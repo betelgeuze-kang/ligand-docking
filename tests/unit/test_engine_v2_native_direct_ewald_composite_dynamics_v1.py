@@ -8,18 +8,20 @@ import sys
 
 import pytest
 
-from tools import verify_engine_v2_native_direct_ewald_composite_v1 as verifier
+from tools import (
+    verify_engine_v2_native_direct_ewald_composite_dynamics_v1 as verifier,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = ROOT / verifier.PROFILE_RELATIVE_PATH
 MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
-TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_composite_v1.py"
+TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
 WORKFLOW = (
-    ROOT / ".github/workflows/ci-engine-v2-native-direct-ewald-composite.yml"
+    ROOT / ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"
 )
 PROFILE_SHA256 = (
-    "15ffc24f782ff1f168b3b1b89cc8f883795a1d66b7debc94a19bf474ef3b31e2"
+    "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f"
 )
 
 
@@ -32,41 +34,64 @@ def _profile_inputs() -> tuple[bytes, bytes, int]:
 
 def test_historical_predecessor_is_exact_squash_tree_and_ancestor() -> None:
     assert verifier.PREDECESSOR == {
-        "merge_commit": "074d3b71373088c0738de7a14797fe35d66d986e",
-        "merge_tree": "e2763a42f4605d7435514c49f18259ea44f4dd3c",
-        "profile_path": "config/engine_v2_native_direct_ewald_cpu_profile_v1.json",
-        "profile_sha256": (
-            "5d0a09742e8388938e90988a6a23fd945d5e2613d0fa37e9f2c8c9dd86d89de8"
+        "merge_commit": "f2731176fb913f600349ec6a1fbf3678d399a7c1",
+        "merge_tree": "6017cf05e3f437443371966775bb4deb3fc73cab",
+        "profile_path": (
+            "config/engine_v2_native_direct_ewald_composite_profile_v1.json"
         ),
-        "pull_request": 436,
-        "reviewed_head": "60a0047af27acacbce3feed7ee1dcedd8a690176",
-        "source_manifest_entry_count": 55,
+        "profile_sha256": (
+            "31dc3535d915980b1a7c318839162a4ce62d6a8bbf221b3415a67a98677d57e7"
+        ),
+        "pull_request": 437,
+        "reviewed_head": "454bb9ee6cdb4202cecbc807f78503ce842bdd13",
+        "source_manifest_entry_count": 73,
         "source_manifest_path": (
-            "config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json"
+            "config/engine_v2_native_direct_ewald_composite_profile_v1_sources.json"
         ),
         "source_manifest_sha256": (
-            "4f2acac517f56ade77b8712bfd24b4312f208f2a5902862f73a807e2a3f7e3ab"
+            "53267e95900402f60f4aba13a674e0e9530291d68310765d1a35a17146bf6afb"
         ),
     }
     observed = verifier.require_predecessor(ROOT)
     assert observed["merge_commit"] == verifier.PREDECESSOR["merge_commit"]
     assert observed["merge_tree"] == verifier.PREDECESSOR["merge_tree"]
     assert observed["reviewed_head"] == verifier.PREDECESSOR["reviewed_head"]
-    assert observed["source_manifest_entry_count"] == 55
+    assert observed["source_manifest_entry_count"] == 73
+    assert set(observed["frozen_predecessor_paths"]) == {
+        path.as_posix() for path in verifier.FROZEN_PREDECESSOR_PATHS
+    }
 
 
 def test_invalid_historical_object_identity_fails_before_git_lookup() -> None:
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="object identity is invalid",
     ):
         verifier.require_predecessor(ROOT, merge_commit="not-an-object")
 
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="reviewed-head metadata changed",
     ):
         verifier.require_predecessor(ROOT, reviewed_head="0" * 40)
+
+
+def test_frozen_parent_or_legacy_checkpoint_drift_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frozen = ROOT / verifier.FROZEN_PREDECESSOR_PATHS[-1]
+    real_read_bytes = Path.read_bytes
+
+    def read_with_frozen_drift(path: Path) -> bytes:
+        raw = real_read_bytes(path)
+        return raw + b"\n" if path == frozen else raw
+
+    monkeypatch.setattr(Path, "read_bytes", read_with_frozen_drift)
+    with pytest.raises(
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
+        match="frozen predecessor source bytes changed",
+    ):
+        verifier.require_predecessor(ROOT)
 
 
 def test_exact_profile_and_source_binding_verify() -> None:
@@ -84,6 +109,9 @@ def test_exact_profile_and_source_binding_verify() -> None:
     assert profile["authority"] == verifier.AUTHORITY_CONTRACT
     assert all(value is False for value in profile["authority"].values())
     assert profile["operational_boundary"] == verifier.OPERATIONAL_BOUNDARY
+    assert profile["abi"]["exported_symbol_count"] == 13
+    assert profile["implementation"]["stateful_owner_added"] is True
+    assert profile["implementation"]["shared_velocity_verlet_sha256_pipeline"] is True
 
 
 def test_manifest_is_sorted_unique_exact_and_acyclic() -> None:
@@ -96,23 +124,25 @@ def test_manifest_is_sorted_unique_exact_and_acyclic() -> None:
     ]
     assert verifier.PROFILE_RELATIVE_PATH.as_posix() not in sources
     assert verifier.SOURCE_MANIFEST_RELATIVE_PATH.as_posix() not in sources
-    assert "tools/verify_engine_v2_native_direct_ewald_composite_v1.py" in sources
-    assert "native/src/composite/evaluator.hpp" in sources
+    assert "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py" in sources
+    for required in (
+        "rust/betelgeuze-runtime/src/dynamics.rs",
+        "native/src/hip/backend.hpp",
+        "native/src/hip/evaluator.cpp",
+        "native/src/hip/evaluator.hpp",
+        "native/src/hip/provider.h",
+        "native/src/hip/stub.cpp",
+        "rust/betelgeuze-sys/vendor/native/src/hip/backend.hpp",
+        "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.cpp",
+        "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.hpp",
+        "rust/betelgeuze-sys/vendor/native/src/hip/provider.h",
+        "rust/betelgeuze-sys/vendor/native/src/hip/stub.cpp",
+    ):
+        assert required in sources
+    assert "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py" not in sources
+    assert "docs/engine_v2_native_direct_ewald_composite_dynamics_v1.md" not in sources
     assert (
-        "rust/betelgeuze-sys/vendor/native/src/composite/evaluator.hpp"
-        in sources
-    )
-    assert "tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py" not in sources
-    assert "docs/engine_v2_native_direct_ewald_composite_v1.md" not in sources
-    assert not any(
-        "direct_ewald_composite_dynamics" in Path(path).name for path in sources
-    )
-    assert not any(
-        Path(path).name == "direct_ewald_composite_checkpoint.cpp"
-        for path in sources
-    )
-    assert (
-        ".github/workflows/ci-engine-v2-native-direct-ewald-composite.yml"
+        ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"
         not in sources
     )
 
@@ -122,7 +152,7 @@ def test_authority_or_operational_escalation_fails_closed() -> None:
     profile = json.loads(profile_raw)
     profile["authority"]["molecular_execution_authorized"] = True
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="authority changed",
     ):
         verifier.require_profile(
@@ -134,7 +164,7 @@ def test_authority_or_operational_escalation_fails_closed() -> None:
     profile = json.loads(profile_raw)
     profile["operational_boundary"]["blockers"].pop()
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="operational blocker boundary changed",
     ):
         verifier.require_profile(
@@ -148,7 +178,7 @@ def test_source_byte_or_path_tampering_fails_closed() -> None:
     manifest = json.loads(MANIFEST.read_bytes())
     manifest["files"][0]["sha256"] = "0" * 64
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="source bytes drifted",
     ):
         verifier.require_source_manifest(ROOT, verifier.canonical_bytes(manifest))
@@ -156,23 +186,23 @@ def test_source_byte_or_path_tampering_fails_closed() -> None:
     manifest = json.loads(MANIFEST.read_bytes())
     manifest["files"].append(dict(manifest["files"][-1]))
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="sorted and unique",
     ):
         verifier.require_source_manifest(ROOT, verifier.canonical_bytes(manifest))
 
 
-def test_zero_charge_provenance_and_vendor_tampering_fail_closed() -> None:
+def test_stateful_pipeline_and_vendor_tampering_fail_closed() -> None:
     _, sources = verifier.require_source_manifest(ROOT, MANIFEST.read_bytes())
 
     tampered = dict(sources)
-    implementation = "native/src/composite/direct_ewald.cpp"
+    implementation = "native/src/composite/direct_ewald_composite_dynamics.cpp"
     tampered[implementation] = tampered[implementation].replace(
-        b"std::fill(short_system.charge.begin(), short_system.charge.end(), 0.0)",
-        b"std::fill(short_system.charge.begin(), short_system.charge.end(), 1.0)",
+        b"DynamicStateRollback",
+        b"DynamicStateCommit",
     )
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="implementation contract is missing",
     ):
         verifier._require_source_contract(tampered)
@@ -181,8 +211,8 @@ def test_zero_charge_provenance_and_vendor_tampering_fail_closed() -> None:
     vendor = "rust/betelgeuze-sys/vendor/native/src/ewald/model.hpp"
     tampered[vendor] += b"\n"
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
-        match="vendored composite dependency drifted",
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
+        match="vendored composite-dynamics dependency drifted",
     ):
         verifier._require_source_contract(tampered)
 
@@ -200,6 +230,7 @@ def test_command_line_verifier_is_read_only_and_authority_bounded() -> None:
     assert payload["verified"] is True
     assert payload["all_authority_false"] is True
     assert payload["fixed64_cpu_v7_qualification_invoked"] is False
+    assert payload["frozen_predecessor_file_count"] == 4
     assert payload["hip_device_execution_invoked"] is False
     assert payload["molecular_execution_invoked"] is False
     assert payload["operational_blocker_count"] == 4
@@ -211,16 +242,22 @@ def test_ci_runs_only_bounded_cpu_and_hosted_export_checks() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert "--refresh" not in workflow
     for required in (
-        "verify_engine_v2_native_direct_ewald_composite_v1.py",
-        "test_engine_v2_native_direct_ewald_composite_v1.py",
-        "betelgeuze_engine_direct_ewald_composite",
+        "verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py",
+        "test_engine_v2_native_direct_ewald_composite_dynamics_v1.py",
+        "betelgeuze_engine_direct_ewald_composite_dynamics",
         "-p betelgeuze-sys --test layout --test raw_smoke",
-        "-p betelgeuze-runtime --test composite",
+        "-p betelgeuze-runtime --test direct_ewald_composite_dynamics",
+        "-p betelgeuze-runtime --doc",
         "macos-export-boundary:",
         "runs-on: macos-15",
+        'CUDA_VISIBLE_DEVICES: ""',
+        'HIP_VISIBLE_DEVICES: ""',
+        'ROCR_VISIBLE_DEVICES: ""',
+        "-DBG_ENABLE_HIP=OFF",
         "-DBG_ENABLE_HIP_SAFE=OFF",
         "betelgeuze_engine_export_allowlist",
         "fetch-depth: 0",
+        'native/src/hip/**',
     ):
         assert required in workflow
     for forbidden in (
@@ -267,7 +304,7 @@ def test_refresh_rolls_back_both_evidence_files_on_failure(
         nonlocal verify_called
         verify_called = True
         if failure_phase == "post_verify":
-            raise verifier.NativeDirectEwaldCompositeV1Error(
+            raise verifier.NativeDirectEwaldCompositeDynamicsV1Error(
                 "injected post-write verification failure"
             )
         return {"verified": True}
@@ -278,7 +315,7 @@ def test_refresh_rolls_back_both_evidence_files_on_failure(
         else "injected post-write verification failure"
     )
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match=expected_error,
     ):
         verifier._replace_evidence_transactionally(
@@ -363,7 +400,7 @@ def test_refresh_preserves_backup_when_rollback_fails(
 
     monkeypatch.setattr(verifier.os, "replace", replace_with_failures)
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="rollback was incomplete.*backup preserved",
     ):
         verifier._replace_evidence_transactionally(
@@ -394,7 +431,7 @@ def test_refresh_rejects_a_symlinked_evidence_ancestor(tmp_path: Path) -> None:
     (root / "config").symlink_to(outside, target_is_directory=True)
 
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="symlinked or non-directory ancestor",
     ):
         verifier._replace_evidence_transactionally(
@@ -458,7 +495,7 @@ def test_staging_cleanup_failure_reports_the_preserved_temporary(
     monkeypatch.setattr(verifier.os, "fsync", fail_fsync)
     monkeypatch.setattr(Path, "unlink", fail_temporary_unlink)
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="evidence staging failed and temporary cleanup was incomplete",
     ) as raised:
         verifier._replace_evidence_transactionally(
@@ -504,7 +541,7 @@ def test_late_staging_and_outer_cleanup_report_every_preserved_temporary(
     monkeypatch.setattr(verifier.os, "fsync", fail_third_fsync)
     monkeypatch.setattr(Path, "unlink", fail_temporary_unlink)
     with pytest.raises(
-        verifier.NativeDirectEwaldCompositeV1Error,
+        verifier.NativeDirectEwaldCompositeDynamicsV1Error,
         match="refresh staging failed before commit.*cleanup was incomplete",
     ) as raised:
         verifier._replace_evidence_transactionally(

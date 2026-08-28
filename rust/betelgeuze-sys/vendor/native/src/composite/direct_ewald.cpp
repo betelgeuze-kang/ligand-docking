@@ -9,6 +9,7 @@
 #endif
 #include "betelgeuze/direct_ewald_composite.h"
 
+#include "evaluator.hpp"
 #include "../cpu/evaluator.hpp"
 #include "../ewald/cpp_evaluator.hpp"
 #include "../ewald/model.hpp"
@@ -460,18 +461,10 @@ bg_status validate_pair_rule_projection(
     return BG_STATUS_OK;
 }
 
-bg_status validate_handle_compatibility(
-    const bg_context &context,
+bg_status validate_compatible_storage_and_pair_rules(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &model) {
-    if (context.unit_system != system.unit_system ||
-        context.unit_system != forcefield.unit_system ||
-        context.unit_system != model.unit_system) {
-        return fail(
-            BG_STATUS_INVALID_ARGUMENT,
-            "composite context, system, force field, and model units must match");
-    }
     if (!system_storage_is_consistent(system)) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
@@ -539,6 +532,173 @@ bool ewald_energy_is_valid(const ewald::Evaluation &evaluation) noexcept {
 }
 
 }  // namespace
+
+bg_status validate_static_compatibility(
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const bg_direct_ewald_model_v1 &model) {
+    if (system.unit_system != forcefield.unit_system ||
+        system.unit_system != model.unit_system) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "composite system, force field, and model units must match");
+    }
+    return validate_compatible_storage_and_pair_rules(
+        system, forcefield, model);
+}
+
+bg_status validate_handle_compatibility(
+    const bg_context &context,
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const bg_direct_ewald_model_v1 &model) {
+    if (context.unit_system != system.unit_system ||
+        context.unit_system != forcefield.unit_system ||
+        context.unit_system != model.unit_system) {
+        return fail(
+            BG_STATUS_INVALID_ARGUMENT,
+            "composite context, system, force field, and model units must match");
+    }
+    return validate_compatible_storage_and_pair_rules(
+        system, forcefield, model);
+}
+
+bg_status evaluate_prevalidated(
+    const bg_context &context,
+    const bg_system &system,
+    const bg_forcefield &forcefield,
+    const bg_direct_ewald_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    ewald::Error *out_error) {
+    if (out_evaluation == nullptr || out_error == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "composite evaluation or typed-error output is null");
+    }
+    *out_error = ewald::Error{};
+    switch (context.backend) {
+        case BG_BACKEND_CPP_CPU_REFERENCE:
+        case BG_BACKEND_RUST_CPU:
+            break;
+        case BG_BACKEND_HIP_SAFE:
+        case BG_BACKEND_HIP_FAST:
+            return fail(
+                BG_STATUS_UNSUPPORTED_BACKEND,
+                "direct-Ewald composite HIP execution is unsupported and CPU fallback is forbidden");
+        default:
+            return fail(
+                BG_STATUS_UNSUPPORTED_BACKEND,
+                "selected backend has no direct-Ewald composite evaluator");
+    }
+
+    bg_system short_system = system;
+    std::fill(short_system.charge.begin(), short_system.charge.end(), 0.0);
+
+    cpu::Evaluation short_evaluation;
+    bg_status status = BG_STATUS_OK;
+    if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+        status = cpu::evaluate(
+            short_system, forcefield, compute_forces, &short_evaluation);
+    } else {
+        status = rust_cpu::evaluate(
+            short_system, forcefield, compute_forces, &short_evaluation);
+    }
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    if (!short_energy_is_valid(short_evaluation)) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "short-range composite parent returned inconsistent energy");
+    }
+
+    ewald::Evaluation ewald_evaluation;
+    if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
+        status = ewald::cpp_cpu::evaluate(
+            system, model, compute_forces, &ewald_evaluation, out_error);
+    } else {
+        status = ewald::rust_cpu::evaluate(
+            system, model, compute_forces, &ewald_evaluation, out_error);
+    }
+    if (status != BG_STATUS_OK) {
+        return out_error->code == BG_DIRECT_EWALD_ERROR_NONE
+                   ? status
+                   : status_for_typed_error(out_error->code);
+    }
+    if (out_error->code != BG_DIRECT_EWALD_ERROR_NONE ||
+        !ewald_energy_is_valid(ewald_evaluation)) {
+        *out_error = ewald::Error{};
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "direct-Ewald composite parent returned inconsistent energy or error state");
+    }
+
+    const double ewald_total = ewald_evaluation.energy.total();
+    const double total =
+        short_evaluation.energy.total_kcal_per_mol + ewald_total;
+    if (!std::isfinite(total)) {
+        return fail(
+            BG_STATUS_NUMERICAL_ERROR,
+            "composite total energy is not finite");
+    }
+
+    Evaluation candidate;
+    if (compute_forces) {
+        const std::size_t atom_count = model.atom_count;
+        if (short_evaluation.force_x.size() != atom_count ||
+            short_evaluation.force_y.size() != atom_count ||
+            short_evaluation.force_z.size() != atom_count ||
+            ewald_evaluation.forces.size() != atom_count) {
+            return fail(
+                BG_STATUS_INTERNAL_ERROR,
+                "composite parent force counts are inconsistent");
+        }
+        candidate.forces.resize(atom_count);
+        for (std::size_t atom = 0; atom < atom_count; ++atom) {
+            candidate.forces[atom] = {{
+                short_evaluation.force_x[atom] +
+                    ewald_evaluation.forces[atom][0],
+                short_evaluation.force_y[atom] +
+                    ewald_evaluation.forces[atom][1],
+                short_evaluation.force_z[atom] +
+                    ewald_evaluation.forces[atom][2],
+            }};
+            if (std::any_of(
+                    candidate.forces[atom].begin(),
+                    candidate.forces[atom].end(),
+                    [](double value) { return !std::isfinite(value); })) {
+                return fail(
+                    BG_STATUS_NUMERICAL_ERROR,
+                    "a composite force component is not finite");
+            }
+        }
+    }
+
+    candidate.energy.short_harmonic_bond =
+        short_evaluation.energy.harmonic_bond_kcal_per_mol;
+    candidate.energy.short_harmonic_angle =
+        short_evaluation.energy.harmonic_angle_kcal_per_mol;
+    candidate.energy.short_periodic_torsion =
+        short_evaluation.energy.periodic_torsion_kcal_per_mol;
+    candidate.energy.short_lennard_jones =
+        short_evaluation.energy.lennard_jones_kcal_per_mol;
+    candidate.energy.short_coulomb =
+        short_evaluation.energy.coulomb_kcal_per_mol;
+    candidate.energy.short_total =
+        short_evaluation.energy.total_kcal_per_mol;
+    candidate.energy.ewald_real_space = ewald_evaluation.energy.real_space;
+    candidate.energy.ewald_reciprocal_space =
+        ewald_evaluation.energy.reciprocal_space;
+    candidate.energy.ewald_self = ewald_evaluation.energy.self;
+    candidate.energy.ewald_pair_correction =
+        ewald_evaluation.energy.pair_correction;
+    candidate.energy.ewald_total = ewald_total;
+    candidate.energy.total = total;
+    *out_evaluation = std::move(candidate);
+    return BG_STATUS_OK;
+}
+
 }  // namespace betelgeuze::native::composite
 
 extern "C" BG_API uint32_t BG_CALL
@@ -686,143 +846,53 @@ bg_context_evaluate_direct_ewald_composite_v1(
         if (status != BG_STATUS_OK) {
             return status;
         }
-        switch (context->backend) {
-            case BG_BACKEND_CPP_CPU_REFERENCE:
-            case BG_BACKEND_RUST_CPU:
-                break;
-            case BG_BACKEND_HIP_SAFE:
-            case BG_BACKEND_HIP_FAST:
-                return fail(
-                    BG_STATUS_UNSUPPORTED_BACKEND,
-                    "direct-Ewald composite HIP execution is unsupported and CPU fallback is forbidden");
-            default:
-                return fail(
-                    BG_STATUS_UNSUPPORTED_BACKEND,
-                    "selected backend has no direct-Ewald composite evaluator");
-        }
-
         const bool compute_forces = out_forces != nullptr;
-        bg_system short_system = *system;
-        std::fill(short_system.charge.begin(), short_system.charge.end(), 0.0);
-
-        cpu::Evaluation short_evaluation;
-        if (context->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
-            status = cpu::evaluate(
-                short_system, *forcefield, compute_forces,
-                &short_evaluation);
-        } else {
-            status = rust_cpu::evaluate(
-                short_system, *forcefield, compute_forces,
-                &short_evaluation);
-        }
-        if (status != BG_STATUS_OK) {
-            return status;
-        }
-        if (!short_energy_is_valid(short_evaluation)) {
-            return fail(
-                BG_STATUS_INTERNAL_ERROR,
-                "short-range composite parent returned inconsistent energy");
-        }
-
-        ewald::Evaluation ewald_evaluation;
+        Evaluation evaluation;
         ewald::Error typed_error;
-        if (context->backend == BG_BACKEND_CPP_CPU_REFERENCE) {
-            status = ewald::cpp_cpu::evaluate(
-                *system, *model, compute_forces, &ewald_evaluation,
-                &typed_error);
-        } else {
-            status = ewald::rust_cpu::evaluate(
-                *system, *model, compute_forces, &ewald_evaluation,
-                &typed_error);
-        }
+        status = evaluate_prevalidated(
+            *context, *system, *forcefield, *model, compute_forces,
+            &evaluation, &typed_error);
         if (status != BG_STATUS_OK) {
             if (typed_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
                 commit_error(out_error, typed_error.code, typed_error.detail);
-                return status_for_typed_error(typed_error.code);
             }
             return status;
-        }
-        if (typed_error.code != BG_DIRECT_EWALD_ERROR_NONE ||
-            !ewald_energy_is_valid(ewald_evaluation)) {
-            return fail(
-                BG_STATUS_INTERNAL_ERROR,
-                "direct-Ewald composite parent returned inconsistent energy or error state");
-        }
-
-        const double ewald_total = ewald_evaluation.energy.total();
-        const double total =
-            short_evaluation.energy.total_kcal_per_mol + ewald_total;
-        if (!std::isfinite(total)) {
-            return fail(
-                BG_STATUS_NUMERICAL_ERROR,
-                "composite total energy is not finite");
-        }
-
-        std::vector<std::array<double, 3>> combined_forces;
-        if (compute_forces) {
-            const std::size_t atom_count = model->atom_count;
-            if (short_evaluation.force_x.size() != atom_count ||
-                short_evaluation.force_y.size() != atom_count ||
-                short_evaluation.force_z.size() != atom_count ||
-                ewald_evaluation.forces.size() != atom_count) {
-                return fail(
-                    BG_STATUS_INTERNAL_ERROR,
-                    "composite parent force counts are inconsistent");
-            }
-            combined_forces.resize(atom_count);
-            for (std::size_t atom = 0; atom < atom_count; ++atom) {
-                combined_forces[atom] = {{
-                    short_evaluation.force_x[atom] +
-                        ewald_evaluation.forces[atom][0],
-                    short_evaluation.force_y[atom] +
-                        ewald_evaluation.forces[atom][1],
-                    short_evaluation.force_z[atom] +
-                        ewald_evaluation.forces[atom][2],
-                }};
-                if (std::any_of(
-                        combined_forces[atom].begin(),
-                        combined_forces[atom].end(),
-                        [](double value) { return !std::isfinite(value); })) {
-                    return fail(
-                        BG_STATUS_NUMERICAL_ERROR,
-                        "a composite force component is not finite");
-                }
-            }
         }
 
         bg_direct_ewald_composite_energy_components_v1 committed_energy =
             *out_energy;
         committed_energy.short_harmonic_bond_kcal_per_mol =
-            short_evaluation.energy.harmonic_bond_kcal_per_mol;
+            evaluation.energy.short_harmonic_bond;
         committed_energy.short_harmonic_angle_kcal_per_mol =
-            short_evaluation.energy.harmonic_angle_kcal_per_mol;
+            evaluation.energy.short_harmonic_angle;
         committed_energy.short_periodic_torsion_kcal_per_mol =
-            short_evaluation.energy.periodic_torsion_kcal_per_mol;
+            evaluation.energy.short_periodic_torsion;
         committed_energy.short_lennard_jones_kcal_per_mol =
-            short_evaluation.energy.lennard_jones_kcal_per_mol;
+            evaluation.energy.short_lennard_jones;
         committed_energy.short_coulomb_kcal_per_mol =
-            short_evaluation.energy.coulomb_kcal_per_mol;
+            evaluation.energy.short_coulomb;
         committed_energy.short_total_kcal_per_mol =
-            short_evaluation.energy.total_kcal_per_mol;
+            evaluation.energy.short_total;
         committed_energy.ewald_real_space_kcal_per_mol =
-            ewald_evaluation.energy.real_space;
+            evaluation.energy.ewald_real_space;
         committed_energy.ewald_reciprocal_space_kcal_per_mol =
-            ewald_evaluation.energy.reciprocal_space;
+            evaluation.energy.ewald_reciprocal_space;
         committed_energy.ewald_self_kcal_per_mol =
-            ewald_evaluation.energy.self;
+            evaluation.energy.ewald_self;
         committed_energy.ewald_pair_correction_kcal_per_mol =
-            ewald_evaluation.energy.pair_correction;
-        committed_energy.ewald_total_kcal_per_mol = ewald_total;
-        committed_energy.total_kcal_per_mol = total;
+            evaluation.energy.ewald_pair_correction;
+        committed_energy.ewald_total_kcal_per_mol =
+            evaluation.energy.ewald_total;
+        committed_energy.total_kcal_per_mol = evaluation.energy.total;
 
         if (compute_forces) {
             for (std::size_t atom = 0; atom < model->atom_count; ++atom) {
                 out_forces->x_kcal_per_mol_angstrom[atom] =
-                    combined_forces[atom][0];
+                    evaluation.forces[atom][0];
                 out_forces->y_kcal_per_mol_angstrom[atom] =
-                    combined_forces[atom][1];
+                    evaluation.forces[atom][1];
                 out_forces->z_kcal_per_mol_angstrom[atom] =
-                    combined_forces[atom][2];
+                    evaluation.forces[atom][2];
             }
             out_forces->atom_count = static_cast<uint64_t>(model->atom_count);
         }

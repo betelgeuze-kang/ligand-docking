@@ -148,6 +148,7 @@ EXPECTED_CARGO_TARGETS = {
     "rust/betelgeuze-runtime/tests/composite.rs",
     "rust/betelgeuze-runtime/tests/cpu_oracle_parity.rs",
     "rust/betelgeuze-runtime/tests/direct_ewald.rs",
+    "rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs",
     "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
     "rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs",
     "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_v5_activation.rs",

@@ -2,8 +2,9 @@
 //!
 //! This crate intentionally mirrors `include/betelgeuze/engine.h` and
 //! `include/betelgeuze/direct_ewald.h`, and
-//! `include/betelgeuze/direct_ewald_composite.h` without adding ownership or
-//! lifetime semantics. Prefer `betelgeuze-runtime` for a safe API.
+//! `include/betelgeuze/direct_ewald_composite.h`, and
+//! `include/betelgeuze/direct_ewald_composite_dynamics.h` without adding
+//! ownership or lifetime semantics. Prefer `betelgeuze-runtime` for a safe API.
 //!
 //! The optional `hip` feature requires `BG_HIP_ARCHITECTURE` and a ROCm
 //! toolchain selected with `HIP_PATH` or `ROCM_PATH`. If device libraries are
@@ -32,6 +33,10 @@ pub const BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY: u32 = 256;
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR: u32 = 0;
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION: u32 = 1;
+
+pub const BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MAJOR: u32 = 1;
+pub const BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MINOR: u32 = 0;
+pub const BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION: u32 = 1;
 
 pub const BG_CANONICAL_LENGTH_UNIT: &[u8] = b"angstrom\0";
 pub const BG_CANONICAL_ENERGY_UNIT: &[u8] = b"kcal/mol\0";
@@ -457,6 +462,12 @@ pub struct bg_forcefield {
 /// Opaque immutable direct-Ewald model.
 #[repr(C)]
 pub struct bg_direct_ewald_model_v1 {
+    _private: [u8; 0],
+}
+
+/// Opaque deep-owned short-range + direct-Ewald dynamics simulation.
+#[repr(C)]
+pub struct bg_direct_ewald_composite_simulation_v1 {
     _private: [u8; 0],
 }
 
@@ -2394,6 +2405,53 @@ unsafe extern "C" {
         out_energy: *mut bg_direct_ewald_composite_energy_components_v1,
         out_forces: *mut bg_direct_ewald_composite_force_soa_v1,
         out_error: *mut bg_direct_ewald_error_v1,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_dynamics_abi_version() -> u32;
+    pub fn bg_direct_ewald_composite_dynamics_abi_version_major() -> u32;
+    pub fn bg_direct_ewald_composite_dynamics_abi_version_minor() -> u32;
+    pub fn bg_direct_ewald_composite_dynamics_abi_version_string() -> *const c_char;
+    pub fn bg_direct_ewald_composite_dynamics_v1_profile_id() -> *const c_char;
+    pub fn bg_direct_ewald_composite_simulation_v1_create(
+        system: *const bg_system,
+        forcefield: *const bg_forcefield,
+        model: *const bg_direct_ewald_model_v1,
+        constraints: *const bg_distance_constraints_v1,
+        options: *const bg_simulation_options_v1,
+        out_simulation: *mut *mut bg_direct_ewald_composite_simulation_v1,
+        out_error: *mut bg_direct_ewald_error_v1,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_simulation_v1_destroy(
+        simulation: *mut bg_direct_ewald_composite_simulation_v1,
+    );
+    pub fn bg_direct_ewald_composite_simulation_v1_get_particles(
+        simulation: *const bg_direct_ewald_composite_simulation_v1,
+        out_view: *mut bg_particle_soa_view,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_simulation_v1_get_absolute_step(
+        simulation: *const bg_direct_ewald_composite_simulation_v1,
+        absolute_step: *mut u64,
+    ) -> bg_status;
+    pub fn bg_context_integrate_direct_ewald_composite_v1(
+        context: *const bg_context,
+        simulation: *mut bg_direct_ewald_composite_simulation_v1,
+        step_count: u64,
+        out_report: *mut bg_dynamics_report_v1,
+        out_error: *mut bg_direct_ewald_error_v1,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_simulation_v1_checkpoint_size(
+        simulation: *const bg_direct_ewald_composite_simulation_v1,
+        required_size: *mut u64,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_simulation_v1_checkpoint_write(
+        simulation: *const bg_direct_ewald_composite_simulation_v1,
+        buffer: *mut core::ffi::c_void,
+        buffer_capacity: u64,
+        written_size: *mut u64,
+    ) -> bg_status;
+    pub fn bg_direct_ewald_composite_simulation_v1_checkpoint_load(
+        simulation: *mut bg_direct_ewald_composite_simulation_v1,
+        buffer: *const core::ffi::c_void,
+        buffer_size: u64,
     ) -> bg_status;
 
     pub fn bg_abi_version() -> u32;

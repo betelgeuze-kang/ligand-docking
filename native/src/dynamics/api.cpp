@@ -795,7 +795,9 @@ extern "C" BG_API bg_status BG_CALL bg_context_integrate(
         DynamicStateRollback rollback(
             simulation, step_count != UINT64_C(0));
         bg_dynamics_report_v1 report = *out_report;
-        status = integrate(*context, step_count, simulation, &report);
+        const ForceProvider provider = short_range_force_provider();
+        status = integrate(
+            *context, provider, step_count, simulation, &report);
         if (status != BG_STATUS_OK) {
             return status;
         }

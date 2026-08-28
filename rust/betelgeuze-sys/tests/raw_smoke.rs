@@ -445,6 +445,191 @@ fn direct_ewald_composite_identity_initializers_and_null_failure_are_transaction
 }
 
 #[test]
+fn direct_ewald_composite_dynamics_identity_and_null_failures_are_transactional() {
+    // SAFETY: Identity functions take no pointers. Every descriptor points to
+    // initialized writable storage, and null handles deliberately exercise
+    // the documented invalid-argument paths without native dereferences.
+    unsafe {
+        assert_eq!(
+            bg_direct_ewald_composite_dynamics_abi_version(),
+            BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION
+        );
+        assert_eq!(
+            bg_direct_ewald_composite_dynamics_abi_version_major(),
+            BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MAJOR
+        );
+        assert_eq!(
+            bg_direct_ewald_composite_dynamics_abi_version_minor(),
+            BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MINOR
+        );
+        assert_eq!(
+            owned_string(bg_direct_ewald_composite_dynamics_abi_version_string()),
+            "1.0.0"
+        );
+        assert_eq!(
+            owned_string(bg_direct_ewald_composite_dynamics_v1_profile_id()),
+            "betelgeuze.native_direct_ewald_composite_dynamics/1.0.0"
+        );
+
+        bg_direct_ewald_composite_simulation_v1_destroy(ptr::null_mut());
+
+        let mut options = core::mem::MaybeUninit::<bg_simulation_options_v1>::uninit();
+        assert_eq!(
+            bg_simulation_options_v1_init(
+                options.as_mut_ptr(),
+                core::mem::size_of::<bg_simulation_options_v1>(),
+                BG_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let options = options.assume_init();
+
+        let mut error = core::mem::MaybeUninit::<bg_direct_ewald_error_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_error_v1_init(
+                error.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_error_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut error = error.assume_init();
+        error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+        error.detail[0] = b'x' as c_char;
+
+        let mut simulation = ptr::null_mut();
+        assert_eq!(
+            bg_direct_ewald_composite_simulation_v1_create(
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                &options,
+                &mut simulation,
+                &mut error,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert!(simulation.is_null());
+        assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
+        assert!(error.detail.iter().all(|byte| *byte == 0));
+
+        let mut view = core::mem::MaybeUninit::<bg_particle_soa_view>::uninit();
+        assert_eq!(
+            bg_particle_soa_view_init(
+                view.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_soa_view>(),
+                BG_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut view = view.assume_init();
+        view.particle_count = 77;
+        assert_eq!(
+            bg_direct_ewald_composite_simulation_v1_get_particles(ptr::null(), &mut view),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(view.particle_count, 77);
+
+        let mut absolute_step = 91_u64;
+        assert_eq!(
+            bg_direct_ewald_composite_simulation_v1_get_absolute_step(
+                ptr::null(),
+                &mut absolute_step,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(absolute_step, 91);
+
+        let mut report = core::mem::MaybeUninit::<bg_dynamics_report_v1>::uninit();
+        assert_eq!(
+            bg_dynamics_report_v1_init(
+                report.as_mut_ptr(),
+                core::mem::size_of::<bg_dynamics_report_v1>(),
+                BG_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut report = report.assume_init();
+        report.steps_completed = 73;
+        report.absolute_step = 74;
+        report.degrees_of_freedom = 75;
+        report.potential_kcal_per_mol = 1.25;
+        report.kinetic_kcal_per_mol = 2.5;
+        report.total_kcal_per_mol = 3.75;
+        report.temperature_kelvin = 4.5;
+        error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+        error.detail[0] = b'y' as c_char;
+        assert_eq!(
+            bg_context_integrate_direct_ewald_composite_v1(
+                ptr::null(),
+                ptr::null_mut(),
+                5,
+                &mut report,
+                &mut error,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            [
+                report.steps_completed,
+                report.absolute_step,
+                report.degrees_of_freedom,
+            ],
+            [73, 74, 75]
+        );
+        assert_eq!(
+            [
+                report.potential_kcal_per_mol.to_bits(),
+                report.kinetic_kcal_per_mol.to_bits(),
+                report.total_kcal_per_mol.to_bits(),
+                report.temperature_kelvin.to_bits(),
+            ],
+            [
+                1.25_f64.to_bits(),
+                2.5_f64.to_bits(),
+                3.75_f64.to_bits(),
+                4.5_f64.to_bits(),
+            ]
+        );
+        assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
+        assert!(error.detail.iter().all(|byte| *byte == 0));
+
+        let mut required_size = 123_u64;
+        assert_eq!(
+            bg_direct_ewald_composite_simulation_v1_checkpoint_size(
+                ptr::null(),
+                &mut required_size,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(required_size, 123);
+
+        let mut buffer = [0xA5_u8; 16];
+        let mut written_size = 456_u64;
+        assert_eq!(
+            bg_direct_ewald_composite_simulation_v1_checkpoint_write(
+                ptr::null(),
+                buffer.as_mut_ptr().cast(),
+                buffer.len() as u64,
+                &mut written_size,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(written_size, 456);
+        assert_eq!(buffer, [0xA5; 16]);
+        assert_eq!(
+            bg_direct_ewald_composite_simulation_v1_checkpoint_load(
+                ptr::null_mut(),
+                buffer.as_ptr().cast(),
+                buffer.len() as u64,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+    }
+}
+
+#[test]
 fn descriptor_initializers_bind_size_version_and_units() {
     // SAFETY: Each MaybeUninit output points to writable storage for exactly
     // the descriptor accepted by the initializer.

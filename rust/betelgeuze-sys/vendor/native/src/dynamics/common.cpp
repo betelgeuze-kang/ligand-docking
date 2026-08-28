@@ -251,6 +251,51 @@ bg_status evaluate(
     }
 }
 
+namespace {
+
+bg_status evaluate_short_range_provider(
+    const bg_context &context,
+    bg_simulation *simulation,
+    const bg_system &system,
+    bool compute_forces,
+    void *state,
+    cpu::Evaluation *out_evaluation) {
+    if (state != nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "short-range dynamics force provider state must be null");
+    }
+    return evaluate(
+        context, simulation, system, compute_forces, out_evaluation);
+}
+
+}  // namespace
+
+ForceProvider short_range_force_provider() noexcept {
+    return ForceProvider{&evaluate_short_range_provider, nullptr};
+}
+
+bg_status evaluate_with_provider(
+    const ForceProvider &provider,
+    const bg_context &context,
+    bg_simulation *simulation,
+    const bg_system &system,
+    bool compute_forces,
+    cpu::Evaluation *out_evaluation) {
+    if (provider.function == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "dynamics force provider function is null");
+    }
+    return provider.function(
+        context,
+        simulation,
+        system,
+        compute_forces,
+        provider.state,
+        out_evaluation);
+}
+
 std::array<uint8_t, 32> compute_static_fingerprint(
     const bg_simulation &simulation) noexcept {
     Sha256 hash;
