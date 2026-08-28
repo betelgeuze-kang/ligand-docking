@@ -19,6 +19,8 @@ on:
       - "rust/betelgeuze-sys/**"
       - "rust/betelgeuze-runtime/**"
       - "rust/reference-ewald/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
       - "config/engine_v2_direct_ewald_reference_profile_v1.json"
       - "config/engine_v2_native_direct_ewald_cpu_profile_v1.json"
       - "config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json"
@@ -46,6 +48,8 @@ on:
       - "rust/betelgeuze-sys/**"
       - "rust/betelgeuze-runtime/**"
       - "rust/reference-ewald/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
       - "config/engine_v2_direct_ewald_reference_profile_v1.json"
       - "config/engine_v2_native_direct_ewald_cpu_profile_v1.json"
       - "config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json"
@@ -83,6 +87,8 @@ jobs:
             include
             native
             rust
+            rust_engine_v2/Cargo.lock
+            rust_engine_v2/Cargo.toml
             config/engine_v2_direct_ewald_reference_profile_v1.json
             config/engine_v2_native_direct_ewald_cpu_profile_v1.json
             config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json

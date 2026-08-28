@@ -17,7 +17,7 @@ MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py"
 WORKFLOW = ROOT / ".github/workflows/ci-engine-v2-native-direct-ewald.yml"
 PROFILE_SHA256 = (
-    "e0bc25f517dfd447bf739e72ce36c956258fe2ae79d53d4d9b515929dae6f7c4"
+    "057e87596c5cb303583be7a3bbeec03bf1c512e1cc5beb788713d01309c99594"
 )
 
 
@@ -138,6 +138,8 @@ def test_production_reference_dependency_fails_closed() -> None:
     for path in (
         "native/CMakeLists.txt",
         "rust/betelgeuze-runtime/Cargo.toml",
+        "rust_engine_v2/Cargo.lock",
+        "rust_engine_v2/Cargo.toml",
     ):
         tampered = dict(sources)
         tampered[path] += b'\nreference-ewald = { path = "../reference-ewald" }\n'

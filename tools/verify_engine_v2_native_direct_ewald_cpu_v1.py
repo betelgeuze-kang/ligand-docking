@@ -194,6 +194,8 @@ REQUIRED_SOURCE_PATHS = (
     Path("rust/cpu-kernel/Cargo.toml"),
     Path("rust/cpu-kernel/src/direct_ewald.rs"),
     Path("rust/cpu-kernel/src/lib.rs"),
+    Path("rust_engine_v2/Cargo.lock"),
+    Path("rust_engine_v2/Cargo.toml"),
     REFERENCE_PROFILE_RELATIVE_PATH,
     REFERENCE_SOURCE_RELATIVE_PATH,
     REFERENCE_FIXTURE_RELATIVE_PATH,

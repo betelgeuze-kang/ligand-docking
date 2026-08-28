@@ -52,7 +52,9 @@ is `config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json`. The
 manifest uses canonical ASCII JSON and sorted unique rows containing repository
 path, byte count, and SHA-256. It covers the direct implementation, public and
 private ABI surfaces, direct tests and their crate-local frozen fixture, Rust
-system/runtime binding files, vendor copies, and the four parent-oracle inputs.
+system/runtime binding files, vendor copies, the primary Rust workspace, the
+separate `rust_engine_v2` native-wheel Cargo manifest and lockfile, and the four
+parent-oracle inputs.
 It also binds the verifier itself and its `tools` package initializer. Neither
 contains the resulting profile hash, so this remains acyclic. It deliberately
 excludes the profile, manifest, profile-hash unit test, documentation, and
