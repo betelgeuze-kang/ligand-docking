@@ -72,7 +72,10 @@ jobs:
 
       - name: Select frozen hosted Rust toolchain
         run: |
-          rustup toolchain install 1.93.0 --profile minimal
+          rustup toolchain install 1.93.0 \
+            --profile minimal \
+            --component clippy \
+            --component rustfmt
           rustup override set 1.93.0
 
       - name: Verify immutable evidence and fail-closed unit contracts

@@ -281,6 +281,8 @@ def test_ci_runs_only_safe_standalone_scalar_checks() -> None:
         'ROCR_VISIBLE_DEVICES: ""',
         "fetch-depth: 0",
         "persist-credentials: false",
+        "--component clippy",
+        "--component rustfmt",
         "cargo fmt --manifest-path rust/reference-pme/Cargo.toml",
         "cargo clippy --manifest-path rust/reference-pme/Cargo.toml",
         "cargo test --manifest-path rust/reference-pme/Cargo.toml",
