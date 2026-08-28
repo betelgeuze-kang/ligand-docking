@@ -513,6 +513,11 @@ bg_status evaluate_composite_provider(
     }
 
     cpu::Evaluation candidate;
+    if (compute_forces) {
+        candidate.force_x = std::move(out_evaluation->force_x);
+        candidate.force_y = std::move(out_evaluation->force_y);
+        candidate.force_z = std::move(out_evaluation->force_z);
+    }
     candidate.energy.struct_size =
         static_cast<uint32_t>(sizeof(candidate.energy));
     candidate.energy.abi_version = BG_ABI_VERSION;

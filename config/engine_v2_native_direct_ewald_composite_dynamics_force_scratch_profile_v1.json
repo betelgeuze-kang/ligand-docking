@@ -1,0 +1,110 @@
+{
+  "abi": {
+    "abi_changed": false,
+    "checkpoint_format_changed": false,
+    "checkpoint_header_size_bytes": 104,
+    "checkpoint_magic": "BGDEC001",
+    "public_profile_id": "betelgeuze.native_direct_ewald_composite_dynamics/1.0.0",
+    "public_symbol_count": 13,
+    "public_symbols": [
+      "bg_direct_ewald_composite_dynamics_abi_version",
+      "bg_direct_ewald_composite_dynamics_abi_version_major",
+      "bg_direct_ewald_composite_dynamics_abi_version_minor",
+      "bg_direct_ewald_composite_dynamics_abi_version_string",
+      "bg_direct_ewald_composite_dynamics_v1_profile_id",
+      "bg_direct_ewald_composite_simulation_v1_create",
+      "bg_direct_ewald_composite_simulation_v1_destroy",
+      "bg_direct_ewald_composite_simulation_v1_get_particles",
+      "bg_direct_ewald_composite_simulation_v1_get_absolute_step",
+      "bg_context_integrate_direct_ewald_composite_v1",
+      "bg_direct_ewald_composite_simulation_v1_checkpoint_size",
+      "bg_direct_ewald_composite_simulation_v1_checkpoint_write",
+      "bg_direct_ewald_composite_simulation_v1_checkpoint_load"
+    ]
+  },
+  "architecture_predecessor": {
+    "merge_commit": "5c532668f9ed95b1159b899acf726eef8824b288",
+    "merge_tree": "515d0ea740426d6267a5b521acc451ea1492f282",
+    "profile_path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json",
+    "profile_sha256": "8ae38af90175e1e62eb54abb6727963a4439ece0fc4b622a4b0f4c9593c1a97f",
+    "pull_request": 443,
+    "reviewed_head": "b785fd793c421c27730516453559a27b9cee6427",
+    "source_manifest_entry_count": 120,
+    "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json",
+    "source_manifest_sha256": "1aed00454380e70338428b11e347b7d47f28b2b5f46e5e843612dca0ac361432"
+  },
+  "authority": {
+    "acceleration_claim_authorized": false,
+    "d1_d2_execution_authorized": false,
+    "fresh_holdout_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "historical_molecular_ab_execution_authorized": false,
+    "molecular_execution_authorized": false,
+    "performance_claim_authorized": false,
+    "product_authority": false,
+    "public_benchmark_authorized": false,
+    "qualification_rerun_authorized": false,
+    "reservation_authorized": false,
+    "root_supervisor_install_authorized": false,
+    "scientific_claim_authorized": false,
+    "stage0_admission_authorized": false,
+    "test_double_production_authority": false
+  },
+  "implementation": {
+    "acceleration_claimed": false,
+    "allocation_free_claimed": false,
+    "cross_lane_bit_parity_claimed": false,
+    "explicit_cpp_cpu_reference_lane": true,
+    "explicit_rust_cpu_lane": true,
+    "fixed64_cpu_v7_qualification_invoked": false,
+    "hip_device_execution_invoked": false,
+    "molecular_execution_invoked": false,
+    "performance_claimed": false,
+    "persistent_final_soa_force_output_storage": true,
+    "source_manifest_entry_count": 202,
+    "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
+    "source_manifest_sha256": "f1c41ad4ad774bd2d7ab1672df61792ad539f0c2c199b37511ed0f5783412467",
+    "storage_transfer_after_upstream_success_only": true,
+    "test_only_owner_introspection_not_exported": true,
+    "timing_claimed": false
+  },
+  "operational_boundary": {
+    "blockers": [
+      "external_reservation_endpoint_not_configured",
+      "external_reservation_provider_not_operational",
+      "external_reservation_trust_anchor_not_configured",
+      "historical_execution_operational_authority_false"
+    ],
+    "unresolved_operational_decisions": 32
+  },
+  "predecessor": {
+    "merge_commit": "c53f7993ec06c4ac04a4907b40f179d12fbe309a",
+    "merge_tree": "2bb25b756b802671bcfc5f3ac95b26df3b284956",
+    "profile_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json",
+    "profile_sha256": "32129a32d0b351ac265fda21906e707cc708c664241715b4d0d92fa3cc013b62",
+    "pull_request": 445,
+    "reviewed_head": "801a85d56846c464b3a618ecacca867cd12a8c9f",
+    "source_manifest_entry_count": 194,
+    "source_manifest_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
+    "source_manifest_sha256": "d428b3f18d26382fbb7e5e8a48f3a114eb953b8708bec77c4f00ec6c0d1bcc3f"
+  },
+  "profile_id": "engine_v2_native_direct_ewald_composite_dynamics_force_scratch_development_v1",
+  "roadmap_issue": 434,
+  "schema_id": "betelgeuze.engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile/1.0.0",
+  "validation": {
+    "both_explicit_cpu_lanes": true,
+    "canonical_vendor_byte_identity": true,
+    "clean_rust_packages": true,
+    "exact_public_symbol_surfaces": true,
+    "force_scratch_pointer_and_capacity_retention": true,
+    "git_object_probes_lazy_fetch_disabled": true,
+    "repeated_late_failure_transactionality": true,
+    "reviewed_head_optional_locally": true,
+    "rust_raw_safe_docs_fmt_clippy": true,
+    "same_lane_reserved_vs_peer_bit_identity": true,
+    "same_owner_checkpoint_reload_scratch_stability": true,
+    "synthetic_release_and_asan_ubsan": true,
+    "workflow_reviewed_head_explicitly_fetched": true,
+    "zero_step_scratch_stability": true
+  }
+}

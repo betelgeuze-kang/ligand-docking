@@ -3,6 +3,8 @@
 #define BG_DISABLE_DIRECT_EWALD_COMPOSITE_DESCRIPTOR_INIT_CONVENIENCE_MACROS
 #include "betelgeuze/direct_ewald_composite_dynamics.h"
 
+#include "direct_ewald_composite_dynamics_scratch.hpp"
+
 #include "../src/internal.hpp"
 
 #include <algorithm>
@@ -65,6 +67,35 @@ uint64_t bits(double value) noexcept {
 
 void require_exact(double actual, double expected, const char *message) {
     require(bits(actual) == bits(expected), message);
+}
+
+using ForceScratchSnapshot =
+    betelgeuze::native::tests::DirectEwaldCompositeForceScratchSnapshot;
+
+ForceScratchSnapshot force_scratch_snapshot(
+    const bg_direct_ewald_composite_simulation_v1 *simulation) {
+    return betelgeuze::native::tests::
+        direct_ewald_composite_force_scratch_snapshot(simulation);
+}
+
+void require_same_force_scratch_storage(
+    const ForceScratchSnapshot &actual,
+    const ForceScratchSnapshot &expected,
+    const char *message) {
+    require(
+        actual.addresses == expected.addresses &&
+            actual.capacities == expected.capacities,
+        message);
+}
+
+void require_force_scratch_sizes(
+    const ForceScratchSnapshot &snapshot,
+    std::size_t expected,
+    const char *message) {
+    require(
+        snapshot.sizes == std::array<std::size_t, 3>{
+            expected, expected, expected},
+        message);
 }
 
 template <typename Type, typename = void>
@@ -1115,6 +1146,137 @@ void verify_zero_step_matches_stateless() {
     }
 }
 
+void verify_force_output_scratch_reuse() {
+    constexpr std::size_t kReservedCapacity = 64U;
+    constexpr double timestep = 0.001;
+    const Fixture fixture;
+
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+         }) {
+        const ContextPtr context = make_context(backend);
+        const SystemPtr system = make_system(fixture);
+        const ForceFieldPtr forcefield = make_forcefield(fixture);
+        const ModelPtr model = make_model(fixture);
+        const CompositeSimulationPtr simulation = make_composite_simulation(
+            system.get(), forcefield.get(), model.get(), timestep);
+        const CompositeSimulationPtr peer = make_composite_simulation(
+            system.get(), forcefield.get(), model.get(), timestep);
+
+        const ForceScratchSnapshot initial =
+            force_scratch_snapshot(simulation.get());
+        require_force_scratch_sizes(
+            initial, 0U, "new simulation force scratch was not empty");
+        require(
+            initial.capacities == std::array<std::size_t, 3>{0U, 0U, 0U},
+            "new simulation force scratch retained capacity");
+
+        betelgeuze::native::tests::
+            reserve_direct_ewald_composite_force_scratch(
+                simulation.get(), kReservedCapacity);
+        const ForceScratchSnapshot reserved =
+            force_scratch_snapshot(simulation.get());
+        require_force_scratch_sizes(
+            reserved, 0U, "reserved force scratch changed logical size");
+        for (std::size_t axis = 0U; axis < 3U; ++axis) {
+            require(
+                reserved.addresses[axis] != nullptr &&
+                    reserved.capacities[axis] >= kReservedCapacity,
+                "force scratch reserve did not materialize storage");
+            for (std::size_t other = axis + 1U; other < 3U; ++other) {
+                require(
+                    reserved.addresses[axis] != reserved.addresses[other],
+                    "force scratch channels aliased");
+            }
+        }
+
+        const std::vector<uint8_t> before_zero =
+            write_composite_checkpoint(simulation.get());
+        const bg_dynamics_report_v1 zero_report = integrate_success(
+            context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero_report = integrate_success(
+            context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(
+                &zero_report, &peer_zero_report, sizeof(zero_report)) == 0,
+            "reserved scratch changed zero-step report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) == before_zero,
+            "zero-step integration changed checkpoint state");
+        const ForceScratchSnapshot after_zero =
+            force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            after_zero,
+            reserved,
+            "zero-step integration changed scratch storage");
+        require_force_scratch_sizes(
+            after_zero, 0U, "zero-step integration changed scratch size");
+
+        for (const uint64_t step_count : {UINT64_C(1), UINT64_C(2)}) {
+            const bg_dynamics_report_v1 report = integrate_success(
+                context.get(), simulation.get(), step_count);
+            const bg_dynamics_report_v1 peer_report = integrate_success(
+                context.get(), peer.get(), step_count);
+            require(
+                std::memcmp(&report, &peer_report, sizeof(report)) == 0,
+                "reserved scratch changed integration report bits");
+            require(
+                write_composite_checkpoint(simulation.get()) ==
+                    write_composite_checkpoint(peer.get()),
+                "reserved scratch changed checkpoint bits");
+            const ForceScratchSnapshot current =
+                force_scratch_snapshot(simulation.get());
+            require_same_force_scratch_storage(
+                current,
+                reserved,
+                "integration replaced reusable force scratch storage");
+            require_force_scratch_sizes(
+                current,
+                kAtomCount,
+                "integration retained the wrong force scratch size");
+        }
+
+        const std::vector<uint8_t> saved =
+            write_composite_checkpoint(simulation.get());
+        const ForceScratchSnapshot before_load =
+            force_scratch_snapshot(simulation.get());
+        require_status(
+            bg_direct_ewald_composite_simulation_v1_checkpoint_load(
+                simulation.get(), saved.data(), saved.size()),
+            BG_STATUS_OK,
+            "same-owner checkpoint reload failed");
+        const ForceScratchSnapshot after_load =
+            force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            after_load,
+            before_load,
+            "checkpoint reload replaced force scratch storage");
+        require(
+            after_load.sizes == before_load.sizes,
+            "checkpoint reload changed force scratch size");
+
+        const bg_dynamics_report_v1 final_report = integrate_success(
+            context.get(), simulation.get(), UINT64_C(1));
+        const bg_dynamics_report_v1 peer_final_report = integrate_success(
+            context.get(), peer.get(), UINT64_C(1));
+        require(
+            std::memcmp(
+                &final_report,
+                &peer_final_report,
+                sizeof(final_report)) == 0,
+            "checkpoint-retained scratch changed report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) ==
+                write_composite_checkpoint(peer.get()),
+            "checkpoint-retained scratch changed state bits");
+        require_same_force_scratch_storage(
+            force_scratch_snapshot(simulation.get()),
+            reserved,
+            "post-checkpoint integration replaced force scratch storage");
+    }
+}
+
 void verify_manual_velocity_verlet_and_same_lane_repeat() {
     constexpr double timestep = 0.001;
     const Fixture fixture;
@@ -1590,42 +1752,65 @@ void verify_late_typed_ewald_failure_rolls_back() {
             forcefield.get(),
             model.get(),
             timestep);
+        betelgeuze::native::tests::
+            reserve_direct_ewald_composite_force_scratch(
+                simulation.get(), 64U);
+        const ForceScratchSnapshot reserved =
+            force_scratch_snapshot(simulation.get());
         const ParticleSnapshot before = snapshot_composite(simulation.get());
         const auto addresses = view_addresses(composite_view(simulation.get()));
-        bg_dynamics_report_v1 report{};
-        init_report(&report);
-        report.steps_completed = UINT64_C(123);
-        report.absolute_step = UINT64_C(456);
-        report.total_kcal_per_mol = 789.0;
-        const bg_dynamics_report_v1 report_before = report;
-        bg_direct_ewald_error_v1 error{};
-        init_error(&error);
-        require_status(
-            bg_context_integrate_direct_ewald_composite_v1(
-                context.get(),
-                simulation.get(),
-                UINT64_C(1),
-                &report,
-                &error),
-            BG_STATUS_NUMERICAL_ERROR,
-            "late direct-Ewald failure did not propagate numerical status");
-        require(
-            error.code ==
-                BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE,
-            "late direct-Ewald failure returned the wrong typed code");
-        require(
-            error.detail[0] != '\0',
-            "late direct-Ewald failure omitted typed detail");
-        require(
-            std::memcmp(&report, &report_before, sizeof(report)) == 0,
-            "late direct-Ewald failure changed report");
-        require_snapshot_exact(
-            snapshot_composite(simulation.get()),
-            before,
-            "late direct-Ewald failure did not roll back whole state");
-        require(
-            view_addresses(composite_view(simulation.get())) == addresses,
-            "late direct-Ewald rollback changed view addresses");
+        const std::vector<uint8_t> checkpoint_before =
+            write_composite_checkpoint(simulation.get());
+        for (std::size_t attempt = 0U; attempt < 2U; ++attempt) {
+            bg_dynamics_report_v1 report{};
+            init_report(&report);
+            report.steps_completed = UINT64_C(123);
+            report.absolute_step = UINT64_C(456);
+            report.total_kcal_per_mol = 789.0;
+            const bg_dynamics_report_v1 report_before = report;
+            bg_direct_ewald_error_v1 error{};
+            init_error(&error);
+            require_status(
+                bg_context_integrate_direct_ewald_composite_v1(
+                    context.get(),
+                    simulation.get(),
+                    UINT64_C(1),
+                    &report,
+                    &error),
+                BG_STATUS_NUMERICAL_ERROR,
+                "late direct-Ewald failure did not propagate numerical status");
+            require(
+                error.code ==
+                    BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE,
+                "late direct-Ewald failure returned the wrong typed code");
+            require(
+                error.detail[0] != '\0',
+                "late direct-Ewald failure omitted typed detail");
+            require(
+                std::memcmp(&report, &report_before, sizeof(report)) == 0,
+                "late direct-Ewald failure changed report");
+            require_snapshot_exact(
+                snapshot_composite(simulation.get()),
+                before,
+                "late direct-Ewald failure did not roll back whole state");
+            require(
+                write_composite_checkpoint(simulation.get()) ==
+                    checkpoint_before,
+                "late direct-Ewald failure changed checkpoint state");
+            require(
+                view_addresses(composite_view(simulation.get())) == addresses,
+                "late direct-Ewald rollback changed view addresses");
+            const ForceScratchSnapshot after_failure =
+                force_scratch_snapshot(simulation.get());
+            require_same_force_scratch_storage(
+                after_failure,
+                reserved,
+                "late direct-Ewald failure replaced force scratch storage");
+            require_force_scratch_sizes(
+                after_failure,
+                kAtomCount,
+                "late direct-Ewald failure retained the wrong scratch size");
+        }
     }
 }
 
@@ -1881,6 +2066,7 @@ int main() {
     verify_abi_profile_and_descriptor_transactionality();
     verify_deep_ownership_and_stable_views();
     verify_zero_step_matches_stateless();
+    verify_force_output_scratch_reuse();
     verify_manual_velocity_verlet_and_same_lane_repeat();
     verify_checkpoint_continuation_and_small_nve();
     verify_baoab_hip_and_step_overflow_fail_closed();

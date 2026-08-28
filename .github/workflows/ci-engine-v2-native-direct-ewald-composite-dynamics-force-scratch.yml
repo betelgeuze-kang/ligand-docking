@@ -1,56 +1,64 @@
-name: ci-engine-v2-native-pme-composite-dynamics-force-scratch
+name: ci-engine-v2-native-direct-ewald-composite-dynamics-force-scratch
 
 on:
   pull_request:
     paths:
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-force-scratch.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml"
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml"
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml"
       - "CMakeLists.txt"
       - "include/betelgeuze/**"
       - "native/**"
       - "rust/**"
       - "rust_engine_v2/Cargo.lock"
       - "rust_engine_v2/Cargo.toml"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json"
-      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.md"
-      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.md"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1_sources.json"
+      - "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md"
+      - "docs/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.md"
       - "tools/__init__.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
   push:
     branches: ["main"]
     paths:
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-force-scratch.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml"
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml"
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml"
       - "CMakeLists.txt"
       - "include/betelgeuze/**"
       - "native/**"
       - "rust/**"
       - "rust_engine_v2/Cargo.lock"
       - "rust_engine_v2/Cargo.toml"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json"
-      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.md"
-      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.md"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1_sources.json"
+      - "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md"
+      - "docs/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.md"
       - "tools/__init__.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+      - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-pme-composite-dynamics-force-scratch-${{ github.ref }}
+  group: ci-engine-v2-native-direct-ewald-composite-dynamics-force-scratch-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -72,8 +80,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact PR 445 evidence and reviewed head
-        shell: bash
+      - name: Materialize frozen PR 445 reviewed head
         run: |
           set -euo pipefail
           test "$(git rev-parse c53f7993ec06c4ac04a4907b40f179d12fbe309a^{tree})" = "2bb25b756b802671bcfc5f3ac95b26df3b284956"
@@ -81,22 +88,13 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/445/head
           test "$(git rev-parse FETCH_HEAD)" = "801a85d56846c464b3a618ecacca867cd12a8c9f"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "2bb25b756b802671bcfc5f3ac95b26df3b284956"
-      - name: Verify exact frozen PR 445 evidence
-        shell: bash
+      - name: Verify bounded successor evidence
         run: |
-          set -euo pipefail
-          frozen=c53f7993ec06c4ac04a4907b40f179d12fbe309a
-          current_sha="$(git rev-parse HEAD)"
-          git checkout --detach --quiet "$frozen"
-          trap 'git checkout --detach --quiet "$current_sha"' EXIT
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json >/dev/null
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py
-          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py
-          git checkout --detach --quiet "$current_sha"
-          trap - EXIT
-          test "$(git rev-parse HEAD)" = "$current_sha"
+          python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py
+          python3 -m pytest -q tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
@@ -111,18 +109,18 @@ jobs:
           rustup override set 1.93.0
       - name: Synthetic release and sanitizer regressions
         run: |
-          cmake -S . -B build/pme-force-scratch-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/pme-force-scratch-release --target betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ctest --test-dir build/pme-force-scratch-release -R '^betelgeuze_engine_(particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
-          cmake -S . -B build/pme-force-scratch-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/pme-force-scratch-sanitize --target betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/pme-force-scratch-sanitize -R '^betelgeuze_engine_particle_mesh_ewald_composite_dynamics$' --output-on-failure
+          cmake -S . -B build/direct-ewald-force-scratch-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/direct-ewald-force-scratch-release --target betelgeuze_engine_direct_ewald_composite_dynamics --parallel 2
+          ctest --test-dir build/direct-ewald-force-scratch-release -R '^betelgeuze_engine_(direct_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/direct-ewald-force-scratch-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/direct-ewald-force-scratch-sanitize --target betelgeuze_engine_direct_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/direct-ewald-force-scratch-sanitize -R '^betelgeuze_engine_direct_ewald_composite_dynamics$' --output-on-failure
 
   rust-boundaries:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/build/pme-force-scratch-cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/direct-ewald-force-scratch-cargo
     steps:
       - name: Check out Rust sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -134,9 +132,9 @@ jobs:
       - name: Existing Rust regression, docs, and clean packages
         run: |
           cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --test layout --test raw_smoke
-          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --lib particle_mesh_ewald_composite_dynamics
-          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --test particle_mesh_ewald_composite_dynamics
-          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --doc particle_mesh_ewald_composite_dynamics
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --lib direct_ewald_composite_dynamics
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --test direct_ewald_composite_dynamics
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --doc direct_ewald_composite_dynamics
           cargo doc --manifest-path rust/Cargo.toml --locked --no-deps --package betelgeuze-sys --package betelgeuze-runtime
           cargo fmt --manifest-path rust/Cargo.toml --all -- --check
           cargo clippy --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --package betelgeuze-runtime --all-targets -- -D warnings
@@ -156,6 +154,6 @@ jobs:
           rustup override set 1.93.0
       - name: Exact export regression
         run: |
-          cmake -S . -B build/pme-force-scratch-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/pme-force-scratch-macos --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/pme-force-scratch-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
+          cmake -S . -B build/direct-ewald-force-scratch-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/direct-ewald-force-scratch-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/direct-ewald-force-scratch-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

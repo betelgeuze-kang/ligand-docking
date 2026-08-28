@@ -609,6 +609,7 @@ if(BUILD_TESTING)
     add_executable(
         betelgeuze_engine_direct_ewald_composite_dynamics
         tests/direct_ewald_composite_dynamics.cpp
+        tests/direct_ewald_composite_dynamics_scratch.cpp
     )
     target_link_libraries(
         betelgeuze_engine_direct_ewald_composite_dynamics
