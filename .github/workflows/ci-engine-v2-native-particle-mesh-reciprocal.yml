@@ -1,0 +1,202 @@
+name: ci-engine-v2-native-particle-mesh-reciprocal
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-engine-v2-native-direct-ewald.yml"
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite.yml"
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/particle_mesh_reciprocal.h"
+      - "include/betelgeuze/engine.h"
+      - "native/CMakeLists.txt"
+      - "native/betelgeuze_engine.exports"
+      - "native/betelgeuze_engine.map"
+      - "native/src/context.cpp"
+      - "native/src/particle_mesh_reciprocal/**"
+      - "native/src/internal.hpp"
+      - "native/src/system.cpp"
+      - "native/tests/check_exports.cmake"
+      - "native/tests/particle_mesh_reciprocal.cpp"
+      - "rust/Cargo.lock"
+      - "rust/Cargo.toml"
+      - "rust/cpu-kernel/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust/reference-pme/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_pme_reciprocal_reference_profile_v1.json"
+      - "config/engine_v2_pme_reciprocal_reference_profile_v1_sources.json"
+      - "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_reciprocal_cpu_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
+      - "tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/ci-engine-v2-native-direct-ewald.yml"
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite.yml"
+      - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/particle_mesh_reciprocal.h"
+      - "include/betelgeuze/engine.h"
+      - "native/CMakeLists.txt"
+      - "native/betelgeuze_engine.exports"
+      - "native/betelgeuze_engine.map"
+      - "native/src/context.cpp"
+      - "native/src/particle_mesh_reciprocal/**"
+      - "native/src/internal.hpp"
+      - "native/src/system.cpp"
+      - "native/tests/check_exports.cmake"
+      - "native/tests/particle_mesh_reciprocal.cpp"
+      - "rust/Cargo.lock"
+      - "rust/Cargo.toml"
+      - "rust/cpu-kernel/**"
+      - "rust/betelgeuze-sys/**"
+      - "rust/betelgeuze-runtime/**"
+      - "rust/reference-pme/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_pme_reciprocal_reference_profile_v1.json"
+      - "config/engine_v2_pme_reciprocal_reference_profile_v1_sources.json"
+      - "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_reciprocal_cpu_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
+      - "tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py"
+      - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-native-particle-mesh-reciprocal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  immutable-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out the bounded evidence closure
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 0
+          sparse-checkout: |
+            .github/workflows/ci-engine-v2-native-direct-ewald.yml
+            .github/workflows/ci-engine-v2-native-direct-ewald-composite.yml
+            .github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml
+            CMakeLists.txt
+            include
+            native
+            rust
+            rust_engine_v2/Cargo.lock
+            rust_engine_v2/Cargo.toml
+            config/engine_v2_pme_reciprocal_reference_profile_v1.json
+            config/engine_v2_pme_reciprocal_reference_profile_v1_sources.json
+            config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json
+            config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json
+            docs/engine_v2_native_particle_mesh_reciprocal_cpu_v1.md
+            tools/__init__.py
+            tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py
+            tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
+            tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
+            tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py
+            tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py
+            tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py
+            .github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Materialize frozen parent review and merge
+        run: |
+          test "$(git rev-parse ebbd7a20538cfd7516d9b53adb2e54c6de14bd97^{tree})" = "2ae92801369c7e16147e07cbb16e19c062e52cc9"
+          git fetch --no-tags --depth=1 origin refs/pull/439/head
+          test "$(git rev-parse FETCH_HEAD)" = "62d309c82aab9b4cfa45c4c3e6d11c93b3bd3786"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "2ae92801369c7e16147e07cbb16e19c062e52cc9"
+
+      - name: Report Python
+        run: python3 --version
+
+      - name: Verify canonical profile and source binding
+        run: |
+          python3 -m json.tool \
+            config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json >/dev/null
+          python3 -m json.tool \
+            config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json \
+            >/dev/null
+          python3 tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
+
+      - name: Verify fail-closed evidence tests
+        run: |
+          python3 -m pip install pytest==8.3.5
+          python3 -m pytest -q \
+            tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py
+
+  macos-export-boundary:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+    steps:
+      - name: Check out native compute sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Select frozen hosted Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+
+      - name: Report hosted toolchain
+        run: |
+          cmake --version
+          clang++ --version
+          rustc --version
+          cargo --version
+
+      - name: Configure Mach-O export boundary
+        run: >-
+          cmake -S . -B build/native-macos
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+          -DBG_ENABLE_HIP=OFF
+          -DBG_ENABLE_HIP_SAFE=OFF
+
+      - name: Build the shared engine only
+        run: >-
+          cmake --build build/native-macos
+          --target betelgeuze_engine
+          --parallel 2
+
+      - name: Verify exact Mach-O public exports
+        run: >-
+          ctest --test-dir build/native-macos
+          -R '^betelgeuze_engine_export_allowlist$'
+          --output-on-failure

@@ -152,6 +152,7 @@ EXPECTED_CARGO_TARGETS = {
     "rust/betelgeuze-runtime/tests/docking_fixed64_pipeline.rs",
     "rust/betelgeuze-runtime/tests/dynamics_oracle_parity.rs",
     "rust/betelgeuze-runtime/tests/fixed64_cpu_probe_v5_activation.rs",
+    "rust/betelgeuze-runtime/tests/particle_mesh_reciprocal.rs",
     "rust/betelgeuze-runtime/tests/runtime.rs",
     "rust/betelgeuze-sys/build.rs",
     "rust/betelgeuze-sys/src/lib.rs",

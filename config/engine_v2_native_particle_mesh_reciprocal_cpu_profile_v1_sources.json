@@ -1,0 +1,346 @@
+{
+  "files": [
+    {
+      "byte_count": 8380,
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml",
+      "sha256": "e8815ea7fb6bf1567174bd5552c8c409e98dcbb3459f530cf6cba73a2f80b0f2"
+    },
+    {
+      "byte_count": 7308,
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite.yml",
+      "sha256": "9e001b8f69173d7e5efdc747cf8ab58e86ce4f4d1db18c9d53eae0b8446e22dc"
+    },
+    {
+      "byte_count": 6450,
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald.yml",
+      "sha256": "bfd9479301cc643546b3250df7dc077b55c38d46034221b8cba4d18a45b9ee0c"
+    },
+    {
+      "byte_count": 8442,
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml",
+      "sha256": "cbf89c3a9e67231bbaaf36a09594a596f467a30e86ca4e03972129af41f8fac9"
+    },
+    {
+      "byte_count": 604,
+      "path": "CMakeLists.txt",
+      "sha256": "23164e9e61ae4911c6b52bb991b1ae7b44df0e60163d1337b3eb09c299336b43"
+    },
+    {
+      "byte_count": 20200,
+      "path": "config/engine_v2_pme_reciprocal_reference_profile_v1.json",
+      "sha256": "d867651e8d6ce0ec1ead0c0e22dc684b4a0b6247ee35f2bcc9e17105f4c244d3"
+    },
+    {
+      "byte_count": 4070,
+      "path": "config/engine_v2_pme_reciprocal_reference_profile_v1_sources.json",
+      "sha256": "da6d669c85d63236936ba1f1324937b90e7cf57cc6dd58b16ab7d43d6278b296"
+    },
+    {
+      "byte_count": 6439,
+      "path": "docs/engine_v2_native_particle_mesh_reciprocal_cpu_v1.md",
+      "sha256": "b27de5e4c8f0f5800d1948984b65f3c84992d710a88381ed1dfbd201ed7eda6d"
+    },
+    {
+      "byte_count": 140395,
+      "path": "include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "byte_count": 6992,
+      "path": "include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "byte_count": 43960,
+      "path": "native/CMakeLists.txt",
+      "sha256": "bfb743d840f0113d3f9db356019accc3d7ab927f9487e7309c15808a504d08a8"
+    },
+    {
+      "byte_count": 6834,
+      "path": "native/betelgeuze_engine.exports",
+      "sha256": "6c35a38354f1ab52ce3e1e2780dd282679f1fc112d0f8bf2e69b94202e00464f"
+    },
+    {
+      "byte_count": 9918,
+      "path": "native/betelgeuze_engine.map",
+      "sha256": "efe01d8c9e501a3fbbe3dce446c2b92df74f6d0d0ccd71459a0a711a9e6259fc"
+    },
+    {
+      "byte_count": 16688,
+      "path": "native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "byte_count": 21469,
+      "path": "native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "byte_count": 36313,
+      "path": "native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "byte_count": 25954,
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "09ec7faa945e63efdb97a8ab5c431b4a7381caa863b76ddb489378259f3016cb"
+    },
+    {
+      "byte_count": 942,
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "c2cec10e2013515a1860f68fbfd6f614d322c550771a72be5060b6affa4c4a85"
+    },
+    {
+      "byte_count": 1017,
+      "path": "native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "byte_count": 10060,
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "493c673f5d454f52782fbeb65bee203c2a816b88b4c6a9cf558d910d966f91fd"
+    },
+    {
+      "byte_count": 583,
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "52b25c48b62439ebad2fadabca33bd4075ec195cc5ca86c10bf54d91d2187018"
+    },
+    {
+      "byte_count": 3211,
+      "path": "native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "5e17ef99216f70a11d34dbc102ed600eeb4d82a2d32a7fac883c9b190fb42794"
+    },
+    {
+      "byte_count": 13247,
+      "path": "native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "byte_count": 18200,
+      "path": "native/tests/check_exports.cmake",
+      "sha256": "ef4d8818c06119851b51875f3ece6cc9f2786068bfd4192a0cba36dd4aaa6d36"
+    },
+    {
+      "byte_count": 46465,
+      "path": "native/tests/particle_mesh_reciprocal.cpp",
+      "sha256": "4cbae30e24c415788ffb1c200cac1d29109e5ddf2e8f4244e9f05d667cc0f60c"
+    },
+    {
+      "byte_count": 3799,
+      "path": "rust/Cargo.lock",
+      "sha256": "8e302c5e9cf90b80232ce1f2df5f13df78095a344e978b47e0e6e3c9ef29db04"
+    },
+    {
+      "byte_count": 648,
+      "path": "rust/Cargo.toml",
+      "sha256": "4a0b23729baeec10cc0e57abd4fb199c762531124fabfa400c34b8475592281c"
+    },
+    {
+      "byte_count": 654,
+      "path": "rust/betelgeuze-runtime/Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "byte_count": 26141,
+      "path": "rust/betelgeuze-runtime/build.rs",
+      "sha256": "fb5901c3fe330d5576b36022cc33b21f8549115ec33a1d6bd94315dddf1d4b86"
+    },
+    {
+      "byte_count": 36344,
+      "path": "rust/betelgeuze-runtime/src/lib.rs",
+      "sha256": "7a5d9191b292de9994d7bb263b0e626a72836af1e653c5f013b2da8c2ab2f93b"
+    },
+    {
+      "byte_count": 26682,
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_reciprocal.rs",
+      "sha256": "875f7e90237dfd01051f32ba2c06ca720e79011036a387aa82de6f76409f38bf"
+    },
+    {
+      "byte_count": 533,
+      "path": "rust/betelgeuze-runtime/tests/fixtures/particle_mesh_reciprocal_v1.tsv",
+      "sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef"
+    },
+    {
+      "byte_count": 10961,
+      "path": "rust/betelgeuze-runtime/tests/particle_mesh_reciprocal.rs",
+      "sha256": "142e3b45cd1006918696a84ad45d90bc67701eaf2f050ccab9bc6c9a1d8a8382"
+    },
+    {
+      "byte_count": 4789,
+      "path": "rust/betelgeuze-sys/Cargo.toml",
+      "sha256": "0a9296b6dbd89572476bf9d4ef6c4c5686176bbe93b6c582a9e1d08ebbe3ec62"
+    },
+    {
+      "byte_count": 4972,
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_reciprocal_header_c11.c",
+      "sha256": "06966f19248657bd0463223f73bc6da400f9450d121d7c6089abe52c96652347"
+    },
+    {
+      "byte_count": 5562,
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_reciprocal_layout_assertions.cpp",
+      "sha256": "e7f6c93bec84939e99a00539ab4d95a5f0c9a872ef909a9e4c2be68080057729"
+    },
+    {
+      "byte_count": 30307,
+      "path": "rust/betelgeuze-sys/build.rs",
+      "sha256": "ea428c0084cb337685c18f079fce9690a5b93f12553922fff6808ba18179c9a9"
+    },
+    {
+      "byte_count": 126722,
+      "path": "rust/betelgeuze-sys/src/lib.rs",
+      "sha256": "47d06720b85020ece4e003daf2ddaba9375d6bcbfc982a254b49cb25b6a4d0b4"
+    },
+    {
+      "byte_count": 74047,
+      "path": "rust/betelgeuze-sys/tests/layout.rs",
+      "sha256": "c9465751e921ad2e92750c37aa632016994fd494455f8e68ea9472531f431293"
+    },
+    {
+      "byte_count": 59743,
+      "path": "rust/betelgeuze-sys/tests/raw_smoke.rs",
+      "sha256": "150d0314ad7882c5ccf6a06e070bcf514d95db77f231c230f9936f2853596312"
+    },
+    {
+      "byte_count": 140395,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "byte_count": 6992,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "byte_count": 16688,
+      "path": "rust/betelgeuze-sys/vendor/native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "byte_count": 21469,
+      "path": "rust/betelgeuze-sys/vendor/native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "byte_count": 36313,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "byte_count": 25954,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "09ec7faa945e63efdb97a8ab5c431b4a7381caa863b76ddb489378259f3016cb"
+    },
+    {
+      "byte_count": 942,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "c2cec10e2013515a1860f68fbfd6f614d322c550771a72be5060b6affa4c4a85"
+    },
+    {
+      "byte_count": 1017,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "byte_count": 10060,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "493c673f5d454f52782fbeb65bee203c2a816b88b4c6a9cf558d910d966f91fd"
+    },
+    {
+      "byte_count": 583,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "52b25c48b62439ebad2fadabca33bd4075ec195cc5ca86c10bf54d91d2187018"
+    },
+    {
+      "byte_count": 3211,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "5e17ef99216f70a11d34dbc102ed600eeb4d82a2d32a7fac883c9b190fb42794"
+    },
+    {
+      "byte_count": 13247,
+      "path": "rust/betelgeuze-sys/vendor/native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "byte_count": 398,
+      "path": "rust/cpu-kernel/Cargo.toml",
+      "sha256": "eb489ba207d9c2500967a48f02a09dd0d2978087a91678511274330bf50a5450"
+    },
+    {
+      "byte_count": 166146,
+      "path": "rust/cpu-kernel/src/lib.rs",
+      "sha256": "ffcf89486f460f300ce4e12b726226002f684e5ec8529b5c590561487e28c351"
+    },
+    {
+      "byte_count": 97654,
+      "path": "rust/cpu-kernel/src/particle_mesh_reciprocal.rs",
+      "sha256": "557caba0f2e371188ae90838316cdc592d957d2930081e8a578dccd64e0d7eb9"
+    },
+    {
+      "byte_count": 522,
+      "path": "rust/reference-pme/Cargo.lock",
+      "sha256": "98d90148a16d2a7fc3f20b27a0cc9ab570c47759c2666ea7a9a0193067c94d80"
+    },
+    {
+      "byte_count": 533,
+      "path": "rust/reference-pme/fixtures/pme_reciprocal_v1.tsv",
+      "sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef"
+    },
+    {
+      "byte_count": 7189,
+      "path": "rust/reference-pme/src/fft.rs",
+      "sha256": "e65c2a4f3837ae25ce32883671462120c6a2ac9af60c27bbe78e92d502c58c01"
+    },
+    {
+      "byte_count": 39969,
+      "path": "rust/reference-pme/src/lib.rs",
+      "sha256": "9579d213ec47fc75f70dbb4df76ff951de4a51518dc9216233c663a3e43e53c4"
+    },
+    {
+      "byte_count": 12962,
+      "path": "rust_engine_v2/Cargo.lock",
+      "sha256": "af9ae63166c087bdd885980e0f7a4d870eaec78a3f285b28263b18139b248041"
+    },
+    {
+      "byte_count": 651,
+      "path": "rust_engine_v2/Cargo.toml",
+      "sha256": "7babe881df4d0fc7fe3c49b63a5ddc08a0b4b07735ad747d3a7e0f157a67cf29"
+    },
+    {
+      "byte_count": 21301,
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py",
+      "sha256": "90cd07579fbef5d4d48f6ccc4cec69a81594eb1574697b3a70b17ded3ce3b855"
+    },
+    {
+      "byte_count": 19645,
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py",
+      "sha256": "3f297167f164fb46da614b0e88f73e3964efd55b2a76ec2ac8259f90626b3954"
+    },
+    {
+      "byte_count": 9887,
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py",
+      "sha256": "c61d0043de7d84f2f2fca422f24ebad7a3ab29ef5a55979948508a586857a94d"
+    },
+    {
+      "byte_count": 19028,
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py",
+      "sha256": "677e6fefa31543ea6467a3114108b3ccfcaed46ddfe0fb33cacb1bd2e59482b4"
+    },
+    {
+      "byte_count": 146,
+      "path": "tools/__init__.py",
+      "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
+    },
+    {
+      "byte_count": 53645,
+      "path": "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py",
+      "sha256": "f7113bc81b625f7753927435cb826ce11115c8db4d7c9868100a79b667e8fb50"
+    },
+    {
+      "byte_count": 43720,
+      "path": "tools/verify_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py",
+      "sha256": "8b5018dfa9b047da7d6631afacc9785da780e94772482eef6df5cbd51cf3d3c9"
+    }
+  ],
+  "schema_id": "betelgeuze.engine_v2_native_particle_mesh_reciprocal_cpu_sources/1.0.0",
+  "scope": "particle_mesh_reciprocal_v1_owned_sources_bindings_tests_and_parent_oracle_inputs"
+}

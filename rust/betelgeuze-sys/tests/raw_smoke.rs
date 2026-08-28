@@ -122,6 +122,22 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
         assert_initializer_exact(bg_docking_torsion_v7_output_v1_init);
         assert_initializer_exact(bg_docking_fixed64_refinement_input_v1_init);
         assert_initializer_exact(bg_docking_fixed64_refinement_output_v1_init);
+        assert_versioned_initializer_exact(
+            bg_particle_mesh_reciprocal_parameters_v1_init,
+            BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+        );
+        assert_versioned_initializer_exact(
+            bg_particle_mesh_reciprocal_energy_v1_init,
+            BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+        );
+        assert_versioned_initializer_exact(
+            bg_particle_mesh_reciprocal_force_soa_v1_init,
+            BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+        );
+        assert_versioned_initializer_exact(
+            bg_particle_mesh_reciprocal_error_v1_init,
+            BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+        );
     }
 }
 
@@ -240,6 +256,121 @@ fn direct_ewald_abi_identity_and_initializers_match_the_header() {
         assert_eq!(error.abi_version, BG_DIRECT_EWALD_ABI_VERSION);
         assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
         assert!(error.detail.iter().all(|byte| *byte == 0));
+    }
+}
+
+#[test]
+fn particle_mesh_reciprocal_identity_and_initializers_match_the_header() {
+    // SAFETY: Identity functions take no pointers and exact writable storage
+    // is passed to each descriptor initializer.
+    unsafe {
+        assert_eq!(
+            bg_particle_mesh_reciprocal_abi_version(),
+            BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION
+        );
+        assert_eq!(bg_particle_mesh_reciprocal_abi_version_major(), 1);
+        assert_eq!(bg_particle_mesh_reciprocal_abi_version_minor(), 0);
+        assert_eq!(
+            owned_string(bg_particle_mesh_reciprocal_abi_version_string()),
+            "1.0.0"
+        );
+        assert_eq!(
+            owned_string(bg_particle_mesh_reciprocal_model_v1_profile_id()),
+            "betelgeuze.native_particle_mesh_reciprocal/1.0.0"
+        );
+
+        let mut parameters =
+            core::mem::MaybeUninit::<bg_particle_mesh_reciprocal_parameters_v1>::uninit();
+        assert_eq!(
+            bg_particle_mesh_reciprocal_parameters_v1_init(
+                parameters.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_mesh_reciprocal_parameters_v1>(),
+                BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut parameters = parameters.assume_init();
+        assert_eq!(
+            parameters.abi_version,
+            BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION
+        );
+        assert_eq!(parameters.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+
+        let mut energy = core::mem::MaybeUninit::<bg_particle_mesh_reciprocal_energy_v1>::uninit();
+        assert_eq!(
+            bg_particle_mesh_reciprocal_energy_v1_init(
+                energy.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_mesh_reciprocal_energy_v1>(),
+                BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        assert_eq!(
+            energy.assume_init().unit_system,
+            BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        );
+
+        let mut forces =
+            core::mem::MaybeUninit::<bg_particle_mesh_reciprocal_force_soa_v1>::uninit();
+        assert_eq!(
+            bg_particle_mesh_reciprocal_force_soa_v1_init(
+                forces.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_mesh_reciprocal_force_soa_v1>(),
+                BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        assert_eq!(
+            forces.assume_init().unit_system,
+            BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL
+        );
+
+        let mut error = core::mem::MaybeUninit::<bg_particle_mesh_reciprocal_error_v1>::uninit();
+        assert_eq!(
+            bg_particle_mesh_reciprocal_error_v1_init(
+                error.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_mesh_reciprocal_error_v1>(),
+                BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let error = error.assume_init();
+        assert_eq!(error.code, BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE);
+        assert!(error.detail.iter().all(|byte| *byte == 0));
+
+        let mut error = error;
+        let mut model =
+            core::ptr::NonNull::<bg_particle_mesh_reciprocal_model_v1>::dangling().as_ptr();
+        assert_eq!(
+            bg_particle_mesh_reciprocal_model_v1_create(&parameters, &mut model, &mut error,),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert!(model.is_null());
+        assert_eq!(error.code, BG_PARTICLE_MESH_RECIPROCAL_ERROR_EMPTY_SYSTEM);
+
+        assert_eq!(
+            bg_particle_mesh_reciprocal_error_v1_init(
+                &mut error,
+                core::mem::size_of::<bg_particle_mesh_reciprocal_error_v1>(),
+                BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        parameters.atom_count = 1;
+        parameters.cell_lengths_angstrom = [18.0, 20.0, 22.0];
+        assert_eq!(
+            bg_particle_mesh_reciprocal_model_v1_create(&parameters, &mut model, &mut error,),
+            BG_STATUS_OK
+        );
+        assert!(!model.is_null());
+        assert_eq!(error.code, BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE);
+        let mut atom_count = 0;
+        assert_eq!(
+            bg_particle_mesh_reciprocal_model_v1_get_atom_count(model, &mut atom_count),
+            BG_STATUS_OK
+        );
+        assert_eq!(atom_count, 1);
+        bg_particle_mesh_reciprocal_model_v1_destroy(model);
     }
 }
 

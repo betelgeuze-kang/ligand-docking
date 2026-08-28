@@ -12,6 +12,7 @@ mod docking_fixed64_so3;
 mod docking_rigid_refinement;
 mod docking_torsion_v7;
 mod kernel;
+mod particle_mesh_reciprocal;
 
 use core::mem::{align_of, size_of};
 use core::ptr;

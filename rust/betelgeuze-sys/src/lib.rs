@@ -1,10 +1,11 @@
 //! Raw bindings for the Betelgeuze native compute ABI.
 //!
-//! This crate intentionally mirrors `include/betelgeuze/engine.h` and
-//! `include/betelgeuze/direct_ewald.h`, and
-//! `include/betelgeuze/direct_ewald_composite.h`, and
-//! `include/betelgeuze/direct_ewald_composite_dynamics.h` without adding
-//! ownership or lifetime semantics. Prefer `betelgeuze-runtime` for a safe API.
+//! This crate intentionally mirrors the native headers
+//! `include/betelgeuze/engine.h`, `include/betelgeuze/direct_ewald.h`,
+//! `include/betelgeuze/direct_ewald_composite.h`,
+//! `include/betelgeuze/direct_ewald_composite_dynamics.h`, and
+//! `include/betelgeuze/particle_mesh_reciprocal.h` without adding ownership or
+//! lifetime semantics. Prefer `betelgeuze-runtime` for a safe API.
 //!
 //! The optional `hip` feature requires `BG_HIP_ARCHITECTURE` and a ROCm
 //! toolchain selected with `HIP_PATH` or `ROCM_PATH`. If device libraries are
@@ -29,6 +30,12 @@ pub const BG_DIRECT_EWALD_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_DIRECT_EWALD_ABI_VERSION_MINOR: u32 = 0;
 pub const BG_DIRECT_EWALD_ABI_VERSION: u32 = 1;
 pub const BG_DIRECT_EWALD_ERROR_DETAIL_CAPACITY: u32 = 256;
+
+pub const BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION_MAJOR: u32 = 1;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION_MINOR: u32 = 0;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ABI_VERSION: u32 = 1;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_DETAIL_CAPACITY: u32 = 256;
+pub const BG_PARTICLE_MESH_RECIPROCAL_CARDINAL_B_SPLINE_ORDER: u32 = 4;
 
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR: u32 = 1;
 pub const BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR: u32 = 0;
@@ -97,6 +104,29 @@ pub const BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE: bg_direct_ewald_err
 pub const BG_DIRECT_EWALD_ERROR_DAMPING_UNDERFLOW: bg_direct_ewald_error_code = 18;
 pub const BG_DIRECT_EWALD_ERROR_PHASE_UNDERFLOW: bg_direct_ewald_error_code = 19;
 pub const BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT: bg_direct_ewald_error_code = 20;
+
+pub type bg_particle_mesh_reciprocal_error_code = i32;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE: bg_particle_mesh_reciprocal_error_code = 0;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_EMPTY_SYSTEM: bg_particle_mesh_reciprocal_error_code =
+    1;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY_EXCEEDED:
+    bg_particle_mesh_reciprocal_error_code = 2;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_CHARGE_COUNT_MISMATCH:
+    bg_particle_mesh_reciprocal_error_code = 3;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_COORDINATE:
+    bg_particle_mesh_reciprocal_error_code = 4;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_CHARGE:
+    bg_particle_mesh_reciprocal_error_code = 5;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_NON_NEUTRAL_SYSTEM:
+    bg_particle_mesh_reciprocal_error_code = 6;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_CELL: bg_particle_mesh_reciprocal_error_code =
+    7;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_PARAMETER:
+    bg_particle_mesh_reciprocal_error_code = 8;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_MESH: bg_particle_mesh_reciprocal_error_code =
+    9;
+pub const BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT:
+    bg_particle_mesh_reciprocal_error_code = 10;
 
 pub type bg_integrator = i32;
 pub const BG_INTEGRATOR_VELOCITY_VERLET: bg_integrator = 1;
@@ -465,6 +495,12 @@ pub struct bg_direct_ewald_model_v1 {
     _private: [u8; 0],
 }
 
+/// Opaque immutable particle-mesh reciprocal model.
+#[repr(C)]
+pub struct bg_particle_mesh_reciprocal_model_v1 {
+    _private: [u8; 0],
+}
+
 /// Opaque deep-owned short-range + direct-Ewald dynamics simulation.
 #[repr(C)]
 pub struct bg_direct_ewald_composite_simulation_v1 {
@@ -706,6 +742,59 @@ pub struct bg_direct_ewald_parameters_v1 {
     pub pair_scale_atom_i: *const u64,
     pub pair_scale_atom_j: *const u64,
     pub pair_scale_coulomb: *const f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_particle_mesh_reciprocal_parameters_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub cell_lengths_angstrom: [f64; 3],
+    pub alpha_per_angstrom: f64,
+    pub mesh_dimensions: [u32; 3],
+    pub reserved1: u32,
+    pub dielectric: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_particle_mesh_reciprocal_energy_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub reciprocal_space_kcal_per_mol: f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_particle_mesh_reciprocal_force_soa_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub atom_capacity: u64,
+    pub atom_count: u64,
+    pub unit_system: bg_unit_system,
+    pub reserved0: u32,
+    pub x_kcal_per_mol_angstrom: *mut f64,
+    pub y_kcal_per_mol_angstrom: *mut f64,
+    pub z_kcal_per_mol_angstrom: *mut f64,
+    pub reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct bg_particle_mesh_reciprocal_error_v1 {
+    pub struct_size: u32,
+    pub abi_version: u32,
+    pub code: bg_particle_mesh_reciprocal_error_code,
+    pub reserved0: u32,
+    pub detail: [c_char; BG_PARTICLE_MESH_RECIPROCAL_ERROR_DETAIL_CAPACITY as usize],
     pub reserved: [u64; 4],
 }
 
@@ -2339,6 +2428,52 @@ pub struct bg_docking_fixed64_refinement_output_v1 {
 }
 
 unsafe extern "C" {
+    pub fn bg_particle_mesh_reciprocal_abi_version() -> u32;
+    pub fn bg_particle_mesh_reciprocal_abi_version_major() -> u32;
+    pub fn bg_particle_mesh_reciprocal_abi_version_minor() -> u32;
+    pub fn bg_particle_mesh_reciprocal_abi_version_string() -> *const c_char;
+    pub fn bg_particle_mesh_reciprocal_parameters_v1_init(
+        parameters: *mut bg_particle_mesh_reciprocal_parameters_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_reciprocal_energy_v1_init(
+        energy: *mut bg_particle_mesh_reciprocal_energy_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_reciprocal_force_soa_v1_init(
+        forces: *mut bg_particle_mesh_reciprocal_force_soa_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_reciprocal_error_v1_init(
+        error: *mut bg_particle_mesh_reciprocal_error_v1,
+        caller_struct_size: usize,
+        caller_abi_version: u32,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_reciprocal_model_v1_create(
+        parameters: *const bg_particle_mesh_reciprocal_parameters_v1,
+        out_model: *mut *mut bg_particle_mesh_reciprocal_model_v1,
+        out_error: *mut bg_particle_mesh_reciprocal_error_v1,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_reciprocal_model_v1_destroy(
+        model: *mut bg_particle_mesh_reciprocal_model_v1,
+    );
+    pub fn bg_particle_mesh_reciprocal_model_v1_get_atom_count(
+        model: *const bg_particle_mesh_reciprocal_model_v1,
+        atom_count: *mut u64,
+    ) -> bg_status;
+    pub fn bg_particle_mesh_reciprocal_model_v1_profile_id() -> *const c_char;
+    pub fn bg_context_evaluate_particle_mesh_reciprocal_v1(
+        context: *const bg_context,
+        system: *const bg_system,
+        model: *const bg_particle_mesh_reciprocal_model_v1,
+        out_energy: *mut bg_particle_mesh_reciprocal_energy_v1,
+        out_forces: *mut bg_particle_mesh_reciprocal_force_soa_v1,
+        out_error: *mut bg_particle_mesh_reciprocal_error_v1,
+    ) -> bg_status;
+
     pub fn bg_direct_ewald_abi_version() -> u32;
     pub fn bg_direct_ewald_abi_version_major() -> u32;
     pub fn bg_direct_ewald_abi_version_minor() -> u32;
