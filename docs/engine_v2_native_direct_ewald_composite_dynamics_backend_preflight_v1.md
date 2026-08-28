@@ -55,10 +55,14 @@ The predecessor is PR #438:
 - 113-entry source-manifest SHA-256
   `1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15`.
 
-The successor verifier reads both exact Git objects, requires the merge and
-reviewed head to share the recorded tree, reads the immutable profile and
-manifest from the merge object, and requires the checked-out #438 evidence to
-remain byte-identical. It also compares the public ABI headers, checkpoint
+Standalone verification always requires the exact merge object and tree,
+reads the immutable profile and manifest from that merge, and requires the
+checked-out #438 evidence to remain byte-identical. The reviewed-head SHA
+remains frozen metadata. A shallow standalone checkout may omit that reviewed
+commit; if the object is locally present, its tree must equal the recorded
+merge tree. All required and optional object probes set `GIT_NO_LAZY_FETCH=1`,
+so standalone verification cannot fetch missing objects or mutate a partial
+clone. The verifier also compares the public ABI headers, checkpoint
 implementation, and ABI probes directly with their #438 blobs.
 
 The successor branch base is exact PR #442 merge
@@ -98,8 +102,9 @@ files:
 python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py --refresh
 ```
 
-The pinned-actions workflow verifies the frozen merge, reviewed head, tree,
-profile, and manifest; then runs the verifier and unit suite, focused native
+The pinned-actions workflow explicitly fetches `refs/pull/438/head`, requires
+its exact reviewed-head SHA and tree, and verifies the frozen merge, profile,
+and manifest before running the verifier and unit suite, focused native
 release and sanitizer tests, Rust raw/safe tests and docs, and Linux/macOS
 export checks. It invokes no HIP device, molecular execution, reservation,
 root supervisor, benchmark, or fixed64 qualification workflow.

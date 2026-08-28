@@ -255,15 +255,18 @@ VALIDATION_CONTRACT = {
     "exact_five_implementation_deltas_bound_to_successor_base": True,
     "explicit_cpp_cpu_integration_succeeds": True,
     "explicit_rust_cpu_safe_runtime_covered": True,
+    "git_object_probes_lazy_fetch_disabled": True,
     "mach_o_exact_export_allowlist": True,
     "native_mismatch_rejection_report_unchanged": True,
     "native_mismatch_rejection_state_unchanged": True,
     "native_real_auto_rejection": True,
+    "optional_local_reviewed_head_tree_checked_when_present": True,
     "public_symbol_version_checked": True,
     "requested_resolved_mismatch_rejected": True,
     "safe_rust_full_preflight_precedes_composite_abi_and_native_integration_call": True,
     "safe_rust_unsupported_request_rejected_before_resolved_backend_query": True,
     "stale_typed_error_cleared_on_native_preflight_rejection": True,
+    "standalone_reviewed_head_object_required": False,
     "unsupported_hip_and_unknown_rejection_transactional": True,
     "workflow_all_four_actions_exactly_pinned": True,
     "workflow_global_cpu_only_environment": True,
@@ -363,25 +366,55 @@ def _regular_file(root: Path, relative: Path) -> Path:
     return path
 
 
-def _git(root: Path, *arguments: str) -> bytes:
-    environment = {
+def _git_environment() -> dict[str, str]:
+    return {
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_NO_LAZY_FETCH": "1",
         "GIT_NO_REPLACE_OBJECTS": "1",
         "GIT_OPTIONAL_LOCKS": "0",
         "LC_ALL": "C",
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
     }
+
+
+def _git(root: Path, *arguments: str) -> bytes:
     result = subprocess.run(
         ["/usr/bin/git", "--no-replace-objects", *arguments],
         cwd=root,
         check=False,
         capture_output=True,
-        env=environment,
+        env=_git_environment(),
     )
     if result.returncode != 0 or result.stderr:
         _fail(f"frozen Git object inspection failed: {' '.join(arguments)}")
     return result.stdout
+
+
+def _reviewed_head_tree_if_present(root: Path, reviewed: str) -> str | None:
+    result = subprocess.run(
+        [
+            "/usr/bin/git",
+            "--no-replace-objects",
+            "cat-file",
+            "--batch-check=%(objectname) %(objecttype)",
+        ],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        input=f"{reviewed}\n".encode("ascii"),
+        env=_git_environment(),
+    )
+    if result.returncode != 0 or result.stderr:
+        _fail("optional reviewed-head Git object inspection failed")
+    if result.stdout == f"{reviewed} missing\n".encode("ascii"):
+        return None
+    if result.stdout != f"{reviewed} commit\n".encode("ascii"):
+        _fail("locally present reviewed-head object is not the frozen commit")
+    tree = _git(root, "show", "-s", "--format=%T", reviewed).decode("ascii").strip()
+    if OID_PATTERN.fullmatch(tree) is None:
+        _fail("locally present reviewed-head tree identity is invalid")
+    return tree
 
 
 def require_bound_implementation_deltas(
@@ -425,16 +458,12 @@ def require_frozen_predecessor(root: Path = ROOT) -> dict[str, object]:
         f"{merge}\n".encode("ascii")
     ):
         _fail("frozen predecessor merge object changed")
-    if _git(root, "rev-parse", "--verify", f"{reviewed}^{{commit}}") != (
-        f"{reviewed}\n".encode("ascii")
-    ):
-        _fail("frozen predecessor reviewed head changed")
     merge_tree = _git(root, "show", "-s", "--format=%T", merge).decode().strip()
-    reviewed_tree = (
-        _git(root, "show", "-s", "--format=%T", reviewed).decode().strip()
-    )
-    if merge_tree != PREDECESSOR["merge_tree"] or reviewed_tree != merge_tree:
-        _fail("frozen merge and reviewed head do not share the exact recorded tree")
+    if merge_tree != PREDECESSOR["merge_tree"]:
+        _fail("frozen predecessor merge tree changed")
+    reviewed_tree = _reviewed_head_tree_if_present(root, reviewed)
+    if reviewed_tree is not None and reviewed_tree != merge_tree:
+        _fail("locally present reviewed head does not share the frozen merge tree")
     _git(root, "merge-base", "--is-ancestor", merge, "HEAD")
 
     profile_raw = _git(
@@ -487,6 +516,7 @@ def require_frozen_predecessor(root: Path = ROOT) -> dict[str, object]:
         "merge_commit": merge,
         "merge_tree": merge_tree,
         "reviewed_head": reviewed,
+        "reviewed_head_locally_present": reviewed_tree is not None,
         "source_paths": tuple(Path(path) for path in paths),
         "frozen_unchanged_digests": frozen_digests,
     }
@@ -1001,6 +1031,9 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
             str(PREDECESSOR["reviewed_head"]),
             str(PREDECESSOR["profile_sha256"]),
             str(PREDECESSOR["source_manifest_sha256"]),
+            "git fetch --no-tags --depth=1 origin refs/pull/438/head\n"
+            '          test "$(git rev-parse FETCH_HEAD)" = "$reviewed"\n'
+            '          test "$(git rev-parse FETCH_HEAD^{tree})" = "$tree"',
             str(SUCCESSOR_BASE["commit"]),
             str(SUCCESSOR_BASE["tree"]),
             VERIFIER_RELATIVE_PATH.as_posix(),
@@ -1043,6 +1076,10 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
             "report, typed-error, and dynamic-state transactionality",
             "No ABI, public-symbol, owner, or checkpoint-format change",
             "all 32 unresolved operational decisions",
+            "A shallow standalone checkout may omit that reviewed",
+            "if the object is locally present, its tree must equal",
+            "`GIT_NO_LAZY_FETCH=1`",
+            "explicitly fetches `refs/pull/438/head`",
         ),
         label="successor boundary documentation",
     )
@@ -1114,6 +1151,9 @@ def verify(root: Path = ROOT) -> dict[str, object]:
         "fixed64_cpu_v7_qualification_invoked": False,
         "frozen_predecessor_merge_commit": predecessor["merge_commit"],
         "frozen_predecessor_source_count": PREDECESSOR["source_manifest_entry_count"],
+        "frozen_reviewed_head_locally_present": predecessor[
+            "reviewed_head_locally_present"
+        ],
         "hip_device_execution_invoked": False,
         "molecular_execution_invoked": False,
         "operational_blocker_count": len(OPERATIONAL_BLOCKERS),

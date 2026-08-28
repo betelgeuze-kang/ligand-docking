@@ -50,6 +50,14 @@ def test_exact_successor_profile_manifest_and_authority_verify() -> None:
     assert profile["implementation"]["new_public_symbol_added"] is False
     assert profile["implementation"]["checkpoint_format_changed"] is False
     assert profile["validation"]["actual_auto_context_rejected"] is True
+    assert profile["validation"]["standalone_reviewed_head_object_required"] is False
+    assert profile["validation"]["git_object_probes_lazy_fetch_disabled"] is True
+    assert (
+        profile["validation"][
+            "optional_local_reviewed_head_tree_checked_when_present"
+        ]
+        is True
+    )
     assert (
         profile["validation"][
             "safe_rust_unsupported_request_rejected_before_resolved_backend_query"
@@ -87,6 +95,7 @@ def test_frozen_pr438_merge_review_tree_and_evidence_are_exact() -> None:
     frozen = verifier.require_frozen_predecessor(ROOT)
     assert frozen["merge_commit"] == "e434295b1711f612e0f7e9fac2d95de92abf19a8"
     assert frozen["reviewed_head"] == "581a17a135d75ddf085c4edd29f3763c2f691fcf"
+    assert type(frozen["reviewed_head_locally_present"]) is bool
     assert frozen["merge_tree"] == "3546ef29ae708c16c7af1e3be4925d2d7ad1f6b5"
     assert len(frozen["source_paths"]) == 113
     assert len(frozen["frozen_unchanged_digests"]) == 7
@@ -96,6 +105,66 @@ def test_frozen_pr438_merge_review_tree_and_evidence_are_exact() -> None:
     assert verifier.PREDECESSOR["source_manifest_sha256"] == (
         "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
     )
+
+
+def test_standalone_absent_reviewed_head_is_optional_and_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert verifier._git_environment()["GIT_NO_LAZY_FETCH"] == "1"
+    assert verifier._reviewed_head_tree_if_present(
+        ROOT, str(verifier.PREDECESSOR["merge_commit"])
+    ) == verifier.PREDECESSOR["merge_tree"]
+    with pytest.raises(
+        verifier.NativeDirectEwaldCompositeDynamicsBackendPreflightV1Error,
+        match="not the frozen commit",
+    ):
+        verifier._reviewed_head_tree_if_present(
+            ROOT, str(verifier.PREDECESSOR["merge_tree"])
+        )
+    assert verifier._reviewed_head_tree_if_present(ROOT, "0" * 40) is None
+    before = (PROFILE.read_bytes(), MANIFEST.read_bytes())
+    monkeypatch.setattr(
+        verifier,
+        "_reviewed_head_tree_if_present",
+        lambda root, reviewed: None,
+    )
+    frozen = verifier.require_frozen_predecessor(ROOT)
+    assert frozen["reviewed_head"] == verifier.PREDECESSOR["reviewed_head"]
+    assert frozen["reviewed_head_locally_present"] is False
+    assert before == (PROFILE.read_bytes(), MANIFEST.read_bytes())
+
+    script = "\n".join(
+        (
+            "from tools import verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1 as v",
+            "v._reviewed_head_tree_if_present = lambda root, reviewed: None",
+            "report = v.verify(v.ROOT)",
+            "assert report['frozen_reviewed_head_locally_present'] is False",
+        )
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert before == (PROFILE.read_bytes(), MANIFEST.read_bytes())
+
+
+def test_present_reviewed_head_with_wrong_tree_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        verifier,
+        "_reviewed_head_tree_if_present",
+        lambda root, reviewed: "0" * 40,
+    )
+    with pytest.raises(
+        verifier.NativeDirectEwaldCompositeDynamicsBackendPreflightV1Error,
+        match="locally present reviewed head does not share",
+    ):
+        verifier.require_frozen_predecessor(ROOT)
 
 
 def test_successor_base_and_exact_five_implementation_deltas_fail_closed(
@@ -369,6 +438,12 @@ def test_workflow_is_pinned_focused_and_non_authoritative() -> None:
     assert workflow.count("-DBG_ENABLE_HIP_SAFE=OFF") == 3
     assert workflow.count('      - "tools/__init__.py"') == 2
     assert "refs/pull/438/head" in workflow
+    assert (
+        "git fetch --no-tags --depth=1 origin refs/pull/438/head\n"
+        '          test "$(git rev-parse FETCH_HEAD)" = "$reviewed"\n'
+        '          test "$(git rev-parse FETCH_HEAD^{tree})" = "$tree"'
+        in workflow
+    )
     assert "betelgeuze_engine_direct_ewald_composite_dynamics" in workflow
     assert "--test direct_ewald_composite_dynamics" in workflow
     assert "cargo doc --manifest-path rust/Cargo.toml --locked" in workflow
