@@ -12,7 +12,30 @@ inline constexpr double kAccelerationConversion = 4.184e-4;
 inline constexpr double kGasConstantKcalPerMolKelvin =
     0.0019872042586408316;
 
+using ForceProviderFunction = bg_status (*)(
+    const bg_context &context,
+    bg_simulation *simulation,
+    const bg_system &system,
+    bool compute_forces,
+    void *state,
+    cpu::Evaluation *out_evaluation);
+
+struct ForceProvider final {
+    ForceProviderFunction function = nullptr;
+    void *state = nullptr;
+};
+
 bg_status evaluate(
+    const bg_context &context,
+    bg_simulation *simulation,
+    const bg_system &system,
+    bool compute_forces,
+    cpu::Evaluation *out_evaluation);
+
+[[nodiscard]] ForceProvider short_range_force_provider() noexcept;
+
+bg_status evaluate_with_provider(
+    const ForceProvider &provider,
     const bg_context &context,
     bg_simulation *simulation,
     const bg_system &system,
@@ -37,6 +60,7 @@ bg_status minimize(
 
 bg_status integrate(
     const bg_context &context,
+    const ForceProvider &provider,
     uint64_t step_count,
     bg_simulation *work,
     bg_dynamics_report_v1 *out_report);

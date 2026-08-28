@@ -17,7 +17,7 @@ MANIFEST = ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH
 TOOL = ROOT / "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py"
 WORKFLOW = ROOT / ".github/workflows/ci-engine-v2-native-direct-ewald.yml"
 PROFILE_SHA256 = (
-    "0b565387e272137984cdc08f26ec742c955dda563dca4104d23d83e0fdea5f23"
+    "3534cd08aa9ef429698c9f0123f1b615c018a8ab5014fe922a57a109b1a74fc2"
 )
 
 
@@ -52,6 +52,9 @@ def test_manifest_is_sorted_unique_exact_and_cycle_free() -> None:
     assert "tools/__init__.py" in sources
     assert "tools/verify_engine_v2_native_direct_ewald_cpu_v1.py" in sources
     assert "tests/unit/test_engine_v2_native_direct_ewald_cpu_v1.py" not in sources
+    assert not any(
+        "direct_ewald_composite" in Path(path).name for path in sources
+    )
 
 
 def test_parent_oracle_and_merge_provenance_are_exact() -> None:

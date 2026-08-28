@@ -211,8 +211,10 @@ REQUIRED_SOURCE_PATHS = (
 )
 
 # New direct-Ewald-specific ABI probes, vendor copies, runtime bindings, and
-# tests are discovered automatically.  Adding or removing one makes ordinary
-# verification fail until --refresh is explicitly run.
+# tests are discovered automatically. Descendant composite ABIs have their own
+# evidence closures and must not become dependencies of this parent profile.
+# Adding or removing a parent source makes ordinary verification fail until
+# --refresh is explicitly run.
 DISCOVERED_SOURCE_GLOBS = (
     "native/src/ewald/**/*",
     "rust/betelgeuze-runtime/src/**/*direct_ewald*",
@@ -303,7 +305,9 @@ def discover_source_paths(root: Path) -> tuple[Path, ...]:
                     f"{path.relative_to(root)}"
                 )
             if path.is_file():
-                paths.add(path.relative_to(root))
+                relative = path.relative_to(root)
+                if "direct_ewald_composite" not in relative.name:
+                    paths.add(relative)
     for relative in paths:
         _require_regular_file(root, relative)
     return tuple(sorted(paths, key=lambda value: value.as_posix()))

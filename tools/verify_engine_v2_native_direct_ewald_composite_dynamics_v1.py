@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the bounded native short-range + direct-Ewald composite v1 evidence."""
+"""Verify the bounded native direct-Ewald composite dynamics v1 evidence."""
 
 from __future__ import annotations
 
@@ -17,102 +17,123 @@ from typing import Callable, NoReturn
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE_RELATIVE_PATH = Path(
-    "config/engine_v2_native_direct_ewald_composite_profile_v1.json"
+    "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json"
 )
 SOURCE_MANIFEST_RELATIVE_PATH = Path(
-    "config/engine_v2_native_direct_ewald_composite_profile_v1_sources.json"
+    "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json"
 )
 PREDECESSOR_PROFILE_RELATIVE_PATH = Path(
-    "config/engine_v2_native_direct_ewald_cpu_profile_v1.json"
+    "config/engine_v2_native_direct_ewald_composite_profile_v1.json"
 )
 PREDECESSOR_MANIFEST_RELATIVE_PATH = Path(
-    "config/engine_v2_native_direct_ewald_cpu_profile_v1_sources.json"
+    "config/engine_v2_native_direct_ewald_composite_profile_v1_sources.json"
 )
 
 SCHEMA_ID = (
-    "betelgeuze.engine_v2_native_direct_ewald_composite_profile/1.0.0"
+    "betelgeuze.engine_v2_native_direct_ewald_composite_dynamics_profile/1.0.0"
 )
-PROFILE_ID = "engine_v2_native_direct_ewald_composite_development_v1"
+PROFILE_ID = "engine_v2_native_direct_ewald_composite_dynamics_development_v1"
 SOURCE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_native_direct_ewald_composite_sources/1.0.0"
+    "betelgeuze.engine_v2_native_direct_ewald_composite_dynamics_sources/1.0.0"
 )
 SOURCE_SCOPE = (
-    "stateless_short_range_direct_ewald_composite_v1_owned_and_shared_inputs"
+    "stateful_direct_ewald_composite_dynamics_v1_owned_and_shared_inputs"
 )
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 OID_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
 
 PREDECESSOR = {
-    "merge_commit": "074d3b71373088c0738de7a14797fe35d66d986e",
-    "merge_tree": "e2763a42f4605d7435514c49f18259ea44f4dd3c",
+    "merge_commit": "f2731176fb913f600349ec6a1fbf3678d399a7c1",
+    "merge_tree": "6017cf05e3f437443371966775bb4deb3fc73cab",
     "profile_path": PREDECESSOR_PROFILE_RELATIVE_PATH.as_posix(),
     "profile_sha256": (
-        "5d0a09742e8388938e90988a6a23fd945d5e2613d0fa37e9f2c8c9dd86d89de8"
+        "31dc3535d915980b1a7c318839162a4ce62d6a8bbf221b3415a67a98677d57e7"
     ),
-    "pull_request": 436,
-    "reviewed_head": "60a0047af27acacbce3feed7ee1dcedd8a690176",
-    "source_manifest_entry_count": 55,
+    "pull_request": 437,
+    "reviewed_head": "454bb9ee6cdb4202cecbc807f78503ce842bdd13",
+    "source_manifest_entry_count": 73,
     "source_manifest_path": PREDECESSOR_MANIFEST_RELATIVE_PATH.as_posix(),
     "source_manifest_sha256": (
-        "4f2acac517f56ade77b8712bfd24b4312f208f2a5902862f73a807e2a3f7e3ab"
+        "53267e95900402f60f4aba13a674e0e9530291d68310765d1a35a17146bf6afb"
     ),
 }
+
+FROZEN_PREDECESSOR_PATHS = (
+    Path("include/betelgeuze/engine.h"),
+    Path("include/betelgeuze/direct_ewald.h"),
+    Path("include/betelgeuze/direct_ewald_composite.h"),
+    Path("native/src/dynamics/checkpoint.cpp"),
+)
 
 ABI_CONTRACT = {
     "abi_version": 1,
     "abi_version_major": 1,
     "abi_version_minor": 0,
     "abi_version_string": "1.0.0",
-    "borrowed_handle_count": 4,
-    "energy_component_count": 12,
-    "energy_descriptor_size_64_bit": 144,
-    "force_descriptor_size_64_bit": 88,
+    "checkpoint_header_size_bytes": 104,
+    "checkpoint_magic": "BGDEC001",
+    "exported_symbol_count": 13,
     "frozen_direct_ewald_abi_changed": False,
     "frozen_engine_abi_changed": False,
-    "header": "include/betelgeuze/direct_ewald_composite.h",
-    "profile_id": "betelgeuze.native_direct_ewald_composite/1.0.0",
-    "separately_versioned_stateless_boundary": True,
-    "symbol_version_node": "BETELGEUZE_DIRECT_EWALD_COMPOSITE_1.0",
+    "frozen_stateless_composite_abi_changed": False,
+    "header": "include/betelgeuze/direct_ewald_composite_dynamics.h",
+    "profile_id": "betelgeuze.native_direct_ewald_composite_dynamics/1.0.0",
+    "reused_dynamics_report_size_64_bit": 104,
+    "reused_simulation_options_size_64_bit": 80,
+    "separately_versioned_stateful_boundary": True,
+    "symbol_version_node": "BETELGEUZE_DIRECT_EWALD_COMPOSITE_DYNAMICS_1.0",
 }
 
 IMPLEMENTATION_CONTRACT_BASE = {
     "caller_system_mutated": False,
+    "checkpoint_format_cross_compatible_with_legacy": False,
     "cpp_cpu_reference_lane": True,
+    "deep_owned_constraints": True,
+    "deep_owned_direct_ewald_model": True,
+    "deep_owned_forcefield": True,
+    "deep_owned_system": True,
     "development_exact_neutral_four_atom_fixture_only": True,
-    "direct_ewald_uses_original_charges": True,
-    "energy_only_allocates_or_accumulates_forces": False,
     "exclusion_provenance_preserved": True,
     "explicit_zero_scale_is_exclusion": False,
     "fixed64_cpu_v7_qualification_invoked": False,
     "hip_device_execution_invoked": False,
     "hip_to_cpu_fallback": False,
     "molecular_execution_invoked": False,
+    "reuses_frozen_constraints_descriptor": True,
+    "reuses_frozen_dynamics_report": True,
+    "reuses_frozen_simulation_options": True,
     "rust_cpu_lane": True,
-    "short_range_uses_positive_zero_charge_copy": True,
+    "shared_velocity_verlet_sha256_pipeline": True,
     "source_manifest_path": SOURCE_MANIFEST_RELATIVE_PATH.as_posix(),
-    "stateful_owner_added": False,
+    "stateful_owner_added": True,
     "whole_call_transactional_commit": True,
 }
 
 VALIDATION_CONTRACT = {
+    "baoab_rejected": True,
     "c11_public_header_probe": True,
     "caller_system_unchanged": True,
     "canonical_vendor_byte_identity": True,
+    "checkpoint_corrupt_truncated_appended_rejected": True,
+    "checkpoint_cross_format_rejected": True,
+    "checkpoint_fingerprint_model_provenance_timestep_checked": True,
+    "checkpoint_output_transactionality": True,
+    "checkpoint_split_continuation_bit_identity": True,
     "cpp_layout_probe": True,
-    "cpp_rust_cpu_tolerance": 5e-12,
-    "energy_only_bit_identity": True,
+    "cpp_rust_zero_step_stateless_total_bit_identity": True,
+    "deep_ownership_and_stable_views": True,
     "exact_neutral_charge_bits": [0.7, -0.4, -0.6, 0.30000000000000004],
     "failure_output_transactionality": True,
-    "finite_difference_force_check": True,
     "hip_fails_closed_before_evaluation": True,
     "mach_o_exact_export_allowlist": True,
+    "manual_one_step_velocity_verlet_exact": True,
+    "nve_small_step_finite": True,
     "pair_rule_provenance_checked": True,
-    "parent_sum_component_order_checked": True,
     "public_symbol_version_checked": True,
     "raw_rust_abi_layout_and_smoke": True,
     "same_lane_bitwise_repeat": True,
     "safe_rust_runtime_wrapper": True,
-    "short_coulomb_is_positive_zero": True,
+    "step_overflow_rejected": True,
     "typed_ewald_late_failure_preserved": True,
 }
 
@@ -152,11 +173,15 @@ OPERATIONAL_BOUNDARY = {
 REQUIRED_SOURCE_PATHS = (
     Path("include/betelgeuze/direct_ewald.h"),
     Path("include/betelgeuze/direct_ewald_composite.h"),
+    Path("include/betelgeuze/direct_ewald_composite_dynamics.h"),
     Path("include/betelgeuze/engine.h"),
     Path("native/CMakeLists.txt"),
     Path("native/betelgeuze_engine.exports"),
     Path("native/betelgeuze_engine.map"),
     Path("native/src/composite/direct_ewald.cpp"),
+    Path("native/src/composite/direct_ewald_composite_checkpoint.cpp"),
+    Path("native/src/composite/direct_ewald_composite_dynamics.cpp"),
+    Path("native/src/composite/direct_ewald_composite_dynamics.hpp"),
     Path("native/src/composite/evaluator.hpp"),
     Path("native/src/context.cpp"),
     Path("native/src/cpu/evaluator.cpp"),
@@ -171,25 +196,43 @@ REQUIRED_SOURCE_PATHS = (
     Path("native/src/ewald/rust_evaluator.hpp"),
     Path("native/src/ewald/rust_provider.h"),
     Path("native/src/forcefield.cpp"),
+    Path("native/src/hip/backend.hpp"),
+    Path("native/src/hip/evaluator.cpp"),
+    Path("native/src/hip/evaluator.hpp"),
+    Path("native/src/hip/provider.h"),
+    Path("native/src/hip/stub.cpp"),
     Path("native/src/internal.hpp"),
+    Path("native/src/dynamics/api.cpp"),
+    Path("native/src/dynamics/checkpoint.cpp"),
+    Path("native/src/dynamics/common.cpp"),
+    Path("native/src/dynamics/dynamics.hpp"),
+    Path("native/src/dynamics/integrator.cpp"),
+    Path("native/src/dynamics/sha256.cpp"),
+    Path("native/src/dynamics/sha256.hpp"),
     Path("native/src/rust/evaluator.cpp"),
     Path("native/src/rust/evaluator.hpp"),
     Path("native/src/rust/provider.h"),
     Path("native/src/system.cpp"),
     Path("native/tests/check_exports.cmake"),
     Path("native/tests/direct_ewald_composite.cpp"),
+    Path("native/tests/direct_ewald_composite_dynamics.cpp"),
     Path("rust/Cargo.lock"),
     Path("rust/Cargo.toml"),
     Path("rust/betelgeuze-runtime/Cargo.toml"),
     Path("rust/betelgeuze-runtime/build.rs"),
     Path("rust/betelgeuze-runtime/src/composite.rs"),
     Path("rust/betelgeuze-runtime/src/direct_ewald.rs"),
+    Path("rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs"),
+    Path("rust/betelgeuze-runtime/src/dynamics.rs"),
     Path("rust/betelgeuze-runtime/src/lib.rs"),
     Path("rust/betelgeuze-runtime/tests/composite.rs"),
+    Path("rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs"),
     Path("rust/betelgeuze-runtime/tests/fixtures/direct_ewald_v1.tsv"),
     Path("rust/betelgeuze-sys/Cargo.toml"),
     Path("rust/betelgeuze-sys/abi/composite_header_c11.c"),
     Path("rust/betelgeuze-sys/abi/composite_layout_assertions.cpp"),
+    Path("rust/betelgeuze-sys/abi/direct_ewald_composite_dynamics_header_c11.c"),
+    Path("rust/betelgeuze-sys/abi/direct_ewald_composite_dynamics_layout_assertions.cpp"),
     Path("rust/betelgeuze-sys/build.rs"),
     Path("rust/betelgeuze-sys/src/lib.rs"),
     Path("rust/betelgeuze-sys/tests/layout.rs"),
@@ -201,25 +244,31 @@ REQUIRED_SOURCE_PATHS = (
     Path("rust_engine_v2/Cargo.lock"),
     Path("rust_engine_v2/Cargo.toml"),
     Path("tools/__init__.py"),
-    Path("tools/verify_engine_v2_native_direct_ewald_composite_v1.py"),
+    Path("tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py"),
 )
 
 DISCOVERED_SOURCE_GLOBS = (
     "include/betelgeuze/**/*direct_ewald_composite*",
     "native/src/composite/**/*",
+    "native/src/dynamics/**/*",
     "native/tests/**/*direct_ewald_composite*",
     "rust/betelgeuze-runtime/src/**/*composite*",
     "rust/betelgeuze-runtime/tests/**/*composite*",
     "rust/betelgeuze-sys/abi/**/*composite*",
     "rust/betelgeuze-sys/vendor/include/betelgeuze/**/*direct_ewald_composite*",
     "rust/betelgeuze-sys/vendor/native/src/composite/**/*",
+    "rust/betelgeuze-sys/vendor/native/src/dynamics/**/*",
 )
 
 VENDOR_SHARED_PATHS = (
     "include/betelgeuze/direct_ewald.h",
     "include/betelgeuze/direct_ewald_composite.h",
+    "include/betelgeuze/direct_ewald_composite_dynamics.h",
     "include/betelgeuze/engine.h",
     "native/src/composite/direct_ewald.cpp",
+    "native/src/composite/direct_ewald_composite_checkpoint.cpp",
+    "native/src/composite/direct_ewald_composite_dynamics.cpp",
+    "native/src/composite/direct_ewald_composite_dynamics.hpp",
     "native/src/composite/evaluator.hpp",
     "native/src/context.cpp",
     "native/src/cpu/evaluator.cpp",
@@ -234,7 +283,19 @@ VENDOR_SHARED_PATHS = (
     "native/src/ewald/rust_evaluator.hpp",
     "native/src/ewald/rust_provider.h",
     "native/src/forcefield.cpp",
+    "native/src/hip/backend.hpp",
+    "native/src/hip/evaluator.cpp",
+    "native/src/hip/evaluator.hpp",
+    "native/src/hip/provider.h",
+    "native/src/hip/stub.cpp",
     "native/src/internal.hpp",
+    "native/src/dynamics/api.cpp",
+    "native/src/dynamics/checkpoint.cpp",
+    "native/src/dynamics/common.cpp",
+    "native/src/dynamics/dynamics.hpp",
+    "native/src/dynamics/integrator.cpp",
+    "native/src/dynamics/sha256.cpp",
+    "native/src/dynamics/sha256.hpp",
     "native/src/rust/evaluator.cpp",
     "native/src/rust/evaluator.hpp",
     "native/src/rust/provider.h",
@@ -242,12 +303,12 @@ VENDOR_SHARED_PATHS = (
 )
 
 
-class NativeDirectEwaldCompositeV1Error(ValueError):
-    """The composite v1 development evidence failed closed."""
+class NativeDirectEwaldCompositeDynamicsV1Error(ValueError):
+    """The composite-dynamics v1 development evidence failed closed."""
 
 
 def _fail(message: str) -> NoReturn:
-    raise NativeDirectEwaldCompositeV1Error(message)
+    raise NativeDirectEwaldCompositeDynamicsV1Error(message)
 
 
 def _duplicate_rejector(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -284,7 +345,7 @@ def _load_canonical_object(raw: bytes, *, label: str) -> dict[str, object]:
             parse_constant=_reject_constant,
         )
     except (UnicodeError, json.JSONDecodeError) as exc:
-        raise NativeDirectEwaldCompositeV1Error(
+        raise NativeDirectEwaldCompositeDynamicsV1Error(
             f"{label} is not canonical ASCII JSON"
         ) from exc
     if type(value) is not dict or raw != canonical_bytes(value):
@@ -321,26 +382,17 @@ def discover_source_paths(root: Path) -> tuple[Path, ...]:
         for path in root.glob(pattern):
             if path.is_symlink():
                 _fail(
-                    "composite discovered source must not be a symlink: "
+                    "composite-dynamics discovered source must not be a symlink: "
                     f"{path.relative_to(root)}"
                 )
             if path.is_file():
-                relative = path.relative_to(root)
-                # Stateful composite dynamics is a descendant ABI with its
-                # own evidence closure. Keep this stateless parent acyclic;
-                # the shared evaluator declaration remains bound above.
-                if (
-                    "direct_ewald_composite_dynamics" not in relative.name
-                    and relative.name
-                    != "direct_ewald_composite_checkpoint.cpp"
-                ):
-                    paths.add(relative)
+                paths.add(path.relative_to(root))
     excluded = {
         PROFILE_RELATIVE_PATH,
         SOURCE_MANIFEST_RELATIVE_PATH,
-        Path("tests/unit/test_engine_v2_native_direct_ewald_composite_v1.py"),
-        Path("docs/engine_v2_native_direct_ewald_composite_v1.md"),
-        Path(".github/workflows/ci-engine-v2-native-direct-ewald-composite.yml"),
+        Path("tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_v1.py"),
+        Path("docs/engine_v2_native_direct_ewald_composite_dynamics_v1.md"),
+        Path(".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics.yml"),
     }
     if paths & excluded:
         _fail("generated or consumer evidence entered the acyclic source closure")
@@ -447,7 +499,7 @@ def _git(
             env=environment,
         )
     except OSError as exc:
-        raise NativeDirectEwaldCompositeV1Error(
+        raise NativeDirectEwaldCompositeDynamicsV1Error(
             "historical predecessor Git object inspection failed"
         ) from exc
     if completed.returncode not in expected_statuses or completed.stderr:
@@ -475,6 +527,20 @@ def require_predecessor(
     if merge_tree != expected_tree:
         _fail("merged predecessor tree is not the frozen exact tree")
     _git(root, ["merge-base", "--is-ancestor", merge, "HEAD"])
+
+    frozen_digests: dict[str, str] = {}
+    for relative in FROZEN_PREDECESSOR_PATHS:
+        _, historical_raw = _git(
+            root,
+            ["cat-file", "blob", f"{merge}:{relative.as_posix()}"],
+        )
+        current_raw = _require_regular_file(root, relative).read_bytes()
+        if current_raw != historical_raw:
+            _fail(
+                "frozen predecessor source bytes changed: "
+                f"{relative.as_posix()}"
+            )
+        frozen_digests[relative.as_posix()] = _sha256(historical_raw)
 
     _, profile_raw = _git(
         root,
@@ -509,6 +575,7 @@ def require_predecessor(
     return {
         "merge_commit": merge,
         "merge_tree": merge_tree.decode("ascii").strip(),
+        "frozen_predecessor_paths": frozen_digests,
         "profile_sha256": _sha256(profile_raw),
         "reviewed_head": reviewed,
         "source_manifest_entry_count": len(rows),
@@ -521,31 +588,59 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
         try:
             return sources[path].decode("utf-8")
         except KeyError as exc:
-            raise NativeDirectEwaldCompositeV1Error(
-                f"required composite source is unbound: {path}"
+            raise NativeDirectEwaldCompositeDynamicsV1Error(
+                f"required composite-dynamics source is unbound: {path}"
             ) from exc
         except UnicodeError as exc:
-            raise NativeDirectEwaldCompositeV1Error(
-                f"composite source is not UTF-8: {path}"
+            raise NativeDirectEwaldCompositeDynamicsV1Error(
+                f"composite-dynamics source is not UTF-8: {path}"
             ) from exc
 
-    header = text("include/betelgeuze/direct_ewald_composite.h")
+    header = text("include/betelgeuze/direct_ewald_composite_dynamics.h")
     for token in (
-        "BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MAJOR UINT32_C(1)",
-        "BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR UINT32_C(0)",
-        "typedef struct bg_direct_ewald_composite_energy_components_v1",
-        "typedef struct bg_direct_ewald_composite_force_soa_v1",
-        "bg_context_evaluate_direct_ewald_composite_v1",
-        "Rust CPU lanes are supported.  HIP fails before evaluation",
+        "BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MAJOR UINT32_C(1)",
+        "BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION_MINOR UINT32_C(0)",
+        "typedef struct bg_direct_ewald_composite_simulation_v1",
+        "Only Velocity-Verlet options are",
+        'uses magic "BGDEC001"',
+        'legacy "BGDYN001"',
     ):
         if token not in header:
-            _fail(f"public composite ABI contract is missing: {token}")
+            _fail(f"public composite-dynamics ABI contract is missing: {token}")
+
+    dynamics_symbols = (
+        "bg_direct_ewald_composite_dynamics_abi_version",
+        "bg_direct_ewald_composite_dynamics_abi_version_major",
+        "bg_direct_ewald_composite_dynamics_abi_version_minor",
+        "bg_direct_ewald_composite_dynamics_abi_version_string",
+        "bg_direct_ewald_composite_dynamics_v1_profile_id",
+        "bg_direct_ewald_composite_simulation_v1_create",
+        "bg_direct_ewald_composite_simulation_v1_destroy",
+        "bg_direct_ewald_composite_simulation_v1_get_particles",
+        "bg_direct_ewald_composite_simulation_v1_get_absolute_step",
+        "bg_context_integrate_direct_ewald_composite_v1",
+        "bg_direct_ewald_composite_simulation_v1_checkpoint_size",
+        "bg_direct_ewald_composite_simulation_v1_checkpoint_write",
+        "bg_direct_ewald_composite_simulation_v1_checkpoint_load",
+    )
+    if len(dynamics_symbols) != ABI_CONTRACT["exported_symbol_count"]:
+        _fail("composite-dynamics public symbol count changed")
+    for symbol in dynamics_symbols:
+        occurrences = re.findall(rf"\b{re.escape(symbol)}\s*\(", header)
+        if len(occurrences) != 1:
+            _fail(
+                "public composite-dynamics declaration count changed: "
+                f"{symbol}"
+            )
+
     for path, tokens in (
         (
             "include/betelgeuze/engine.h",
             (
                 "BG_ABI_VERSION_MINOR UINT32_C(21)",
-                "BG_ABI_VERSION UINT32_C(1)",
+                "typedef struct bg_distance_constraints_v1",
+                "typedef struct bg_simulation_options_v1",
+                "typedef struct bg_dynamics_report_v1",
             ),
         ),
         (
@@ -555,51 +650,76 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
                 "BG_DIRECT_EWALD_ABI_VERSION UINT32_C(1)",
             ),
         ),
+        (
+            "include/betelgeuze/direct_ewald_composite.h",
+            (
+                "BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION_MINOR UINT32_C(0)",
+                "bg_context_evaluate_direct_ewald_composite_v1",
+            ),
+        ),
     ):
         source = text(path)
         for token in tokens:
             if token not in source:
                 _fail(f"frozen parent ABI identity changed: {path}: {token}")
 
-    implementation = text("native/src/composite/direct_ewald.cpp")
+    implementation = text(
+        "native/src/composite/direct_ewald_composite_dynamics.cpp"
+    )
     for token in (
-        "validate_pair_rule_projection",
-        "validate_output_system_disjoint",
-        "observed.is_exclusion",
-        "std::fill(short_system.charge.begin(), short_system.charge.end(), 0.0)",
-        "ewald::cpp_cpu::evaluate",
-        "ewald::rust_cpu::evaluate",
+        "DynamicStateRollback",
+        "evaluate_prevalidated",
+        "BG_INTEGRATOR_VELOCITY_VERLET",
         "BG_STATUS_UNSUPPORTED_BACKEND",
-        "CPU fallback is forbidden",
-        "*out_energy = committed_energy",
+        "step_count > UINT64_MAX - legacy->absolute_step",
+        "const betelgeuze::native::dynamics::ForceProvider provider",
+        "betelgeuze::native::dynamics::integrate(",
+        "std::make_unique<bg_direct_ewald_composite_simulation_v1>()",
+        "*out_report = report",
     ):
         if token not in implementation:
-            _fail(f"native composite implementation contract is missing: {token}")
-    model = text("native/src/ewald/model.hpp")
-    api = text("native/src/ewald/api.cpp")
-    for token in ("bool is_exclusion = false;",):
-        if token not in model:
-            _fail(f"direct-Ewald pair provenance storage is missing: {token}")
-    for token in ("0.0, true", "scale->second,", "false}"):
-        if token not in api:
-            _fail(f"direct-Ewald pair provenance construction is missing: {token}")
+            _fail(
+                "native composite-dynamics implementation contract is missing: "
+                f"{token}"
+            )
+
+    shared_dynamics = text("native/src/dynamics/dynamics.hpp")
+    for token in (
+        "using ForceProviderFunction = bg_status (*)(",
+        "struct ForceProvider final",
+        "bg_status integrate(",
+        "const ForceProvider &provider",
+    ):
+        if token not in shared_dynamics:
+            _fail(f"shared dynamics provider seam is missing: {token}")
+
+    checkpoint = text(
+        "native/src/composite/direct_ewald_composite_checkpoint.cpp"
+    )
+    for token in (
+        "kCompositeMagic",
+        "'B', 'G', 'D', 'E', 'C', '0', '0', '1'",
+        "kLegacyMagic",
+        "'B', 'G', 'D', 'Y', 'N', '0', '0', '1'",
+        "constexpr std::size_t kHeaderSize = 104U",
+        "simulation->static_fingerprint",
+        "sha256_with_zero_range",
+        "bg_simulation_checkpoint_write",
+        "bg_simulation_checkpoint_load",
+        "std::memmove(buffer, bytes.data(), required)",
+    ):
+        if token not in checkpoint:
+            _fail(f"composite checkpoint contract is missing: {token}")
 
     version_map = text("native/betelgeuze_engine.map")
-    if "BETELGEUZE_DIRECT_EWALD_COMPOSITE_1.0" not in version_map:
-        _fail("composite ELF symbol version node is missing")
-    composite_symbols = (
-        "bg_direct_ewald_composite_abi_version",
-        "bg_direct_ewald_composite_abi_version_major",
-        "bg_direct_ewald_composite_abi_version_minor",
-        "bg_direct_ewald_composite_abi_version_string",
-        "bg_direct_ewald_composite_energy_components_v1_init",
-        "bg_direct_ewald_composite_force_soa_v1_init",
-        "bg_direct_ewald_composite_v1_profile_id",
-        "bg_context_evaluate_direct_ewald_composite_v1",
-    )
-    for symbol in composite_symbols:
+    if (
+        "BETELGEUZE_DIRECT_EWALD_COMPOSITE_DYNAMICS_1.0"
+        not in version_map
+    ):
+        _fail("composite-dynamics ELF symbol version node is missing")
+    for symbol in dynamics_symbols:
         if f"        {symbol};" not in version_map:
-            _fail(f"composite ELF export is missing: {symbol}")
+            _fail(f"composite-dynamics ELF export is missing: {symbol}")
     map_symbols = re.findall(
         r"(?m)^[ \t]+(bg_[A-Za-z0-9_]+);[ \t]*$", version_map
     )
@@ -611,94 +731,134 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
 
     cmake = text("native/CMakeLists.txt")
     for token in (
-        "src/composite/direct_ewald.cpp",
-        "include/betelgeuze/direct_ewald_composite.h",
-        "betelgeuze_engine_direct_ewald_composite",
+        "src/composite/direct_ewald_composite_checkpoint.cpp",
+        "src/composite/direct_ewald_composite_dynamics.cpp",
+        "include/betelgeuze/direct_ewald_composite_dynamics.h",
+        "betelgeuze_engine_direct_ewald_composite_dynamics",
         "betelgeuze_engine_export_allowlist",
     ):
         if token not in cmake:
-            _fail(f"native composite build/test contract is missing: {token}")
+            _fail(f"native composite-dynamics build contract is missing: {token}")
     export_test = text("native/tests/check_exports.cmake")
-    for token in composite_symbols:
-        if token not in export_test:
-            _fail(f"export regression test omitted composite symbol: {token}")
+    for symbol in dynamics_symbols:
+        if symbol not in export_test:
+            _fail(
+                "export regression test omitted composite-dynamics symbol: "
+                f"{symbol}"
+            )
 
-    native_test = text("native/tests/direct_ewald_composite.cpp")
-    runtime_test = text("rust/betelgeuze-runtime/tests/composite.rs")
-    combined_tests = native_test + runtime_test
+    native_test = text("native/tests/direct_ewald_composite_dynamics.cpp")
     for token in (
-        "bg_context_evaluate_direct_ewald_composite_v1",
         "0.30000000000000004",
-        "energy_only",
-        "transaction",
-        "verify_central_finite_difference",
-        "HIP",
+        "verify_abi_profile_and_descriptor_transactionality",
+        "verify_deep_ownership_and_stable_views",
+        "verify_zero_step_matches_stateless",
+        "verify_manual_velocity_verlet_and_same_lane_repeat",
+        "verify_checkpoint_continuation_and_small_nve",
+        "verify_baoab_hip_and_step_overflow_fail_closed",
+        "UINT64_MAX",
+        "BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE",
+        "verify_checkpoint_format_failures_and_output_transactionality",
+        "BGDEC001",
+        "BGDYN001",
+        "verify_checkpoint_fingerprint_mismatches",
     ):
-        if token.lower() not in combined_tests.lower():
-            _fail(f"composite regression coverage is missing: {token}")
-    if "ala3" in combined_tests.lower():
-        _fail("non-neutral Ala3 deferral fixture entered composite execution tests")
+        if token not in native_test:
+            _fail(f"composite-dynamics regression coverage is missing: {token}")
+    if "ala3" in native_test.lower():
+        _fail(
+            "non-neutral Ala3 deferral fixture entered composite-dynamics tests"
+        )
 
     sys_source = text("rust/betelgeuze-sys/src/lib.rs")
     for token in (
-        "BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION: u32 = 1",
-        "pub struct bg_direct_ewald_composite_energy_components_v1",
-        "pub struct bg_direct_ewald_composite_force_soa_v1",
-        "pub fn bg_context_evaluate_direct_ewald_composite_v1",
+        "BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION: u32 = 1",
+        "pub struct bg_direct_ewald_composite_simulation_v1",
+        "pub fn bg_direct_ewald_composite_dynamics_abi_version()",
+        "pub fn bg_direct_ewald_composite_simulation_v1_create(",
+        "pub fn bg_context_integrate_direct_ewald_composite_v1(",
+        "pub fn bg_direct_ewald_composite_simulation_v1_checkpoint_load(",
     ):
         if token not in sys_source:
-            _fail(f"Rust raw composite ABI binding is missing: {token}")
+            _fail(f"Rust raw composite-dynamics ABI binding is missing: {token}")
+
     sys_manifest = text("rust/betelgeuze-sys/Cargo.toml")
     sys_build = text("rust/betelgeuze-sys/build.rs")
     for token in (
-        "abi/composite_header_c11.c",
-        "abi/composite_layout_assertions.cpp",
-        "vendor/include/betelgeuze/direct_ewald_composite.h",
-        "vendor/native/src/composite/direct_ewald.cpp",
+        "abi/direct_ewald_composite_dynamics_header_c11.c",
+        "abi/direct_ewald_composite_dynamics_layout_assertions.cpp",
+        "vendor/include/betelgeuze/direct_ewald_composite_dynamics.h",
+        "vendor/native/src/composite/direct_ewald_composite_dynamics.cpp",
+        "vendor/native/src/composite/direct_ewald_composite_checkpoint.cpp",
     ):
         if token not in sys_manifest:
-            _fail(f"Rust system package omitted composite input: {token}")
+            _fail(f"Rust system package omitted dynamics input: {token}")
     for token in (
-        "composite_header_c11_probe",
-        "composite_cpp_layout_probe",
+        "composite_dynamics_c_header_probe",
+        "composite_dynamics_cpp_layout_probe",
     ):
         if token not in sys_build:
-            _fail(f"Rust system build omitted composite ABI probe: {token}")
+            _fail(f"Rust system build omitted dynamics ABI probe: {token}")
+
     layout_test = text("rust/betelgeuze-sys/tests/layout.rs")
-    raw_smoke = text("rust/betelgeuze-sys/tests/raw_smoke.rs")
-    for token in ("144", "bg_direct_ewald_composite_energy_components_v1"):
-        if token not in layout_test:
-            _fail(f"Rust raw composite layout coverage is missing: {token}")
     for token in (
-        "direct_ewald_composite_identity_initializers_and_null_failure_are_transactional",
-        "bg_direct_ewald_composite_v1_profile_id",
+        "direct_ewald_composite_dynamics_reuses_frozen_engine_layouts",
+        "size_of::<bg_distance_constraints_v1>(), 104",
+        "size_of::<bg_simulation_options_v1>(), 80",
+        "size_of::<bg_dynamics_report_v1>(), 104",
+        "size_of::<*mut bg_direct_ewald_composite_simulation_v1>()",
+    ):
+        if token not in layout_test:
+            _fail(f"Rust raw composite-dynamics layout coverage is missing: {token}")
+
+    raw_smoke = text("rust/betelgeuze-sys/tests/raw_smoke.rs")
+    for token in (
+        "direct_ewald_composite_dynamics_identity_and_null_failures_are_transactional",
+        "bg_direct_ewald_composite_dynamics_v1_profile_id",
+        "bg_context_integrate_direct_ewald_composite_v1",
+        "bg_direct_ewald_composite_simulation_v1_checkpoint_write",
     ):
         if token not in raw_smoke:
-            _fail(f"Rust raw composite smoke coverage is missing: {token}")
+            _fail(f"Rust raw composite-dynamics smoke coverage is missing: {token}")
 
-    runtime = text("rust/betelgeuze-runtime/src/composite.rs")
+    runtime = text(
+        "rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs"
+    )
     for token in (
-        "evaluate_direct_ewald_composite",
-        "evaluate_direct_ewald_composite_energy",
-        "direct_ewald_composite_profile_id",
-        "short_coulomb_kcal_per_mol.to_bits()",
-        "BG_DIRECT_EWALD_COMPOSITE_ABI_VERSION",
+        "pub struct DirectEwaldCompositeSimulation",
+        "direct_ewald_composite_dynamics_profile_id",
+        "BG_DIRECT_EWALD_COMPOSITE_DYNAMICS_ABI_VERSION",
+        "bg_context_integrate_direct_ewald_composite_v1",
+        "CHECKPOINT_MAGIC",
+        "b\"BGDEC001\"",
     ):
         if token not in runtime:
-            _fail(f"safe Rust composite boundary is missing: {token}")
+            _fail(f"safe Rust composite-dynamics boundary is missing: {token}")
+    runtime_test = text(
+        "rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs"
+    )
+    for token in (
+        "betelgeuze.native_direct_ewald_composite_dynamics/1.0.0",
+        "BGDEC001",
+        "checkpoint",
+        "integrate",
+    ):
+        if token not in runtime_test:
+            _fail(f"safe Rust composite-dynamics test is missing: {token}")
 
     for canonical in VENDOR_SHARED_PATHS:
         vendor = f"rust/betelgeuze-sys/vendor/{canonical}"
         if vendor not in sources:
-            _fail(f"vendored composite dependency is unbound: {vendor}")
+            _fail(f"vendored composite-dynamics dependency is unbound: {vendor}")
         if sources[vendor] != sources[canonical]:
-            _fail(f"vendored composite dependency drifted: {vendor}")
+            _fail(f"vendored composite-dynamics dependency drifted: {vendor}")
 
     production_paths = (
         "native/CMakeLists.txt",
-        "native/src/composite/direct_ewald.cpp",
+        "native/src/composite/direct_ewald_composite_dynamics.cpp",
+        "native/src/composite/direct_ewald_composite_checkpoint.cpp",
         "rust/betelgeuze-runtime/Cargo.toml",
-        "rust/betelgeuze-runtime/src/composite.rs",
+        "rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs",
         "rust/betelgeuze-sys/Cargo.toml",
         "rust_engine_v2/Cargo.toml",
     )
@@ -711,7 +871,6 @@ def _require_source_contract(sources: dict[str, bytes]) -> None:
         ):
             if forbidden in source:
                 _fail(f"forbidden production dependency entered {path}: {forbidden}")
-
 
 def require_profile(
     raw: bytes,
@@ -742,20 +901,20 @@ def require_profile(
     if profile["predecessor"] != PREDECESSOR:
         _fail("historical predecessor binding changed")
     if profile["abi"] != ABI_CONTRACT:
-        _fail("composite ABI contract changed")
+        _fail("composite-dynamics ABI contract changed")
     expected_implementation = {
         **IMPLEMENTATION_CONTRACT_BASE,
         "source_manifest_entry_count": source_count,
         "source_manifest_sha256": _sha256(source_manifest_raw),
     }
     if profile["implementation"] != expected_implementation:
-        _fail("composite implementation binding changed")
+        _fail("composite-dynamics implementation binding changed")
     if profile["validation"] != VALIDATION_CONTRACT:
-        _fail("composite validation contract changed")
+        _fail("composite-dynamics validation contract changed")
     if profile["authority"] != AUTHORITY_CONTRACT or any(
         value is not False for value in AUTHORITY_CONTRACT.values()
     ):
-        _fail("composite authority changed")
+        _fail("composite-dynamics authority changed")
     if profile["operational_boundary"] != OPERATIONAL_BOUNDARY:
         _fail("operational blocker boundary changed")
     return profile
@@ -802,6 +961,9 @@ def verify(root: Path = ROOT) -> dict[str, object]:
     return {
         "all_authority_false": True,
         "fixed64_cpu_v7_qualification_invoked": False,
+        "frozen_predecessor_file_count": len(
+            predecessor["frozen_predecessor_paths"]
+        ),
         "hip_device_execution_invoked": False,
         "molecular_execution_invoked": False,
         "operational_blocker_count": len(OPERATIONAL_BLOCKERS),
@@ -840,7 +1002,7 @@ def _stage_evidence_file(path: Path, raw: bytes, mode: int) -> Path:
                 cleanup_errors.append(f"descriptor close: {close_exc}")
         cleanup_errors.extend(_cleanup_evidence_temporaries((temporary,)))
         if cleanup_errors:
-            raise NativeDirectEwaldCompositeV1Error(
+            raise NativeDirectEwaldCompositeDynamicsV1Error(
                 "evidence staging failed and temporary cleanup was incomplete: "
                 + "; ".join(cleanup_errors)
             ) from exc
@@ -877,7 +1039,7 @@ def _require_evidence_target(root: Path, relative: Path) -> Path:
         if root.resolve(strict=True) != Path(os.path.abspath(root)):
             _fail(f"evidence root has a symlinked ancestor: {root}")
     except OSError as exc:
-        raise NativeDirectEwaldCompositeV1Error(
+        raise NativeDirectEwaldCompositeDynamicsV1Error(
             f"cannot resolve evidence root: {root}"
         ) from exc
 
@@ -935,17 +1097,17 @@ def _replace_evidence_transactionally(
         )
         if cleanup_errors:
             details = list(cleanup_errors)
-            if isinstance(exc, NativeDirectEwaldCompositeV1Error):
+            if isinstance(exc, NativeDirectEwaldCompositeDynamicsV1Error):
                 details.insert(0, str(exc))
-            raise NativeDirectEwaldCompositeV1Error(
+            raise NativeDirectEwaldCompositeDynamicsV1Error(
                 "evidence refresh staging failed before commit and temporary "
                 "cleanup was incomplete: " + "; ".join(details)
             ) from exc
         if not isinstance(exc, Exception):
             raise
-        if isinstance(exc, NativeDirectEwaldCompositeV1Error):
+        if isinstance(exc, NativeDirectEwaldCompositeDynamicsV1Error):
             raise
-        raise NativeDirectEwaldCompositeV1Error(
+        raise NativeDirectEwaldCompositeDynamicsV1Error(
             "evidence refresh staging failed before commit"
         ) from exc
 
@@ -992,27 +1154,27 @@ def _replace_evidence_transactionally(
             preserve=frozenset(preserved_backups),
         )
         if rollback_errors:
-            raise NativeDirectEwaldCompositeV1Error(
+            raise NativeDirectEwaldCompositeDynamicsV1Error(
                 "evidence refresh failed and rollback was incomplete: "
                 + "; ".join((*rollback_errors, *cleanup_errors))
             ) from exc
         if cleanup_errors:
-            raise NativeDirectEwaldCompositeV1Error(
+            raise NativeDirectEwaldCompositeDynamicsV1Error(
                 "evidence refresh failed; original evidence was restored but "
                 "temporary cleanup was incomplete: "
                 + "; ".join(cleanup_errors)
             ) from exc
         if not isinstance(exc, Exception):
             raise
-        if isinstance(exc, NativeDirectEwaldCompositeV1Error):
+        if isinstance(exc, NativeDirectEwaldCompositeDynamicsV1Error):
             raise
-        raise NativeDirectEwaldCompositeV1Error(
+        raise NativeDirectEwaldCompositeDynamicsV1Error(
             "evidence refresh failed; original evidence restored"
         ) from exc
 
     cleanup_errors = _cleanup_evidence_temporaries((*staged, *rollback))
     if cleanup_errors:
-        raise NativeDirectEwaldCompositeV1Error(
+        raise NativeDirectEwaldCompositeDynamicsV1Error(
             "evidence refresh committed and verified but temporary cleanup "
             "was incomplete: " + "; ".join(cleanup_errors)
         )
@@ -1056,7 +1218,7 @@ def main(argv: list[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
     try:
         result = refresh(ROOT) if arguments.refresh else verify(ROOT)
-    except NativeDirectEwaldCompositeV1Error as exc:
+    except NativeDirectEwaldCompositeDynamicsV1Error as exc:
         print(str(exc), file=sys.stderr)
         return 1
     print(json.dumps(result, allow_nan=False, sort_keys=True))

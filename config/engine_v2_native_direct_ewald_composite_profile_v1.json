@@ -46,9 +46,9 @@
     "molecular_execution_invoked": false,
     "rust_cpu_lane": true,
     "short_range_uses_positive_zero_charge_copy": true,
-    "source_manifest_entry_count": 73,
+    "source_manifest_entry_count": 75,
     "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_profile_v1_sources.json",
-    "source_manifest_sha256": "53267e95900402f60f4aba13a674e0e9530291d68310765d1a35a17146bf6afb",
+    "source_manifest_sha256": "9772b0e910d018afa393b7e1af1e3e776dc42f7e64358a1c80562004b98275f8",
     "stateful_owner_added": false,
     "whole_call_transactional_commit": true
   },

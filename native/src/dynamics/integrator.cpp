@@ -633,10 +633,12 @@ bg_status ornstein_uhlenbeck(
 
 bg_status velocity_verlet_step(
     const bg_context &context,
+    const ForceProvider &provider,
     bg_simulation *simulation,
     cpu::Evaluation *out_final_evaluation,
     VectorChannels *constraint_scratch) {
-    bg_status status = evaluate(
+    bg_status status = evaluate_with_provider(
+        provider,
         context,
         simulation,
         simulation->system,
@@ -660,7 +662,8 @@ bg_status velocity_verlet_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = evaluate(
+    status = evaluate_with_provider(
+        provider,
         context,
         simulation,
         simulation->system,
@@ -685,10 +688,12 @@ bg_status velocity_verlet_step(
 
 bg_status baoab_step(
     const bg_context &context,
+    const ForceProvider &provider,
     bg_simulation *simulation,
     cpu::Evaluation *out_final_evaluation,
     VectorChannels *constraint_scratch) {
-    bg_status status = evaluate(
+    bg_status status = evaluate_with_provider(
+        provider,
         context,
         simulation,
         simulation->system,
@@ -719,7 +724,8 @@ bg_status baoab_step(
     if (status != BG_STATUS_OK) {
         return status;
     }
-    status = evaluate(
+    status = evaluate_with_provider(
+        provider,
         context,
         simulation,
         simulation->system,
@@ -1347,6 +1353,7 @@ bg_status minimize(
 
 bg_status integrate(
     const bg_context &context,
+    const ForceProvider &provider,
     uint64_t step_count,
     bg_simulation *work,
     bg_dynamics_report_v1 *out_report) {
@@ -1359,8 +1366,9 @@ bg_status integrate(
         &work->constraint_drift_scratch;
     bg_status status = BG_STATUS_OK;
     if (step_count == UINT64_C(0)) {
-        status = evaluate(
-            context, work, work->system, false, &final_evaluation);
+        status = evaluate_with_provider(
+            provider, context, work, work->system, false,
+            &final_evaluation);
         if (status != BG_STATUS_OK) {
             return status;
         }
@@ -1370,6 +1378,7 @@ bg_status integrate(
                 case BG_INTEGRATOR_VELOCITY_VERLET:
                     status = velocity_verlet_step(
                         context,
+                        provider,
                         work,
                         &final_evaluation,
                         constraint_scratch);
@@ -1377,6 +1386,7 @@ bg_status integrate(
                 case BG_INTEGRATOR_LANGEVIN_BAOAB:
                     status = baoab_step(
                         context,
+                        provider,
                         work,
                         &final_evaluation,
                         constraint_scratch);
