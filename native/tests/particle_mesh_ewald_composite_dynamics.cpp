@@ -8,6 +8,8 @@
 #include "betelgeuze/direct_ewald_composite.h"
 #include "betelgeuze/direct_ewald_composite_dynamics.h"
 
+#include "particle_mesh_ewald_composite_dynamics_scratch.hpp"
+
 #include "../src/ewald/model.hpp"
 #include "../src/internal.hpp"
 #include "../src/particle_mesh_reciprocal/model.hpp"
@@ -65,6 +67,35 @@ std::uint64_t bits(double value) noexcept {
 
 void require_exact(double actual, double expected, const char *message) {
     require(bits(actual) == bits(expected), message);
+}
+
+using ForceScratchSnapshot = betelgeuze::native::tests::
+    ParticleMeshEwaldCompositeForceScratchSnapshot;
+
+ForceScratchSnapshot force_scratch_snapshot(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
+    return betelgeuze::native::tests::
+        particle_mesh_ewald_composite_force_scratch_snapshot(simulation);
+}
+
+void require_same_force_scratch_storage(
+    const ForceScratchSnapshot &actual,
+    const ForceScratchSnapshot &expected,
+    const char *message) {
+    require(
+        actual.addresses == expected.addresses &&
+            actual.capacities == expected.capacities,
+        message);
+}
+
+void require_force_scratch_sizes(
+    const ForceScratchSnapshot &snapshot,
+    std::size_t expected,
+    const char *message) {
+    require(
+        snapshot.sizes == std::array<std::size_t, 3>{
+            expected, expected, expected},
+        message);
 }
 
 template <typename Type, typename = void>
@@ -560,6 +591,122 @@ void verify_runtime_and_checkpoint_identity() {
     }
 }
 
+void verify_force_output_scratch_reuse() {
+    constexpr std::size_t kReservedCapacity = 64U;
+    const Fixture fixture;
+    for (const bg_backend lane :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        auto context = make_context(lane);
+        auto system = make_system(fixture, fixture.charge);
+        auto forcefield = make_forcefield(fixture);
+        auto direct = make_direct_model(fixture);
+        auto reciprocal = make_reciprocal_model(fixture);
+        auto simulation = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+        auto peer = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+
+        const ForceScratchSnapshot initial =
+            force_scratch_snapshot(simulation.get());
+        require_force_scratch_sizes(
+            initial, 0U, "new simulation force scratch was not empty");
+        require(
+            initial.capacities == std::array<std::size_t, 3>{0U, 0U, 0U},
+            "new simulation force scratch retained capacity");
+
+        betelgeuze::native::tests::
+            reserve_particle_mesh_ewald_composite_force_scratch(
+                simulation.get(), kReservedCapacity);
+        const ForceScratchSnapshot reserved =
+            force_scratch_snapshot(simulation.get());
+        require_force_scratch_sizes(
+            reserved, 0U, "reserved force scratch changed logical size");
+        for (std::size_t axis = 0U; axis < 3U; ++axis) {
+            require(
+                reserved.addresses[axis] != nullptr &&
+                    reserved.capacities[axis] >= kReservedCapacity,
+                "force scratch reserve did not materialize storage");
+            for (std::size_t other = axis + 1U; other < 3U; ++other) {
+                require(
+                    reserved.addresses[axis] != reserved.addresses[other],
+                    "force scratch channels aliased");
+            }
+        }
+
+        const auto before_zero = checkpoint(simulation.get());
+        const bg_dynamics_report_v1 zero_report =
+            integrate(context.get(), simulation.get(), 0U);
+        const bg_dynamics_report_v1 peer_zero_report =
+            integrate(context.get(), peer.get(), 0U);
+        require(
+            std::memcmp(
+                &zero_report, &peer_zero_report, sizeof(zero_report)) == 0,
+            "reserved scratch changed zero-step report bits");
+        require(
+            checkpoint(simulation.get()) == before_zero,
+            "zero-step integration changed checkpoint state");
+        const ForceScratchSnapshot after_zero =
+            force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            after_zero, reserved, "zero-step integration changed scratch storage");
+        require_force_scratch_sizes(
+            after_zero, 0U, "zero-step integration changed scratch size");
+
+        for (const std::uint64_t step_count : {UINT64_C(1), UINT64_C(2)}) {
+            const bg_dynamics_report_v1 report =
+                integrate(context.get(), simulation.get(), step_count);
+            const bg_dynamics_report_v1 peer_report =
+                integrate(context.get(), peer.get(), step_count);
+            require(
+                std::memcmp(&report, &peer_report, sizeof(report)) == 0,
+                "reserved scratch changed integration report bits");
+            require(
+                checkpoint(simulation.get()) == checkpoint(peer.get()),
+                "reserved scratch changed checkpoint bits");
+            const ForceScratchSnapshot current =
+                force_scratch_snapshot(simulation.get());
+            require_same_force_scratch_storage(
+                current, reserved,
+                "integration replaced reusable force scratch storage");
+            require_force_scratch_sizes(
+                current, fixture.x.size(),
+                "integration retained the wrong force scratch size");
+        }
+
+        const auto saved = checkpoint(simulation.get());
+        const ForceScratchSnapshot before_load =
+            force_scratch_snapshot(simulation.get());
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
+                simulation.get(), saved.data(), saved.size()),
+            BG_STATUS_OK, "same-owner checkpoint reload failed");
+        const ForceScratchSnapshot after_load =
+            force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            after_load, before_load,
+            "checkpoint reload replaced force scratch storage");
+        require(
+            after_load.sizes == before_load.sizes,
+            "checkpoint reload changed force scratch size");
+
+        const bg_dynamics_report_v1 final_report =
+            integrate(context.get(), simulation.get(), 1U);
+        const bg_dynamics_report_v1 peer_final_report =
+            integrate(context.get(), peer.get(), 1U);
+        require(
+            std::memcmp(
+                &final_report, &peer_final_report,
+                sizeof(final_report)) == 0,
+            "checkpoint-retained scratch changed report bits");
+        require(
+            checkpoint(simulation.get()) == checkpoint(peer.get()),
+            "checkpoint-retained scratch changed state bits");
+        require_same_force_scratch_storage(
+            force_scratch_snapshot(simulation.get()), reserved,
+            "post-checkpoint integration replaced force scratch storage");
+    }
+}
+
 void verify_late_typed_failure_rolls_back() {
     constexpr double timestep = 0.01;
     const Fixture base;
@@ -631,31 +778,52 @@ void verify_late_typed_failure_rolls_back() {
         require_status(bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
             simulation.get(), &view), BG_STATUS_OK, "particle view failed");
         const auto address = view.position_x_angstrom;
+        betelgeuze::native::tests::
+            reserve_particle_mesh_ewald_composite_force_scratch(
+                simulation.get(), 64U);
+        const ForceScratchSnapshot reserved =
+            force_scratch_snapshot(simulation.get());
         const auto before = checkpoint(simulation.get());
-        bg_dynamics_report_v1 report{};
-        init_report(&report);
-        report.steps_completed = 123U;
-        report.absolute_step = 456U;
-        report.total_kcal_per_mol = 789.0;
-        const auto report_before = report;
-        bg_direct_ewald_error_v1 error{};
-        init_error(&error);
-        require_status(bg_context_integrate_particle_mesh_ewald_composite_v1(
-            context.get(), simulation.get(), 1U, &report, &error),
-            BG_STATUS_NUMERICAL_ERROR,
-            "late typed evaluator failure did not propagate");
-        require(error.code ==
-                    BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE &&
-                error.detail[0] != '\0',
-                "late evaluator failure omitted typed detail");
-        require(std::memcmp(&report, &report_before, sizeof(report)) == 0,
+        for (std::size_t attempt = 0U; attempt < 2U; ++attempt) {
+            bg_dynamics_report_v1 report{};
+            init_report(&report);
+            report.steps_completed = 123U;
+            report.absolute_step = 456U;
+            report.total_kcal_per_mol = 789.0;
+            const auto report_before = report;
+            bg_direct_ewald_error_v1 error{};
+            init_error(&error);
+            require_status(
+                bg_context_integrate_particle_mesh_ewald_composite_v1(
+                    context.get(), simulation.get(), 1U, &report, &error),
+                BG_STATUS_NUMERICAL_ERROR,
+                "late typed evaluator failure did not propagate");
+            require(error.code ==
+                        BG_DIRECT_EWALD_ERROR_PAIR_BELOW_MINIMUM_DISTANCE &&
+                    error.detail[0] != '\0',
+                    "late evaluator failure omitted typed detail");
+            require(
+                std::memcmp(&report, &report_before, sizeof(report)) == 0,
                 "late evaluator failure mutated report");
-        require(checkpoint(simulation.get()) == before,
+            require(
+                checkpoint(simulation.get()) == before,
                 "late evaluator failure did not roll back complete state");
-        require_status(bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
-            simulation.get(), &view), BG_STATUS_OK, "particle view failed");
-        require(view.position_x_angstrom == address,
+            require_status(
+                bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
+                    simulation.get(), &view),
+                BG_STATUS_OK, "particle view failed");
+            require(
+                view.position_x_angstrom == address,
                 "late evaluator rollback changed particle addresses");
+            const ForceScratchSnapshot after_failure =
+                force_scratch_snapshot(simulation.get());
+            require_same_force_scratch_storage(
+                after_failure, reserved,
+                "late evaluator failure replaced force scratch storage");
+            require_force_scratch_sizes(
+                after_failure, base.x.size(),
+                "late evaluator failure retained the wrong scratch size");
+        }
     }
 }
 
@@ -906,6 +1074,7 @@ int main() {
         "betelgeuze.native_particle_mesh_ewald_composite_dynamics/1.0.0") == 0,
         "profile mismatch");
     verify_runtime_and_checkpoint_identity();
+    verify_force_output_scratch_reuse();
     verify_zero_step_and_restart();
     verify_deep_ownership_and_constraints();
     verify_checkpoint_rejections();

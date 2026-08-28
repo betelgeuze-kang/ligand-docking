@@ -1,0 +1,151 @@
+name: ci-engine-v2-native-pme-composite-dynamics-force-scratch
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/**"
+      - "native/**"
+      - "rust/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.md"
+      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml"
+      - "CMakeLists.txt"
+      - "include/betelgeuze/**"
+      - "native/**"
+      - "rust/**"
+      - "rust_engine_v2/Cargo.lock"
+      - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json"
+      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.md"
+      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-native-pme-composite-dynamics-force-scratch-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CUDA_VISIBLE_DEVICES: ""
+  HIP_VISIBLE_DEVICES: ""
+  ROCR_VISIBLE_DEVICES: ""
+
+jobs:
+  immutable-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out exact evidence graph
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 0
+      - name: Materialize frozen PR 444 reviewed head
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse 6499ef99ed5b7b3a374b9f4ab15bc43057f44cf3^{tree})" = "531399ae05897624439f561402b7d51d76a21cad"
+          git merge-base --is-ancestor 6499ef99ed5b7b3a374b9f4ab15bc43057f44cf3 HEAD
+          git fetch --no-tags --depth=1 origin refs/pull/444/head
+          test "$(git rev-parse FETCH_HEAD)" = "84dcdf4759e1d182d52502f157a2d551bfad68a4"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "531399ae05897624439f561402b7d51d76a21cad"
+      - name: Verify bounded successor evidence
+        run: |
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json >/dev/null
+          python3 -m pip install pytest==8.3.5
+          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py
+
+  native-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out native sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: {persist-credentials: false, clean: true, fetch-depth: 1}
+      - name: Select frozen Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+      - name: Synthetic release and sanitizer regressions
+        run: |
+          cmake -S . -B build/pme-force-scratch-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/pme-force-scratch-release --target betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ctest --test-dir build/pme-force-scratch-release -R '^betelgeuze_engine_(particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/pme-force-scratch-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/pme-force-scratch-sanitize --target betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/pme-force-scratch-sanitize -R '^betelgeuze_engine_particle_mesh_ewald_composite_dynamics$' --output-on-failure
+
+  rust-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/pme-force-scratch-cargo
+    steps:
+      - name: Check out Rust sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: {persist-credentials: false, clean: true, fetch-depth: 1}
+      - name: Select frozen Rust components
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal --component rustfmt --component clippy
+          rustup override set 1.93.0
+      - name: Existing Rust regression, docs, and clean packages
+        run: |
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --test layout --test raw_smoke
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --lib particle_mesh_ewald_composite_dynamics
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --test particle_mesh_ewald_composite_dynamics
+          cargo test --manifest-path rust/Cargo.toml --locked --package betelgeuze-runtime --doc particle_mesh_ewald_composite_dynamics
+          cargo doc --manifest-path rust/Cargo.toml --locked --no-deps --package betelgeuze-sys --package betelgeuze-runtime
+          cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+          cargo clippy --manifest-path rust/Cargo.toml --locked --package betelgeuze-sys --package betelgeuze-runtime --all-targets -- -D warnings
+          cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"'
+          BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1 BETELGEUZE_V7_SOURCE_ROOT="$GITHUB_WORKSPACE" cargo package --manifest-path rust/betelgeuze-runtime/Cargo.toml --locked --config 'patch.crates-io.betelgeuze-sys.path="rust/betelgeuze-sys"' --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"' --config 'patch.crates-io.betelgeuze-docking-search.path="rust/betelgeuze-docking-search"' --config 'patch.crates-io.betelgeuze-reference-physics.path="rust/reference-physics"' --config 'patch.crates-io.betelgeuze-reference-dynamics.path="rust/reference-dynamics"'
+
+  macos-export-boundary:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Check out export sources
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: {persist-credentials: false, clean: true, fetch-depth: 1}
+      - name: Select frozen Rust toolchain
+        run: |
+          rustup toolchain install 1.93.0 --profile minimal
+          rustup override set 1.93.0
+      - name: Exact export regression
+        run: |
+          cmake -S . -B build/pme-force-scratch-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/pme-force-scratch-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/pme-force-scratch-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
