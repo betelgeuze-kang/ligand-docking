@@ -146,6 +146,14 @@ fn descriptor_initializers_reject_incompatible_callers_without_writing() {
             bg_particle_mesh_ewald_force_soa_v1_init,
             BG_PARTICLE_MESH_EWALD_ABI_VERSION,
         );
+        assert_versioned_initializer_exact(
+            bg_particle_mesh_ewald_composite_energy_components_v1_init,
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION,
+        );
+        assert_versioned_initializer_exact(
+            bg_particle_mesh_ewald_composite_force_soa_v1_init,
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION,
+        );
     }
 }
 
@@ -507,6 +515,178 @@ fn particle_mesh_ewald_identity_initializers_and_null_failure_are_transactional(
                 energy.total_kcal_per_mol,
             ],
             [1.0, 2.0, 3.0, 4.0, 5.0]
+        );
+        assert_eq!(forces.atom_capacity, 2);
+        assert_eq!(forces.atom_count, 17);
+        assert_eq!(force_x, [11.0, 12.0]);
+        assert_eq!(force_y, [21.0, 22.0]);
+        assert_eq!(force_z, [31.0, 32.0]);
+        assert_eq!(error.code, BG_DIRECT_EWALD_ERROR_NONE);
+        assert!(error.detail.iter().all(|byte| *byte == 0));
+        bg_context_destroy(context);
+    }
+}
+
+#[test]
+fn particle_mesh_ewald_composite_identity_and_null_failure_are_transactional() {
+    // SAFETY: Identity functions take no pointers. Initializers receive exact
+    // writable storage. The evaluation deliberately supplies null borrowed
+    // handles while retaining valid, disjoint output descriptors.
+    unsafe {
+        assert_eq!(
+            bg_particle_mesh_ewald_composite_abi_version(),
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION
+        );
+        assert_eq!(
+            bg_particle_mesh_ewald_composite_abi_version_major(),
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION_MAJOR
+        );
+        assert_eq!(
+            bg_particle_mesh_ewald_composite_abi_version_minor(),
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION_MINOR
+        );
+        assert_eq!(
+            owned_string(bg_particle_mesh_ewald_composite_abi_version_string()),
+            "1.0.0"
+        );
+        assert_eq!(
+            owned_string(bg_particle_mesh_ewald_composite_v1_profile_id()),
+            "betelgeuze.native_particle_mesh_ewald_composite/1.0.0"
+        );
+        assert_eq!(
+            bg_particle_mesh_ewald_composite_energy_components_v1_init(
+                ptr::null_mut(),
+                core::mem::size_of::<bg_particle_mesh_ewald_composite_energy_components_v1>(),
+                BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+
+        let mut energy = core::mem::MaybeUninit::<
+            bg_particle_mesh_ewald_composite_energy_components_v1,
+        >::uninit();
+        assert_eq!(
+            bg_particle_mesh_ewald_composite_energy_components_v1_init(
+                energy.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_mesh_ewald_composite_energy_components_v1>(),
+                BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut energy = energy.assume_init();
+        assert_eq!(
+            energy.struct_size as usize,
+            core::mem::size_of::<bg_particle_mesh_ewald_composite_energy_components_v1>()
+        );
+        assert_eq!(
+            energy.abi_version,
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION
+        );
+        assert_eq!(energy.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(
+            energy.short_coulomb_kcal_per_mol.to_bits(),
+            0.0_f64.to_bits()
+        );
+        assert_eq!(energy.reserved, [0; 4]);
+
+        let mut forces =
+            core::mem::MaybeUninit::<bg_particle_mesh_ewald_composite_force_soa_v1>::uninit();
+        assert_eq!(
+            bg_particle_mesh_ewald_composite_force_soa_v1_init(
+                forces.as_mut_ptr(),
+                core::mem::size_of::<bg_particle_mesh_ewald_composite_force_soa_v1>(),
+                BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut forces = forces.assume_init();
+        assert_eq!(
+            forces.abi_version,
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION
+        );
+        assert_eq!(forces.unit_system, BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL);
+        assert_eq!(forces.atom_capacity, 0);
+        assert_eq!(forces.atom_count, 0);
+        assert!(forces.x_kcal_per_mol_angstrom.is_null());
+        assert!(forces.y_kcal_per_mol_angstrom.is_null());
+        assert!(forces.z_kcal_per_mol_angstrom.is_null());
+        assert_eq!(forces.reserved, [0; 4]);
+
+        energy.short_harmonic_bond_kcal_per_mol = 1.0;
+        energy.short_harmonic_angle_kcal_per_mol = 2.0;
+        energy.short_periodic_torsion_kcal_per_mol = 3.0;
+        energy.short_lennard_jones_kcal_per_mol = 4.0;
+        energy.short_coulomb_kcal_per_mol = 5.0;
+        energy.short_total_kcal_per_mol = 6.0;
+        energy.pme_real_space_kcal_per_mol = 7.0;
+        energy.pme_reciprocal_space_kcal_per_mol = 8.0;
+        energy.pme_self_kcal_per_mol = 9.0;
+        energy.pme_pair_correction_kcal_per_mol = 10.0;
+        energy.pme_total_kcal_per_mol = 11.0;
+        energy.total_kcal_per_mol = 12.0;
+
+        let mut force_x = [11.0, 12.0];
+        let mut force_y = [21.0, 22.0];
+        let mut force_z = [31.0, 32.0];
+        forces.atom_capacity = 2;
+        forces.atom_count = 17;
+        forces.x_kcal_per_mol_angstrom = force_x.as_mut_ptr();
+        forces.y_kcal_per_mol_angstrom = force_y.as_mut_ptr();
+        forces.z_kcal_per_mol_angstrom = force_z.as_mut_ptr();
+
+        let mut error = core::mem::MaybeUninit::<bg_direct_ewald_error_v1>::uninit();
+        assert_eq!(
+            bg_direct_ewald_error_v1_init(
+                error.as_mut_ptr(),
+                core::mem::size_of::<bg_direct_ewald_error_v1>(),
+                BG_DIRECT_EWALD_ABI_VERSION,
+            ),
+            BG_STATUS_OK
+        );
+        let mut error = error.assume_init();
+        error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+        error.detail[0] = b'x' as c_char;
+
+        let mut options = core::mem::MaybeUninit::<bg_context_options>::uninit();
+        assert_eq!(
+            initialize(bg_context_options_init, options.as_mut_ptr()),
+            BG_STATUS_OK
+        );
+        let mut options = options.assume_init();
+        options.backend = BG_BACKEND_RUST_CPU;
+        let mut context = ptr::null_mut();
+        assert_eq!(bg_context_create(&options, &mut context), BG_STATUS_OK);
+        assert!(!context.is_null());
+
+        assert_eq!(
+            bg_context_evaluate_particle_mesh_ewald_composite_v1(
+                context,
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                &mut energy,
+                &mut forces,
+                &mut error,
+            ),
+            BG_STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            [
+                energy.short_harmonic_bond_kcal_per_mol,
+                energy.short_harmonic_angle_kcal_per_mol,
+                energy.short_periodic_torsion_kcal_per_mol,
+                energy.short_lennard_jones_kcal_per_mol,
+                energy.short_coulomb_kcal_per_mol,
+                energy.short_total_kcal_per_mol,
+                energy.pme_real_space_kcal_per_mol,
+                energy.pme_reciprocal_space_kcal_per_mol,
+                energy.pme_self_kcal_per_mol,
+                energy.pme_pair_correction_kcal_per_mol,
+                energy.pme_total_kcal_per_mol,
+                energy.total_kcal_per_mol,
+            ],
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
         );
         assert_eq!(forces.atom_capacity, 2);
         assert_eq!(forces.atom_count, 17);

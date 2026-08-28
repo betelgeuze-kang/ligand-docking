@@ -1,0 +1,576 @@
+{
+  "files": [
+    {
+      "byte_count": 10229,
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite.yml",
+      "sha256": "302654a389a1fe0c231f83b14411d8ad3f0437872f2918045e1291409b61969b"
+    },
+    {
+      "byte_count": 10578,
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml",
+      "sha256": "c846f163a57e67809d3bbfc6a651389cc27b9326d5fa007ccc9cbd0f1c587baf"
+    },
+    {
+      "byte_count": 604,
+      "path": "CMakeLists.txt",
+      "sha256": "23164e9e61ae4911c6b52bb991b1ae7b44df0e60163d1337b3eb09c299336b43"
+    },
+    {
+      "byte_count": 6119,
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_cpu_v1.md",
+      "sha256": "48b84be5159944eaa65a147d9f0dfceac2c8f553f632f66ae2bff9df0bf5227d"
+    },
+    {
+      "byte_count": 7883,
+      "path": "include/betelgeuze/direct_ewald.h",
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
+    },
+    {
+      "byte_count": 4901,
+      "path": "include/betelgeuze/direct_ewald_composite.h",
+      "sha256": "5d09bd7d13c57cb665a038b1a5fe48ce513a3b47b05a4955ee2695919b9ebbf7"
+    },
+    {
+      "byte_count": 140395,
+      "path": "include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "byte_count": 4332,
+      "path": "include/betelgeuze/particle_mesh_ewald.h",
+      "sha256": "e6e966fffe50163cc7d5e8eedfbc6d31b6c4ce54c754d424e1d9149e88913f4f"
+    },
+    {
+      "byte_count": 5203,
+      "path": "include/betelgeuze/particle_mesh_ewald_composite.h",
+      "sha256": "cb870cee2948ee096aa08f636b02343fb974e5a293240e4d65fe50c15442fabe"
+    },
+    {
+      "byte_count": 6992,
+      "path": "include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "byte_count": 46362,
+      "path": "native/CMakeLists.txt",
+      "sha256": "84d9cde3edf7f54cfbc2d0c46fc6caac22132e9b7acab0e2a321dfcab91f008b"
+    },
+    {
+      "byte_count": 7588,
+      "path": "native/betelgeuze_engine.exports",
+      "sha256": "4fe52047630e12cd3cb66ef75258bd5f16b3fe4ecece87597d33d2f9be10c5ff"
+    },
+    {
+      "byte_count": 11138,
+      "path": "native/betelgeuze_engine.map",
+      "sha256": "b1aa265bbb98f7bee9df469aa73b3e1c9bde93c8de250bf5a57832f08f37e462"
+    },
+    {
+      "byte_count": 34271,
+      "path": "native/src/composite/direct_ewald.cpp",
+      "sha256": "3bb9e81a93e05bbe04c1b9a0e70fd250f1e690faa92bd95cce554366c7c32013"
+    },
+    {
+      "byte_count": 1627,
+      "path": "native/src/composite/evaluator.hpp",
+      "sha256": "239386a2c21cd6a9ff346c04d869e9ae980b22328becb7230f23c346c713fc70"
+    },
+    {
+      "byte_count": 35658,
+      "path": "native/src/composite/particle_mesh_ewald.cpp",
+      "sha256": "5cb66bdc71c9fe73902fd0535e62c58946d1c3e2c1a79c1e67ada8482d509a03"
+    },
+    {
+      "byte_count": 46045,
+      "path": "native/src/composite/particle_mesh_ewald_composite.cpp",
+      "sha256": "c8528c2550df559f5f9a91381747a377313d1a7a9b4eabfac69d84ffa4cdae3c"
+    },
+    {
+      "byte_count": 16688,
+      "path": "native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "byte_count": 42085,
+      "path": "native/src/cpu/evaluator.cpp",
+      "sha256": "64cb0cb85ddce5dd57a81753207428e58e6c98bcd71c81e4633db03f04748268"
+    },
+    {
+      "byte_count": 1909,
+      "path": "native/src/cpu/evaluator.hpp",
+      "sha256": "1b79cd6be3a9ad536fbefb1ef48e859fce60a89512b005fa22df5395db438422"
+    },
+    {
+      "byte_count": 1178,
+      "path": "native/src/cpu/neighbor_pair.hpp",
+      "sha256": "a985dcbccadfe08f86a6fcde55ed2548a69446157381cb4b5608edd9e6ac16e7"
+    },
+    {
+      "byte_count": 8467,
+      "path": "native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "byte_count": 39333,
+      "path": "native/src/ewald/api.cpp",
+      "sha256": "1fbfd621ede2865617017545f7fc0b5e7f0e8b79e8f3451d9f007eeff57bd52f"
+    },
+    {
+      "byte_count": 35959,
+      "path": "native/src/ewald/cpp_evaluator.cpp",
+      "sha256": "68a2800fc00be65986b6e0dea6251dd1b0af13fb2efa63fc3fd19c25f9696761"
+    },
+    {
+      "byte_count": 1003,
+      "path": "native/src/ewald/cpp_evaluator.hpp",
+      "sha256": "5223a732add22d7085936e247be97ddf0a8b9de385035a6b41a10e908fc2aa79"
+    },
+    {
+      "byte_count": 1274,
+      "path": "native/src/ewald/model.hpp",
+      "sha256": "9225959127393ff0750e1fb4e8939af83cdfd27c7c594764e196ac6201cb6df9"
+    },
+    {
+      "byte_count": 10248,
+      "path": "native/src/ewald/rust_evaluator.cpp",
+      "sha256": "47d690b5c925dcd3d53ec3ee6d425f76590d4d4004ba82c880a5331df29530ea"
+    },
+    {
+      "byte_count": 476,
+      "path": "native/src/ewald/rust_evaluator.hpp",
+      "sha256": "24ff103ed46b9906f632ad1be3820be8812276d941c8c645425fe5e954ce9814"
+    },
+    {
+      "byte_count": 3875,
+      "path": "native/src/ewald/rust_provider.h",
+      "sha256": "a1532cc7b78890561b8126c5d2ad2c13f8994498e32a90e4c99838e14744511a"
+    },
+    {
+      "byte_count": 31434,
+      "path": "native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "byte_count": 21469,
+      "path": "native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "byte_count": 36313,
+      "path": "native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "byte_count": 25954,
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "09ec7faa945e63efdb97a8ab5c431b4a7381caa863b76ddb489378259f3016cb"
+    },
+    {
+      "byte_count": 942,
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "c2cec10e2013515a1860f68fbfd6f614d322c550771a72be5060b6affa4c4a85"
+    },
+    {
+      "byte_count": 1017,
+      "path": "native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "byte_count": 10060,
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "493c673f5d454f52782fbeb65bee203c2a816b88b4c6a9cf558d910d966f91fd"
+    },
+    {
+      "byte_count": 583,
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "52b25c48b62439ebad2fadabca33bd4075ec195cc5ca86c10bf54d91d2187018"
+    },
+    {
+      "byte_count": 3211,
+      "path": "native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "5e17ef99216f70a11d34dbc102ed600eeb4d82a2d32a7fac883c9b190fb42794"
+    },
+    {
+      "byte_count": 13718,
+      "path": "native/src/rust/evaluator.cpp",
+      "sha256": "be0ab8988c49c034ae1cff7c268c5865fd291cdcb64c831c61e41734f611c22a"
+    },
+    {
+      "byte_count": 1446,
+      "path": "native/src/rust/evaluator.hpp",
+      "sha256": "be267c392950469bfdd1c1c955bcf4be821c8109ac898027513cf9c795314236"
+    },
+    {
+      "byte_count": 16749,
+      "path": "native/src/rust/provider.h",
+      "sha256": "9594e9be351a15a07b802d2f4d50f7aa7d182011b858640eeef2449fc5310d2f"
+    },
+    {
+      "byte_count": 13247,
+      "path": "native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "byte_count": 19818,
+      "path": "native/tests/check_exports.cmake",
+      "sha256": "0275b187ff33e685d0e4a3636655570c06630ed9d618cffe6d2b2eb884200fd9"
+    },
+    {
+      "byte_count": 63178,
+      "path": "native/tests/particle_mesh_ewald_composite.cpp",
+      "sha256": "4bc4dd7d14b5eff7a7ca8abc59d94d4fbe41efbdf5f207683a430fef05b74519"
+    },
+    {
+      "byte_count": 3799,
+      "path": "rust/Cargo.lock",
+      "sha256": "8e302c5e9cf90b80232ce1f2df5f13df78095a344e978b47e0e6e3c9ef29db04"
+    },
+    {
+      "byte_count": 648,
+      "path": "rust/Cargo.toml",
+      "sha256": "4a0b23729baeec10cc0e57abd4fb199c762531124fabfa400c34b8475592281c"
+    },
+    {
+      "byte_count": 654,
+      "path": "rust/betelgeuze-runtime/Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "byte_count": 26141,
+      "path": "rust/betelgeuze-runtime/build.rs",
+      "sha256": "fb5901c3fe330d5576b36022cc33b21f8549115ec33a1d6bd94315dddf1d4b86"
+    },
+    {
+      "byte_count": 14129,
+      "path": "rust/betelgeuze-runtime/src/composite.rs",
+      "sha256": "0fa1fc422b1efc3c9b8e6efbdafa82c11844e576b67e28cb4ab88290ff5e6bb3"
+    },
+    {
+      "byte_count": 27210,
+      "path": "rust/betelgeuze-runtime/src/direct_ewald.rs",
+      "sha256": "4d353e778ea767c00d5008ffae378c9de56ea36a6ab1a17cf4b069be6f62fac9"
+    },
+    {
+      "byte_count": 18509,
+      "path": "rust/betelgeuze-runtime/src/forcefield.rs",
+      "sha256": "679215a6b1acf3331334f0ae12c7beebe9ad0ab3bb793008d763b423f5ebca6c"
+    },
+    {
+      "byte_count": 36750,
+      "path": "rust/betelgeuze-runtime/src/lib.rs",
+      "sha256": "79a1786960f0e7482bde49a40156d8a9b063a0821ae7b3e54db4ecdb5bb6f5bd"
+    },
+    {
+      "byte_count": 15299,
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald.rs",
+      "sha256": "7bc6804be5766c8a6a8e58bcf19d838b32044b63cf4a06a0ab885984d95c1366"
+    },
+    {
+      "byte_count": 17905,
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald_composite.rs",
+      "sha256": "ecd7fc2aa328e42878069973f2403f89bd74bf1c7872b073751eb96b0718e175"
+    },
+    {
+      "byte_count": 26817,
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_reciprocal.rs",
+      "sha256": "c36192f8e9383bbd3af76fc1c0b8cbd86c7685e82e9777de15e65c6aee1b608c"
+    },
+    {
+      "byte_count": 679,
+      "path": "rust/betelgeuze-runtime/tests/fixtures/direct_ewald_v1.tsv",
+      "sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
+    },
+    {
+      "byte_count": 533,
+      "path": "rust/betelgeuze-runtime/tests/fixtures/particle_mesh_reciprocal_v1.tsv",
+      "sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef"
+    },
+    {
+      "byte_count": 16445,
+      "path": "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite.rs",
+      "sha256": "1a4d7f4f3f7aa4f36156649e5b0187dc7271df546dd390ee4942b67b85bb7cc9"
+    },
+    {
+      "byte_count": 5251,
+      "path": "rust/betelgeuze-sys/Cargo.toml",
+      "sha256": "7bb0c3e6f539cc10c7438cdb740e48b5ec04c7b9954027cee0db5f9dc9737607"
+    },
+    {
+      "byte_count": 7880,
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_header_c11.c",
+      "sha256": "19c9fd6254f39bb98d18bab6443bc0ec5e3d8ee8e057a51350a9bedcb81d60e7"
+    },
+    {
+      "byte_count": 5467,
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_layout_assertions.cpp",
+      "sha256": "81e66ba6917d3b4fe23fe31d1ebc842485cd99d7e449a636387b8943ed171a4e"
+    },
+    {
+      "byte_count": 5730,
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_header_c11.c",
+      "sha256": "90ccbb6406dd9f5b6bee3765a0d40c9bef27c7e8fb170987fab9fdf86831efdc"
+    },
+    {
+      "byte_count": 3908,
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_layout_assertions.cpp",
+      "sha256": "4c09dcb0faa9ba66857cf986034b9b7935af8ef676129101c6b025822ad5f89e"
+    },
+    {
+      "byte_count": 33005,
+      "path": "rust/betelgeuze-sys/build.rs",
+      "sha256": "9089a7bcda6d65f34d914a352e13425fd44c9ca2650d89077ee364a3090b5797"
+    },
+    {
+      "byte_count": 131831,
+      "path": "rust/betelgeuze-sys/src/lib.rs",
+      "sha256": "79b482e97094d8439bae806ac48d00d728708214fd2950ae2b7ef42a1a90c955"
+    },
+    {
+      "byte_count": 81690,
+      "path": "rust/betelgeuze-sys/tests/layout.rs",
+      "sha256": "fb4de8390251932f7f0f0d88e412a3d362a7d1057d70137ce76df7907c7871b8"
+    },
+    {
+      "byte_count": 72795,
+      "path": "rust/betelgeuze-sys/tests/raw_smoke.rs",
+      "sha256": "19295797dd4db29d959d597ee6d63bd8d6b849df2f9cef0de7038ef0fa4609a3"
+    },
+    {
+      "byte_count": 7883,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald.h",
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
+    },
+    {
+      "byte_count": 4901,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald_composite.h",
+      "sha256": "5d09bd7d13c57cb665a038b1a5fe48ce513a3b47b05a4955ee2695919b9ebbf7"
+    },
+    {
+      "byte_count": 140395,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "byte_count": 4332,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald.h",
+      "sha256": "e6e966fffe50163cc7d5e8eedfbc6d31b6c4ce54c754d424e1d9149e88913f4f"
+    },
+    {
+      "byte_count": 5203,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald_composite.h",
+      "sha256": "cb870cee2948ee096aa08f636b02343fb974e5a293240e4d65fe50c15442fabe"
+    },
+    {
+      "byte_count": 6992,
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "byte_count": 34271,
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald.cpp",
+      "sha256": "3bb9e81a93e05bbe04c1b9a0e70fd250f1e690faa92bd95cce554366c7c32013"
+    },
+    {
+      "byte_count": 1627,
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/evaluator.hpp",
+      "sha256": "239386a2c21cd6a9ff346c04d869e9ae980b22328becb7230f23c346c713fc70"
+    },
+    {
+      "byte_count": 35658,
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald.cpp",
+      "sha256": "5cb66bdc71c9fe73902fd0535e62c58946d1c3e2c1a79c1e67ada8482d509a03"
+    },
+    {
+      "byte_count": 46045,
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite.cpp",
+      "sha256": "c8528c2550df559f5f9a91381747a377313d1a7a9b4eabfac69d84ffa4cdae3c"
+    },
+    {
+      "byte_count": 16688,
+      "path": "rust/betelgeuze-sys/vendor/native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "byte_count": 42085,
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.cpp",
+      "sha256": "64cb0cb85ddce5dd57a81753207428e58e6c98bcd71c81e4633db03f04748268"
+    },
+    {
+      "byte_count": 1909,
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.hpp",
+      "sha256": "1b79cd6be3a9ad536fbefb1ef48e859fce60a89512b005fa22df5395db438422"
+    },
+    {
+      "byte_count": 1178,
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/neighbor_pair.hpp",
+      "sha256": "a985dcbccadfe08f86a6fcde55ed2548a69446157381cb4b5608edd9e6ac16e7"
+    },
+    {
+      "byte_count": 8467,
+      "path": "rust/betelgeuze-sys/vendor/native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "byte_count": 39333,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/api.cpp",
+      "sha256": "1fbfd621ede2865617017545f7fc0b5e7f0e8b79e8f3451d9f007eeff57bd52f"
+    },
+    {
+      "byte_count": 35959,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.cpp",
+      "sha256": "68a2800fc00be65986b6e0dea6251dd1b0af13fb2efa63fc3fd19c25f9696761"
+    },
+    {
+      "byte_count": 1003,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.hpp",
+      "sha256": "5223a732add22d7085936e247be97ddf0a8b9de385035a6b41a10e908fc2aa79"
+    },
+    {
+      "byte_count": 1274,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/model.hpp",
+      "sha256": "9225959127393ff0750e1fb4e8939af83cdfd27c7c594764e196ac6201cb6df9"
+    },
+    {
+      "byte_count": 10248,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_evaluator.cpp",
+      "sha256": "47d690b5c925dcd3d53ec3ee6d425f76590d4d4004ba82c880a5331df29530ea"
+    },
+    {
+      "byte_count": 476,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_evaluator.hpp",
+      "sha256": "24ff103ed46b9906f632ad1be3820be8812276d941c8c645425fe5e954ce9814"
+    },
+    {
+      "byte_count": 3875,
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_provider.h",
+      "sha256": "a1532cc7b78890561b8126c5d2ad2c13f8994498e32a90e4c99838e14744511a"
+    },
+    {
+      "byte_count": 31434,
+      "path": "rust/betelgeuze-sys/vendor/native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "byte_count": 21469,
+      "path": "rust/betelgeuze-sys/vendor/native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "byte_count": 36313,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "byte_count": 25954,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "09ec7faa945e63efdb97a8ab5c431b4a7381caa863b76ddb489378259f3016cb"
+    },
+    {
+      "byte_count": 942,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "c2cec10e2013515a1860f68fbfd6f614d322c550771a72be5060b6affa4c4a85"
+    },
+    {
+      "byte_count": 1017,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "byte_count": 10060,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "493c673f5d454f52782fbeb65bee203c2a816b88b4c6a9cf558d910d966f91fd"
+    },
+    {
+      "byte_count": 583,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "52b25c48b62439ebad2fadabca33bd4075ec195cc5ca86c10bf54d91d2187018"
+    },
+    {
+      "byte_count": 3211,
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "5e17ef99216f70a11d34dbc102ed600eeb4d82a2d32a7fac883c9b190fb42794"
+    },
+    {
+      "byte_count": 13718,
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.cpp",
+      "sha256": "be0ab8988c49c034ae1cff7c268c5865fd291cdcb64c831c61e41734f611c22a"
+    },
+    {
+      "byte_count": 1446,
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.hpp",
+      "sha256": "be267c392950469bfdd1c1c955bcf4be821c8109ac898027513cf9c795314236"
+    },
+    {
+      "byte_count": 16749,
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/provider.h",
+      "sha256": "9594e9be351a15a07b802d2f4d50f7aa7d182011b858640eeef2449fc5310d2f"
+    },
+    {
+      "byte_count": 13247,
+      "path": "rust/betelgeuze-sys/vendor/native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "byte_count": 398,
+      "path": "rust/cpu-kernel/Cargo.toml",
+      "sha256": "eb489ba207d9c2500967a48f02a09dd0d2978087a91678511274330bf50a5450"
+    },
+    {
+      "byte_count": 97155,
+      "path": "rust/cpu-kernel/src/direct_ewald.rs",
+      "sha256": "b43463c37ad4c18adb040656b159a7c9af49719eb180ee7660d8025068f7eb45"
+    },
+    {
+      "byte_count": 39905,
+      "path": "rust/cpu-kernel/src/kernel.rs",
+      "sha256": "aca40401f47947423c277af1c095adb09223dfd523aa9449badb631bcbe30e3e"
+    },
+    {
+      "byte_count": 166146,
+      "path": "rust/cpu-kernel/src/lib.rs",
+      "sha256": "ffcf89486f460f300ce4e12b726226002f684e5ec8529b5c590561487e28c351"
+    },
+    {
+      "byte_count": 97654,
+      "path": "rust/cpu-kernel/src/particle_mesh_reciprocal.rs",
+      "sha256": "557caba0f2e371188ae90838316cdc592d957d2930081e8a578dccd64e0d7eb9"
+    },
+    {
+      "byte_count": 12962,
+      "path": "rust_engine_v2/Cargo.lock",
+      "sha256": "af9ae63166c087bdd885980e0f7a4d870eaec78a3f285b28263b18139b248041"
+    },
+    {
+      "byte_count": 651,
+      "path": "rust_engine_v2/Cargo.toml",
+      "sha256": "7babe881df4d0fc7fe3c49b63a5ddc08a0b4b07735ad747d3a7e0f157a67cf29"
+    },
+    {
+      "byte_count": 12977,
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+      "sha256": "818f83470575841d6ffdb92c090f1a35af935e196e6e5999e8d880fcac241502"
+    },
+    {
+      "byte_count": 9364,
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py",
+      "sha256": "ed4415b511f02743bdca7056f69697adc89603ba37ed7e216d0a1e8cb60dc5bc"
+    },
+    {
+      "byte_count": 146,
+      "path": "tools/__init__.py",
+      "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
+    },
+    {
+      "byte_count": 53775,
+      "path": "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py",
+      "sha256": "dfcd502003d054764b487152d5ee61230a64015cdb5b4dd429106b1593999750"
+    },
+    {
+      "byte_count": 40601,
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+      "sha256": "31e5cf90f813d989fd96b44a2938f9392172820bd498b105b44eda0c4d8f1895"
+    }
+  ],
+  "schema_id": "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_cpu_sources/1.0.0",
+  "scope": "particle_mesh_ewald_composite_v1_owned_sources_bindings_tests_and_frozen_parents"
+}

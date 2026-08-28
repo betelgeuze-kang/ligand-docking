@@ -1,14 +1,14 @@
-name: ci-engine-v2-native-particle-mesh-ewald
+name: ci-engine-v2-native-particle-mesh-ewald-composite
 
 on:
   pull_request:
     paths:
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite.yml"
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml"
       - "CMakeLists.txt"
       - "include/betelgeuze/engine.h"
       - "include/betelgeuze/direct_ewald.h"
+      - "include/betelgeuze/direct_ewald_composite.h"
       - "include/betelgeuze/particle_mesh_reciprocal.h"
       - "include/betelgeuze/particle_mesh_ewald.h"
       - "include/betelgeuze/particle_mesh_ewald_composite.h"
@@ -20,28 +20,27 @@ on:
       - "rust/betelgeuze-runtime/**"
       - "rust_engine_v2/Cargo.lock"
       - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_direct_ewald_composite_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json"
-      - "docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md"
-      - "tools/__init__.py"
-      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
       - "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1_sources.json"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_cpu_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py"
   push:
     branches: ["main"]
     paths:
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite.yml"
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-reciprocal.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml"
       - "CMakeLists.txt"
       - "include/betelgeuze/engine.h"
       - "include/betelgeuze/direct_ewald.h"
+      - "include/betelgeuze/direct_ewald_composite.h"
       - "include/betelgeuze/particle_mesh_reciprocal.h"
       - "include/betelgeuze/particle_mesh_ewald.h"
       - "include/betelgeuze/particle_mesh_ewald_composite.h"
@@ -53,18 +52,17 @@ on:
       - "rust/betelgeuze-runtime/**"
       - "rust_engine_v2/Cargo.lock"
       - "rust_engine_v2/Cargo.toml"
+      - "config/engine_v2_native_direct_ewald_composite_profile_v1.json"
+      - "config/engine_v2_native_direct_ewald_composite_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json"
-      - "docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md"
-      - "tools/__init__.py"
-      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_reciprocal_cpu_v1.py"
       - "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1_sources.json"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_cpu_v1.md"
+      - "tools/__init__.py"
+      - "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py"
   workflow_dispatch:
 
@@ -72,7 +70,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-particle-mesh-ewald-${{ github.ref }}
+  group: ci-engine-v2-native-particle-mesh-ewald-composite-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -88,48 +86,44 @@ jobs:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - name: Check out complete history for frozen parent objects
+      - name: Check out current and frozen evidence objects
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
           clean: true
           fetch-depth: 0
 
-      - name: Materialize exact reviewed particle-mesh Ewald head
+      - name: Materialize exact reviewed parent heads
+        shell: bash
         run: |
+          set -euo pipefail
+          test "$(git rev-parse f2731176fb913f600349ec6a1fbf3678d399a7c1^{tree})" = "6017cf05e3f437443371966775bb4deb3fc73cab"
           test "$(git rev-parse e228f376857ead900bd1ae99cf5b111c8b40cf34^{tree})" = "ae0a6eddd44262eeec633c57a0f5566bf7989361"
+          git fetch --no-tags --depth=1 origin refs/pull/437/head
+          test "$(git rev-parse FETCH_HEAD)" = "454bb9ee6cdb4202cecbc807f78503ce842bdd13"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "6017cf05e3f437443371966775bb4deb3fc73cab"
           git fetch --no-tags --depth=1 origin refs/pull/441/head
           test "$(git rev-parse FETCH_HEAD)" = "59ad72fe57e82106a71df2c88c63c9fe12d014ad"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "ae0a6eddd44262eeec633c57a0f5566bf7989361"
 
-      - name: Verify exact frozen particle-mesh Ewald evidence
+      - name: Verify canonical evidence and fail-closed contracts
         run: |
-          frozen=e228f376857ead900bd1ae99cf5b111c8b40cf34
-          frozen_tree=ae0a6eddd44262eeec633c57a0f5566bf7989361
-          current_sha="$(git rev-parse HEAD)"
-          test "$(git rev-parse "$frozen^{tree}")" = "$frozen_tree"
-          git diff --exit-code "$frozen" -- \
-            config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json \
-            config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json \
-            docs/engine_v2_native_particle_mesh_ewald_cpu_v1.md \
-            tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py
-          git checkout --detach --quiet "$frozen"
           python3 -m json.tool \
-            config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1.json >/dev/null
+            config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json \
+            >/dev/null
           python3 -m json.tool \
-            config/engine_v2_native_particle_mesh_ewald_cpu_profile_v1_sources.json >/dev/null
+            config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1_sources.json \
+            >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 tools/verify_engine_v2_native_particle_mesh_ewald_cpu_v1.py
+          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py
           python3 -m pytest -q \
-            tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py
-          git checkout --detach --quiet "$current_sha"
-          test "$(git rev-parse HEAD)" = "$current_sha"
+            tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Check out native and Rust sources
+      - name: Check out native sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
@@ -141,39 +135,42 @@ jobs:
           rustup toolchain install 1.93.0 --profile minimal
           rustup override set 1.93.0
 
-      - name: Build and test release native composition
+      - name: Build and test release composite and exact exports
         run: |
-          cmake -S . -B build/native-pme-ewald-release \
+          cmake -S . -B build/native-pme-composite-release \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DBG_ENABLE_HIP=OFF \
             -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/native-pme-ewald-release \
-            --target betelgeuze_engine_particle_mesh_ewald --parallel 2
-          ctest --test-dir build/native-pme-ewald-release \
-            -R '^betelgeuze_engine_(particle_mesh_ewald|export_allowlist)$' \
+          cmake --build build/native-pme-composite-release \
+            --target betelgeuze_engine_particle_mesh_ewald_composite --parallel 2
+          ctest --test-dir build/native-pme-composite-release \
+            -R '^betelgeuze_engine_(particle_mesh_ewald_composite|export_allowlist)$' \
             --output-on-failure
 
-      - name: Build and test sanitizer native composition
+      - name: Build and test sanitizer composite
         env:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: |
-          cmake -S . -B build/native-pme-ewald-sanitize \
+          cmake -S . -B build/native-pme-composite-sanitize \
             -DCMAKE_BUILD_TYPE=Debug \
             -DBUILD_TESTING=ON \
             -DBG_ENABLE_HIP=OFF \
             -DBG_ENABLE_HIP_SAFE=OFF \
             -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
             -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/native-pme-ewald-sanitize \
-            --target betelgeuze_engine_particle_mesh_ewald --parallel 2
-          ctest --test-dir build/native-pme-ewald-sanitize \
-            -R '^betelgeuze_engine_particle_mesh_ewald$' --output-on-failure
+          cmake --build build/native-pme-composite-sanitize \
+            --target betelgeuze_engine_particle_mesh_ewald_composite --parallel 2
+          ctest --test-dir build/native-pme-composite-sanitize \
+            -R '^betelgeuze_engine_particle_mesh_ewald_composite$' \
+            --output-on-failure
 
   rust-bindings:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/pme-composite-cargo
     steps:
       - name: Check out packaged bindings
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -190,11 +187,9 @@ jobs:
       - name: Verify raw and safe Rust boundaries
         run: |
           cargo test --manifest-path rust/Cargo.toml --locked \
-            --package betelgeuze-cpu-kernel direct_ewald
-          cargo test --manifest-path rust/Cargo.toml --locked \
             --package betelgeuze-sys --test layout --test raw_smoke
           cargo test --manifest-path rust/Cargo.toml --locked \
-            --package betelgeuze-runtime --test particle_mesh_ewald
+            --package betelgeuze-runtime --test particle_mesh_ewald_composite
           cargo package --manifest-path rust/betelgeuze-sys/Cargo.toml --locked \
             --config 'patch.crates-io.betelgeuze-cpu-kernel.path="rust/cpu-kernel"'
           BETELGEUZE_V7_NON_AUTHORITATIVE_PACKAGE_BUILD=1 \
@@ -224,12 +219,12 @@ jobs:
 
       - name: Build shared engine and verify exact exports
         run: |
-          cmake -S . -B build/native-pme-ewald-macos \
+          cmake -S . -B build/native-pme-composite-macos \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DBG_ENABLE_HIP=OFF \
             -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/native-pme-ewald-macos \
+          cmake --build build/native-pme-composite-macos \
             --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/native-pme-ewald-macos \
+          ctest --test-dir build/native-pme-composite-macos \
             -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

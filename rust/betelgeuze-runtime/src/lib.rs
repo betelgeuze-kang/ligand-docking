@@ -16,6 +16,7 @@ mod dynamics;
 mod fixed64_lane_metrics;
 mod forcefield;
 mod particle_mesh_ewald;
+mod particle_mesh_ewald_composite;
 mod particle_mesh_reciprocal;
 mod qualification;
 mod qualification_v6;
@@ -132,6 +133,10 @@ pub use forcefield::{
 pub use particle_mesh_ewald::{
     particle_mesh_ewald_profile_id, ParticleMeshEwaldEnergyComponents, ParticleMeshEwaldEvaluation,
     ParticleMeshEwaldForceSoaOwned,
+};
+pub use particle_mesh_ewald_composite::{
+    particle_mesh_ewald_composite_profile_id, ParticleMeshEwaldCompositeEnergyComponents,
+    ParticleMeshEwaldCompositeEvaluation,
 };
 pub use particle_mesh_reciprocal::{
     particle_mesh_reciprocal_profile_id, ParticleMeshReciprocalEnergy, ParticleMeshReciprocalError,
