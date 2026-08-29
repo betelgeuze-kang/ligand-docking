@@ -13,6 +13,7 @@
 struct bg_direct_ewald_composite_simulation_v1 final {
     std::unique_ptr<bg_simulation> simulation;
     bg_direct_ewald_model_v1 model;
+    bg_system short_system_scratch;
     std::array<uint8_t, 32> static_fingerprint{};
 };
 

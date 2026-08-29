@@ -186,7 +186,8 @@ bool owner_storage_overlaps(
     const bg_direct_ewald_composite_simulation_v1 &owner,
     const ByteRange &output) noexcept {
     if (fixed_storage_overlaps(&owner, sizeof(owner), output) ||
-        model_storage_overlaps(owner.model, output)) {
+        model_storage_overlaps(owner.model, output) ||
+        system_storage_overlaps(owner.short_system_scratch, output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -505,6 +506,7 @@ bg_status evaluate_composite_provider(
         system,
         simulation->forcefield,
         provider->owner->model,
+        &provider->owner->short_system_scratch,
         compute_forces,
         &combined,
         provider->typed_error);
@@ -732,6 +734,11 @@ bg_direct_ewald_composite_simulation_v1_create(
         if (status != BG_STATUS_OK) {
             return status;
         }
+        candidate->short_system_scratch = candidate->simulation->system;
+        std::fill(
+            candidate->short_system_scratch.charge.begin(),
+            candidate->short_system_scratch.charge.end(),
+            0.0);
 
         bg_context validation_context{};
         validation_context.backend = BG_BACKEND_CPP_CPU_REFERENCE;
@@ -745,6 +752,7 @@ bg_direct_ewald_composite_simulation_v1_create(
             candidate->simulation->system,
             candidate->simulation->forcefield,
             candidate->model,
+            &candidate->short_system_scratch,
             false,
             &initial_evaluation,
             &initial_error);

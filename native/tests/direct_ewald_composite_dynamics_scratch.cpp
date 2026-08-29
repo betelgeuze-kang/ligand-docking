@@ -45,4 +45,66 @@ direct_ewald_composite_force_scratch_snapshot(
     return snapshot;
 }
 
+DirectEwaldCompositeShortSystemScratchSnapshot
+direct_ewald_composite_short_system_scratch_snapshot(
+    const bg_direct_ewald_composite_simulation_v1 *simulation) {
+    assert(simulation != nullptr);
+    const bg_system &scratch = simulation->short_system_scratch;
+    DirectEwaldCompositeShortSystemScratchSnapshot snapshot;
+    snapshot.unit_system = scratch.unit_system;
+    snapshot.addresses = {
+        scratch.position_x.data(),
+        scratch.position_y.data(),
+        scratch.position_z.data(),
+        scratch.velocity_x.data(),
+        scratch.velocity_y.data(),
+        scratch.velocity_z.data(),
+        scratch.mass.data(),
+        scratch.charge.data(),
+    };
+    snapshot.sizes = {
+        scratch.position_x.size(),
+        scratch.position_y.size(),
+        scratch.position_z.size(),
+        scratch.velocity_x.size(),
+        scratch.velocity_y.size(),
+        scratch.velocity_z.size(),
+        scratch.mass.size(),
+        scratch.charge.size(),
+    };
+    snapshot.capacities = {
+        scratch.position_x.capacity(),
+        scratch.position_y.capacity(),
+        scratch.position_z.capacity(),
+        scratch.velocity_x.capacity(),
+        scratch.velocity_y.capacity(),
+        scratch.velocity_z.capacity(),
+        scratch.mass.capacity(),
+        scratch.charge.capacity(),
+    };
+    return snapshot;
+}
+
+void set_direct_ewald_composite_short_system_scratch_unit_for_test(
+    bg_direct_ewald_composite_simulation_v1 *simulation,
+    bg_unit_system unit_system) {
+    assert(simulation != nullptr);
+    simulation->short_system_scratch.unit_system = unit_system;
+}
+
+void truncate_direct_ewald_composite_short_system_scratch_for_test(
+    bg_direct_ewald_composite_simulation_v1 *simulation) {
+    assert(simulation != nullptr);
+    assert(!simulation->short_system_scratch.position_x.empty());
+    simulation->short_system_scratch.position_x.pop_back();
+}
+
+void set_direct_ewald_composite_short_system_scratch_charge_for_test(
+    bg_direct_ewald_composite_simulation_v1 *simulation,
+    double charge) {
+    assert(simulation != nullptr);
+    assert(!simulation->short_system_scratch.charge.empty());
+    simulation->short_system_scratch.charge.front() = charge;
+}
+
 }  // namespace betelgeuze::native::tests
