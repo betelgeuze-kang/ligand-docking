@@ -43,12 +43,19 @@ struct Evaluation final {
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &model);
 
-/* The caller must first establish validate_handle_compatibility(). */
+/*
+ * The caller must first establish validate_handle_compatibility(). A null
+ * short-system scratch preserves the stateless local-copy path. A non-null
+ * scratch must be independent, deep-owned, shape/unit matched, and contain
+ * exact +0.0 charges; only its positions are refreshed, and failed calls need
+ * not restore its private derived contents.
+ */
 [[nodiscard]] bg_status evaluate_prevalidated(
     const bg_context &context,
     const bg_system &system,
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &model,
+    bg_system *short_system_scratch,
     bool compute_forces,
     Evaluation *out_evaluation,
     ewald::Error *out_error);

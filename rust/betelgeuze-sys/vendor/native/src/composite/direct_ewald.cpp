@@ -531,6 +531,20 @@ bool ewald_energy_is_valid(const ewald::Evaluation &evaluation) noexcept {
     });
 }
 
+bool short_system_scratch_shape_matches(
+    const bg_system &system,
+    const bg_system &scratch) noexcept {
+    return scratch.unit_system == system.unit_system &&
+           scratch.position_x.size() == system.position_x.size() &&
+           scratch.position_y.size() == system.position_y.size() &&
+           scratch.position_z.size() == system.position_z.size() &&
+           scratch.velocity_x.size() == system.velocity_x.size() &&
+           scratch.velocity_y.size() == system.velocity_y.size() &&
+           scratch.velocity_z.size() == system.velocity_z.size() &&
+           scratch.mass.size() == system.mass.size() &&
+           scratch.charge.size() == system.charge.size();
+}
+
 }  // namespace
 
 bg_status validate_static_compatibility(
@@ -568,6 +582,7 @@ bg_status evaluate_prevalidated(
     const bg_system &system,
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &model,
+    bg_system *short_system_scratch,
     bool compute_forces,
     Evaluation *out_evaluation,
     ewald::Error *out_error) {
@@ -592,17 +607,46 @@ bg_status evaluate_prevalidated(
                 "selected backend has no direct-Ewald composite evaluator");
     }
 
-    bg_system short_system = system;
-    std::fill(short_system.charge.begin(), short_system.charge.end(), 0.0);
+    bg_system local_short_system;
+    bg_system *short_system = short_system_scratch;
+    if (short_system == nullptr) {
+        local_short_system = system;
+        std::fill(
+            local_short_system.charge.begin(),
+            local_short_system.charge.end(),
+            0.0);
+        short_system = &local_short_system;
+    } else {
+        if (!short_system_scratch_shape_matches(system, *short_system) ||
+            std::any_of(
+                short_system->charge.begin(),
+                short_system->charge.end(),
+                [](double charge) {
+                    return !double_bits_equal(charge, 0.0);
+                })) {
+            return fail(
+                BG_STATUS_INTERNAL_ERROR,
+                "stateful composite short-system scratch shape, units, or zero-charge invariant drifted");
+        }
+        std::copy(
+            system.position_x.begin(), system.position_x.end(),
+            short_system->position_x.begin());
+        std::copy(
+            system.position_y.begin(), system.position_y.end(),
+            short_system->position_y.begin());
+        std::copy(
+            system.position_z.begin(), system.position_z.end(),
+            short_system->position_z.begin());
+    }
 
     cpu::Evaluation short_evaluation;
     bg_status status = BG_STATUS_OK;
     if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
         status = cpu::evaluate(
-            short_system, forcefield, compute_forces, &short_evaluation);
+            *short_system, forcefield, compute_forces, &short_evaluation);
     } else {
         status = rust_cpu::evaluate(
-            short_system, forcefield, compute_forces, &short_evaluation);
+            *short_system, forcefield, compute_forces, &short_evaluation);
     }
     if (status != BG_STATUS_OK) {
         return status;
@@ -850,7 +894,7 @@ bg_context_evaluate_direct_ewald_composite_v1(
         Evaluation evaluation;
         ewald::Error typed_error;
         status = evaluate_prevalidated(
-            *context, *system, *forcefield, *model, compute_forces,
+            *context, *system, *forcefield, *model, nullptr, compute_forces,
             &evaluation, &typed_error);
         if (status != BG_STATUS_OK) {
             if (typed_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
