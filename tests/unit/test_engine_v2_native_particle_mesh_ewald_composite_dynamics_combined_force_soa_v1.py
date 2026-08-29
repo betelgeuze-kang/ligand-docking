@@ -6,36 +6,23 @@ from pathlib import Path
 import pytest
 
 from tools import (
-    verify_engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PARTICLE_MESH_EWALD_COMBINED_FORCE_SOA_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "combined_force_soa_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PARTICLE_MESH_EWALD_COMBINED_FORCE_SOA_EVIDENCE_PRESENT,
-    reason=(
-        "direct Ewald composite dynamics combined-force SoA evidence is verified "
-        "from its exact frozen object after particle-mesh Ewald combined-force SoA "
-        "evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
-    assert result["source_count"] == 232
+    assert result["source_count"] == 238
     assert result["source_count"] == profile["implementation"][
         "source_manifest_entry_count"
     ]
     assert profile["abi"]["public_symbol_count"] == 13
-    assert profile["abi"]["checkpoint_magic"] == "BGDEC001"
+    assert profile["abi"]["checkpoint_magic"] == "BGPME001"
     assert profile["abi"]["checkpoint_header_size_bytes"] == 104
     assert not profile["abi"]["abi_changed"]
     assert not profile["abi"]["checkpoint_format_changed"]
@@ -44,27 +31,6 @@ def test_exact_profile_manifest_and_contracts() -> None:
 def test_predecessor_identity_and_optional_reviewed_heads_are_frozen() -> None:
     verifier.require_predecessor()
     assert verifier.PREDECESSOR == {
-        "pull_request": 449,
-        "reviewed_head": "0268e1731eb5f8b472cb527ac277a66c7ce4317f",
-        "merge_commit": "11ee408d89c44e70188af5133544ecebd604b182",
-        "merge_tree": "01d37e1adf097384c1e895fa637af0cfff45f4e8",
-        "profile_path": (
-            "config/engine_v2_native_direct_ewald_composite_dynamics_"
-            "short_parent_force_scratch_profile_v1.json"
-        ),
-        "profile_sha256": (
-            "745a4413cc875f143be460f372ad4ddc809af0588df65e736d68361fce418485"
-        ),
-        "source_manifest_path": (
-            "config/engine_v2_native_direct_ewald_composite_dynamics_"
-            "short_parent_force_scratch_profile_v1_sources.json"
-        ),
-        "source_manifest_sha256": (
-            "38d48a481963dc5a4a6202f6b6f794e9984e64ea43bb2ebd11a3aeb7e7815a1f"
-        ),
-        "source_manifest_entry_count": 220,
-    }
-    assert verifier.ARCHITECTURE_PREDECESSOR == {
         "pull_request": 450,
         "reviewed_head": "b0e26a8b2eea995a6038a484894808387486ff9e",
         "merge_commit": "75d3a4e2b7ba5b0f1dcf99007358f6f2c47c7330",
@@ -85,26 +51,47 @@ def test_predecessor_identity_and_optional_reviewed_heads_are_frozen() -> None:
         ),
         "source_manifest_entry_count": 226,
     }
-    assert verifier.INHERITED_PREDECESSOR == {
-        "pull_request": 446,
-        "reviewed_head": "5b3fb7ab339d21598ccd22c8c2fe89b38cc97fe7",
-        "merge_commit": "29edcd1ea18e9fb64b9d416a0d05d87e0485be4b",
-        "merge_tree": "77f5298c291130f7ea86b96bd13b6bd9596f6850",
+    assert verifier.ARCHITECTURE_PREDECESSOR == {
+        "pull_request": 451,
+        "reviewed_head": "b09f1dd125e1bb6aaf255cc2f3fb737ca4d9f475",
+        "merge_commit": "0d1e5fa1d2923139f0d070d5ec09ed29959cbc2a",
+        "merge_tree": "124539c1d14f5cbc0f3d91d231d6a40736f58f5a",
         "profile_path": (
             "config/engine_v2_native_direct_ewald_composite_dynamics_"
-            "force_scratch_profile_v1.json"
+            "combined_force_soa_profile_v1.json"
         ),
         "profile_sha256": (
-            "2c1a5c015cd4db903e359e6d18fb52ee70c583e1c2744409754b44352d201985"
+            "50c50ba44f9d3ff32358454d0d9f81f2619265fdaa5a3e9fe9194f22848685b7"
         ),
         "source_manifest_path": (
             "config/engine_v2_native_direct_ewald_composite_dynamics_"
+            "combined_force_soa_profile_v1_sources.json"
+        ),
+        "source_manifest_sha256": (
+            "348ab691558af31b398c653d0c6399bc30c651bc7cc911edb35aedcda2ec9032"
+        ),
+        "source_manifest_entry_count": 232,
+    }
+    assert verifier.INHERITED_PREDECESSOR == {
+        "pull_request": 445,
+        "reviewed_head": "801a85d56846c464b3a618ecacca867cd12a8c9f",
+        "merge_commit": "c53f7993ec06c4ac04a4907b40f179d12fbe309a",
+        "merge_tree": "2bb25b756b802671bcfc5f3ac95b26df3b284956",
+        "profile_path": (
+            "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+            "force_scratch_profile_v1.json"
+        ),
+        "profile_sha256": (
+            "32129a32d0b351ac265fda21906e707cc708c664241715b4d0d92fa3cc013b62"
+        ),
+        "source_manifest_path": (
+            "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
             "force_scratch_profile_v1_sources.json"
         ),
         "source_manifest_sha256": (
-            "f1c41ad4ad774bd2d7ab1672df61792ad539f0c2c199b37511ed0f5783412467"
+            "d428b3f18d26382fbb7e5e8a48f3a114eb953b8708bec77c4f00ec6c0d1bcc3f"
         ),
-        "source_manifest_entry_count": 202,
+        "source_manifest_entry_count": 194,
     }
 
 
@@ -113,9 +100,9 @@ def test_predecessor_manifest_mutations_fail_closed() -> None:
     manifest = json.loads(raw)
     manifest["files"][0]["sha256"] = "x" * 64
     with pytest.raises(ValueError, match="row value drift"):
-        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 220)
+        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 226)
     with pytest.raises(ValueError, match="count drift"):
-        verifier.require_manifest_shape(raw, 219)
+        verifier.require_manifest_shape(raw, 225)
 
 
 def test_architecture_manifest_mutations_fail_closed() -> None:
@@ -124,10 +111,10 @@ def test_architecture_manifest_mutations_fail_closed() -> None:
     manifest["files"][0]["sha256"] = "x" * 64
     with pytest.raises(ValueError, match="row value drift"):
         verifier.require_architecture_manifest_shape(
-            verifier.canonical_bytes(manifest), 226
+            verifier.canonical_bytes(manifest), 232
         )
     with pytest.raises(ValueError, match="count drift"):
-        verifier.require_architecture_manifest_shape(raw, 225)
+        verifier.require_architecture_manifest_shape(raw, 231)
 
 
 def test_inherited_manifest_mutations_fail_closed() -> None:
@@ -135,9 +122,9 @@ def test_inherited_manifest_mutations_fail_closed() -> None:
     manifest = json.loads(raw)
     manifest["files"][0]["path"] = "../escape"
     with pytest.raises(ValueError, match="row value drift"):
-        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 202)
+        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 194)
     with pytest.raises(ValueError, match="count drift"):
-        verifier.require_manifest_shape(raw, 201)
+        verifier.require_manifest_shape(raw, 193)
 
 
 def test_source_manifest_is_canonical_sorted_and_acyclic() -> None:
@@ -162,6 +149,26 @@ def test_delta_path_set_is_exact() -> None:
     )
 
 
+def test_trigger_path_set_statically_closes_architecture_evidence() -> None:
+    architecture_evidence = {
+        verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH.as_posix(),
+        verifier.ARCHITECTURE_PROFILE_RELATIVE_PATH.as_posix(),
+        verifier.ARCHITECTURE_MANIFEST_RELATIVE_PATH.as_posix(),
+        (
+            "docs/engine_v2_native_direct_ewald_composite_dynamics_"
+            "combined_force_soa_v1.md"
+        ),
+        (
+            "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_"
+            "combined_force_soa_v1.py"
+        ),
+        verifier.PREDECESSOR_UNIT_RELATIVE_PATH.as_posix(),
+    }
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 54
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 54
+    assert architecture_evidence <= set(verifier.REQUIRED_TRIGGER_PATHS)
+
+
 def test_profile_is_narrow_and_all_authority_is_false() -> None:
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
@@ -178,9 +185,9 @@ def test_profile_is_narrow_and_all_authority_is_false() -> None:
         "short_parent_output_alias_rejected",
         "parent_shape_and_component_finiteness_checked_before_final_soa_write",
         "final_soa_resize_after_all_parent_validation",
-        "direct_ewald_failure_precedes_final_soa_write",
+        "late_direct_local_failure_precedes_final_soa_write",
         "final_soa_scratch_is_derived_non_authoritative",
-        "late_ewald_failure_last_successful_final_soa_bits_preserved",
+        "late_direct_local_failure_last_successful_final_soa_bits_preserved",
         "explicit_cpp_cpu_reference_lane",
         "explicit_rust_cpu_lane",
         "test_only_owner_introspection_not_exported",
@@ -239,13 +246,13 @@ def test_all_public_symbol_surfaces_are_exactly_thirteen() -> None:
 
 def test_fourteenth_namespace_symbol_is_detected() -> None:
     header = (
-        ROOT / "include/betelgeuze/direct_ewald_composite_dynamics.h"
+        ROOT / "include/betelgeuze/particle_mesh_ewald_composite_dynamics.h"
     ).read_text()
     symbols = tuple(
         symbol
         for symbol in __import__("re").findall(
             r"\b(bg_[a-z0-9_]+)\s*\(",
-            header + "\nbg_direct_ewald_composite_dynamics_extra(",
+            header + "\nbg_particle_mesh_ewald_composite_dynamics_extra(",
         )
         if verifier.is_dynamics_symbol(symbol)
     )
@@ -266,7 +273,7 @@ def test_production_delta_is_exact_and_vendor_identical() -> None:
 @pytest.mark.parametrize(
     "transform",
     [
-        verifier.expected_direct_ewald_source,
+        verifier.expected_particle_mesh_ewald_source,
         verifier.expected_dynamics_source,
         verifier.expected_evaluator_header,
     ],
@@ -276,9 +283,47 @@ def test_production_transforms_reject_missing_insertion_point(transform) -> None
         transform("bounded transformation anchor is absent")
 
 
+@pytest.mark.parametrize(
+    "relative_path,transform,sentinel",
+    [
+        (
+            "native/src/composite/particle_mesh_ewald_composite.cpp",
+            verifier.expected_particle_mesh_ewald_source,
+            '#include "betelgeuze/particle_mesh_ewald_composite.h"\n',
+        ),
+        (
+            "native/src/composite/particle_mesh_ewald_composite_dynamics.cpp",
+            verifier.expected_dynamics_source,
+            '#include "particle_mesh_ewald_composite_dynamics.hpp"\n',
+        ),
+        (
+            "native/src/composite/particle_mesh_ewald_composite_evaluator.hpp",
+            verifier.expected_evaluator_header,
+            "#include <vector>\n",
+        ),
+    ],
+)
+def test_production_transforms_are_derived_from_frozen_input(
+    relative_path: str,
+    transform,
+    sentinel: str,
+) -> None:
+    frozen = verifier.git(
+        "show",
+        f"{verifier.ARCHITECTURE_PREDECESSOR['merge_commit']}:{relative_path}",
+    ).stdout.decode()
+    current = (ROOT / relative_path).read_text()
+    assert transform(frozen) == current
+    marker = "// bounded-frozen-input-sentinel\n"
+    assert frozen.count(sentinel) == 1
+    assert current.count(sentinel) == 1
+    mutated = frozen.replace(sentinel, sentinel + marker, 1)
+    assert transform(mutated) == current.replace(sentinel, sentinel + marker, 1)
+
+
 def test_conditionally_disabled_final_soa_regression_fails_closed() -> None:
     test = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics.cpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics.cpp"
     ).read_bytes()
     disabled = test.replace(
         b"    verify_force_output_scratch_reuse();\n",
@@ -287,14 +332,14 @@ def test_conditionally_disabled_final_soa_regression_fails_closed() -> None:
     )
     assert disabled != test
     with pytest.raises(
-        ValueError, match="exact direct-Ewald dynamics regression source drift"
+        ValueError, match="exact particle-mesh Ewald dynamics regression source drift"
     ):
         verifier.require_exact_regression_source(disabled)
 
 
 def test_stateful_provider_contains_no_combined_aos_copy() -> None:
     source = (
-        ROOT / "native/src/composite/direct_ewald_composite_dynamics.cpp"
+        ROOT / "native/src/composite/particle_mesh_ewald_composite_dynamics.cpp"
     ).read_text()
     provider = source.split("bg_status evaluate_composite_provider(", 1)[1].split(
         "bg_status validate_particle_view_descriptor(", 1
@@ -340,7 +385,7 @@ def test_predecessor_unit_freeze_is_exact() -> None:
     "old,new",
     [
         (
-            "    DIRECT_EWALD_COMBINED_FORCE_SOA_EVIDENCE_PRESENT,\n",
+            "    PARTICLE_MESH_EWALD_COMBINED_FORCE_SOA_EVIDENCE_PRESENT,\n",
             "    False,\n",
         ),
         (").is_file()\n", ").is_dir()\n"),
@@ -367,7 +412,7 @@ def test_predecessor_unit_freeze_mutation_fails_closed(
     [
         ("        shell: bash\n", "        shell: sh\n"),
         (
-            "          frozen=75d3a4e2b7ba5b0f1dcf99007358f6f2c47c7330\n",
+            "          frozen=0d1e5fa1d2923139f0d070d5ec09ed29959cbc2a\n",
             "          frozen=HEAD\n",
         ),
         (
@@ -396,7 +441,7 @@ def test_workflow_is_pinned_cpu_only_and_fetches_predecessor() -> None:
     assert text.count(verifier.PINNED_CHECKOUT_ACTION) == 4
     assert "permissions:\n  contents: read" in text
     assert text.count(verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL) == 1
-    for pull_request in (450, 449, 446):
+    for pull_request in (451, 450, 445):
         assert text.count(f"refs/pull/{pull_request}/head") == 1
     verifier.require_workflow_contract(text)
 
@@ -500,10 +545,10 @@ def test_checkout_credentials_mutation_fails_closed() -> None:
 @pytest.mark.parametrize(
     "command",
     [
-        "          git merge-base --is-ancestor 75d3a4e2b7ba5b0f1dcf99007358f6f2c47c7330 HEAD\n",
-        "          git fetch --no-tags --depth=1 origin refs/pull/446/head\n",
-        "          cmake --build build/direct-ewald-combined-force-soa-release --target betelgeuze_engine_direct_ewald_composite_dynamics --parallel 2\n",
-        "          ctest --test-dir build/direct-ewald-combined-force-soa-release -R '^betelgeuze_engine_(direct_ewald_composite_dynamics|export_allowlist)$' --output-on-failure\n",
+        "          git merge-base --is-ancestor 0d1e5fa1d2923139f0d070d5ec09ed29959cbc2a HEAD\n",
+        "          git fetch --no-tags --depth=1 origin refs/pull/445/head\n",
+        "          cmake --build build/particle-mesh-ewald-combined-force-soa-release --target betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2\n",
+        "          ctest --test-dir build/particle-mesh-ewald-combined-force-soa-release -R '^betelgeuze_engine_(particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure\n",
     ],
 )
 def test_commented_token_command_bypasses_fail_closed(command: str) -> None:
@@ -625,8 +670,8 @@ def test_exact_rust_command_removal_fails_closed(command: str) -> None:
         ("runs-on: ubuntu-latest", "runs-on: self-hosted"),
         ("workflow_dispatch:", "pull_request_target:"),
         (
-            "python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_v1.py",
-            "python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_v1.py --refresh",
+            "python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py",
+            "python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py --refresh",
         ),
     ],
 )

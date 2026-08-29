@@ -34,14 +34,18 @@ struct Evaluation final {
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model);
 
 /*
- * The caller must first establish validate_static_compatibility(). All three
- * scratch/cache pointers must be null for the stateless path or non-null for
- * the stateful path. A non-null short-system scratch must be independent,
- * deep-owned, shape/unit matched, and contain exact +0.0 charges; only its
- * positions are refreshed. Force-producing stateful calls reuse the short
- * parent's Evaluation storage. Force-free calls leave that storage and the
- * Rust validation cache untouched. Failed calls need not restore private
- * derived scratch/cache contents.
+ * The caller must first establish validate_static_compatibility(). The three
+ * private scratch/cache pointers must be null for the stateless path or
+ * non-null for the stateful path. The stateful force output must be non-null
+ * exactly for a force-producing stateful call. A non-null short-system
+ * scratch must be independent, deep-owned, shape/unit matched, and contain
+ * exact +0.0 charges; only its positions are refreshed. Force-producing
+ * stateful calls reuse the short parent's Evaluation storage and write the
+ * final force directly to the supplied SoA Evaluation after all parent and
+ * combined force values have been validated. Stateless force-producing calls
+ * retain the composite AoS force result. Force-free calls leave the private
+ * force storage and Rust validation cache untouched. Failed calls need not
+ * restore private derived scratch/cache contents.
  */
 [[nodiscard]] bg_status evaluate_prevalidated(
     bg_backend lane,
@@ -52,6 +56,7 @@ struct Evaluation final {
     bg_system *short_system_scratch,
     cpu::Evaluation *short_parent_evaluation_scratch,
     uint8_t *inout_rust_cpu_forcefield_validated,
+    cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
     bg_direct_ewald_error_v1 *out_error);
