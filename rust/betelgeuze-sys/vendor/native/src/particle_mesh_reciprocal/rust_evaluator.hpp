@@ -3,7 +3,15 @@
 
 #include "cpp_evaluator.hpp"
 
+#include <vector>
+
 namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu {
+
+struct ProviderForceScratch final {
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> z;
+};
 
 [[nodiscard]] bg_status evaluate(
     const bg_system &system,
@@ -16,6 +24,7 @@ namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu {
     const bg_system &system,
     const bg_particle_mesh_reciprocal_model_v1 &model,
     bool compute_forces,
+    ProviderForceScratch *provider_force_scratch,
     Evaluation *out_evaluation,
     Error *out_error);
 

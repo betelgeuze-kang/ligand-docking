@@ -858,6 +858,8 @@ bg_status evaluate_prevalidated(
     ewald::Evaluation *direct_parent_evaluation_scratch,
     particle_mesh_reciprocal::Evaluation *
         reciprocal_parent_evaluation_scratch,
+    particle_mesh_reciprocal::rust_cpu::ProviderForceScratch *
+        rust_reciprocal_provider_force_scratch,
     cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
@@ -884,10 +886,12 @@ bg_status evaluate_prevalidated(
             stateful_scratch ||
         (direct_parent_evaluation_scratch != nullptr) != stateful_scratch ||
         (reciprocal_parent_evaluation_scratch != nullptr) !=
+            stateful_scratch ||
+        (rust_reciprocal_provider_force_scratch != nullptr) !=
             stateful_scratch) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
-            "particle-mesh composite stateful scratch, validation-cache, direct-parent, and reciprocal-parent pointers must be all null or all non-null");
+            "particle-mesh composite stateful scratch, validation-cache, direct-parent, reciprocal-parent, and Rust reciprocal provider-force pointers must be all null or all non-null");
     }
     const bool requires_stateful_force_output =
         stateful_scratch && compute_forces;
@@ -1040,6 +1044,7 @@ bg_status evaluate_prevalidated(
             ? particle_mesh_reciprocal::rust_cpu::
                   evaluate_reusing_force_storage(
                       system, reciprocal_model, true,
+                      rust_reciprocal_provider_force_scratch,
                       reciprocal_evaluation, &reciprocal_error)
             : particle_mesh_reciprocal::rust_cpu::evaluate(
                   system, reciprocal_model, compute_forces,
@@ -1345,7 +1350,8 @@ bg_context_evaluate_particle_mesh_ewald_composite_v1(
         status = evaluate_prevalidated(
             lane, *system, *forcefield, *direct_model,
             *reciprocal_model, nullptr, nullptr, nullptr, nullptr, nullptr,
-            nullptr, out_forces != nullptr, &evaluation, out_error);
+            nullptr, nullptr, out_forces != nullptr, &evaluation,
+            out_error);
         if (status != BG_STATUS_OK) {
             return status;
         }

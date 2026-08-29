@@ -3,38 +3,38 @@ from pathlib import Path
 
 import pytest
 
-from tools import verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_v1 as verifier
+from tools import verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_scratch_v1 as verifier
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_FORCE_SCRATCH_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_force_scratch_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_FORCE_SCRATCH_EVIDENCE_PRESENT,
-    reason=(
-        "PME reciprocal-parent force-scratch evidence is verified from its "
-        "exact frozen PR 455 object after Rust reciprocal provider-force "
-        "scratch evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 260
+    assert result["source_count"] == 266
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
     validation = profile["validation"]
     assert implementation[
-        "successful_stateful_forceful_reciprocal_parent_aos_storage_reused"
+        "successful_stateful_forceful_rust_reciprocal_provider_force_soa_storage_reused"
     ]
-    assert implementation["steady_state_reciprocal_parent_force_storage_reused"]
-    assert implementation["cpp_reciprocal_gather_reuses_supplied_aos_vector"]
-    assert implementation["rust_reciprocal_provider_soa_remains_local"]
-    assert implementation["reciprocal_internal_soa_storage_reused"] is False
-    assert implementation["reciprocal_mesh_storage_reused"] is False
+    assert implementation[
+        "steady_state_rust_reciprocal_provider_force_soa_storage_reused"
+    ]
+    assert implementation["cpp_lane_rust_reciprocal_provider_force_scratch_unused"]
+    assert implementation[
+        "cpp_lane_stale_rust_reciprocal_provider_force_scratch_preserved"
+    ]
+    assert implementation["reciprocal_parent_force_storage_reuse_preserved"]
+    assert implementation["direct_parent_force_storage_reuse_preserved"]
+    assert implementation["rust_reciprocal_provider_soa_remains_local"] is False
+    assert implementation[
+        "rust_reciprocal_provider_internal_aos_storage_reused"
+    ] is False
+    assert implementation["rust_reciprocal_provider_mesh_storage_reused"] is False
+    assert implementation[
+        "rust_reciprocal_provider_other_workspace_reused"
+    ] is False
+    assert validation["cpp_lane_unused_and_stale_scratch_preservation"]
     assert validation["macos_locked_cargo_exact_signature_retry_bounded"]
     assert not any(profile["authority"].values())
     for key in (
@@ -52,17 +52,17 @@ def test_exact_profile_manifest_and_contracts() -> None:
 
 
 def test_exact_anchors_and_delta() -> None:
-    assert verifier.PREDECESSOR["pull_request"] == 454
+    assert verifier.PREDECESSOR["pull_request"] == 455
     assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 453
     assert verifier.INHERITED_PREDECESSOR["pull_request"] == 440
-    assert len(verifier.IMPLEMENTATION_DELTA_PATHS) == 19
-    assert len(verifier.EXPECTED_DELTA_PATHS) == 27
+    assert len(verifier.IMPLEMENTATION_DELTA_PATHS) == 15
+    assert len(verifier.EXPECTED_DELTA_PATHS) == 23
     assert verifier.current_delta_paths() == verifier.EXPECTED_DELTA_PATHS
 
 
 def test_workflow_static_trigger_closure_and_bodies() -> None:
-    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 76
-    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 76
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 84
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 84
     workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     verifier.require_workflow_contract(workflow)
     assert workflow == verifier.expected_workflow_document()
@@ -95,17 +95,8 @@ def test_workflow_job_body_mutation_fails_closed(job: str) -> None:
     "relative,transform",
     [
         (
-            "native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
-            verifier.expected_cpp_evaluator_header,
-        ),
-        (
             "native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
             verifier.expected_rust_evaluator_header,
-        ),
-        (
-            "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/"
-            "cpp_evaluator.hpp",
-            verifier.expected_cpp_evaluator_header,
         ),
         (
             "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/"
@@ -124,15 +115,30 @@ def test_frozen_header_transforms_and_sentinels(relative, transform) -> None:
     with pytest.raises(ValueError, match="transformation point drift"):
         transform(
             frozen.replace(
-                "[[nodiscard]] bg_status evaluate(\n",
-                "[[nodiscard]] bg_status drifted(\n",
+                '#include "cpp_evaluator.hpp"\n',
+                '#include "drifted.hpp"\n',
                 1,
             )
         )
 
 
+def test_provider_sources_frozen_and_binding_order() -> None:
+    merge = verifier.PREDECESSOR["merge_commit"]
+    for relative, digest in verifier.FROZEN_PROVIDER_SOURCE_SHA256.items():
+        frozen = verifier.git("show", f"{merge}:{relative}").stdout
+        assert verifier.sha(frozen) == digest
+        assert frozen == (ROOT / relative).read_bytes()
+    source = (
+        ROOT / "native/src/particle_mesh_reciprocal/rust_evaluator.cpp"
+    ).read_text()
+    resize = source.index("active_provider_force_scratch->x.resize(atom_count);")
+    capacity = source.index("provider_forces.capacity = atom_count;")
+    data = source.index("provider_forces.x = active_provider_force_scratch->x.data();")
+    assert resize < capacity < data
+
+
 def test_production_hashes_and_vendor_identity() -> None:
-    verifier.require_reciprocal_parent_force_scratch_contract(ROOT)
+    verifier.require_rust_reciprocal_provider_force_scratch_contract(ROOT)
 
 
 def test_predecessor_freezes() -> None:
@@ -168,8 +174,8 @@ def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
     "anchor",
     [
         (
-            "      - name: Materialize exact PR 453 architecture, PR 452 "
-            "target, and PR 435 inherited Ewald evaluator\n"
+            "      - name: Materialize exact PR 454 target, PR 453 "
+            "architecture, and PR 440 inherited reciprocal evaluator\n"
         ),
         "      - name: Verify bounded successor evidence\n",
     ],
@@ -185,7 +191,7 @@ def test_predecessor_workflow_executes_exact_frozen_merge(anchor: str) -> None:
         ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH
     ).read_text()
     for token in (
-        "Materialize exact PR 454 evidence and reviewed head",
+        "Materialize exact PR 455 evidence and reviewed head",
         'git checkout --detach --quiet "$frozen"',
         "trap 'git checkout --detach --quiet \"$current_sha\"' EXIT",
         verifier.PREDECESSOR["reviewed_head"],

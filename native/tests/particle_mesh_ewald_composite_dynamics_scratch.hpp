@@ -34,6 +34,12 @@ struct ParticleMeshEwaldCompositeReciprocalParentForceScratchSnapshot final {
     std::size_t capacity = 0U;
 };
 
+struct ParticleMeshEwaldCompositeRustReciprocalProviderForceScratchSnapshot final {
+    std::array<const double *, 3> addresses{};
+    std::array<std::size_t, 3> sizes{};
+    std::array<std::size_t, 3> capacities{};
+};
+
 struct ParticleMeshEwaldCompositeShortSystemScratchSnapshot final {
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     std::array<const double *, 8> addresses{};
@@ -57,6 +63,10 @@ void reserve_particle_mesh_ewald_composite_reciprocal_parent_force_scratch(
     bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
     std::size_t capacity);
 
+void reserve_particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch(
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    std::size_t capacity);
+
 [[nodiscard]] ParticleMeshEwaldCompositeForceScratchSnapshot
 particle_mesh_ewald_composite_force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation);
@@ -71,6 +81,11 @@ particle_mesh_ewald_composite_direct_parent_force_scratch_snapshot(
 
 [[nodiscard]] ParticleMeshEwaldCompositeReciprocalParentForceScratchSnapshot
 particle_mesh_ewald_composite_reciprocal_parent_force_scratch_snapshot(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation);
+
+[[nodiscard]]
+ParticleMeshEwaldCompositeRustReciprocalProviderForceScratchSnapshot
+particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation);
 
 [[nodiscard]] ParticleMeshEwaldCompositeShortSystemScratchSnapshot

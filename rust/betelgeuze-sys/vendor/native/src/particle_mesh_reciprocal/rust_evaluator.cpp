@@ -51,6 +51,7 @@ static bg_status evaluate_impl(
     const bg_particle_mesh_reciprocal_model_v1 &model,
     bool compute_forces,
     bool reuse_force_storage,
+    ProviderForceScratch *provider_force_scratch,
     Evaluation *out_evaluation,
     Error *out_error) {
     static_assert(
@@ -103,6 +104,12 @@ static bg_status evaluate_impl(
             "Rust particle-mesh reciprocal evaluation outputs must not be null");
     }
     *out_error = Error{};
+    if (compute_forces && reuse_force_storage &&
+        provider_force_scratch == nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "Rust particle-mesh reciprocal reusable provider-force scratch must not be null");
+    }
     const std::size_t atom_count = system.position_x.size();
     if (atom_count == 0U) {
         out_error->code =
@@ -169,21 +176,22 @@ static bg_status evaluate_impl(
     }
     bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
     bg_rust_particle_mesh_reciprocal_force_output_v1 *force_pointer = nullptr;
-    std::vector<double> force_x;
-    std::vector<double> force_y;
-    std::vector<double> force_z;
+    ProviderForceScratch local_provider_force_scratch;
+    ProviderForceScratch *active_provider_force_scratch =
+        reuse_force_storage ? provider_force_scratch
+                            : &local_provider_force_scratch;
     if (compute_forces) {
-        force_x.resize(atom_count);
-        force_y.resize(atom_count);
-        force_z.resize(atom_count);
+        active_provider_force_scratch->x.resize(atom_count);
+        active_provider_force_scratch->y.resize(atom_count);
+        active_provider_force_scratch->z.resize(atom_count);
         provider_forces.struct_size =
             static_cast<std::uint32_t>(sizeof(provider_forces));
         provider_forces.abi_version =
             BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
         provider_forces.capacity = atom_count;
-        provider_forces.x = force_x.data();
-        provider_forces.y = force_y.data();
-        provider_forces.z = force_z.data();
+        provider_forces.x = active_provider_force_scratch->x.data();
+        provider_forces.y = active_provider_force_scratch->y.data();
+        provider_forces.z = active_provider_force_scratch->z.data();
         force_pointer = &provider_forces;
     }
 
@@ -235,15 +243,17 @@ static bg_status evaluate_impl(
     if (compute_forces) {
         candidate.forces.resize(atom_count);
         for (std::size_t atom = 0U; atom < atom_count; ++atom) {
-            if (!std::isfinite(force_x[atom]) ||
-                !std::isfinite(force_y[atom]) ||
-                !std::isfinite(force_z[atom])) {
+            if (!std::isfinite(active_provider_force_scratch->x[atom]) ||
+                !std::isfinite(active_provider_force_scratch->y[atom]) ||
+                !std::isfinite(active_provider_force_scratch->z[atom])) {
                 return fail(
                     BG_STATUS_INTERNAL_ERROR,
                     "Rust particle-mesh reciprocal provider returned non-finite force on success");
             }
             candidate.forces[atom] = {
-                force_x[atom], force_y[atom], force_z[atom]};
+                active_provider_force_scratch->x[atom],
+                active_provider_force_scratch->y[atom],
+                active_provider_force_scratch->z[atom]};
         }
     }
     *out_evaluation = std::move(candidate);
@@ -257,17 +267,20 @@ bg_status evaluate(
     Evaluation *out_evaluation,
     Error *out_error) {
     return evaluate_impl(
-        system, model, compute_forces, false, out_evaluation, out_error);
+        system, model, compute_forces, false, nullptr, out_evaluation,
+        out_error);
 }
 
 bg_status evaluate_reusing_force_storage(
     const bg_system &system,
     const bg_particle_mesh_reciprocal_model_v1 &model,
     bool compute_forces,
+    ProviderForceScratch *provider_force_scratch,
     Evaluation *out_evaluation,
     Error *out_error) {
     return evaluate_impl(
-        system, model, compute_forces, true, out_evaluation, out_error);
+        system, model, compute_forces, true, provider_force_scratch,
+        out_evaluation, out_error);
 }
 
 }  // namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu

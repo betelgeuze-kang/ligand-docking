@@ -215,7 +215,13 @@ bool owner_storage_overlaps(
         evaluation_storage_overlaps(
             owner.direct_parent_evaluation_scratch, output) ||
         evaluation_storage_overlaps(
-            owner.reciprocal_parent_evaluation_scratch, output)) {
+            owner.reciprocal_parent_evaluation_scratch, output) ||
+        vector_storage_overlaps(
+            owner.rust_reciprocal_provider_force_scratch.x, output) ||
+        vector_storage_overlaps(
+            owner.rust_reciprocal_provider_force_scratch.y, output) ||
+        vector_storage_overlaps(
+            owner.rust_reciprocal_provider_force_scratch.z, output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -547,6 +553,7 @@ bg_status evaluate_composite_provider(
         &simulation->rust_cpu_forcefield_validated,
         &provider->owner->direct_parent_evaluation_scratch,
         &provider->owner->reciprocal_parent_evaluation_scratch,
+        &provider->owner->rust_reciprocal_provider_force_scratch,
         compute_forces ? out_evaluation : nullptr, compute_forces,
         &combined, &local_error);
     if (status != BG_STATUS_OK) {
@@ -795,7 +802,8 @@ bg_particle_mesh_ewald_composite_simulation_v1_create(
             &candidate->short_parent_evaluation_scratch,
             &candidate->simulation->rust_cpu_forcefield_validated,
             &candidate->direct_parent_evaluation_scratch,
-            &candidate->reciprocal_parent_evaluation_scratch, nullptr,
+            &candidate->reciprocal_parent_evaluation_scratch,
+            &candidate->rust_reciprocal_provider_force_scratch, nullptr,
             false, &initial_evaluation, &initial_error);
         if (status != BG_STATUS_OK) {
             if (initial_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
