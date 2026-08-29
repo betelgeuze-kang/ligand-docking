@@ -7,6 +7,7 @@
 #include "../dynamics/dynamics.hpp"
 #include "../ewald/cpp_evaluator.hpp"
 #include "../particle_mesh_reciprocal/cpp_evaluator.hpp"
+#include "../particle_mesh_reciprocal/rust_evaluator.hpp"
 
 #include <array>
 #include <cstdint>
@@ -21,6 +22,8 @@ struct bg_particle_mesh_ewald_composite_simulation_v1 final {
     betelgeuze::native::ewald::Evaluation direct_parent_evaluation_scratch;
     betelgeuze::native::particle_mesh_reciprocal::Evaluation
         reciprocal_parent_evaluation_scratch;
+    betelgeuze::native::particle_mesh_reciprocal::rust_cpu::
+        ProviderForceScratch rust_reciprocal_provider_force_scratch;
     std::array<uint8_t, 32> static_fingerprint{};
 };
 

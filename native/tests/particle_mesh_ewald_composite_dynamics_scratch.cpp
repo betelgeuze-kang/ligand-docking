@@ -44,6 +44,16 @@ void reserve_particle_mesh_ewald_composite_reciprocal_parent_force_scratch(
     simulation->reciprocal_parent_evaluation_scratch.forces.reserve(capacity);
 }
 
+void reserve_particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch(
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    std::size_t capacity) {
+    assert(simulation != nullptr);
+    auto &scratch = simulation->rust_reciprocal_provider_force_scratch;
+    scratch.x.reserve(capacity);
+    scratch.y.reserve(capacity);
+    scratch.z.reserve(capacity);
+}
+
 ParticleMeshEwaldCompositeForceScratchSnapshot
 particle_mesh_ewald_composite_force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
@@ -121,6 +131,32 @@ particle_mesh_ewald_composite_reciprocal_parent_force_scratch_snapshot(
     snapshot.address = scratch.data();
     snapshot.size = scratch.size();
     snapshot.capacity = scratch.capacity();
+    return snapshot;
+}
+
+ParticleMeshEwaldCompositeRustReciprocalProviderForceScratchSnapshot
+particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch_snapshot(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
+    assert(simulation != nullptr);
+    const auto &scratch =
+        simulation->rust_reciprocal_provider_force_scratch;
+    ParticleMeshEwaldCompositeRustReciprocalProviderForceScratchSnapshot
+        snapshot;
+    snapshot.addresses = {
+        scratch.x.data(),
+        scratch.y.data(),
+        scratch.z.data(),
+    };
+    snapshot.sizes = {
+        scratch.x.size(),
+        scratch.y.size(),
+        scratch.z.size(),
+    };
+    snapshot.capacities = {
+        scratch.x.capacity(),
+        scratch.y.capacity(),
+        scratch.z.capacity(),
+    };
     return snapshot;
 }
 
