@@ -855,6 +855,7 @@ bg_status evaluate_prevalidated(
     bg_system *short_system_scratch,
     cpu::Evaluation *short_parent_evaluation_scratch,
     uint8_t *inout_rust_cpu_forcefield_validated,
+    ewald::Evaluation *direct_parent_evaluation_scratch,
     cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
@@ -878,10 +879,11 @@ bg_status evaluate_prevalidated(
     const bool stateful_scratch = short_system_scratch != nullptr;
     if ((short_parent_evaluation_scratch != nullptr) != stateful_scratch ||
         (inout_rust_cpu_forcefield_validated != nullptr) !=
-            stateful_scratch) {
+            stateful_scratch ||
+        (direct_parent_evaluation_scratch != nullptr) != stateful_scratch) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
-            "particle-mesh composite stateful scratch and validation-cache pointers must be all null or all non-null");
+            "particle-mesh composite stateful scratch, validation-cache, and direct-parent pointers must be all null or all non-null");
     }
     const bool requires_stateful_force_output =
         stateful_scratch && compute_forces;
@@ -970,16 +972,30 @@ bg_status evaluate_prevalidated(
 
     bg_direct_ewald_model_v1 local_direct_model = direct_model;
     local_direct_model.reciprocal_max_indices = {{0, 0, 0}};
-    ewald::Evaluation direct_evaluation;
+    ewald::Evaluation local_direct_evaluation;
+    ewald::Evaluation *direct_evaluation = &local_direct_evaluation;
+    const bool reuse_direct_parent_force_storage =
+        stateful_scratch && compute_forces;
+    if (reuse_direct_parent_force_storage) {
+        direct_evaluation = direct_parent_evaluation_scratch;
+    }
     ewald::Error direct_error;
     if (cpp_lane) {
-        status = ewald::cpp_cpu::evaluate(
-            system, local_direct_model, compute_forces, &direct_evaluation,
-            &direct_error);
+        status = reuse_direct_parent_force_storage
+            ? ewald::cpp_cpu::evaluate_reusing_force_storage(
+                  system, local_direct_model, true, direct_evaluation,
+                  &direct_error)
+            : ewald::cpp_cpu::evaluate(
+                  system, local_direct_model, compute_forces,
+                  direct_evaluation, &direct_error);
     } else {
-        status = ewald::rust_cpu::evaluate(
-            system, local_direct_model, compute_forces, &direct_evaluation,
-            &direct_error);
+        status = reuse_direct_parent_force_storage
+            ? ewald::rust_cpu::evaluate_reusing_force_storage(
+                  system, local_direct_model, true, direct_evaluation,
+                  &direct_error)
+            : ewald::rust_cpu::evaluate(
+                  system, local_direct_model, compute_forces,
+                  direct_evaluation, &direct_error);
     }
     if (status != BG_STATUS_OK) {
         if (direct_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
@@ -989,8 +1005,9 @@ bg_status evaluate_prevalidated(
         }
         return status;
     }
+    const ewald::Evaluation &direct_result = *direct_evaluation;
     if (!direct_parent_is_valid(
-            direct_evaluation, direct_error, compute_forces, atom_count)) {
+            direct_result, direct_error, compute_forces, atom_count)) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "particle-mesh Ewald composite direct-local parent returned inconsistent energy, forces, or error state");
@@ -1043,12 +1060,12 @@ bg_status evaluate_prevalidated(
     candidate.short_coulomb =
         short_result.energy.coulomb_kcal_per_mol;
     candidate.short_total = short_result.energy.total_kcal_per_mol;
-    candidate.pme_real_space = direct_evaluation.energy.real_space;
+    candidate.pme_real_space = direct_result.energy.real_space;
     candidate.pme_reciprocal_space =
         reciprocal_evaluation.reciprocal_space_kcal_per_mol;
-    candidate.pme_self = direct_evaluation.energy.self;
+    candidate.pme_self = direct_result.energy.self;
     candidate.pme_pair_correction =
-        direct_evaluation.energy.pair_correction;
+        direct_result.energy.pair_correction;
     candidate.pme_total =
         ((candidate.pme_real_space + candidate.pme_reciprocal_space) +
          candidate.pme_self) +
@@ -1063,20 +1080,20 @@ bg_status evaluate_prevalidated(
     if (compute_forces) {
         for (std::size_t atom = 0U; atom < atom_count; ++atom) {
             const std::array<double, 3> pme_force{{
-                direct_evaluation.forces[atom][0] +
+                direct_result.forces[atom][0] +
                     reciprocal_evaluation.forces[atom][0],
-                direct_evaluation.forces[atom][1] +
+                direct_result.forces[atom][1] +
                     reciprocal_evaluation.forces[atom][1],
-                direct_evaluation.forces[atom][2] +
+                direct_result.forces[atom][2] +
                     reciprocal_evaluation.forces[atom][2],
             }};
             const std::array<double, 15> parent_and_combined_forces{{
                 short_result.force_x[atom],
                 short_result.force_y[atom],
                 short_result.force_z[atom],
-                direct_evaluation.forces[atom][0],
-                direct_evaluation.forces[atom][1],
-                direct_evaluation.forces[atom][2],
+                direct_result.forces[atom][0],
+                direct_result.forces[atom][1],
+                direct_result.forces[atom][2],
                 reciprocal_evaluation.forces[atom][0],
                 reciprocal_evaluation.forces[atom][1],
                 reciprocal_evaluation.forces[atom][2],
@@ -1103,11 +1120,11 @@ bg_status evaluate_prevalidated(
             stateful_force_output->force_z.resize(atom_count);
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
                 const std::array<double, 3> pme_force{{
-                    direct_evaluation.forces[atom][0] +
+                    direct_result.forces[atom][0] +
                         reciprocal_evaluation.forces[atom][0],
-                    direct_evaluation.forces[atom][1] +
+                    direct_result.forces[atom][1] +
                         reciprocal_evaluation.forces[atom][1],
-                    direct_evaluation.forces[atom][2] +
+                    direct_result.forces[atom][2] +
                         reciprocal_evaluation.forces[atom][2],
                 }};
                 stateful_force_output->force_x[atom] =
@@ -1121,11 +1138,11 @@ bg_status evaluate_prevalidated(
             candidate.forces.resize(atom_count);
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
                 const std::array<double, 3> pme_force{{
-                    direct_evaluation.forces[atom][0] +
+                    direct_result.forces[atom][0] +
                         reciprocal_evaluation.forces[atom][0],
-                    direct_evaluation.forces[atom][1] +
+                    direct_result.forces[atom][1] +
                         reciprocal_evaluation.forces[atom][1],
-                    direct_evaluation.forces[atom][2] +
+                    direct_result.forces[atom][2] +
                         reciprocal_evaluation.forces[atom][2],
                 }};
                 candidate.forces[atom] = {{
@@ -1304,7 +1321,7 @@ bg_context_evaluate_particle_mesh_ewald_composite_v1(
         Evaluation evaluation;
         status = evaluate_prevalidated(
             lane, *system, *forcefield, *direct_model,
-            *reciprocal_model, nullptr, nullptr, nullptr, nullptr,
+            *reciprocal_model, nullptr, nullptr, nullptr, nullptr, nullptr,
             out_forces != nullptr, &evaluation, out_error);
         if (status != BG_STATUS_OK) {
             return status;

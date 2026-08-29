@@ -118,6 +118,12 @@ bool evaluation_storage_overlaps(
            vector_storage_overlaps(evaluation.force_z, output);
 }
 
+bool evaluation_storage_overlaps(
+    const ewald::Evaluation &evaluation,
+    const ByteRange &output) noexcept {
+    return vector_storage_overlaps(evaluation.forces, output);
+}
+
 bool forcefield_storage_overlaps(
     const bg_forcefield &forcefield,
     const ByteRange &output) noexcept {
@@ -199,7 +205,9 @@ bool owner_storage_overlaps(
         model_storage_overlaps(owner.direct_model, output) ||
         system_storage_overlaps(owner.short_system_scratch, output) ||
         evaluation_storage_overlaps(
-            owner.short_parent_evaluation_scratch, output)) {
+            owner.short_parent_evaluation_scratch, output) ||
+        evaluation_storage_overlaps(
+            owner.direct_parent_evaluation_scratch, output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -529,6 +537,7 @@ bg_status evaluate_composite_provider(
         &provider->owner->short_system_scratch,
         &provider->owner->short_parent_evaluation_scratch,
         &simulation->rust_cpu_forcefield_validated,
+        &provider->owner->direct_parent_evaluation_scratch,
         compute_forces ? out_evaluation : nullptr, compute_forces,
         &combined, &local_error);
     if (status != BG_STATUS_OK) {
@@ -775,8 +784,8 @@ bg_particle_mesh_ewald_composite_simulation_v1_create(
             candidate->simulation->forcefield, candidate->direct_model,
             candidate->reciprocal_model, &candidate->short_system_scratch,
             &candidate->short_parent_evaluation_scratch,
-            &candidate->simulation->rust_cpu_forcefield_validated, nullptr,
-            false,
+            &candidate->simulation->rust_cpu_forcefield_validated,
+            &candidate->direct_parent_evaluation_scratch, nullptr, false,
             &initial_evaluation, &initial_error);
         if (status != BG_STATUS_OK) {
             if (initial_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
@@ -809,6 +818,14 @@ bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
                 BG_STATUS_INVALID_ARGUMENT,
                 "particle view output must be non-null and naturally aligned");
         }
+        ByteRange view_range;
+        if (simulation != nullptr &&
+            (!make_byte_range(out_view, sizeof(*out_view), &view_range) ||
+             owner_storage_overlaps(*simulation, view_range))) {
+            return fail(
+                BG_STATUS_INVALID_ARGUMENT,
+                "particle view output must not overlap particle-mesh composite dynamics owner storage");
+        }
         bg_status status = validate_particle_view_descriptor(*out_view);
         if (status != BG_STATUS_OK) {
             return status;
@@ -817,13 +834,6 @@ bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "particle-mesh composite dynamics simulation must not be null");
-        }
-        ByteRange view_range;
-        if (!make_byte_range(out_view, sizeof(*out_view), &view_range) ||
-            owner_storage_overlaps(*simulation, view_range)) {
-            return fail(
-                BG_STATUS_INVALID_ARGUMENT,
-                "particle view output must not overlap particle-mesh composite dynamics owner storage");
         }
         status = validate_owner_invariant(*simulation);
         if (status != BG_STATUS_OK) {
