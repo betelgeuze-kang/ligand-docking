@@ -83,6 +83,13 @@ int32_t bg_rust_particle_mesh_reciprocal_evaluate_v1(
     bg_rust_particle_mesh_reciprocal_force_output_v1 *out_forces,
     bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
 
+int32_t bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+    const bg_rust_particle_mesh_reciprocal_system_v1 *system,
+    const bg_rust_particle_mesh_reciprocal_model_v1 *model,
+    bg_rust_particle_mesh_reciprocal_energy_v1 *out_energy,
+    bg_rust_particle_mesh_reciprocal_force_output_v1 *out_forces,
+    bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif
