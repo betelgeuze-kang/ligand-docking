@@ -1254,6 +1254,76 @@ def expected_frozen_predecessor_workflow(frozen: str) -> str:
         if expected.count(old) != 2:
             fail("frozen predecessor workflow successor trigger drift")
         expected = expected.replace(old, new)
+    old_materialize = """      - name: Materialize exact PR 451 architecture, PR 450 target, and PR 445 inherited final SoA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse 0d1e5fa1d2923139f0d070d5ec09ed29959cbc2a^{tree})" = "124539c1d14f5cbc0f3d91d231d6a40736f58f5a"
+          git merge-base --is-ancestor 0d1e5fa1d2923139f0d070d5ec09ed29959cbc2a HEAD
+          git fetch --no-tags --depth=1 origin refs/pull/451/head
+          test "$(git rev-parse FETCH_HEAD)" = "b09f1dd125e1bb6aaf255cc2f3fb737ca4d9f475"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "124539c1d14f5cbc0f3d91d231d6a40736f58f5a"
+          test "$(git rev-parse 75d3a4e2b7ba5b0f1dcf99007358f6f2c47c7330^{tree})" = "03ccd07339b71eafa435a9b2012d2ab6a863d4d9"
+          git merge-base --is-ancestor 75d3a4e2b7ba5b0f1dcf99007358f6f2c47c7330 0d1e5fa1d2923139f0d070d5ec09ed29959cbc2a
+          git fetch --no-tags --depth=1 origin refs/pull/450/head
+          test "$(git rev-parse FETCH_HEAD)" = "b0e26a8b2eea995a6038a484894808387486ff9e"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "03ccd07339b71eafa435a9b2012d2ab6a863d4d9"
+          test "$(git rev-parse c53f7993ec06c4ac04a4907b40f179d12fbe309a^{tree})" = "2bb25b756b802671bcfc5f3ac95b26df3b284956"
+          git merge-base --is-ancestor c53f7993ec06c4ac04a4907b40f179d12fbe309a 75d3a4e2b7ba5b0f1dcf99007358f6f2c47c7330
+          git fetch --no-tags --depth=1 origin refs/pull/445/head
+          test "$(git rev-parse FETCH_HEAD)" = "801a85d56846c464b3a618ecacca867cd12a8c9f"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "2bb25b756b802671bcfc5f3ac95b26df3b284956"
+"""
+    new_materialize = """      - name: Materialize exact PR 452 evidence and reviewed head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse 8f371847d62c03efe99d1e3593c9c0473adcf968^{tree})" = "aa1ba05928e142f06dac11b31e323bb3e247bb17"
+          git merge-base --is-ancestor 8f371847d62c03efe99d1e3593c9c0473adcf968 HEAD
+          git fetch --no-tags --depth=1 origin refs/pull/452/head
+          test "$(git rev-parse FETCH_HEAD)" = "998c8cf68838d5492aec0da1973f3e1f92953ff1"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "aa1ba05928e142f06dac11b31e323bb3e247bb17"
+"""
+    expected = replace_exact(
+        expected,
+        old_materialize,
+        new_materialize,
+        "frozen predecessor workflow materialization",
+    )
+    old_verify = """      - name: Verify bounded successor evidence
+        run: |
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_profile_v1_sources.json >/dev/null
+          python3 -m pip install pytest==8.3.5
+          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py
+"""
+    new_verify = """      - name: Verify exact frozen PR 452 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen=8f371847d62c03efe99d1e3593c9c0473adcf968
+          frozen_tree=aa1ba05928e142f06dac11b31e323bb3e247bb17
+          current_sha="$(git rev-parse HEAD)"
+          test "$(git rev-parse "$frozen^{commit}")" = "$frozen"
+          test "$(git rev-parse "$frozen^{tree}")" = "$frozen_tree"
+          git checkout --detach --quiet "$frozen"
+          trap 'git checkout --detach --quiet "$current_sha"' EXIT
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_profile_v1_sources.json >/dev/null
+          python3 -m pip install pytest==8.3.5
+          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py
+          git checkout --detach --quiet "$current_sha"
+          trap - EXIT
+          test "$(git rev-parse HEAD)" = "$current_sha"
+"""
+    expected = replace_exact(
+        expected,
+        old_verify,
+        new_verify,
+        "frozen predecessor workflow execution",
+    )
     return expected
 
 

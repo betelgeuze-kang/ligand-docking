@@ -77,6 +77,44 @@ def test_predecessor_freezes() -> None:
     verifier.require_predecessor_unit_freeze(ROOT)
 
 
+@pytest.mark.parametrize(
+    "anchor",
+    [
+        "      - name: Materialize exact PR 451 architecture, PR 450 target, and PR 445 inherited final SoA\n",
+        "      - name: Verify bounded successor evidence\n",
+    ],
+)
+def test_predecessor_workflow_executes_exact_frozen_merge(
+    anchor: str,
+) -> None:
+    frozen = verifier.git(
+        "show",
+        f"{verifier.ARCHITECTURE_PREDECESSOR['merge_commit']}:"
+        f"{verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH.as_posix()}",
+    ).stdout.decode()
+    transformed = verifier.expected_frozen_predecessor_workflow(frozen)
+    assert transformed == (
+        ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH
+    ).read_text()
+    for token in (
+        "Materialize exact PR 452 evidence and reviewed head",
+        'git checkout --detach --quiet "$frozen"',
+        "trap 'git checkout --detach --quiet \"$current_sha\"' EXIT",
+        verifier.ARCHITECTURE_PREDECESSOR["reviewed_head"],
+        verifier.ARCHITECTURE_PREDECESSOR["merge_commit"],
+        verifier.ARCHITECTURE_PREDECESSOR["merge_tree"],
+    ):
+        assert token in transformed
+    sentinel = "\n# unrelated-frozen-workflow-sentinel\n"
+    assert verifier.expected_frozen_predecessor_workflow(
+        frozen + sentinel
+    ).endswith(sentinel)
+    with pytest.raises(ValueError, match="transformation point drift"):
+        verifier.expected_frozen_predecessor_workflow(
+            frozen.replace(anchor, "      - name: drifted predecessor step\n", 1)
+        )
+
+
 def test_manifest_and_profile_mutations_are_noncanonical() -> None:
     manifest = json.loads((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())
     manifest["files"][0]["sha256"] = "0" * 64

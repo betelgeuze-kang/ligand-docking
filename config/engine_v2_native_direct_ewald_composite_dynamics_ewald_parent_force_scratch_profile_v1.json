@@ -70,7 +70,7 @@
     "resize_failure_storage_retention_claimed": false,
     "source_manifest_entry_count": 246,
     "source_manifest_path": "config/engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_profile_v1_sources.json",
-    "source_manifest_sha256": "35e2c28f870cf408751b12ea21972ffe3d3c93966a7a61fdd791e52ab456ede6",
+    "source_manifest_sha256": "b2aa88f0d544711461a18ec232667c3a213eaf04851b3301c6851d74b3cc5dcb",
     "stateful_force_free_path_preserved": true,
     "stateless_path_preserved": true,
     "steady_state_ewald_parent_force_storage_reused": true,
