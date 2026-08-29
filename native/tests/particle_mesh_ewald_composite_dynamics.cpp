@@ -74,6 +74,8 @@ using ForceScratchSnapshot = betelgeuze::native::tests::
     ParticleMeshEwaldCompositeForceScratchSnapshot;
 using ShortParentForceScratchSnapshot = betelgeuze::native::tests::
     ParticleMeshEwaldCompositeShortParentForceScratchSnapshot;
+using DirectParentForceScratchSnapshot = betelgeuze::native::tests::
+    ParticleMeshEwaldCompositeDirectParentForceScratchSnapshot;
 using ShortSystemScratchSnapshot = betelgeuze::native::tests::
     ParticleMeshEwaldCompositeShortSystemScratchSnapshot;
 
@@ -127,6 +129,23 @@ void require_short_parent_force_scratch_sizes(
     require(
         snapshot.sizes == std::array<std::size_t, 3>{
             expected, expected, expected},
+        message);
+}
+
+DirectParentForceScratchSnapshot direct_parent_force_scratch_snapshot(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
+    return betelgeuze::native::tests::
+        particle_mesh_ewald_composite_direct_parent_force_scratch_snapshot(
+            simulation);
+}
+
+void require_same_direct_parent_force_scratch_storage(
+    const DirectParentForceScratchSnapshot &actual,
+    const DirectParentForceScratchSnapshot &expected,
+    const char *message) {
+    require(
+        actual.address == expected.address &&
+            actual.capacity == expected.capacity,
         message);
 }
 
@@ -230,6 +249,20 @@ ForceBits force_scratch_bits(const ForceScratchSnapshot &snapshot) {
             "final force scratch bit snapshot had a null channel");
         for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
             result[axis][atom] = bits(snapshot.addresses[axis][atom]);
+        }
+    }
+    return result;
+}
+
+ForceBits direct_parent_force_scratch_bits(
+    const DirectParentForceScratchSnapshot &snapshot) {
+    require(
+        snapshot.address != nullptr && snapshot.size == kAtomCount,
+        "direct-parent force scratch bit snapshot had the wrong shape");
+    ForceBits result{};
+    for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+        for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+            result[axis][atom] = bits(snapshot.address[atom][axis]);
         }
     }
     return result;
@@ -725,6 +758,60 @@ StatelessEvaluation evaluate_stateless(
         error.code == BG_DIRECT_EWALD_ERROR_NONE &&
             error.detail[0] == '\0',
         "stateless evaluation set a typed error");
+    return result;
+}
+
+ForceBits evaluate_stateless_direct_local_force_bits(
+    const bg_context *context,
+    const bg_system *system,
+    const bg_direct_ewald_model_v1 *model) {
+    require(model != nullptr, "stateless direct-local model was null");
+    bg_direct_ewald_model_v1 direct_local_model = *model;
+    direct_local_model.reciprocal_max_indices = {{0, 0, 0}};
+
+    bg_direct_ewald_energy_components_v1 energy{};
+    require_status(
+        bg_direct_ewald_energy_components_v1_init(
+            &energy, sizeof(energy), BG_DIRECT_EWALD_ABI_VERSION),
+        BG_STATUS_OK,
+        "stateless direct-local energy initializer failed");
+    std::array<double, kAtomCount> force_x{};
+    std::array<double, kAtomCount> force_y{};
+    std::array<double, kAtomCount> force_z{};
+    bg_direct_ewald_force_soa_v1 forces{};
+    require_status(
+        bg_direct_ewald_force_soa_v1_init(
+            &forces, sizeof(forces), BG_DIRECT_EWALD_ABI_VERSION),
+        BG_STATUS_OK,
+        "stateless direct-local force initializer failed");
+    forces.atom_capacity = kAtomCount;
+    forces.x_kcal_per_mol_angstrom = force_x.data();
+    forces.y_kcal_per_mol_angstrom = force_y.data();
+    forces.z_kcal_per_mol_angstrom = force_z.data();
+    bg_direct_ewald_error_v1 error{};
+    init_error(&error);
+    require_status(
+        bg_context_evaluate_direct_ewald_v1(
+            context, system, &direct_local_model, &energy, &forces, &error),
+        BG_STATUS_OK,
+        "stateless direct-local evaluation failed");
+    require(
+        forces.atom_count == kAtomCount &&
+            error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            error.detail[0] == '\0',
+        "stateless direct-local evaluation returned inconsistent outputs");
+
+    const std::array<const std::array<double, kAtomCount> *, 3> channels{{
+        &force_x,
+        &force_y,
+        &force_z,
+    }};
+    ForceBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits((*channels[axis])[atom]);
+        }
+    }
     return result;
 }
 
@@ -1416,6 +1503,311 @@ void verify_short_parent_force_scratch_reuse() {
     }
 }
 
+void verify_direct_parent_force_scratch_reuse() {
+    constexpr std::size_t kReservedCapacity = 64U;
+    const Fixture fixture;
+
+    for (const bg_backend lane : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+         }) {
+        auto context = make_context(lane);
+        auto system = make_system(fixture, fixture.charge);
+        auto forcefield = make_forcefield(fixture);
+        auto direct = make_direct_model(fixture);
+        auto reciprocal = make_reciprocal_model(fixture);
+        auto simulation = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+        auto peer = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+
+        const DirectParentForceScratchSnapshot initial =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require(
+            initial.size == 0U && initial.capacity == 0U,
+            "new PME direct-parent force scratch was not empty");
+        betelgeuze::native::tests::
+            reserve_particle_mesh_ewald_composite_direct_parent_force_scratch(
+                simulation.get(), kReservedCapacity);
+        const DirectParentForceScratchSnapshot reserved =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require(
+            reserved.address != nullptr && reserved.size == 0U &&
+                reserved.capacity >= kReservedCapacity,
+            "PME direct-parent force scratch reserve did not retain empty storage");
+
+        const auto before_zero = checkpoint(simulation.get());
+        const bg_dynamics_report_v1 zero_report =
+            integrate(context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero_report =
+            integrate(context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(
+                &zero_report, &peer_zero_report, sizeof(zero_report)) == 0,
+            "reserved PME direct-parent scratch changed zero-step report bits");
+        require(
+            checkpoint(simulation.get()) == before_zero,
+            "zero-step integration changed checkpoint state");
+        const DirectParentForceScratchSnapshot after_zero =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            after_zero,
+            reserved,
+            "zero-step integration changed PME direct-parent scratch storage");
+        require(
+            after_zero.size == 0U,
+            "zero-step integration changed PME direct-parent scratch size");
+
+        const auto stateless_bits_for_owner = [&]() {
+            Fixture current = fixture;
+            const bg_particle_soa_view view = simulation_view(simulation.get());
+            std::copy_n(
+                view.position_x_angstrom, kAtomCount, current.x.begin());
+            std::copy_n(
+                view.position_y_angstrom, kAtomCount, current.y.begin());
+            std::copy_n(
+                view.position_z_angstrom, kAtomCount, current.z.begin());
+            const auto current_system = make_system(current, current.charge);
+            return evaluate_stateless_direct_local_force_bits(
+                context.get(), current_system.get(), direct.get());
+        };
+
+        for (const std::uint64_t step_count : {
+                 UINT64_C(1),
+                 UINT64_C(2),
+             }) {
+            const bg_dynamics_report_v1 report =
+                integrate(context.get(), simulation.get(), step_count);
+            const bg_dynamics_report_v1 peer_report =
+                integrate(context.get(), peer.get(), step_count);
+            require(
+                std::memcmp(&report, &peer_report, sizeof(report)) == 0,
+                "reused PME direct-parent scratch changed integration report bits");
+            require(
+                checkpoint(simulation.get()) == checkpoint(peer.get()),
+                "reused PME direct-parent scratch changed checkpoint bits");
+            const DirectParentForceScratchSnapshot current =
+                direct_parent_force_scratch_snapshot(simulation.get());
+            require_same_direct_parent_force_scratch_storage(
+                current,
+                reserved,
+                "integration replaced PME direct-parent force scratch storage");
+            require(
+                current.size == kAtomCount,
+                "integration retained the wrong PME direct-parent scratch size");
+            require(
+                direct_parent_force_scratch_bits(current) ==
+                    direct_parent_force_scratch_bits(
+                        direct_parent_force_scratch_snapshot(peer.get())),
+                "PME direct-parent scratch differed from same-lane peer bits");
+            require(
+                direct_parent_force_scratch_bits(current) ==
+                    stateless_bits_for_owner(),
+                "PME direct-parent scratch differed from stateless direct-local force bits");
+        }
+
+        const auto checkpoint_a = checkpoint(simulation.get());
+        const ForceBits forces_a = direct_parent_force_scratch_bits(
+            direct_parent_force_scratch_snapshot(simulation.get()));
+        integrate(context.get(), simulation.get(), UINT64_C(1));
+        const DirectParentForceScratchSnapshot state_b =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            state_b,
+            reserved,
+            "state-B integration replaced PME direct-parent scratch storage");
+        const ForceBits forces_b = direct_parent_force_scratch_bits(state_b);
+        require(
+            forces_b != forces_a,
+            "state-B integration did not refresh PME direct-parent scratch");
+
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
+                simulation.get(), checkpoint_a.data(), checkpoint_a.size()),
+            BG_STATUS_OK,
+            "PME direct-parent scratch checkpoint reload failed");
+        const DirectParentForceScratchSnapshot after_load =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            after_load,
+            state_b,
+            "checkpoint reload replaced PME direct-parent scratch storage");
+        require(
+            direct_parent_force_scratch_bits(after_load) == forces_b,
+            "checkpoint reload unexpectedly rewrote stale PME direct-parent scratch");
+
+        const bg_dynamics_report_v1 restart_zero =
+            integrate(context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero =
+            integrate(context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(&restart_zero, &peer_zero, sizeof(restart_zero)) == 0,
+            "stale PME direct-parent scratch changed zero-step report bits");
+        require(
+            checkpoint(simulation.get()) == checkpoint_a &&
+                checkpoint(peer.get()) == checkpoint_a,
+            "stale PME direct-parent scratch changed zero-step checkpoint bits");
+        const DirectParentForceScratchSnapshot after_restart_zero =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            after_restart_zero,
+            state_b,
+            "zero-step restart replaced PME direct-parent scratch storage");
+        require(
+            direct_parent_force_scratch_bits(after_restart_zero) == forces_b,
+            "zero-step restart changed stale PME direct-parent scratch bits");
+
+        const bg_dynamics_report_v1 restarted =
+            integrate(context.get(), simulation.get(), UINT64_C(1));
+        const bg_dynamics_report_v1 peer_restarted =
+            integrate(context.get(), peer.get(), UINT64_C(1));
+        require(
+            std::memcmp(
+                &restarted, &peer_restarted, sizeof(restarted)) == 0,
+            "forceful restart with stale PME direct scratch changed report bits");
+        require(
+            checkpoint(simulation.get()) == checkpoint(peer.get()),
+            "forceful restart with stale PME direct scratch changed state bits");
+        const DirectParentForceScratchSnapshot after_resync =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            after_resync,
+            reserved,
+            "forceful restart replaced PME direct-parent scratch storage");
+        require(
+            direct_parent_force_scratch_bits(after_resync) ==
+                    direct_parent_force_scratch_bits(
+                        direct_parent_force_scratch_snapshot(peer.get())) &&
+                direct_parent_force_scratch_bits(after_resync) ==
+                    stateless_bits_for_owner(),
+            "forceful restart did not resynchronize PME direct-parent scratch");
+
+        const auto before_step_alias = checkpoint(simulation.get());
+        const bg_particle_soa_view particles_before_step_alias =
+            simulation_view(simulation.get());
+        const PositionBits positions_before_step_alias =
+            view_position_bits(particles_before_step_alias);
+        const std::array<const double *, 8> addresses_before_step_alias{{
+            particles_before_step_alias.position_x_angstrom,
+            particles_before_step_alias.position_y_angstrom,
+            particles_before_step_alias.position_z_angstrom,
+            particles_before_step_alias.velocity_x_angstrom_per_femtosecond,
+            particles_before_step_alias.velocity_y_angstrom_per_femtosecond,
+            particles_before_step_alias.velocity_z_angstrom_per_femtosecond,
+            particles_before_step_alias.mass_dalton,
+            particles_before_step_alias.charge_elementary,
+        }};
+        const ForceBits forces_before_step_alias =
+            direct_parent_force_scratch_bits(after_resync);
+        auto *const aliased_step = reinterpret_cast<std::uint64_t *>(
+            const_cast<double *>(&after_resync.address[1][1]));
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+                simulation.get(), aliased_step),
+            BG_STATUS_INVALID_ARGUMENT,
+            "absolute-step output aliased PME direct-parent force scratch");
+        require(
+            std::strcmp(
+                bg_last_error_message(),
+                "absolute_step output must not overlap particle-mesh composite dynamics owner storage") ==
+                0,
+            "absolute-step alias was not rejected by the PME owner-overlap guard");
+        const DirectParentForceScratchSnapshot after_step_alias =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            after_step_alias,
+            after_resync,
+            "rejected step alias changed PME direct-parent scratch storage");
+        require(
+            direct_parent_force_scratch_bits(after_step_alias) ==
+                    forces_before_step_alias &&
+                checkpoint(simulation.get()) == before_step_alias,
+            "rejected step alias changed PME direct scratch or checkpoint bits");
+        const bg_particle_soa_view particles_after_step_alias =
+            simulation_view(simulation.get());
+        const std::array<const double *, 8> addresses_after_step_alias{{
+            particles_after_step_alias.position_x_angstrom,
+            particles_after_step_alias.position_y_angstrom,
+            particles_after_step_alias.position_z_angstrom,
+            particles_after_step_alias.velocity_x_angstrom_per_femtosecond,
+            particles_after_step_alias.velocity_y_angstrom_per_femtosecond,
+            particles_after_step_alias.velocity_z_angstrom_per_femtosecond,
+            particles_after_step_alias.mass_dalton,
+            particles_after_step_alias.charge_elementary,
+        }};
+        require(
+            addresses_after_step_alias == addresses_before_step_alias &&
+                view_position_bits(particles_after_step_alias) ==
+                    positions_before_step_alias,
+            "rejected PME direct step alias changed authoritative state");
+
+        const DirectParentForceScratchSnapshot before_view_alias =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        const ForceBits forces_before_view_alias =
+            direct_parent_force_scratch_bits(before_view_alias);
+        const auto checkpoint_before_view_alias = checkpoint(simulation.get());
+        const bg_particle_soa_view particles_before_view_alias =
+            simulation_view(simulation.get());
+        const PositionBits positions_before_view_alias =
+            view_position_bits(particles_before_view_alias);
+        const std::array<const double *, 8> addresses_before_view_alias{{
+            particles_before_view_alias.position_x_angstrom,
+            particles_before_view_alias.position_y_angstrom,
+            particles_before_view_alias.position_z_angstrom,
+            particles_before_view_alias.velocity_x_angstrom_per_femtosecond,
+            particles_before_view_alias.velocity_y_angstrom_per_femtosecond,
+            particles_before_view_alias.velocity_z_angstrom_per_femtosecond,
+            particles_before_view_alias.mass_dalton,
+            particles_before_view_alias.charge_elementary,
+        }};
+        auto *const aliased_view = reinterpret_cast<bg_particle_soa_view *>(
+            const_cast<std::array<double, 3> *>(
+                before_view_alias.address + 1U));
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
+                simulation.get(), aliased_view),
+            BG_STATUS_INVALID_ARGUMENT,
+            "particle-view output aliased PME direct-parent force scratch");
+        require(
+            std::strcmp(
+                bg_last_error_message(),
+                "particle view output must not overlap particle-mesh composite dynamics owner storage") ==
+                0,
+            "particle-view alias was not rejected by the PME owner-overlap guard");
+        const DirectParentForceScratchSnapshot after_view_alias =
+            direct_parent_force_scratch_snapshot(simulation.get());
+        require_same_direct_parent_force_scratch_storage(
+            after_view_alias,
+            before_view_alias,
+            "rejected view alias changed PME direct-parent scratch storage");
+        require(
+            after_view_alias.size == before_view_alias.size &&
+                direct_parent_force_scratch_bits(after_view_alias) ==
+                    forces_before_view_alias,
+            "rejected view alias changed PME direct-parent scratch bytes");
+        require(
+            checkpoint(simulation.get()) == checkpoint_before_view_alias,
+            "rejected view alias changed PME checkpoint state");
+        const bg_particle_soa_view particles_after_view_alias =
+            simulation_view(simulation.get());
+        const std::array<const double *, 8> addresses_after_view_alias{{
+            particles_after_view_alias.position_x_angstrom,
+            particles_after_view_alias.position_y_angstrom,
+            particles_after_view_alias.position_z_angstrom,
+            particles_after_view_alias.velocity_x_angstrom_per_femtosecond,
+            particles_after_view_alias.velocity_y_angstrom_per_femtosecond,
+            particles_after_view_alias.velocity_z_angstrom_per_femtosecond,
+            particles_after_view_alias.mass_dalton,
+            particles_after_view_alias.charge_elementary,
+        }};
+        require(
+            addresses_after_view_alias == addresses_before_view_alias &&
+                view_position_bits(particles_after_view_alias) ==
+                    positions_before_view_alias,
+            "rejected PME direct view alias changed authoritative state");
+    }
+}
+
 void verify_short_system_scratch_reuse() {
     const Fixture fixture;
     for (const bg_backend lane :
@@ -2051,6 +2443,7 @@ int main() {
     verify_force_output_scratch_reuse();
     verify_manual_velocity_verlet_final_force_bits();
     verify_short_parent_force_scratch_reuse();
+    verify_direct_parent_force_scratch_reuse();
     verify_short_system_scratch_reuse();
     verify_short_system_scratch_drift_fails_closed();
     verify_zero_step_and_restart();
