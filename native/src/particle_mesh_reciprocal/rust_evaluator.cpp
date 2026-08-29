@@ -46,10 +46,11 @@ bool provider_code_is_valid(std::int32_t code) noexcept {
 
 }  // namespace
 
-bg_status evaluate(
+static bg_status evaluate_impl(
     const bg_system &system,
     const bg_particle_mesh_reciprocal_model_v1 &model,
     bool compute_forces,
+    bool reuse_force_storage,
     Evaluation *out_evaluation,
     Error *out_error) {
     static_assert(
@@ -163,6 +164,9 @@ bg_status evaluate(
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
 
     Evaluation candidate;
+    if (compute_forces && reuse_force_storage) {
+        candidate.forces.swap(out_evaluation->forces);
+    }
     bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
     bg_rust_particle_mesh_reciprocal_force_output_v1 *force_pointer = nullptr;
     std::vector<double> force_x;
@@ -244,6 +248,26 @@ bg_status evaluate(
     }
     *out_evaluation = std::move(candidate);
     return BG_STATUS_OK;
+}
+
+bg_status evaluate(
+    const bg_system &system,
+    const bg_particle_mesh_reciprocal_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, false, out_evaluation, out_error);
+}
+
+bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_particle_mesh_reciprocal_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, true, out_evaluation, out_error);
 }
 
 }  // namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu

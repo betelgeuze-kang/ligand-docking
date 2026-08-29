@@ -856,6 +856,8 @@ bg_status evaluate_prevalidated(
     cpu::Evaluation *short_parent_evaluation_scratch,
     uint8_t *inout_rust_cpu_forcefield_validated,
     ewald::Evaluation *direct_parent_evaluation_scratch,
+    particle_mesh_reciprocal::Evaluation *
+        reciprocal_parent_evaluation_scratch,
     cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
@@ -880,10 +882,12 @@ bg_status evaluate_prevalidated(
     if ((short_parent_evaluation_scratch != nullptr) != stateful_scratch ||
         (inout_rust_cpu_forcefield_validated != nullptr) !=
             stateful_scratch ||
-        (direct_parent_evaluation_scratch != nullptr) != stateful_scratch) {
+        (direct_parent_evaluation_scratch != nullptr) != stateful_scratch ||
+        (reciprocal_parent_evaluation_scratch != nullptr) !=
+            stateful_scratch) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
-            "particle-mesh composite stateful scratch, validation-cache, and direct-parent pointers must be all null or all non-null");
+            "particle-mesh composite stateful scratch, validation-cache, direct-parent, and reciprocal-parent pointers must be all null or all non-null");
     }
     const bool requires_stateful_force_output =
         stateful_scratch && compute_forces;
@@ -1013,16 +1017,33 @@ bg_status evaluate_prevalidated(
             "particle-mesh Ewald composite direct-local parent returned inconsistent energy, forces, or error state");
     }
 
-    particle_mesh_reciprocal::Evaluation reciprocal_evaluation;
+    particle_mesh_reciprocal::Evaluation local_reciprocal_evaluation;
+    particle_mesh_reciprocal::Evaluation *reciprocal_evaluation =
+        &local_reciprocal_evaluation;
+    const bool reuse_reciprocal_parent_force_storage =
+        stateful_scratch && compute_forces;
+    if (reuse_reciprocal_parent_force_storage) {
+        reciprocal_evaluation = reciprocal_parent_evaluation_scratch;
+    }
     particle_mesh_reciprocal::Error reciprocal_error;
     if (cpp_lane) {
-        status = particle_mesh_reciprocal::cpp_cpu::evaluate(
-            system, reciprocal_model, compute_forces,
-            &reciprocal_evaluation, &reciprocal_error);
+        status = reuse_reciprocal_parent_force_storage
+            ? particle_mesh_reciprocal::cpp_cpu::
+                  evaluate_reusing_force_storage(
+                      system, reciprocal_model, true,
+                      reciprocal_evaluation, &reciprocal_error)
+            : particle_mesh_reciprocal::cpp_cpu::evaluate(
+                  system, reciprocal_model, compute_forces,
+                  reciprocal_evaluation, &reciprocal_error);
     } else {
-        status = particle_mesh_reciprocal::rust_cpu::evaluate(
-            system, reciprocal_model, compute_forces,
-            &reciprocal_evaluation, &reciprocal_error);
+        status = reuse_reciprocal_parent_force_storage
+            ? particle_mesh_reciprocal::rust_cpu::
+                  evaluate_reusing_force_storage(
+                      system, reciprocal_model, true,
+                      reciprocal_evaluation, &reciprocal_error)
+            : particle_mesh_reciprocal::rust_cpu::evaluate(
+                  system, reciprocal_model, compute_forces,
+                  reciprocal_evaluation, &reciprocal_error);
     }
     if (status != BG_STATUS_OK) {
         if (reciprocal_error.code !=
@@ -1040,8 +1061,10 @@ bg_status evaluate_prevalidated(
         }
         return status;
     }
+    const particle_mesh_reciprocal::Evaluation &reciprocal_result =
+        *reciprocal_evaluation;
     if (!reciprocal_parent_is_valid(
-            reciprocal_evaluation, reciprocal_error, compute_forces,
+            reciprocal_result, reciprocal_error, compute_forces,
             atom_count)) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
@@ -1062,7 +1085,7 @@ bg_status evaluate_prevalidated(
     candidate.short_total = short_result.energy.total_kcal_per_mol;
     candidate.pme_real_space = direct_result.energy.real_space;
     candidate.pme_reciprocal_space =
-        reciprocal_evaluation.reciprocal_space_kcal_per_mol;
+        reciprocal_result.reciprocal_space_kcal_per_mol;
     candidate.pme_self = direct_result.energy.self;
     candidate.pme_pair_correction =
         direct_result.energy.pair_correction;
@@ -1081,11 +1104,11 @@ bg_status evaluate_prevalidated(
         for (std::size_t atom = 0U; atom < atom_count; ++atom) {
             const std::array<double, 3> pme_force{{
                 direct_result.forces[atom][0] +
-                    reciprocal_evaluation.forces[atom][0],
+                    reciprocal_result.forces[atom][0],
                 direct_result.forces[atom][1] +
-                    reciprocal_evaluation.forces[atom][1],
+                    reciprocal_result.forces[atom][1],
                 direct_result.forces[atom][2] +
-                    reciprocal_evaluation.forces[atom][2],
+                    reciprocal_result.forces[atom][2],
             }};
             const std::array<double, 15> parent_and_combined_forces{{
                 short_result.force_x[atom],
@@ -1094,9 +1117,9 @@ bg_status evaluate_prevalidated(
                 direct_result.forces[atom][0],
                 direct_result.forces[atom][1],
                 direct_result.forces[atom][2],
-                reciprocal_evaluation.forces[atom][0],
-                reciprocal_evaluation.forces[atom][1],
-                reciprocal_evaluation.forces[atom][2],
+                reciprocal_result.forces[atom][0],
+                reciprocal_result.forces[atom][1],
+                reciprocal_result.forces[atom][2],
                 pme_force[0],
                 pme_force[1],
                 pme_force[2],
@@ -1121,11 +1144,11 @@ bg_status evaluate_prevalidated(
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
                 const std::array<double, 3> pme_force{{
                     direct_result.forces[atom][0] +
-                        reciprocal_evaluation.forces[atom][0],
+                        reciprocal_result.forces[atom][0],
                     direct_result.forces[atom][1] +
-                        reciprocal_evaluation.forces[atom][1],
+                        reciprocal_result.forces[atom][1],
                     direct_result.forces[atom][2] +
-                        reciprocal_evaluation.forces[atom][2],
+                        reciprocal_result.forces[atom][2],
                 }};
                 stateful_force_output->force_x[atom] =
                     short_result.force_x[atom] + pme_force[0];
@@ -1139,11 +1162,11 @@ bg_status evaluate_prevalidated(
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
                 const std::array<double, 3> pme_force{{
                     direct_result.forces[atom][0] +
-                        reciprocal_evaluation.forces[atom][0],
+                        reciprocal_result.forces[atom][0],
                     direct_result.forces[atom][1] +
-                        reciprocal_evaluation.forces[atom][1],
+                        reciprocal_result.forces[atom][1],
                     direct_result.forces[atom][2] +
-                        reciprocal_evaluation.forces[atom][2],
+                        reciprocal_result.forces[atom][2],
                 }};
                 candidate.forces[atom] = {{
                     short_result.force_x[atom] + pme_force[0],
@@ -1322,7 +1345,7 @@ bg_context_evaluate_particle_mesh_ewald_composite_v1(
         status = evaluate_prevalidated(
             lane, *system, *forcefield, *direct_model,
             *reciprocal_model, nullptr, nullptr, nullptr, nullptr, nullptr,
-            out_forces != nullptr, &evaluation, out_error);
+            nullptr, out_forces != nullptr, &evaluation, out_error);
         if (status != BG_STATUS_OK) {
             return status;
         }

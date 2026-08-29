@@ -456,14 +456,15 @@ OperatorResult apply_operator(
         grid_derivative_scale};
 }
 
-std::vector<std::array<double, 3>> gather_forces(
+void gather_forces(
     const std::vector<Complex> &grid_derivative,
     const std::array<std::size_t, 3> &dimensions,
     const std::vector<ParticleAssignment> &assignments,
     const std::vector<double> &charges,
     const bg_particle_mesh_reciprocal_model_v1 &model,
-    double grid_derivative_multiplier) {
-    std::vector<std::array<double, 3>> result(assignments.size());
+    double grid_derivative_multiplier,
+    std::vector<std::array<double, 3>> *result) {
+    result->resize(assignments.size());
     for (std::size_t atom = 0U; atom < assignments.size(); ++atom) {
         const ParticleAssignment &assignment = assignments[atom];
         for (std::size_t derivative_axis = 0U; derivative_axis < 3U;
@@ -498,11 +499,10 @@ std::vector<std::array<double, 3>> gather_forces(
                  static_cast<double>(dimensions[derivative_axis]) /
                  model.cell_lengths_angstrom[derivative_axis]) *
                 grid_derivative_multiplier;
-            result[atom][derivative_axis] =
+            (*result)[atom][derivative_axis] =
                 force_scale * derivative.total();
         }
     }
-    return result;
 }
 
 bool validate_system(
@@ -603,10 +603,11 @@ bool all_finite(
 
 }  // namespace
 
-bg_status evaluate(
+static bg_status evaluate_impl(
     const bg_system &system,
     const bg_particle_mesh_reciprocal_model_v1 &model,
     bool compute_forces,
+    bool reuse_force_storage,
     Evaluation *out_evaluation,
     Error *out_error) {
     if (out_evaluation == nullptr || out_error == nullptr) {
@@ -665,14 +666,17 @@ bg_status evaluate(
         &spectrum);
 
     Evaluation candidate;
+    if (compute_forces && reuse_force_storage) {
+        candidate.forces.swap(out_evaluation->forces);
+    }
     candidate.reciprocal_space_kcal_per_mol = reciprocal.energy;
     if (compute_forces) {
         transform_3d(&spectrum, dimensions, true);
         const double multiplier = reciprocal.grid_derivative_scale /
                                   kRescueScale;
-        candidate.forces = gather_forces(
+        gather_forces(
             spectrum, dimensions, assignments, system.charge, model,
-            multiplier);
+            multiplier, &candidate.forces);
         for (Complex &value : spectrum) {
             value = value.scaled(multiplier);
         }
@@ -687,6 +691,26 @@ bg_status evaluate(
     }
     *out_evaluation = std::move(candidate);
     return BG_STATUS_OK;
+}
+
+bg_status evaluate(
+    const bg_system &system,
+    const bg_particle_mesh_reciprocal_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, false, out_evaluation, out_error);
+}
+
+bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_particle_mesh_reciprocal_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, true, out_evaluation, out_error);
 }
 
 }  // namespace betelgeuze::native::particle_mesh_reciprocal::cpp_cpu
