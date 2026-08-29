@@ -218,6 +218,23 @@ using PositionBits =
 
 using ForceBits = PositionBits;
 
+ForceBits force_scratch_bits(const ForceScratchSnapshot &snapshot) {
+    require_force_scratch_sizes(
+        snapshot,
+        kAtomCount,
+        "final force scratch bit snapshot had the wrong size");
+    ForceBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        require(
+            snapshot.addresses[axis] != nullptr,
+            "final force scratch bit snapshot had a null channel");
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits(snapshot.addresses[axis][atom]);
+        }
+    }
+    return result;
+}
+
 ForceBits short_parent_force_scratch_bits(
     const ShortParentForceScratchSnapshot &snapshot) {
     require_short_parent_force_scratch_sizes(
@@ -651,6 +668,66 @@ bg_dynamics_report_v1 integrate(
     return report;
 }
 
+struct StatelessEvaluation final {
+    bg_particle_mesh_ewald_composite_energy_components_v1 energy{};
+    std::array<double, kAtomCount> force_x{};
+    std::array<double, kAtomCount> force_y{};
+    std::array<double, kAtomCount> force_z{};
+};
+
+ForceBits stateless_force_bits(const StatelessEvaluation &evaluation) {
+    const std::array<const std::array<double, kAtomCount> *, 3> channels{{
+        &evaluation.force_x,
+        &evaluation.force_y,
+        &evaluation.force_z,
+    }};
+    ForceBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits((*channels[axis])[atom]);
+        }
+    }
+    return result;
+}
+
+StatelessEvaluation evaluate_stateless(
+    const bg_context *context,
+    const bg_system *system,
+    const bg_forcefield *forcefield,
+    const bg_direct_ewald_model_v1 *direct_model,
+    const bg_particle_mesh_reciprocal_model_v1 *reciprocal_model) {
+    StatelessEvaluation result;
+    require_status(
+        bg_particle_mesh_ewald_composite_energy_components_v1_init(
+            &result.energy, sizeof(result.energy),
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION),
+        BG_STATUS_OK, "stateless energy init failed");
+    bg_particle_mesh_ewald_composite_force_soa_v1 forces{};
+    require_status(
+        bg_particle_mesh_ewald_composite_force_soa_v1_init(
+            &forces, sizeof(forces),
+            BG_PARTICLE_MESH_EWALD_COMPOSITE_ABI_VERSION),
+        BG_STATUS_OK, "stateless force init failed");
+    forces.atom_capacity = kAtomCount;
+    forces.x_kcal_per_mol_angstrom = result.force_x.data();
+    forces.y_kcal_per_mol_angstrom = result.force_y.data();
+    forces.z_kcal_per_mol_angstrom = result.force_z.data();
+    bg_direct_ewald_error_v1 error{};
+    init_error(&error);
+    require_status(bg_context_evaluate_particle_mesh_ewald_composite_v1(
+        context, system, forcefield, direct_model, reciprocal_model,
+        &result.energy, &forces, &error), BG_STATUS_OK,
+        "stateless energy evaluation failed");
+    require(
+        forces.atom_count == kAtomCount,
+        "stateless force count differed");
+    require(
+        error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            error.detail[0] == '\0',
+        "stateless evaluation set a typed error");
+    return result;
+}
+
 double stateless_total(
     const bg_context *context,
     const bg_system *system,
@@ -852,39 +929,211 @@ void verify_force_output_scratch_reuse() {
             require_force_scratch_sizes(
                 current, fixture.x.size(),
                 "integration retained the wrong force scratch size");
+            require(
+                force_scratch_bits(current) ==
+                    force_scratch_bits(force_scratch_snapshot(peer.get())),
+                "PME SoA force output differed from the peer bits");
         }
 
-        const auto saved = checkpoint(simulation.get());
-        const ForceScratchSnapshot before_load =
+        const auto checkpoint_a = checkpoint(simulation.get());
+        const ForceBits forces_a =
+            force_scratch_bits(force_scratch_snapshot(simulation.get()));
+        integrate(context.get(), simulation.get(), 1U);
+        const ForceScratchSnapshot state_b =
             force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            state_b, reserved,
+            "state-B integration replaced final force scratch storage");
+        const ForceBits forces_b = force_scratch_bits(state_b);
+        require(
+            forces_b != forces_a,
+            "state-B integration did not refresh final force scratch");
+
         require_status(
             bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
-                simulation.get(), saved.data(), saved.size()),
-            BG_STATUS_OK, "same-owner checkpoint reload failed");
+                simulation.get(), checkpoint_a.data(), checkpoint_a.size()),
+            BG_STATUS_OK, "final force scratch checkpoint reload failed");
         const ForceScratchSnapshot after_load =
             force_scratch_snapshot(simulation.get());
         require_same_force_scratch_storage(
-            after_load, before_load,
-            "checkpoint reload replaced force scratch storage");
+            after_load, state_b,
+            "checkpoint reload replaced final force scratch storage");
         require(
-            after_load.sizes == before_load.sizes,
-            "checkpoint reload changed force scratch size");
+            force_scratch_bits(after_load) == forces_b,
+            "checkpoint reload unexpectedly rewrote stale final force scratch");
 
-        const bg_dynamics_report_v1 final_report =
+        const bg_dynamics_report_v1 restart_zero =
+            integrate(context.get(), simulation.get(), 0U);
+        const bg_dynamics_report_v1 peer_zero =
+            integrate(context.get(), peer.get(), 0U);
+        require(
+            std::memcmp(&restart_zero, &peer_zero, sizeof(restart_zero)) == 0,
+            "stale final force scratch changed zero-step report bits");
+        require(
+            checkpoint(simulation.get()) == checkpoint_a &&
+                checkpoint(peer.get()) == checkpoint_a,
+            "stale final force scratch changed zero-step checkpoint bits");
+        const ForceScratchSnapshot after_restart_zero =
+            force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            after_restart_zero, state_b,
+            "zero-step restart replaced final force scratch storage");
+        require(
+            force_scratch_bits(after_restart_zero) == forces_b,
+            "zero-step restart changed stale final force scratch bits");
+
+        const bg_dynamics_report_v1 restarted =
             integrate(context.get(), simulation.get(), 1U);
-        const bg_dynamics_report_v1 peer_final_report =
+        const bg_dynamics_report_v1 peer_restarted =
             integrate(context.get(), peer.get(), 1U);
         require(
             std::memcmp(
-                &final_report, &peer_final_report,
-                sizeof(final_report)) == 0,
-            "checkpoint-retained scratch changed report bits");
+                &restarted, &peer_restarted, sizeof(restarted)) == 0,
+            "forceful restart with stale final scratch changed report bits");
         require(
             checkpoint(simulation.get()) == checkpoint(peer.get()),
-            "checkpoint-retained scratch changed state bits");
+            "forceful restart with stale final scratch changed state bits");
+        const ForceScratchSnapshot after_resync =
+            force_scratch_snapshot(simulation.get());
         require_same_force_scratch_storage(
-            force_scratch_snapshot(simulation.get()), reserved,
-            "post-checkpoint integration replaced force scratch storage");
+            after_resync, reserved,
+            "forceful restart replaced final force scratch storage");
+        require(
+            force_scratch_bits(after_resync) ==
+                force_scratch_bits(force_scratch_snapshot(peer.get())),
+            "forceful restart did not resynchronize final force scratch");
+
+        const auto before_alias = checkpoint(simulation.get());
+        const bg_particle_soa_view particles_before_alias =
+            simulation_view(simulation.get());
+        const std::array<const double *, 8> particle_addresses_before_alias{{
+            particles_before_alias.position_x_angstrom,
+            particles_before_alias.position_y_angstrom,
+            particles_before_alias.position_z_angstrom,
+            particles_before_alias.velocity_x_angstrom_per_femtosecond,
+            particles_before_alias.velocity_y_angstrom_per_femtosecond,
+            particles_before_alias.velocity_z_angstrom_per_femtosecond,
+            particles_before_alias.mass_dalton,
+            particles_before_alias.charge_elementary,
+        }};
+        const ForceBits forces_before_alias = force_scratch_bits(after_resync);
+        auto *const aliased_step = reinterpret_cast<std::uint64_t *>(
+            const_cast<double *>(after_resync.addresses[0]));
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+                simulation.get(), aliased_step),
+            BG_STATUS_INVALID_ARGUMENT,
+            "absolute-step output aliased final force scratch");
+        const ForceScratchSnapshot after_alias =
+            force_scratch_snapshot(simulation.get());
+        require_same_force_scratch_storage(
+            after_alias, after_resync,
+            "rejected alias changed final force scratch storage");
+        require(
+            force_scratch_bits(after_alias) == forces_before_alias,
+            "rejected alias changed final force scratch bits");
+        require(
+            checkpoint(simulation.get()) == before_alias,
+            "rejected final-scratch alias changed checkpoint state");
+        const bg_particle_soa_view particles_after_alias =
+            simulation_view(simulation.get());
+        const std::array<const double *, 8> particle_addresses_after_alias{{
+            particles_after_alias.position_x_angstrom,
+            particles_after_alias.position_y_angstrom,
+            particles_after_alias.position_z_angstrom,
+            particles_after_alias.velocity_x_angstrom_per_femtosecond,
+            particles_after_alias.velocity_y_angstrom_per_femtosecond,
+            particles_after_alias.velocity_z_angstrom_per_femtosecond,
+            particles_after_alias.mass_dalton,
+            particles_after_alias.charge_elementary,
+        }};
+        require(
+            particle_addresses_after_alias == particle_addresses_before_alias,
+            "rejected final-scratch alias changed authoritative storage identity");
+    }
+}
+
+void verify_manual_velocity_verlet_final_force_bits() {
+    constexpr double timestep = 0.001;
+    const Fixture fixture;
+    auto initial_system = make_system(fixture, fixture.charge);
+    auto forcefield = make_forcefield(fixture);
+    auto direct = make_direct_model(fixture);
+    auto reciprocal = make_reciprocal_model(fixture);
+
+    for (const bg_backend lane :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        auto context = make_context(lane);
+        const StatelessEvaluation initial_force = evaluate_stateless(
+            context.get(), initial_system.get(), forcefield.get(), direct.get(),
+            reciprocal.get());
+
+        Fixture drifted = fixture;
+        const std::array<const std::array<double, kAtomCount> *, 3>
+            force_channels{{
+                &initial_force.force_x,
+                &initial_force.force_y,
+                &initial_force.force_z,
+            }};
+        const std::array<const std::array<double, kAtomCount> *, 3>
+            initial_positions{{&fixture.x, &fixture.y, &fixture.z}};
+        const std::array<const std::array<double, kAtomCount> *, 3>
+            initial_velocities{{
+                &fixture.velocity_x,
+                &fixture.velocity_y,
+                &fixture.velocity_z,
+            }};
+        const std::array<std::array<double, kAtomCount> *, 3>
+            drifted_positions{{&drifted.x, &drifted.y, &drifted.z}};
+        const std::array<std::array<double, kAtomCount> *, 3>
+            half_velocities{{
+                &drifted.velocity_x,
+                &drifted.velocity_y,
+                &drifted.velocity_z,
+            }};
+        const double half_timestep = 0.5 * timestep;
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            const double half_kick_scale =
+                kAccelerationConversion * half_timestep / fixture.mass[atom];
+            for (std::size_t axis = 0U; axis < 3U; ++axis) {
+                const double velocity =
+                    (*initial_velocities[axis])[atom] +
+                    half_kick_scale * (*force_channels[axis])[atom];
+                (*half_velocities[axis])[atom] = velocity;
+                (*drifted_positions[axis])[atom] =
+                    (*initial_positions[axis])[atom] + timestep * velocity;
+            }
+        }
+
+        auto drifted_system = make_system(drifted, drifted.charge);
+        const StatelessEvaluation final_force = evaluate_stateless(
+            context.get(), drifted_system.get(), forcefield.get(), direct.get(),
+            reciprocal.get());
+        auto simulation = make_simulation(
+            initial_system.get(), forcefield.get(), direct.get(),
+            reciprocal.get(), nullptr, timestep);
+        integrate(context.get(), simulation.get(), 1U);
+        const ForceScratchSnapshot stateful_force =
+            force_scratch_snapshot(simulation.get());
+        require(
+            force_scratch_bits(stateful_force) ==
+                stateless_force_bits(final_force),
+            "PME stateful SoA force bits differed from stateless AoS bits");
+
+        const bg_particle_soa_view observed = simulation_view(simulation.get());
+        const std::array<const double *, 3> observed_positions{{
+            observed.position_x_angstrom,
+            observed.position_y_angstrom,
+            observed.position_z_angstrom,
+        }};
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            for (std::size_t axis = 0U; axis < 3U; ++axis) {
+                require_exact(
+                    observed_positions[axis][atom],
+                    (*drifted_positions[axis])[atom],
+                    "PME one-step position differed from manual Velocity Verlet");
+            }
+        }
     }
 }
 
@@ -1414,6 +1663,12 @@ void verify_late_typed_failure_rolls_back() {
             context.get(), initial_system.get(), forcefield.get(), direct.get(),
             reciprocal.get(), &energy, &forces, &eval_error), BG_STATUS_OK,
             "initial force evaluation failed");
+        StatelessEvaluation initial_evaluation{};
+        initial_evaluation.force_x = force_x;
+        initial_evaluation.force_y = force_y;
+        initial_evaluation.force_z = force_z;
+        const ForceBits initial_force_bits =
+            stateless_force_bits(initial_evaluation);
 
         Fixture moving = base;
         const std::array<std::array<double, 4>, 3> targets{{
@@ -1515,6 +1770,9 @@ void verify_late_typed_failure_rolls_back() {
             require_force_scratch_sizes(
                 after_failure, base.x.size(),
                 "late evaluator failure retained the wrong scratch size");
+            require(
+                force_scratch_bits(after_failure) == initial_force_bits,
+                "late direct-local failure overwrote the last successful final force bits");
             const ShortSystemScratchSnapshot short_system_after_failure =
                 short_system_scratch_snapshot(simulation.get());
             require_same_short_system_scratch_storage(
@@ -1791,6 +2049,7 @@ int main() {
         "profile mismatch");
     verify_runtime_and_checkpoint_identity();
     verify_force_output_scratch_reuse();
+    verify_manual_velocity_verlet_final_force_bits();
     verify_short_parent_force_scratch_reuse();
     verify_short_system_scratch_reuse();
     verify_short_system_scratch_drift_fails_closed();
