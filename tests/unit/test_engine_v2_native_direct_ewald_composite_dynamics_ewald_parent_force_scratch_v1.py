@@ -1,0 +1,124 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from tools import verify_engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_v1 as verifier
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_exact_profile_manifest_and_contracts() -> None:
+    result = verifier.verify(ROOT)
+    assert result["source_count"] == 246
+    profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
+    implementation = profile["implementation"]
+    assert implementation["successful_stateful_forceful_ewald_parent_aos_storage_reused"]
+    assert implementation["steady_state_ewald_parent_force_storage_reused"]
+    assert not any(profile["authority"].values())
+    for key in ("allocation_free_claimed", "timing_claimed", "performance_claimed", "acceleration_claimed", "cross_lane_bit_parity_claimed", "unconditional_failure_storage_retention_claimed", "universal_failure_storage_retention_claimed", "all_failure_path_storage_retention_claimed"):
+        assert implementation[key] is False
+
+
+def test_exact_anchors_and_delta() -> None:
+    assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 452
+    assert verifier.PREDECESSOR["pull_request"] == 451
+    assert verifier.INHERITED_PREDECESSOR["pull_request"] == 435
+    assert len(verifier.EXPECTED_DELTA_PATHS) == 27
+    assert verifier.current_delta_paths() == verifier.EXPECTED_DELTA_PATHS
+
+
+def test_workflow_static_trigger_closure_and_bodies() -> None:
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 62
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 62
+    workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    verifier.require_workflow_contract(workflow)
+    assert workflow == verifier.expected_workflow_document()
+    assert workflow.count("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0") == 4
+
+
+@pytest.mark.parametrize("job", ["immutable-evidence", "native-linux", "rust-boundaries", "macos-export-boundary"])
+def test_workflow_job_body_mutation_fails_closed(tmp_path: Path, job: str) -> None:
+    workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
+    body = verifier.job_body(workflow, job)
+    mutated = workflow.replace(body, body + "      # sentinel drift\n", 1)
+    target = tmp_path / verifier.WORKFLOW_RELATIVE_PATH
+    target.parent.mkdir(parents=True)
+    target.write_text(mutated)
+    with pytest.raises(ValueError, match="workflow exact job body drift"):
+        verifier.require_workflow_contract(mutated)
+
+
+@pytest.mark.parametrize("relative,transform,kwargs,anchor", [
+    ("native/src/composite/direct_ewald.cpp", verifier.expected_direct_ewald_composite_source, {}, "    ewald::Evaluation ewald_evaluation;\n"),
+    ("native/src/composite/direct_ewald_composite_dynamics.cpp", verifier.expected_composite_dynamics_source, {}, "bool forcefield_storage_overlaps(\n"),
+    ("native/src/composite/direct_ewald_composite_dynamics.hpp", verifier.expected_composite_dynamics_header, {}, '#include "../ewald/model.hpp"\n'),
+    ("native/src/composite/evaluator.hpp", verifier.expected_composite_evaluator_header, {}, "The three\n * private scratch/cache pointers"),
+    ("native/src/ewald/cpp_evaluator.cpp", verifier.expected_ewald_parent_evaluator_source, {"rust": False}, "bg_status evaluate("),
+    ("native/src/ewald/rust_evaluator.cpp", verifier.expected_ewald_parent_evaluator_source, {"rust": True}, "bg_status evaluate("),
+    ("native/src/ewald/cpp_evaluator.hpp", verifier.expected_ewald_parent_evaluator_header, {}, "}  // namespace cpp_cpu\n"),
+    ("native/src/ewald/rust_evaluator.hpp", verifier.expected_ewald_parent_evaluator_header, {}, "}  // namespace betelgeuze::native::ewald::rust_cpu\n"),
+])
+def test_frozen_production_transforms_and_sentinels(relative, transform, kwargs, anchor) -> None:
+    frozen = verifier.git("show", f"{verifier.ARCHITECTURE_PREDECESSOR['merge_commit']}:{relative}").stdout.decode()
+    assert transform(frozen, **kwargs) == (ROOT / relative).read_text()
+    sentinel = "\n// unrelated-frozen-input-sentinel\n"
+    assert transform(frozen + sentinel, **kwargs).endswith(sentinel)
+    with pytest.raises(ValueError, match="transformation point drift"):
+        transform(frozen.replace(anchor, "drifted anchor", 1), **kwargs)
+
+
+def test_production_hashes_and_vendor_identity() -> None:
+    verifier.require_ewald_parent_force_scratch_contract(ROOT)
+
+
+def test_predecessor_freezes() -> None:
+    verifier.require_predecessor_workflow_freeze(ROOT)
+    verifier.require_predecessor_unit_freeze(ROOT)
+
+
+@pytest.mark.parametrize(
+    "anchor",
+    [
+        "      - name: Materialize exact PR 451 architecture, PR 450 target, and PR 445 inherited final SoA\n",
+        "      - name: Verify bounded successor evidence\n",
+    ],
+)
+def test_predecessor_workflow_executes_exact_frozen_merge(
+    anchor: str,
+) -> None:
+    frozen = verifier.git(
+        "show",
+        f"{verifier.ARCHITECTURE_PREDECESSOR['merge_commit']}:"
+        f"{verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH.as_posix()}",
+    ).stdout.decode()
+    transformed = verifier.expected_frozen_predecessor_workflow(frozen)
+    assert transformed == (
+        ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH
+    ).read_text()
+    for token in (
+        "Materialize exact PR 452 evidence and reviewed head",
+        'git checkout --detach --quiet "$frozen"',
+        "trap 'git checkout --detach --quiet \"$current_sha\"' EXIT",
+        verifier.ARCHITECTURE_PREDECESSOR["reviewed_head"],
+        verifier.ARCHITECTURE_PREDECESSOR["merge_commit"],
+        verifier.ARCHITECTURE_PREDECESSOR["merge_tree"],
+    ):
+        assert token in transformed
+    sentinel = "\n# unrelated-frozen-workflow-sentinel\n"
+    assert verifier.expected_frozen_predecessor_workflow(
+        frozen + sentinel
+    ).endswith(sentinel)
+    with pytest.raises(ValueError, match="transformation point drift"):
+        verifier.expected_frozen_predecessor_workflow(
+            frozen.replace(anchor, "      - name: drifted predecessor step\n", 1)
+        )
+
+
+def test_manifest_and_profile_mutations_are_noncanonical() -> None:
+    manifest = json.loads((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())
+    manifest["files"][0]["sha256"] = "0" * 64
+    assert verifier.canonical_bytes(manifest) != (ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes()
+    profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
+    profile["authority"]["product_authority"] = True
+    assert profile != verifier.build_profile((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())

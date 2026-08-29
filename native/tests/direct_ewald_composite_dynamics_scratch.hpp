@@ -22,6 +22,12 @@ struct DirectEwaldCompositeShortParentForceScratchSnapshot final {
     uint8_t rust_cpu_forcefield_validated = UINT8_C(0);
 };
 
+struct DirectEwaldCompositeEwaldParentForceScratchSnapshot final {
+    const std::array<double, 3> *address = nullptr;
+    std::size_t size = 0U;
+    std::size_t capacity = 0U;
+};
+
 struct DirectEwaldCompositeShortSystemScratchSnapshot final {
     bg_unit_system unit_system = BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL;
     std::array<const double *, 8> addresses{};
@@ -37,12 +43,20 @@ void reserve_direct_ewald_composite_short_parent_force_scratch(
     bg_direct_ewald_composite_simulation_v1 *simulation,
     std::size_t capacity);
 
+void reserve_direct_ewald_composite_ewald_parent_force_scratch(
+    bg_direct_ewald_composite_simulation_v1 *simulation,
+    std::size_t capacity);
+
 [[nodiscard]] DirectEwaldCompositeForceScratchSnapshot
 direct_ewald_composite_force_scratch_snapshot(
     const bg_direct_ewald_composite_simulation_v1 *simulation);
 
 [[nodiscard]] DirectEwaldCompositeShortParentForceScratchSnapshot
 direct_ewald_composite_short_parent_force_scratch_snapshot(
+    const bg_direct_ewald_composite_simulation_v1 *simulation);
+
+[[nodiscard]] DirectEwaldCompositeEwaldParentForceScratchSnapshot
+direct_ewald_composite_ewald_parent_force_scratch_snapshot(
     const bg_direct_ewald_composite_simulation_v1 *simulation);
 
 [[nodiscard]] DirectEwaldCompositeShortSystemScratchSnapshot

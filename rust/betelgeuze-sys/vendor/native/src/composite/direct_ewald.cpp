@@ -585,6 +585,7 @@ bg_status evaluate_prevalidated(
     bg_system *short_system_scratch,
     cpu::Evaluation *short_parent_evaluation_scratch,
     uint8_t *inout_rust_cpu_forcefield_validated,
+    ewald::Evaluation *ewald_parent_evaluation_scratch,
     cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
@@ -613,10 +614,11 @@ bg_status evaluate_prevalidated(
     const bool stateful_scratch = short_system_scratch != nullptr;
     if ((short_parent_evaluation_scratch != nullptr) != stateful_scratch ||
         (inout_rust_cpu_forcefield_validated != nullptr) !=
-            stateful_scratch) {
+            stateful_scratch ||
+        (ewald_parent_evaluation_scratch != nullptr) != stateful_scratch) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
-            "composite stateful scratch and validation-cache pointers must be all null or all non-null");
+            "composite stateful scratch, validation-cache, and Ewald-parent pointers must be all null or all non-null");
     }
     const bool requires_stateful_force_output =
         stateful_scratch && compute_forces;
@@ -702,28 +704,43 @@ bg_status evaluate_prevalidated(
             "short-range composite parent returned inconsistent energy");
     }
 
-    ewald::Evaluation ewald_evaluation;
+    ewald::Evaluation local_ewald_evaluation;
+    ewald::Evaluation *ewald_evaluation = &local_ewald_evaluation;
+    const bool reuse_ewald_parent_force_storage =
+        stateful_scratch && compute_forces;
+    if (reuse_ewald_parent_force_storage) {
+        ewald_evaluation = ewald_parent_evaluation_scratch;
+    }
     if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
-        status = ewald::cpp_cpu::evaluate(
-            system, model, compute_forces, &ewald_evaluation, out_error);
+        status = reuse_ewald_parent_force_storage
+            ? ewald::cpp_cpu::evaluate_reusing_force_storage(
+                  system, model, true, ewald_evaluation, out_error)
+            : ewald::cpp_cpu::evaluate(
+                  system, model, compute_forces, ewald_evaluation,
+                  out_error);
     } else {
-        status = ewald::rust_cpu::evaluate(
-            system, model, compute_forces, &ewald_evaluation, out_error);
+        status = reuse_ewald_parent_force_storage
+            ? ewald::rust_cpu::evaluate_reusing_force_storage(
+                  system, model, true, ewald_evaluation, out_error)
+            : ewald::rust_cpu::evaluate(
+                  system, model, compute_forces, ewald_evaluation,
+                  out_error);
     }
     if (status != BG_STATUS_OK) {
         return out_error->code == BG_DIRECT_EWALD_ERROR_NONE
                    ? status
                    : status_for_typed_error(out_error->code);
     }
+    const ewald::Evaluation &ewald_result = *ewald_evaluation;
     if (out_error->code != BG_DIRECT_EWALD_ERROR_NONE ||
-        !ewald_energy_is_valid(ewald_evaluation)) {
+        !ewald_energy_is_valid(ewald_result)) {
         *out_error = ewald::Error{};
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "direct-Ewald composite parent returned inconsistent energy or error state");
     }
 
-    const double ewald_total = ewald_evaluation.energy.total();
+    const double ewald_total = ewald_result.energy.total();
     const double total =
         short_result.energy.total_kcal_per_mol + ewald_total;
     if (!std::isfinite(total)) {
@@ -738,7 +755,7 @@ bg_status evaluate_prevalidated(
         if (short_result.force_x.size() != atom_count ||
             short_result.force_y.size() != atom_count ||
             short_result.force_z.size() != atom_count ||
-            ewald_evaluation.forces.size() != atom_count) {
+            ewald_result.forces.size() != atom_count) {
             return fail(
                 BG_STATUS_INTERNAL_ERROR,
                 "composite parent force counts are inconsistent");
@@ -748,15 +765,15 @@ bg_status evaluate_prevalidated(
                 short_result.force_x[atom],
                 short_result.force_y[atom],
                 short_result.force_z[atom],
-                ewald_evaluation.forces[atom][0],
-                ewald_evaluation.forces[atom][1],
-                ewald_evaluation.forces[atom][2],
+                ewald_result.forces[atom][0],
+                ewald_result.forces[atom][1],
+                ewald_result.forces[atom][2],
                 short_result.force_x[atom] +
-                    ewald_evaluation.forces[atom][0],
+                    ewald_result.forces[atom][0],
                 short_result.force_y[atom] +
-                    ewald_evaluation.forces[atom][1],
+                    ewald_result.forces[atom][1],
                 short_result.force_z[atom] +
-                    ewald_evaluation.forces[atom][2],
+                    ewald_result.forces[atom][2],
             }};
             if (std::any_of(
                     parent_and_combined_forces.begin(),
@@ -774,24 +791,24 @@ bg_status evaluate_prevalidated(
             for (std::size_t atom = 0; atom < atom_count; ++atom) {
                 stateful_force_output->force_x[atom] =
                     short_result.force_x[atom] +
-                    ewald_evaluation.forces[atom][0];
+                    ewald_result.forces[atom][0];
                 stateful_force_output->force_y[atom] =
                     short_result.force_y[atom] +
-                    ewald_evaluation.forces[atom][1];
+                    ewald_result.forces[atom][1];
                 stateful_force_output->force_z[atom] =
                     short_result.force_z[atom] +
-                    ewald_evaluation.forces[atom][2];
+                    ewald_result.forces[atom][2];
             }
         } else {
             candidate.forces.resize(atom_count);
             for (std::size_t atom = 0; atom < atom_count; ++atom) {
                 candidate.forces[atom] = {{
                     short_result.force_x[atom] +
-                        ewald_evaluation.forces[atom][0],
+                        ewald_result.forces[atom][0],
                     short_result.force_y[atom] +
-                        ewald_evaluation.forces[atom][1],
+                        ewald_result.forces[atom][1],
                     short_result.force_z[atom] +
-                        ewald_evaluation.forces[atom][2],
+                        ewald_result.forces[atom][2],
                 }};
             }
         }
@@ -809,12 +826,12 @@ bg_status evaluate_prevalidated(
         short_result.energy.coulomb_kcal_per_mol;
     candidate.energy.short_total =
         short_result.energy.total_kcal_per_mol;
-    candidate.energy.ewald_real_space = ewald_evaluation.energy.real_space;
+    candidate.energy.ewald_real_space = ewald_result.energy.real_space;
     candidate.energy.ewald_reciprocal_space =
-        ewald_evaluation.energy.reciprocal_space;
-    candidate.energy.ewald_self = ewald_evaluation.energy.self;
+        ewald_result.energy.reciprocal_space;
+    candidate.energy.ewald_self = ewald_result.energy.self;
     candidate.energy.ewald_pair_correction =
-        ewald_evaluation.energy.pair_correction;
+        ewald_result.energy.pair_correction;
     candidate.energy.ewald_total = ewald_total;
     candidate.energy.total = total;
     *out_evaluation = std::move(candidate);
@@ -973,7 +990,7 @@ bg_context_evaluate_direct_ewald_composite_v1(
         ewald::Error typed_error;
         status = evaluate_prevalidated(
             *context, *system, *forcefield, *model, nullptr, nullptr, nullptr,
-            nullptr, compute_forces, &evaluation, &typed_error);
+            nullptr, nullptr, compute_forces, &evaluation, &typed_error);
         if (status != BG_STATUS_OK) {
             if (typed_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
                 commit_error(out_error, typed_error.code, typed_error.detail);

@@ -30,6 +30,13 @@ void reserve_direct_ewald_composite_short_parent_force_scratch(
     scratch.force_z.reserve(capacity);
 }
 
+void reserve_direct_ewald_composite_ewald_parent_force_scratch(
+    bg_direct_ewald_composite_simulation_v1 *simulation,
+    std::size_t capacity) {
+    assert(simulation != nullptr);
+    simulation->ewald_parent_evaluation_scratch.forces.reserve(capacity);
+}
+
 DirectEwaldCompositeForceScratchSnapshot
 direct_ewald_composite_force_scratch_snapshot(
     const bg_direct_ewald_composite_simulation_v1 *simulation) {
@@ -81,6 +88,19 @@ direct_ewald_composite_short_parent_force_scratch_snapshot(
     };
     snapshot.rust_cpu_forcefield_validated =
         simulation->simulation->rust_cpu_forcefield_validated;
+    return snapshot;
+}
+
+DirectEwaldCompositeEwaldParentForceScratchSnapshot
+direct_ewald_composite_ewald_parent_force_scratch_snapshot(
+    const bg_direct_ewald_composite_simulation_v1 *simulation) {
+    assert(simulation != nullptr);
+    const std::vector<std::array<double, 3>> &scratch =
+        simulation->ewald_parent_evaluation_scratch.forces;
+    DirectEwaldCompositeEwaldParentForceScratchSnapshot snapshot;
+    snapshot.address = scratch.data();
+    snapshot.size = scratch.size();
+    snapshot.capacity = scratch.capacity();
     return snapshot;
 }
 

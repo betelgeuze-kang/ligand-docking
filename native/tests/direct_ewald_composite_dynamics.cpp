@@ -73,6 +73,8 @@ using ForceScratchSnapshot =
     betelgeuze::native::tests::DirectEwaldCompositeForceScratchSnapshot;
 using ShortParentForceScratchSnapshot = betelgeuze::native::tests::
     DirectEwaldCompositeShortParentForceScratchSnapshot;
+using EwaldParentForceScratchSnapshot = betelgeuze::native::tests::
+    DirectEwaldCompositeEwaldParentForceScratchSnapshot;
 using ShortSystemScratchSnapshot = betelgeuze::native::tests::
     DirectEwaldCompositeShortSystemScratchSnapshot;
 
@@ -126,6 +128,23 @@ void require_short_parent_force_scratch_sizes(
     require(
         snapshot.sizes == std::array<std::size_t, 3>{
             expected, expected, expected},
+        message);
+}
+
+EwaldParentForceScratchSnapshot ewald_parent_force_scratch_snapshot(
+    const bg_direct_ewald_composite_simulation_v1 *simulation) {
+    return betelgeuze::native::tests::
+        direct_ewald_composite_ewald_parent_force_scratch_snapshot(
+            simulation);
+}
+
+void require_same_ewald_parent_force_scratch_storage(
+    const EwaldParentForceScratchSnapshot &actual,
+    const EwaldParentForceScratchSnapshot &expected,
+    const char *message) {
+    require(
+        actual.address == expected.address &&
+            actual.capacity == expected.capacity,
         message);
 }
 
@@ -228,6 +247,20 @@ ForceBits force_scratch_bits(const ForceScratchSnapshot &snapshot) {
             "final force scratch bit snapshot had a null channel");
         for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
             result[axis][atom] = bits(snapshot.addresses[axis][atom]);
+        }
+    }
+    return result;
+}
+
+ForceBits ewald_parent_force_scratch_bits(
+    const EwaldParentForceScratchSnapshot &snapshot) {
+    require(
+        snapshot.address != nullptr && snapshot.size == kAtomCount,
+        "Ewald-parent force scratch bit snapshot had the wrong shape");
+    ForceBits result{};
+    for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+        for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+            result[axis][atom] = bits(snapshot.address[atom][axis]);
         }
     }
     return result;
@@ -836,6 +869,55 @@ StatelessEvaluation evaluate_stateless(
         error.code == BG_DIRECT_EWALD_ERROR_NONE &&
             error.detail[0] == '\0',
         "stateless composite success set a typed error");
+    return result;
+}
+
+ForceBits evaluate_stateless_ewald_force_bits(
+    const bg_context *context,
+    const bg_system *system,
+    const bg_direct_ewald_model_v1 *model) {
+    bg_direct_ewald_energy_components_v1 energy{};
+    require_status(
+        bg_direct_ewald_energy_components_v1_init(
+            &energy, sizeof(energy), BG_DIRECT_EWALD_ABI_VERSION),
+        BG_STATUS_OK,
+        "stateless Ewald-energy initializer failed");
+    std::array<double, kAtomCount> force_x{};
+    std::array<double, kAtomCount> force_y{};
+    std::array<double, kAtomCount> force_z{};
+    bg_direct_ewald_force_soa_v1 forces{};
+    require_status(
+        bg_direct_ewald_force_soa_v1_init(
+            &forces, sizeof(forces), BG_DIRECT_EWALD_ABI_VERSION),
+        BG_STATUS_OK,
+        "stateless Ewald-force initializer failed");
+    forces.atom_capacity = kAtomCount;
+    forces.x_kcal_per_mol_angstrom = force_x.data();
+    forces.y_kcal_per_mol_angstrom = force_y.data();
+    forces.z_kcal_per_mol_angstrom = force_z.data();
+    bg_direct_ewald_error_v1 error{};
+    init_error(&error);
+    require_status(
+        bg_context_evaluate_direct_ewald_v1(
+            context, system, model, &energy, &forces, &error),
+        BG_STATUS_OK,
+        "stateless Ewald evaluation failed");
+    require(
+        forces.atom_count == kAtomCount &&
+            error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            error.detail[0] == '\0',
+        "stateless Ewald evaluation returned inconsistent outputs");
+    const std::array<const std::array<double, kAtomCount> *, 3> channels{{
+        &force_x,
+        &force_y,
+        &force_z,
+    }};
+    ForceBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits((*channels[axis])[atom]);
+        }
+    }
     return result;
 }
 
@@ -1797,6 +1879,253 @@ void verify_short_parent_force_scratch_reuse() {
             snapshot_composite(simulation.get()),
             particles_before_alias,
             "rejected scratch alias changed authoritative state");
+    }
+}
+
+void verify_ewald_parent_force_scratch_reuse() {
+    constexpr std::size_t kReservedCapacity = 64U;
+    constexpr double timestep = 0.001;
+    const Fixture fixture;
+
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+         }) {
+        const ContextPtr context = make_context(backend);
+        const SystemPtr system = make_system(fixture);
+        const ForceFieldPtr forcefield = make_forcefield(fixture);
+        const ModelPtr model = make_model(fixture);
+        const CompositeSimulationPtr simulation = make_composite_simulation(
+            system.get(), forcefield.get(), model.get(), timestep);
+        const CompositeSimulationPtr peer = make_composite_simulation(
+            system.get(), forcefield.get(), model.get(), timestep);
+
+        const EwaldParentForceScratchSnapshot initial =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require(
+            initial.size == 0U && initial.capacity == 0U,
+            "new Ewald-parent force scratch was not empty");
+        betelgeuze::native::tests::
+            reserve_direct_ewald_composite_ewald_parent_force_scratch(
+                simulation.get(), kReservedCapacity);
+        const EwaldParentForceScratchSnapshot reserved =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require(
+            reserved.address != nullptr && reserved.size == 0U &&
+                reserved.capacity >= kReservedCapacity,
+            "Ewald-parent force scratch reserve did not retain empty storage");
+
+        const std::vector<uint8_t> before_zero =
+            write_composite_checkpoint(simulation.get());
+        const bg_dynamics_report_v1 zero_report = integrate_success(
+            context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero_report = integrate_success(
+            context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(
+                &zero_report, &peer_zero_report, sizeof(zero_report)) == 0,
+            "reserved Ewald-parent scratch changed zero-step report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) == before_zero,
+            "zero-step integration changed checkpoint state");
+        const EwaldParentForceScratchSnapshot after_zero =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            after_zero,
+            reserved,
+            "zero-step integration changed Ewald-parent scratch storage");
+        require(
+            after_zero.size == 0U,
+            "zero-step integration changed Ewald-parent scratch size");
+
+        const auto stateless_bits_for_owner = [&]() {
+            Fixture current = fixture;
+            const bg_particle_soa_view view = composite_view(simulation.get());
+            std::copy_n(
+                view.position_x_angstrom, kAtomCount, current.x.begin());
+            std::copy_n(
+                view.position_y_angstrom, kAtomCount, current.y.begin());
+            std::copy_n(
+                view.position_z_angstrom, kAtomCount, current.z.begin());
+            const SystemPtr current_system = make_system(current);
+            return evaluate_stateless_ewald_force_bits(
+                context.get(), current_system.get(), model.get());
+        };
+
+        for (const uint64_t step_count : {UINT64_C(1), UINT64_C(2)}) {
+            const bg_dynamics_report_v1 report = integrate_success(
+                context.get(), simulation.get(), step_count);
+            const bg_dynamics_report_v1 peer_report = integrate_success(
+                context.get(), peer.get(), step_count);
+            require(
+                std::memcmp(&report, &peer_report, sizeof(report)) == 0,
+                "reused Ewald-parent scratch changed integration report bits");
+            require(
+                write_composite_checkpoint(simulation.get()) ==
+                    write_composite_checkpoint(peer.get()),
+                "reused Ewald-parent scratch changed checkpoint bits");
+            const EwaldParentForceScratchSnapshot current =
+                ewald_parent_force_scratch_snapshot(simulation.get());
+            require_same_ewald_parent_force_scratch_storage(
+                current,
+                reserved,
+                "integration replaced Ewald-parent force scratch storage");
+            require(
+                current.size == kAtomCount,
+                "integration retained the wrong Ewald-parent scratch size");
+            require(
+                ewald_parent_force_scratch_bits(current) ==
+                    ewald_parent_force_scratch_bits(
+                        ewald_parent_force_scratch_snapshot(peer.get())),
+                "Ewald-parent scratch differed from same-lane peer bits");
+            require(
+                ewald_parent_force_scratch_bits(current) ==
+                    stateless_bits_for_owner(),
+                "Ewald-parent scratch differed from stateless force bits");
+        }
+
+        const std::vector<uint8_t> checkpoint_a =
+            write_composite_checkpoint(simulation.get());
+        const ForceBits forces_a = ewald_parent_force_scratch_bits(
+            ewald_parent_force_scratch_snapshot(simulation.get()));
+        integrate_success(context.get(), simulation.get(), UINT64_C(1));
+        const EwaldParentForceScratchSnapshot state_b =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            state_b,
+            reserved,
+            "state-B integration replaced Ewald-parent scratch storage");
+        const ForceBits forces_b = ewald_parent_force_scratch_bits(state_b);
+        require(
+            forces_b != forces_a,
+            "state-B integration did not refresh Ewald-parent scratch");
+
+        require_status(
+            bg_direct_ewald_composite_simulation_v1_checkpoint_load(
+                simulation.get(), checkpoint_a.data(), checkpoint_a.size()),
+            BG_STATUS_OK,
+            "Ewald-parent scratch checkpoint reload failed");
+        const EwaldParentForceScratchSnapshot after_load =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            after_load,
+            state_b,
+            "checkpoint reload replaced Ewald-parent scratch storage");
+        require(
+            ewald_parent_force_scratch_bits(after_load) == forces_b,
+            "checkpoint reload unexpectedly rewrote stale Ewald-parent scratch");
+
+        const bg_dynamics_report_v1 restart_zero = integrate_success(
+            context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero = integrate_success(
+            context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(&restart_zero, &peer_zero, sizeof(restart_zero)) == 0,
+            "stale Ewald-parent scratch changed zero-step report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) == checkpoint_a &&
+                write_composite_checkpoint(peer.get()) == checkpoint_a,
+            "stale Ewald-parent scratch changed zero-step checkpoint bits");
+        const EwaldParentForceScratchSnapshot after_restart_zero =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            after_restart_zero,
+            state_b,
+            "zero-step restart replaced Ewald-parent scratch storage");
+        require(
+            ewald_parent_force_scratch_bits(after_restart_zero) == forces_b,
+            "zero-step restart changed stale Ewald-parent scratch bits");
+
+        const bg_dynamics_report_v1 restarted = integrate_success(
+            context.get(), simulation.get(), UINT64_C(1));
+        const bg_dynamics_report_v1 peer_restarted = integrate_success(
+            context.get(), peer.get(), UINT64_C(1));
+        require(
+            std::memcmp(
+                &restarted, &peer_restarted, sizeof(restarted)) == 0,
+            "forceful restart with stale Ewald scratch changed report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) ==
+                write_composite_checkpoint(peer.get()),
+            "forceful restart with stale Ewald scratch changed state bits");
+        const EwaldParentForceScratchSnapshot after_resync =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            after_resync,
+            reserved,
+            "forceful restart replaced Ewald-parent scratch storage");
+        require(
+            ewald_parent_force_scratch_bits(after_resync) ==
+                ewald_parent_force_scratch_bits(
+                    ewald_parent_force_scratch_snapshot(peer.get())) &&
+                ewald_parent_force_scratch_bits(after_resync) ==
+                    stateless_bits_for_owner(),
+            "forceful restart did not resynchronize Ewald-parent scratch");
+
+        const std::vector<uint8_t> before_alias =
+            write_composite_checkpoint(simulation.get());
+        const ParticleSnapshot particles_before_alias =
+            snapshot_composite(simulation.get());
+        const ForceBits forces_before_alias =
+            ewald_parent_force_scratch_bits(after_resync);
+        auto *const aliased_step = reinterpret_cast<uint64_t *>(
+            const_cast<double *>(&after_resync.address[1][1]));
+        require_status(
+            bg_direct_ewald_composite_simulation_v1_get_absolute_step(
+                simulation.get(), aliased_step),
+            BG_STATUS_INVALID_ARGUMENT,
+            "absolute-step output aliased Ewald-parent force scratch");
+        const EwaldParentForceScratchSnapshot after_step_alias =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            after_step_alias,
+            after_resync,
+            "rejected step alias changed Ewald-parent scratch storage");
+        require(
+            ewald_parent_force_scratch_bits(after_step_alias) ==
+                forces_before_alias &&
+                write_composite_checkpoint(simulation.get()) == before_alias,
+            "rejected step alias changed Ewald scratch or checkpoint bits");
+        require_snapshot_exact(
+            snapshot_composite(simulation.get()),
+            particles_before_alias,
+            "rejected Ewald step alias changed authoritative state");
+
+        const EwaldParentForceScratchSnapshot before_view_alias =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        const ForceBits forces_before_view_alias =
+            ewald_parent_force_scratch_bits(before_view_alias);
+        const std::vector<uint8_t> checkpoint_before_view_alias =
+            write_composite_checkpoint(simulation.get());
+        const ParticleSnapshot particles_before_view_alias =
+            snapshot_composite(simulation.get());
+        auto *const aliased_view = reinterpret_cast<bg_particle_soa_view *>(
+            const_cast<std::array<double, 3> *>(
+                before_view_alias.address + 1U));
+        require_status(
+            bg_direct_ewald_composite_simulation_v1_get_particles(
+                simulation.get(), aliased_view),
+            BG_STATUS_INVALID_ARGUMENT,
+            "particle-view output aliased Ewald-parent force scratch");
+        const EwaldParentForceScratchSnapshot after_view_alias =
+            ewald_parent_force_scratch_snapshot(simulation.get());
+        require_same_ewald_parent_force_scratch_storage(
+            after_view_alias,
+            before_view_alias,
+            "rejected view alias changed Ewald-parent scratch storage");
+        require(
+            after_view_alias.size == before_view_alias.size &&
+                ewald_parent_force_scratch_bits(after_view_alias) ==
+                    forces_before_view_alias,
+            "rejected view alias changed Ewald-parent scratch bytes");
+        require(
+            write_composite_checkpoint(simulation.get()) ==
+                checkpoint_before_view_alias,
+            "rejected view alias changed checkpoint state");
+        require_snapshot_exact(
+            snapshot_composite(simulation.get()),
+            particles_before_view_alias,
+            "rejected Ewald view alias changed authoritative state");
     }
 }
 
@@ -2857,6 +3186,7 @@ int main() {
     verify_zero_step_matches_stateless();
     verify_force_output_scratch_reuse();
     verify_short_parent_force_scratch_reuse();
+    verify_ewald_parent_force_scratch_reuse();
     verify_short_system_scratch_reuse();
     verify_short_system_scratch_drift_fails_closed();
     verify_manual_velocity_verlet_and_same_lane_repeat();

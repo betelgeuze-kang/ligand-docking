@@ -41,6 +41,13 @@ namespace cpp_cpu {
     Evaluation *out_evaluation,
     Error *out_error);
 
+[[nodiscard]] bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_direct_ewald_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error);
+
 }  // namespace cpp_cpu
 }  // namespace betelgeuze::native::ewald
 
