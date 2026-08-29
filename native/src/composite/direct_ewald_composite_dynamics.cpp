@@ -208,7 +208,13 @@ bool owner_storage_overlaps(
                &simulation, sizeof(simulation), output) ||
            system_storage_overlaps(simulation.system, output) ||
            forcefield_storage_overlaps(simulation.forcefield, output) ||
-           vector_storage_overlaps(simulation.constraints, output);
+           vector_storage_overlaps(simulation.constraints, output) ||
+           vector_storage_overlaps(
+               simulation.force_evaluation_scratch.x, output) ||
+           vector_storage_overlaps(
+               simulation.force_evaluation_scratch.y, output) ||
+           vector_storage_overlaps(
+               simulation.force_evaluation_scratch.z, output);
 }
 
 bg_status validate_typed_error_descriptor(
@@ -519,6 +525,7 @@ bg_status evaluate_composite_provider(
         &provider->owner->short_system_scratch,
         &provider->owner->short_parent_evaluation_scratch,
         &simulation->rust_cpu_forcefield_validated,
+        compute_forces ? out_evaluation : nullptr,
         compute_forces,
         &combined,
         provider->typed_error);
@@ -526,38 +533,22 @@ bg_status evaluate_composite_provider(
         return status;
     }
 
-    cpu::Evaluation candidate;
-    if (compute_forces) {
-        candidate.force_x = std::move(out_evaluation->force_x);
-        candidate.force_y = std::move(out_evaluation->force_y);
-        candidate.force_z = std::move(out_evaluation->force_z);
-    }
-    candidate.energy.struct_size =
-        static_cast<uint32_t>(sizeof(candidate.energy));
-    candidate.energy.abi_version = BG_ABI_VERSION;
-    candidate.energy.unit_system = simulation->system.unit_system;
-    candidate.energy.harmonic_bond_kcal_per_mol =
+    bg_energy_components_v1 committed_energy{};
+    committed_energy.struct_size =
+        static_cast<uint32_t>(sizeof(committed_energy));
+    committed_energy.abi_version = BG_ABI_VERSION;
+    committed_energy.unit_system = simulation->system.unit_system;
+    committed_energy.harmonic_bond_kcal_per_mol =
         combined.energy.short_harmonic_bond;
-    candidate.energy.harmonic_angle_kcal_per_mol =
+    committed_energy.harmonic_angle_kcal_per_mol =
         combined.energy.short_harmonic_angle;
-    candidate.energy.periodic_torsion_kcal_per_mol =
+    committed_energy.periodic_torsion_kcal_per_mol =
         combined.energy.short_periodic_torsion;
-    candidate.energy.lennard_jones_kcal_per_mol =
+    committed_energy.lennard_jones_kcal_per_mol =
         combined.energy.short_lennard_jones;
-    candidate.energy.coulomb_kcal_per_mol = combined.energy.ewald_total;
-    candidate.energy.total_kcal_per_mol = combined.energy.total;
-    if (compute_forces) {
-        const std::size_t atom_count = combined.forces.size();
-        candidate.force_x.resize(atom_count);
-        candidate.force_y.resize(atom_count);
-        candidate.force_z.resize(atom_count);
-        for (std::size_t atom = 0; atom < atom_count; ++atom) {
-            candidate.force_x[atom] = combined.forces[atom][0];
-            candidate.force_y[atom] = combined.forces[atom][1];
-            candidate.force_z[atom] = combined.forces[atom][2];
-        }
-    }
-    *out_evaluation = std::move(candidate);
+    committed_energy.coulomb_kcal_per_mol = combined.energy.ewald_total;
+    committed_energy.total_kcal_per_mol = combined.energy.total;
+    out_evaluation->energy = committed_energy;
     return BG_STATUS_OK;
 }
 
@@ -767,6 +758,7 @@ bg_direct_ewald_composite_simulation_v1_create(
             &candidate->short_system_scratch,
             &candidate->short_parent_evaluation_scratch,
             &candidate->simulation->rust_cpu_forcefield_validated,
+            nullptr,
             false,
             &initial_evaluation,
             &initial_error);
