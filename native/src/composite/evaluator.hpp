@@ -1,9 +1,11 @@
 #ifndef BETELGEUZE_NATIVE_COMPOSITE_EVALUATOR_HPP
 #define BETELGEUZE_NATIVE_COMPOSITE_EVALUATOR_HPP
 
+#include "../cpu/evaluator.hpp"
 #include "../ewald/cpp_evaluator.hpp"
 
 #include <array>
+#include <cstdint>
 #include <vector>
 
 struct bg_context;
@@ -44,11 +46,14 @@ struct Evaluation final {
     const bg_direct_ewald_model_v1 &model);
 
 /*
- * The caller must first establish validate_handle_compatibility(). A null
- * short-system scratch preserves the stateless local-copy path. A non-null
- * scratch must be independent, deep-owned, shape/unit matched, and contain
- * exact +0.0 charges; only its positions are refreshed, and failed calls need
- * not restore its private derived contents.
+ * The caller must first establish validate_handle_compatibility(). All three
+ * scratch/cache pointers must be null for the stateless path or non-null for
+ * the stateful path. A non-null short-system scratch must be independent,
+ * deep-owned, shape/unit matched, and contain exact +0.0 charges; only its
+ * positions are refreshed. Force-producing stateful calls reuse the short
+ * parent's Evaluation storage. Force-free calls leave that storage and the
+ * Rust validation cache untouched. Failed calls need not restore private
+ * derived scratch/cache contents.
  */
 [[nodiscard]] bg_status evaluate_prevalidated(
     const bg_context &context,
@@ -56,6 +61,8 @@ struct Evaluation final {
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &model,
     bg_system *short_system_scratch,
+    cpu::Evaluation *short_parent_evaluation_scratch,
+    uint8_t *inout_rust_cpu_forcefield_validated,
     bool compute_forces,
     Evaluation *out_evaluation,
     ewald::Error *out_error);

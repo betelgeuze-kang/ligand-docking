@@ -71,6 +71,8 @@ void require_exact(double actual, double expected, const char *message) {
 
 using ForceScratchSnapshot =
     betelgeuze::native::tests::DirectEwaldCompositeForceScratchSnapshot;
+using ShortParentForceScratchSnapshot = betelgeuze::native::tests::
+    DirectEwaldCompositeShortParentForceScratchSnapshot;
 using ShortSystemScratchSnapshot = betelgeuze::native::tests::
     DirectEwaldCompositeShortSystemScratchSnapshot;
 
@@ -92,6 +94,33 @@ void require_same_force_scratch_storage(
 
 void require_force_scratch_sizes(
     const ForceScratchSnapshot &snapshot,
+    std::size_t expected,
+    const char *message) {
+    require(
+        snapshot.sizes == std::array<std::size_t, 3>{
+            expected, expected, expected},
+        message);
+}
+
+ShortParentForceScratchSnapshot short_parent_force_scratch_snapshot(
+    const bg_direct_ewald_composite_simulation_v1 *simulation) {
+    return betelgeuze::native::tests::
+        direct_ewald_composite_short_parent_force_scratch_snapshot(
+            simulation);
+}
+
+void require_same_short_parent_force_scratch_storage(
+    const ShortParentForceScratchSnapshot &actual,
+    const ShortParentForceScratchSnapshot &expected,
+    const char *message) {
+    require(
+        actual.addresses == expected.addresses &&
+            actual.capacities == expected.capacities,
+        message);
+}
+
+void require_short_parent_force_scratch_sizes(
+    const ShortParentForceScratchSnapshot &snapshot,
     std::size_t expected,
     const char *message) {
     require(
@@ -184,6 +213,26 @@ void require_short_system_scratch_positions_current(
 
 using PositionBits =
     std::array<std::array<uint64_t, kAtomCount>, 3>;
+
+using ForceBits = PositionBits;
+
+ForceBits short_parent_force_scratch_bits(
+    const ShortParentForceScratchSnapshot &snapshot) {
+    require_short_parent_force_scratch_sizes(
+        snapshot,
+        kAtomCount,
+        "short-parent force scratch bit snapshot had the wrong size");
+    ForceBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        require(
+            snapshot.addresses[axis] != nullptr,
+            "short-parent force scratch bit snapshot had a null channel");
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits(snapshot.addresses[axis][atom]);
+        }
+    }
+    return result;
+}
 
 PositionBits short_system_scratch_position_bits(
     const ShortSystemScratchSnapshot &snapshot) {
@@ -1391,6 +1440,259 @@ void verify_force_output_scratch_reuse() {
     }
 }
 
+void verify_short_parent_force_scratch_reuse() {
+    constexpr std::size_t kReservedCapacity = 64U;
+    constexpr double timestep = 0.001;
+    const Fixture fixture;
+
+    for (const bg_backend backend : {
+             BG_BACKEND_CPP_CPU_REFERENCE,
+             BG_BACKEND_RUST_CPU,
+         }) {
+        const ContextPtr context = make_context(backend);
+        const SystemPtr system = make_system(fixture);
+        const ForceFieldPtr forcefield = make_forcefield(fixture);
+        const ModelPtr model = make_model(fixture);
+        const CompositeSimulationPtr simulation = make_composite_simulation(
+            system.get(), forcefield.get(), model.get(), timestep);
+        const CompositeSimulationPtr peer = make_composite_simulation(
+            system.get(), forcefield.get(), model.get(), timestep);
+
+        const ShortParentForceScratchSnapshot initial =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_short_parent_force_scratch_sizes(
+            initial,
+            0U,
+            "new short-parent force scratch was not empty");
+        require(
+            initial.capacities ==
+                    std::array<std::size_t, 3>{0U, 0U, 0U} &&
+                initial.rust_cpu_forcefield_validated == UINT8_C(0),
+            "new short-parent force scratch or validation cache was not clear");
+
+        betelgeuze::native::tests::
+            reserve_direct_ewald_composite_force_scratch(
+                simulation.get(), kReservedCapacity);
+        betelgeuze::native::tests::
+            reserve_direct_ewald_composite_short_parent_force_scratch(
+                simulation.get(), kReservedCapacity);
+        const ForceScratchSnapshot final_reserved =
+            force_scratch_snapshot(simulation.get());
+        const ShortParentForceScratchSnapshot reserved =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_short_parent_force_scratch_sizes(
+            reserved,
+            0U,
+            "short-parent force scratch reserve changed logical size");
+        require(
+            reserved.rust_cpu_forcefield_validated == UINT8_C(0),
+            "short-parent force scratch reserve changed validation cache");
+        for (std::size_t axis = 0U; axis < 3U; ++axis) {
+            require(
+                reserved.addresses[axis] != nullptr &&
+                    reserved.capacities[axis] >= kReservedCapacity,
+                "short-parent force scratch reserve did not materialize storage");
+            for (std::size_t other = axis + 1U; other < 3U; ++other) {
+                require(
+                    reserved.addresses[axis] != reserved.addresses[other],
+                    "short-parent force scratch channels aliased");
+            }
+        }
+
+        const ShortSystemScratchSnapshot short_system =
+            short_system_scratch_snapshot(simulation.get());
+        const std::array<const double *, 8> authoritative =
+            view_addresses(composite_view(simulation.get()));
+        for (const double *const short_parent_address : reserved.addresses) {
+            for (const double *const final_address :
+                 final_reserved.addresses) {
+                require(
+                    short_parent_address != final_address,
+                    "short-parent scratch aliased final force scratch");
+            }
+            for (const double *const short_system_address :
+                 short_system.addresses) {
+                require(
+                    short_parent_address != short_system_address,
+                    "short-parent scratch aliased short-system scratch");
+            }
+            for (const double *const owner_address : authoritative) {
+                require(
+                    short_parent_address != owner_address,
+                    "short-parent scratch aliased authoritative owner storage");
+            }
+        }
+
+        const std::vector<uint8_t> before_zero =
+            write_composite_checkpoint(simulation.get());
+        const bg_dynamics_report_v1 zero_report = integrate_success(
+            context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero_report = integrate_success(
+            context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(
+                &zero_report, &peer_zero_report, sizeof(zero_report)) == 0,
+            "reserved short-parent scratch changed zero-step report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) == before_zero,
+            "zero-step integration changed checkpoint state");
+        const ShortParentForceScratchSnapshot after_zero =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_same_short_parent_force_scratch_storage(
+            after_zero,
+            reserved,
+            "zero-step integration changed short-parent scratch storage");
+        require_short_parent_force_scratch_sizes(
+            after_zero,
+            0U,
+            "zero-step integration changed short-parent scratch size");
+        require(
+            after_zero.rust_cpu_forcefield_validated == UINT8_C(0),
+            "zero-step integration changed Rust validation cache");
+
+        for (const uint64_t step_count : {UINT64_C(1), UINT64_C(2)}) {
+            const bg_dynamics_report_v1 report = integrate_success(
+                context.get(), simulation.get(), step_count);
+            const bg_dynamics_report_v1 peer_report = integrate_success(
+                context.get(), peer.get(), step_count);
+            require(
+                std::memcmp(&report, &peer_report, sizeof(report)) == 0,
+                "reused short-parent scratch changed integration report bits");
+            require(
+                write_composite_checkpoint(simulation.get()) ==
+                    write_composite_checkpoint(peer.get()),
+                "reused short-parent scratch changed checkpoint bits");
+            const ShortParentForceScratchSnapshot current =
+                short_parent_force_scratch_snapshot(simulation.get());
+            require_same_short_parent_force_scratch_storage(
+                current,
+                reserved,
+                "integration replaced short-parent force scratch storage");
+            require_short_parent_force_scratch_sizes(
+                current,
+                kAtomCount,
+                "integration retained the wrong short-parent scratch size");
+            require(
+                current.rust_cpu_forcefield_validated ==
+                    (backend == BG_BACKEND_RUST_CPU ? UINT8_C(1)
+                                                   : UINT8_C(0)),
+                "short-parent force evaluation retained the wrong Rust validation flag");
+        }
+
+        const std::vector<uint8_t> checkpoint_a =
+            write_composite_checkpoint(simulation.get());
+        const ForceBits forces_a = short_parent_force_scratch_bits(
+            short_parent_force_scratch_snapshot(simulation.get()));
+        integrate_success(context.get(), simulation.get(), UINT64_C(1));
+        const ShortParentForceScratchSnapshot state_b =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_same_short_parent_force_scratch_storage(
+            state_b,
+            reserved,
+            "state-B integration replaced short-parent force scratch storage");
+        const ForceBits forces_b = short_parent_force_scratch_bits(state_b);
+        require(
+            forces_b != forces_a,
+            "state-B integration did not refresh short-parent force scratch");
+
+        require_status(
+            bg_direct_ewald_composite_simulation_v1_checkpoint_load(
+                simulation.get(), checkpoint_a.data(), checkpoint_a.size()),
+            BG_STATUS_OK,
+            "short-parent scratch checkpoint reload failed");
+        const ShortParentForceScratchSnapshot after_load =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_same_short_parent_force_scratch_storage(
+            after_load,
+            state_b,
+            "checkpoint reload replaced short-parent force scratch storage");
+        require(
+            short_parent_force_scratch_bits(after_load) == forces_b &&
+                after_load.rust_cpu_forcefield_validated ==
+                    state_b.rust_cpu_forcefield_validated,
+            "checkpoint reload unexpectedly rewrote short-parent scratch/cache");
+
+        const bg_dynamics_report_v1 restart_zero = integrate_success(
+            context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_zero = integrate_success(
+            context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(&restart_zero, &peer_zero, sizeof(restart_zero)) == 0,
+            "stale short-parent scratch changed zero-step report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) == checkpoint_a &&
+                write_composite_checkpoint(peer.get()) == checkpoint_a,
+            "stale short-parent scratch changed zero-step checkpoint bits");
+        const ShortParentForceScratchSnapshot after_restart_zero =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_same_short_parent_force_scratch_storage(
+            after_restart_zero,
+            state_b,
+            "zero-step restart replaced short-parent force scratch storage");
+        require(
+            short_parent_force_scratch_bits(after_restart_zero) == forces_b &&
+                after_restart_zero.rust_cpu_forcefield_validated ==
+                    state_b.rust_cpu_forcefield_validated,
+            "zero-step restart changed stale short-parent scratch/cache");
+
+        const bg_dynamics_report_v1 restarted = integrate_success(
+            context.get(), simulation.get(), UINT64_C(1));
+        const bg_dynamics_report_v1 peer_restarted = integrate_success(
+            context.get(), peer.get(), UINT64_C(1));
+        require(
+            std::memcmp(&restarted, &peer_restarted, sizeof(restarted)) == 0,
+            "forceful restart with stale scratch changed report bits");
+        require(
+            write_composite_checkpoint(simulation.get()) ==
+                write_composite_checkpoint(peer.get()),
+            "forceful restart with stale scratch changed checkpoint bits");
+        const ShortParentForceScratchSnapshot after_resync =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_same_short_parent_force_scratch_storage(
+            after_resync,
+            reserved,
+            "forceful restart replaced short-parent force scratch storage");
+        require(
+            short_parent_force_scratch_bits(after_resync) ==
+                short_parent_force_scratch_bits(
+                    short_parent_force_scratch_snapshot(peer.get())),
+            "forceful restart did not resynchronize short-parent force scratch");
+
+        const std::vector<uint8_t> before_alias =
+            write_composite_checkpoint(simulation.get());
+        const ParticleSnapshot particles_before_alias =
+            snapshot_composite(simulation.get());
+        const ForceBits forces_before_alias =
+            short_parent_force_scratch_bits(after_resync);
+        auto *const aliased_step = reinterpret_cast<uint64_t *>(
+            const_cast<double *>(after_resync.addresses[0]));
+        require_status(
+            bg_direct_ewald_composite_simulation_v1_get_absolute_step(
+                simulation.get(), aliased_step),
+            BG_STATUS_INVALID_ARGUMENT,
+            "absolute-step output aliased short-parent force scratch");
+        const ShortParentForceScratchSnapshot after_alias =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_same_short_parent_force_scratch_storage(
+            after_alias,
+            after_resync,
+            "rejected scratch alias changed short-parent storage");
+        require(
+            short_parent_force_scratch_bits(after_alias) ==
+                    forces_before_alias &&
+                after_alias.rust_cpu_forcefield_validated ==
+                    after_resync.rust_cpu_forcefield_validated,
+            "rejected scratch alias changed short-parent scratch/cache");
+        require(
+            write_composite_checkpoint(simulation.get()) == before_alias,
+            "rejected scratch alias changed checkpoint state");
+        require_snapshot_exact(
+            snapshot_composite(simulation.get()),
+            particles_before_alias,
+            "rejected scratch alias changed authoritative state");
+    }
+}
+
 void verify_short_system_scratch_reuse() {
     constexpr double timestep = 0.001;
     const Fixture fixture;
@@ -2078,8 +2380,20 @@ void verify_late_typed_ewald_failure_rolls_back() {
         betelgeuze::native::tests::
             reserve_direct_ewald_composite_force_scratch(
                 simulation.get(), 64U);
+        betelgeuze::native::tests::
+            reserve_direct_ewald_composite_short_parent_force_scratch(
+                simulation.get(), 64U);
         const ForceScratchSnapshot reserved =
             force_scratch_snapshot(simulation.get());
+        const ShortParentForceScratchSnapshot short_parent_reserved =
+            short_parent_force_scratch_snapshot(simulation.get());
+        require_short_parent_force_scratch_sizes(
+            short_parent_reserved,
+            0U,
+            "late-failure short-parent scratch reserve changed logical size");
+        require(
+            short_parent_reserved.rust_cpu_forcefield_validated == UINT8_C(0),
+            "late-failure short-parent validation cache started populated");
         const ShortSystemScratchSnapshot short_system_reserved =
             short_system_scratch_snapshot(simulation.get());
         require_short_system_scratch_layout(
@@ -2151,6 +2465,22 @@ void verify_late_typed_ewald_failure_rolls_back() {
             require_short_system_scratch_layout(
                 short_system_after_failure,
                 "late direct-Ewald failure changed short-system scratch layout");
+            const ShortParentForceScratchSnapshot
+                short_parent_after_failure =
+                    short_parent_force_scratch_snapshot(simulation.get());
+            require_same_short_parent_force_scratch_storage(
+                short_parent_after_failure,
+                short_parent_reserved,
+                "late direct-Ewald failure replaced short-parent force scratch storage");
+            require_short_parent_force_scratch_sizes(
+                short_parent_after_failure,
+                kAtomCount,
+                "late direct-Ewald failure retained the wrong short-parent scratch size");
+            require(
+                short_parent_after_failure.rust_cpu_forcefield_validated ==
+                    (backend == BG_BACKEND_RUST_CPU ? UINT8_C(1)
+                                                   : UINT8_C(0)),
+                "late direct-Ewald failure retained the wrong Rust validation flag");
         }
     }
 }
@@ -2408,6 +2738,7 @@ int main() {
     verify_deep_ownership_and_stable_views();
     verify_zero_step_matches_stateless();
     verify_force_output_scratch_reuse();
+    verify_short_parent_force_scratch_reuse();
     verify_short_system_scratch_reuse();
     verify_short_system_scratch_drift_fails_closed();
     verify_manual_velocity_verlet_and_same_lane_repeat();
