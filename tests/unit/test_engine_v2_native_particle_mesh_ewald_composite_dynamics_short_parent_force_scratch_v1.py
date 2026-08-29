@@ -6,36 +6,23 @@ from pathlib import Path
 import pytest
 
 from tools import (
-    verify_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PARTICLE_MESH_EWALD_SHORT_PARENT_FORCE_SCRATCH_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "short_parent_force_scratch_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PARTICLE_MESH_EWALD_SHORT_PARENT_FORCE_SCRATCH_EVIDENCE_PRESENT,
-    reason=(
-        "direct-Ewald composite dynamics short-parent force scratch evidence "
-        "is verified from its exact frozen object after particle-mesh Ewald "
-        "short-parent force scratch evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
-    assert result["source_count"] == 220
+    assert result["source_count"] == 226
     assert result["source_count"] == profile["implementation"][
         "source_manifest_entry_count"
     ]
     assert profile["abi"]["public_symbol_count"] == 13
-    assert profile["abi"]["checkpoint_magic"] == "BGDEC001"
+    assert profile["abi"]["checkpoint_magic"] == "BGPME001"
     assert profile["abi"]["checkpoint_header_size_bytes"] == 104
     assert not profile["abi"]["abi_changed"]
     assert not profile["abi"]["checkpoint_format_changed"]
@@ -44,27 +31,6 @@ def test_exact_profile_manifest_and_contracts() -> None:
 def test_predecessor_identity_and_optional_reviewed_head_are_frozen() -> None:
     verifier.require_predecessor()
     assert verifier.PREDECESSOR == {
-        "pull_request": 447,
-        "reviewed_head": "5d4d238a2eea2765b6ac5d5d3f596487bd5b8cd6",
-        "merge_commit": "3f68361985e57f4c5ee547ba690f4a6859bd8b34",
-        "merge_tree": "1fc25fdc53ae1d2303a6fe6abe279e520fc13f12",
-        "profile_path": (
-            "config/engine_v2_native_direct_ewald_composite_dynamics_"
-            "short_system_scratch_profile_v1.json"
-        ),
-        "profile_sha256": (
-            "8be1f7d28f936f78486bfabaf9fdfc2e1e334285864138639c796d36a454d3cb"
-        ),
-        "source_manifest_path": (
-            "config/engine_v2_native_direct_ewald_composite_dynamics_"
-            "short_system_scratch_profile_v1_sources.json"
-        ),
-        "source_manifest_sha256": (
-            "85c17310e995b8eb22028083694f710414e523884a0ae9834b5258dfcb6c48fd"
-        ),
-        "source_manifest_entry_count": 208,
-    }
-    assert verifier.ARCHITECTURE_PREDECESSOR == {
         "pull_request": 448,
         "reviewed_head": "4ace5d02dd90618140baecfeba28fdf93f3b342f",
         "merge_commit": "5d4a55c85a80b62d38e79ea608e4850a6966ceeb",
@@ -85,26 +51,47 @@ def test_predecessor_identity_and_optional_reviewed_head_are_frozen() -> None:
         ),
         "source_manifest_entry_count": 214,
     }
-    assert verifier.INHERITED_PREDECESSOR == {
-        "pull_request": 446,
-        "reviewed_head": "5b3fb7ab339d21598ccd22c8c2fe89b38cc97fe7",
-        "merge_commit": "29edcd1ea18e9fb64b9d416a0d05d87e0485be4b",
-        "merge_tree": "77f5298c291130f7ea86b96bd13b6bd9596f6850",
+    assert verifier.ARCHITECTURE_PREDECESSOR == {
+        "pull_request": 449,
+        "reviewed_head": "0268e1731eb5f8b472cb527ac277a66c7ce4317f",
+        "merge_commit": "11ee408d89c44e70188af5133544ecebd604b182",
+        "merge_tree": "01d37e1adf097384c1e895fa637af0cfff45f4e8",
         "profile_path": (
             "config/engine_v2_native_direct_ewald_composite_dynamics_"
-            "force_scratch_profile_v1.json"
+            "short_parent_force_scratch_profile_v1.json"
         ),
         "profile_sha256": (
-            "2c1a5c015cd4db903e359e6d18fb52ee70c583e1c2744409754b44352d201985"
+            "745a4413cc875f143be460f372ad4ddc809af0588df65e736d68361fce418485"
         ),
         "source_manifest_path": (
             "config/engine_v2_native_direct_ewald_composite_dynamics_"
+            "short_parent_force_scratch_profile_v1_sources.json"
+        ),
+        "source_manifest_sha256": (
+            "38d48a481963dc5a4a6202f6b6f794e9984e64ea43bb2ebd11a3aeb7e7815a1f"
+        ),
+        "source_manifest_entry_count": 220,
+    }
+    assert verifier.INHERITED_PREDECESSOR == {
+        "pull_request": 445,
+        "reviewed_head": "801a85d56846c464b3a618ecacca867cd12a8c9f",
+        "merge_commit": "c53f7993ec06c4ac04a4907b40f179d12fbe309a",
+        "merge_tree": "2bb25b756b802671bcfc5f3ac95b26df3b284956",
+        "profile_path": (
+            "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+            "force_scratch_profile_v1.json"
+        ),
+        "profile_sha256": (
+            "32129a32d0b351ac265fda21906e707cc708c664241715b4d0d92fa3cc013b62"
+        ),
+        "source_manifest_path": (
+            "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
             "force_scratch_profile_v1_sources.json"
         ),
         "source_manifest_sha256": (
-            "f1c41ad4ad774bd2d7ab1672df61792ad539f0c2c199b37511ed0f5783412467"
+            "d428b3f18d26382fbb7e5e8a48f3a114eb953b8708bec77c4f00ec6c0d1bcc3f"
         ),
-        "source_manifest_entry_count": 202,
+        "source_manifest_entry_count": 194,
     }
 
 
@@ -113,9 +100,9 @@ def test_predecessor_manifest_mutations_fail_closed() -> None:
     manifest = json.loads(raw)
     manifest["files"][0]["sha256"] = "x" * 64
     with pytest.raises(ValueError, match="row value drift"):
-        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 208)
+        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 214)
     with pytest.raises(ValueError, match="count drift"):
-        verifier.require_manifest_shape(raw, 207)
+        verifier.require_manifest_shape(raw, 213)
 
 
 def test_architecture_manifest_mutations_fail_closed() -> None:
@@ -124,10 +111,10 @@ def test_architecture_manifest_mutations_fail_closed() -> None:
     manifest["files"][0]["sha256"] = "x" * 64
     with pytest.raises(ValueError, match="row value drift"):
         verifier.require_architecture_manifest_shape(
-            verifier.canonical_bytes(manifest), 214
+            verifier.canonical_bytes(manifest), 220
         )
     with pytest.raises(ValueError, match="count drift"):
-        verifier.require_architecture_manifest_shape(raw, 213)
+        verifier.require_architecture_manifest_shape(raw, 219)
 
 
 def test_inherited_manifest_mutations_fail_closed() -> None:
@@ -135,9 +122,9 @@ def test_inherited_manifest_mutations_fail_closed() -> None:
     manifest = json.loads(raw)
     manifest["files"][0]["path"] = "../escape"
     with pytest.raises(ValueError, match="row value drift"):
-        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 202)
+        verifier.require_manifest_shape(verifier.canonical_bytes(manifest), 194)
     with pytest.raises(ValueError, match="count drift"):
-        verifier.require_manifest_shape(raw, 201)
+        verifier.require_manifest_shape(raw, 193)
 
 
 def test_source_manifest_is_canonical_sorted_and_acyclic() -> None:
@@ -184,9 +171,11 @@ def test_profile_is_narrow_and_all_authority_is_false() -> None:
     assert not implementation[
         "rust_validation_cache_bound_into_static_fingerprint"
     ]
-    assert implementation["late_downstream_failure_storage_identity_checked"]
+    assert implementation["late_direct_local_failure_storage_identity_checked"]
     assert not implementation["unconditional_failure_storage_retention_claimed"]
     assert not implementation["upstream_failure_storage_retention_claimed"]
+    assert not implementation["reciprocal_failure_storage_retention_claimed"]
+    assert not implementation["universal_failure_storage_retention_claimed"]
     assert not implementation["all_failure_path_storage_retention_claimed"]
     assert implementation["existing_short_system_scratch_contract_preserved"]
     assert implementation["existing_final_soa_force_output_storage_preserved"]
@@ -241,13 +230,13 @@ def test_all_public_symbol_surfaces_are_exactly_thirteen() -> None:
 
 def test_fourteenth_namespace_symbol_is_detected() -> None:
     header = (
-        ROOT / "include/betelgeuze/direct_ewald_composite_dynamics.h"
+        ROOT / "include/betelgeuze/particle_mesh_ewald_composite_dynamics.h"
     ).read_text()
     symbols = tuple(
         symbol
         for symbol in __import__("re").findall(
             r"\b(bg_[a-z0-9_]+)\s*\(",
-            header + "\nbg_direct_ewald_composite_dynamics_extra(",
+            header + "\nbg_particle_mesh_ewald_composite_dynamics_extra(",
         )
         if verifier.is_dynamics_symbol(symbol)
     )
@@ -268,7 +257,7 @@ def test_production_delta_is_exact_and_vendor_identical() -> None:
 @pytest.mark.parametrize(
     "transform",
     [
-        verifier.expected_direct_ewald_source,
+        verifier.expected_composite_source,
         verifier.expected_dynamics_source,
         verifier.expected_dynamics_header,
         verifier.expected_evaluator_header,
@@ -281,13 +270,13 @@ def test_production_transforms_reject_missing_insertion_point(transform) -> None
 
 def test_conditionally_disabled_short_parent_regression_fails_closed() -> None:
     test = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics.cpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics.cpp"
     ).read_text()
     helper = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics_scratch.cpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics_scratch.cpp"
     ).read_text()
     header = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics_scratch.hpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics_scratch.hpp"
     ).read_text()
     disabled = test.replace(
         "    verify_short_parent_force_scratch_reuse();\n",
@@ -295,20 +284,20 @@ def test_conditionally_disabled_short_parent_regression_fails_closed() -> None:
         1,
     )
     assert disabled.count("verify_short_parent_force_scratch_reuse();") == 1
-    with pytest.raises(ValueError, match="exact direct-Ewald dynamics regression source drift"):
+    with pytest.raises(ValueError, match="exact particle-mesh Ewald dynamics regression source drift"):
         verifier.require_exact_regression_sources(disabled, helper, header)
 
 
 @pytest.mark.parametrize("kind", ["helper", "header"])
 def test_test_only_scratch_introspection_drift_fails_closed(kind: str) -> None:
     test = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics.cpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics.cpp"
     ).read_text()
     helper = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics_scratch.cpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics_scratch.cpp"
     ).read_text()
     header = (
-        ROOT / "native/tests/direct_ewald_composite_dynamics_scratch.hpp"
+        ROOT / "native/tests/particle_mesh_ewald_composite_dynamics_scratch.hpp"
     ).read_text()
     if kind == "helper":
         helper += "// drift\n"
@@ -350,7 +339,7 @@ def test_predecessor_unit_freeze_is_exact() -> None:
     "old,new",
     [
         (
-            "    DIRECT_EWALD_SHORT_PARENT_FORCE_SCRATCH_EVIDENCE_PRESENT,\n",
+            "    PARTICLE_MESH_EWALD_SHORT_PARENT_FORCE_SCRATCH_EVIDENCE_PRESENT,\n",
             "    False,\n",
         ),
         (").is_file()\n", ").is_dir()\n"),
@@ -377,7 +366,7 @@ def test_predecessor_unit_freeze_mutation_fails_closed(
     [
         ("        shell: bash\n", "        shell: sh\n"),
         (
-            "          frozen=5d4a55c85a80b62d38e79ea608e4850a6966ceeb\n",
+            "          frozen=11ee408d89c44e70188af5133544ecebd604b182\n",
             "          frozen=HEAD\n",
         ),
         (
@@ -406,7 +395,7 @@ def test_workflow_is_pinned_cpu_only_and_fetches_predecessor() -> None:
     assert text.count(verifier.PINNED_CHECKOUT_ACTION) == 4
     assert "permissions:\n  contents: read" in text
     assert text.count(verifier.RUST_BOUNDARY_TOOLCHAIN_INSTALL) == 1
-    for pull_request in (448, 447, 446):
+    for pull_request in (449, 448, 445):
         assert text.count(f"refs/pull/{pull_request}/head") == 1
     verifier.require_workflow_contract(text)
 
@@ -510,10 +499,10 @@ def test_checkout_credentials_mutation_fails_closed() -> None:
 @pytest.mark.parametrize(
     "command",
     [
-        "          git merge-base --is-ancestor 5d4a55c85a80b62d38e79ea608e4850a6966ceeb HEAD\n",
-        "          git fetch --no-tags --depth=1 origin refs/pull/446/head\n",
-        "          cmake --build build/direct-ewald-short-parent-force-scratch-release --target betelgeuze_engine_direct_ewald_composite_dynamics --parallel 2\n",
-        "          ctest --test-dir build/direct-ewald-short-parent-force-scratch-release -R '^betelgeuze_engine_(direct_ewald_composite_dynamics|export_allowlist)$' --output-on-failure\n",
+        "          git merge-base --is-ancestor 11ee408d89c44e70188af5133544ecebd604b182 HEAD\n",
+        "          git fetch --no-tags --depth=1 origin refs/pull/445/head\n",
+        "          cmake --build build/particle-mesh-ewald-short-parent-force-scratch-release --target betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2\n",
+        "          ctest --test-dir build/particle-mesh-ewald-short-parent-force-scratch-release -R '^betelgeuze_engine_(particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure\n",
     ],
 )
 def test_commented_token_command_bypasses_fail_closed(command: str) -> None:
@@ -635,8 +624,8 @@ def test_exact_rust_command_removal_fails_closed(command: str) -> None:
         ("runs-on: ubuntu-latest", "runs-on: self-hosted"),
         ("workflow_dispatch:", "pull_request_target:"),
         (
-            "python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
-            "python3 tools/verify_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.py --refresh",
+            "python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+            "python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py --refresh",
         ),
     ],
 )

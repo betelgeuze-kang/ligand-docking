@@ -3,6 +3,7 @@
 
 #include "betelgeuze/particle_mesh_ewald_composite_dynamics.h"
 
+#include "../cpu/evaluator.hpp"
 #include "../dynamics/dynamics.hpp"
 #include "../ewald/model.hpp"
 #include "../particle_mesh_reciprocal/model.hpp"
@@ -16,6 +17,7 @@ struct bg_particle_mesh_ewald_composite_simulation_v1 final {
     bg_direct_ewald_model_v1 direct_model;
     bg_particle_mesh_reciprocal_model_v1 reciprocal_model;
     bg_system short_system_scratch;
+    betelgeuze::native::cpu::Evaluation short_parent_evaluation_scratch;
     std::array<uint8_t, 32> static_fingerprint{};
 };
 

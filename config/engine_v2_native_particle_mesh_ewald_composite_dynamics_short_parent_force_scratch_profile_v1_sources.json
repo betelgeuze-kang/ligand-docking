@@ -1,0 +1,918 @@
+{
+  "evidence_paths": [
+    ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-short-parent-force-scratch.yml",
+    "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_profile_v1.json",
+    "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_profile_v1_sources.json",
+    "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.md",
+    "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+    "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml",
+      "sha256": "f0c3b15158d3ac4f41686922dfa9b2025b6238128aa18d49545388b2f8382714"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-force-scratch.yml",
+      "sha256": "5ee390c6f27bfaf827a5cca5a69064441f4c39f3681053eb092487bf45a48b05"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-short-parent-force-scratch.yml",
+      "sha256": "f07bc694ae999f100ff89da161e52be8a84c96933a0aaaa0106c449f10e3db49"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-short-system-scratch.yml",
+      "sha256": "59c6089e4273c2324953ac0916671a8b9580391324cf7d15255a84cb450a9c66"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml",
+      "sha256": "a6da103b38b1fa2335090f9630217ed8d18d0e06d90f1b8340da35c47f864474"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-short-parent-force-scratch.yml",
+      "sha256": "7a08374328007101ee15e26f07569f51e2b63440deb96c803254d455f88650d8"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-short-system-scratch.yml",
+      "sha256": "3190394def0991c60d2894796a9d902de47654bb835dd9c950ca347b3946d7e8"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml",
+      "sha256": "f7176de8cf46c6d8825289b0f3450de6a27740769dbe5e442e7487e9538a42af"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite.yml",
+      "sha256": "cb8ca0cd49e7a6f74aa5217aeba402daf04b7e3c7c4fca8bc9a3a68798867021"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml",
+      "sha256": "c846f163a57e67809d3bbfc6a651389cc27b9326d5fa007ccc9cbd0f1c587baf"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "23164e9e61ae4911c6b52bb991b1ae7b44df0e60163d1337b3eb09c299336b43"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json",
+      "sha256": "8ae38af90175e1e62eb54abb6727963a4439ece0fc4b622a4b0f4c9593c1a97f"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json",
+      "sha256": "1aed00454380e70338428b11e347b7d47f28b2b5f46e5e843612dca0ac361432"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1.json",
+      "sha256": "2c1a5c015cd4db903e359e6d18fb52ee70c583e1c2744409754b44352d201985"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
+      "sha256": "f1c41ad4ad774bd2d7ab1672df61792ad539f0c2c199b37511ed0f5783412467"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json",
+      "sha256": "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json",
+      "sha256": "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_profile_v1.json",
+      "sha256": "745a4413cc875f143be460f372ad4ddc809af0588df65e736d68361fce418485"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_profile_v1_sources.json",
+      "sha256": "38d48a481963dc5a4a6202f6b6f794e9984e64ea43bb2ebd11a3aeb7e7815a1f"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_profile_v1.json",
+      "sha256": "8be1f7d28f936f78486bfabaf9fdfc2e1e334285864138639c796d36a454d3cb"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_profile_v1_sources.json",
+      "sha256": "85c17310e995b8eb22028083694f710414e523884a0ae9834b5258dfcb6c48fd"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json",
+      "sha256": "375e9391bba5823ffe525f7f4748fbbf11a1c790f33171924719a7ec050476bc"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1_sources.json",
+      "sha256": "0a29fd2bb36becee1f307c137c3e006597f21c63d98bae07ceaaf76b5738f1f1"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json",
+      "sha256": "32129a32d0b351ac265fda21906e707cc708c664241715b4d0d92fa3cc013b62"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
+      "sha256": "d428b3f18d26382fbb7e5e8a48f3a114eb953b8708bec77c4f00ec6c0d1bcc3f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json",
+      "sha256": "acca244232d196701044fd9ecbf6a2abce91cd03be966ead875c61cf42f75bab"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json",
+      "sha256": "030264269b2c438c11013c1e5a62e8c9745abcdf8567771ce990cf2f33e14f78"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_profile_v1.json",
+      "sha256": "72982489ea675272607013d9495f36ea5f649eb94f57d35e6a37a9e8ebfef476"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_profile_v1_sources.json",
+      "sha256": "691792ba1f59fb314bd7c4dc8b6ae746f25629a840b9e64da6b3f54eba561028"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md",
+      "sha256": "c83bc63611d99b652aa1e2f801ad14a8af0faf975c9b3267953b02a49490e5a8"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.md",
+      "sha256": "f9964a60244f3dbaa9de434b0c4f2c110ec3c6edbbf8c3d2be22036fa3a5dcaf"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.md",
+      "sha256": "69004e50840e416d6bfbd72ce291b8023fc24be43d74ab6773d32b04af329929"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.md",
+      "sha256": "e640221e290658da0ef758cd4c4b83037fade6ff433cdb45d204d82589e797f8"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_cpu_v1.md",
+      "sha256": "48b84be5159944eaa65a147d9f0dfceac2c8f553f632f66ae2bff9df0bf5227d"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.md",
+      "sha256": "2c8e31ae6079309ac0255fb57620dd3cf0e8d5d66ae3e49a3534cf4f4514981e"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.md",
+      "sha256": "417e017d77f85c3bf3f4228f0278768ad0c863a18c00872456099bee648de167"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_v1.md",
+      "sha256": "f4cd740c13f7429d72904830c974fb24b8803615a0717bbf820e418711d852df"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.md",
+      "sha256": "88bedd8ea7933cabee2db3c071262bb9e44432f2c049533a01442dd5d9f560e7"
+    },
+    {
+      "path": "include/betelgeuze/direct_ewald.h",
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
+    },
+    {
+      "path": "include/betelgeuze/direct_ewald_composite.h",
+      "sha256": "5d09bd7d13c57cb665a038b1a5fe48ce513a3b47b05a4955ee2695919b9ebbf7"
+    },
+    {
+      "path": "include/betelgeuze/direct_ewald_composite_dynamics.h",
+      "sha256": "62bd4b63f5f634966ed45d6781601c4d0b3eac30e3056cd2874d7e274d47ecf2"
+    },
+    {
+      "path": "include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_ewald.h",
+      "sha256": "e6e966fffe50163cc7d5e8eedfbc6d31b6c4ce54c754d424e1d9149e88913f4f"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_ewald_composite.h",
+      "sha256": "cb870cee2948ee096aa08f636b02343fb974e5a293240e4d65fe50c15442fabe"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_ewald_composite_dynamics.h",
+      "sha256": "1e127362b50dd7474ae1c2bab825049f0177ed66fcd50e4c017d0e035e12594a"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "path": "native/CMakeLists.txt",
+      "sha256": "c25e3388df6c5108ec58a0ec3e552f58aaa7a9dde072ecc999510a659cf449a9"
+    },
+    {
+      "path": "native/betelgeuze_engine.exports",
+      "sha256": "d0c5ee0a8ad53cd1dd687412ae023c2f09f3a828f47768f325999ae6b6bf5968"
+    },
+    {
+      "path": "native/betelgeuze_engine.map",
+      "sha256": "9324b7e374bc0e6411211e590bad418dfda0783a292fba2bcacd6ff9419cd1ad"
+    },
+    {
+      "path": "native/src/composite/direct_ewald.cpp",
+      "sha256": "a0b468d6a5fc0f1e45d86d9d8191b846b22fc7f1f3522d7a7e3e2088c4d780ad"
+    },
+    {
+      "path": "native/src/composite/direct_ewald_composite_checkpoint.cpp",
+      "sha256": "b503c471cb2e38a87d1f74499289fb0c606f65b0478e64cc6ca294b12caef537"
+    },
+    {
+      "path": "native/src/composite/direct_ewald_composite_dynamics.cpp",
+      "sha256": "ed6c3c1d0cddde8aab37720421463d177818e2a2a093b134a3b25c097f7d566f"
+    },
+    {
+      "path": "native/src/composite/direct_ewald_composite_dynamics.hpp",
+      "sha256": "7d57561e4daa33ca51e6c15231866cdd5c8372f9a7ae4b37f5ce748e1f7563b4"
+    },
+    {
+      "path": "native/src/composite/evaluator.hpp",
+      "sha256": "8e264457978f3f327ec49b170b261cfe6defe51070899481279e38826f2153ef"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald.cpp",
+      "sha256": "5cb66bdc71c9fe73902fd0535e62c58946d1c3e2c1a79c1e67ada8482d509a03"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite.cpp",
+      "sha256": "be518304d92e9404b32b8ce43781f1b9388276c3992964e6eed778a21e44f7a3"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_checkpoint.cpp",
+      "sha256": "ba9e2ef14d54285e7cf4789e99cc1b24784f870659ffbc7a36ed869bd01c148a"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_dynamics.cpp",
+      "sha256": "572da4723ab1e5aac7ad2bbfb4633eb5e8ea7269c01b6bb27b4b023ca07895c0"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_dynamics.hpp",
+      "sha256": "1a164e49524a1ffbde5494394eaf1a24c1dd9bc3bc4486d4cfd7b7b45024fb46"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_evaluator.hpp",
+      "sha256": "2aa019a77f5e8262679516e3d5248038195e7ece0ab6aa1dbaa64061bd72b8b2"
+    },
+    {
+      "path": "native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "path": "native/src/cpu/evaluator.cpp",
+      "sha256": "64cb0cb85ddce5dd57a81753207428e58e6c98bcd71c81e4633db03f04748268"
+    },
+    {
+      "path": "native/src/cpu/evaluator.hpp",
+      "sha256": "1b79cd6be3a9ad536fbefb1ef48e859fce60a89512b005fa22df5395db438422"
+    },
+    {
+      "path": "native/src/cpu/neighbor_pair.hpp",
+      "sha256": "a985dcbccadfe08f86a6fcde55ed2548a69446157381cb4b5608edd9e6ac16e7"
+    },
+    {
+      "path": "native/src/dynamics/api.cpp",
+      "sha256": "cf9c310e838645e6ca22e17640ae1c45633f0936954cbd3319fc5f7b589df7aa"
+    },
+    {
+      "path": "native/src/dynamics/checkpoint.cpp",
+      "sha256": "ff5c065c34f6365382db230404492a9d3ae9911b87283f59602a5ea40dc5e9cc"
+    },
+    {
+      "path": "native/src/dynamics/common.cpp",
+      "sha256": "9bc8289e08f3e6ad421de67526b5b3bba267ccc685c827d6871ceb769789b07a"
+    },
+    {
+      "path": "native/src/dynamics/dynamics.hpp",
+      "sha256": "5a27800bd344258ca339cdb607ac1dba607a7d5fffd0420aedcbf00baf8c702a"
+    },
+    {
+      "path": "native/src/dynamics/integrator.cpp",
+      "sha256": "40f2d7ce309c54c1733f182275c077f65b73d85964510115e1e07f46cbb2d034"
+    },
+    {
+      "path": "native/src/dynamics/sha256.cpp",
+      "sha256": "e22588ec5726230d38337506fc584f21656335a05cf8541d515db7f5c000778b"
+    },
+    {
+      "path": "native/src/dynamics/sha256.hpp",
+      "sha256": "e8962e70506eae8ba7a9fbfd54b76045ca465c272f741a18d606439a4eb2d68f"
+    },
+    {
+      "path": "native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "path": "native/src/ewald/api.cpp",
+      "sha256": "1fbfd621ede2865617017545f7fc0b5e7f0e8b79e8f3451d9f007eeff57bd52f"
+    },
+    {
+      "path": "native/src/ewald/cpp_evaluator.cpp",
+      "sha256": "68a2800fc00be65986b6e0dea6251dd1b0af13fb2efa63fc3fd19c25f9696761"
+    },
+    {
+      "path": "native/src/ewald/cpp_evaluator.hpp",
+      "sha256": "5223a732add22d7085936e247be97ddf0a8b9de385035a6b41a10e908fc2aa79"
+    },
+    {
+      "path": "native/src/ewald/model.hpp",
+      "sha256": "9225959127393ff0750e1fb4e8939af83cdfd27c7c594764e196ac6201cb6df9"
+    },
+    {
+      "path": "native/src/ewald/rust_evaluator.cpp",
+      "sha256": "47d690b5c925dcd3d53ec3ee6d425f76590d4d4004ba82c880a5331df29530ea"
+    },
+    {
+      "path": "native/src/ewald/rust_evaluator.hpp",
+      "sha256": "24ff103ed46b9906f632ad1be3820be8812276d941c8c645425fe5e954ce9814"
+    },
+    {
+      "path": "native/src/ewald/rust_provider.h",
+      "sha256": "a1532cc7b78890561b8126c5d2ad2c13f8994498e32a90e4c99838e14744511a"
+    },
+    {
+      "path": "native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "path": "native/src/hip/backend.hpp",
+      "sha256": "7ccb4d7503e89f8ee16936a400cc203a83c8804438792264471d8aabc63bb48e"
+    },
+    {
+      "path": "native/src/hip/evaluator.cpp",
+      "sha256": "0adb6d7b3cec8baffaabb5f654346ea8552f5dd0c3e0756686ab8ee5bc97bd12"
+    },
+    {
+      "path": "native/src/hip/evaluator.hpp",
+      "sha256": "1ddf6e0c32e346d236fc906e291c457afb590927aa0c3c1420b697c66692207e"
+    },
+    {
+      "path": "native/src/hip/provider.h",
+      "sha256": "5072ebddc1dc58c0a8b96f9905ea78f155fe9aa316d6dffb4f5ab2db5fff5992"
+    },
+    {
+      "path": "native/src/hip/stub.cpp",
+      "sha256": "7ee0b03076189f9a40fd729fabcd9a8c6583fe964dcf867d1debbb6e8b9de36f"
+    },
+    {
+      "path": "native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "09ec7faa945e63efdb97a8ab5c431b4a7381caa863b76ddb489378259f3016cb"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "c2cec10e2013515a1860f68fbfd6f614d322c550771a72be5060b6affa4c4a85"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "493c673f5d454f52782fbeb65bee203c2a816b88b4c6a9cf558d910d966f91fd"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "52b25c48b62439ebad2fadabca33bd4075ec195cc5ca86c10bf54d91d2187018"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "5e17ef99216f70a11d34dbc102ed600eeb4d82a2d32a7fac883c9b190fb42794"
+    },
+    {
+      "path": "native/src/rust/evaluator.cpp",
+      "sha256": "be0ab8988c49c034ae1cff7c268c5865fd291cdcb64c831c61e41734f611c22a"
+    },
+    {
+      "path": "native/src/rust/evaluator.hpp",
+      "sha256": "be267c392950469bfdd1c1c955bcf4be821c8109ac898027513cf9c795314236"
+    },
+    {
+      "path": "native/src/rust/provider.h",
+      "sha256": "9594e9be351a15a07b802d2f4d50f7aa7d182011b858640eeef2449fc5310d2f"
+    },
+    {
+      "path": "native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "path": "native/tests/check_exports.cmake",
+      "sha256": "2328606524cc22c67caa8032df50ab4b0859e0766989553e14c98e1e2dd2e8cc"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite.cpp",
+      "sha256": "ad0e8c882e7ffca3d619b118150c6b1f805553cd0f4c7784c3658cd4b2026e2e"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite_dynamics.cpp",
+      "sha256": "8263e75fe72ce5fc6fbddae9805a421ed274e75e87c7d70224cac3c7fa7d42c0"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite_dynamics_scratch.cpp",
+      "sha256": "118e474c0e328f5e974a50273122c79f6d818d861a540f9fa6f8a8217cbc8244"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite_dynamics_scratch.hpp",
+      "sha256": "ecfebeae3bed692c02fe017ae4f6ba4546bdf959892efaeaaef47a54fb5d6cd9"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite.cpp",
+      "sha256": "4bc4dd7d14b5eff7a7ca8abc59d94d4fbe41efbdf5f207683a430fef05b74519"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite_dynamics.cpp",
+      "sha256": "cf69e8d1a28564da2dbd5dd2a9447d3b6a78d39b599cfd3c7f358f2a2602594d"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite_dynamics_scratch.cpp",
+      "sha256": "febd13c5e351d78e65cd1955b8ed9c5e501ce671a3e5b0c70e54c0f29dfc9189"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite_dynamics_scratch.hpp",
+      "sha256": "862378939c101ef1f9ccc2b149cfb31a693f9e1677bebcca64de64aeeefc4587"
+    },
+    {
+      "path": "rust/Cargo.lock",
+      "sha256": "8e302c5e9cf90b80232ce1f2df5f13df78095a344e978b47e0e6e3c9ef29db04"
+    },
+    {
+      "path": "rust/Cargo.toml",
+      "sha256": "4a0b23729baeec10cc0e57abd4fb199c762531124fabfa400c34b8475592281c"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/build.rs",
+      "sha256": "fb5901c3fe330d5576b36022cc33b21f8549115ec33a1d6bd94315dddf1d4b86"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/composite.rs",
+      "sha256": "0fa1fc422b1efc3c9b8e6efbdafa82c11844e576b67e28cb4ab88290ff5e6bb3"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/direct_ewald.rs",
+      "sha256": "4d353e778ea767c00d5008ffae378c9de56ea36a6ab1a17cf4b069be6f62fac9"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs",
+      "sha256": "a3d3168fc98acce341415aa8fcd494923a974e5c42544d8019e57dceb7284fef"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/dynamics.rs",
+      "sha256": "d9c3babd0172938d8fc1272bc574235edd24dfda7af7931782395a6cfc3945b9"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/forcefield.rs",
+      "sha256": "679215a6b1acf3331334f0ae12c7beebe9ad0ab3bb793008d763b423f5ebca6c"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/lib.rs",
+      "sha256": "14b197a199895c139b5a3f1afeb90c08e2e981010c0b3f651d050bbef69e3c18"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald.rs",
+      "sha256": "7bc6804be5766c8a6a8e58bcf19d838b32044b63cf4a06a0ab885984d95c1366"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald_composite.rs",
+      "sha256": "ecd7fc2aa328e42878069973f2403f89bd74bf1c7872b073751eb96b0718e175"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald_composite_dynamics.rs",
+      "sha256": "9f322e18582d1b4e4a726011d475ecb4654136d1829be517061203f8e015a036"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_reciprocal.rs",
+      "sha256": "c36192f8e9383bbd3af76fc1c0b8cbd86c7685e82e9777de15e65c6aee1b608c"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/composite.rs",
+      "sha256": "94be8086c8459aceeeac3bbb20d49a5698238cfeee5aa57eafd9ed706601f497"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs",
+      "sha256": "d9b88b6ab4389f1d98da3473ffbe8e821d46b9c5f48ab47f3ce532816c5de14e"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/fixtures/direct_ewald_v1.tsv",
+      "sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/fixtures/particle_mesh_reciprocal_v1.tsv",
+      "sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite.rs",
+      "sha256": "1a4d7f4f3f7aa4f36156649e5b0187dc7271df546dd390ee4942b67b85bb7cc9"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite_dynamics.rs",
+      "sha256": "0af46f8ab4e39485beb9024d3f37256812e659331cb95a89f0c0f8490217e402"
+    },
+    {
+      "path": "rust/betelgeuze-sys/Cargo.toml",
+      "sha256": "34954c1d72a7001c308cb45aa1aeb62de5c12711f0d56792f6ff2d7ff5d3bb0d"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/composite_header_c11.c",
+      "sha256": "40e411eb9e190798e1ca29ab7213d2b0d7a33443cc966477746eb3e6e492314f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/composite_layout_assertions.cpp",
+      "sha256": "cf7023d5e7c8c36b736c458a7e8b2f11dc2b70d67dbb55341f09abee302bcb58"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/direct_ewald_composite_dynamics_header_c11.c",
+      "sha256": "b30689b89fc38bbed1cae86bdbccfec452727dbdf43cdc13a0bc04f81dd970eb"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/direct_ewald_composite_dynamics_layout_assertions.cpp",
+      "sha256": "eff772c0ec517da72b77c446a615b67907c3cc6d8db47c233edf0f5b127a765e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_dynamics_header_c11.c",
+      "sha256": "0be5c678e263e42bd9298c1f57941dca27e6e417e232d45defa5173e598d2846"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_dynamics_layout_assertions.cpp",
+      "sha256": "2f4e6c952ebe6eff92c7ebf1f76b7c838d13de155674928c3857a8232dfee105"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_header_c11.c",
+      "sha256": "19c9fd6254f39bb98d18bab6443bc0ec5e3d8ee8e057a51350a9bedcb81d60e7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_layout_assertions.cpp",
+      "sha256": "81e66ba6917d3b4fe23fe31d1ebc842485cd99d7e449a636387b8943ed171a4e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_header_c11.c",
+      "sha256": "90ccbb6406dd9f5b6bee3765a0d40c9bef27c7e8fb170987fab9fdf86831efdc"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_layout_assertions.cpp",
+      "sha256": "4c09dcb0faa9ba66857cf986034b9b7935af8ef676129101c6b025822ad5f89e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/build.rs",
+      "sha256": "113b98be26d12d00e15053810a6d44b805b8ef01c5996d7b7e1ba5210a367661"
+    },
+    {
+      "path": "rust/betelgeuze-sys/src/lib.rs",
+      "sha256": "7bdb74ef27c6f93ccc8b0fd074df8a7b787b68992decca8f564f0e65adcd6b97"
+    },
+    {
+      "path": "rust/betelgeuze-sys/tests/layout.rs",
+      "sha256": "882007754923983f2b8a85dd475e4fe8e53e13d226f238267fb81dea3ab7248d"
+    },
+    {
+      "path": "rust/betelgeuze-sys/tests/raw_smoke.rs",
+      "sha256": "4ce67e0d5e9b26ede31915266e610d256babcf35fee7a6a1298060df7b5549b0"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald.h",
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald_composite.h",
+      "sha256": "5d09bd7d13c57cb665a038b1a5fe48ce513a3b47b05a4955ee2695919b9ebbf7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald_composite_dynamics.h",
+      "sha256": "62bd4b63f5f634966ed45d6781601c4d0b3eac30e3056cd2874d7e274d47ecf2"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald.h",
+      "sha256": "e6e966fffe50163cc7d5e8eedfbc6d31b6c4ce54c754d424e1d9149e88913f4f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald_composite.h",
+      "sha256": "cb870cee2948ee096aa08f636b02343fb974e5a293240e4d65fe50c15442fabe"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald_composite_dynamics.h",
+      "sha256": "1e127362b50dd7474ae1c2bab825049f0177ed66fcd50e4c017d0e035e12594a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald.cpp",
+      "sha256": "a0b468d6a5fc0f1e45d86d9d8191b846b22fc7f1f3522d7a7e3e2088c4d780ad"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_checkpoint.cpp",
+      "sha256": "b503c471cb2e38a87d1f74499289fb0c606f65b0478e64cc6ca294b12caef537"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_dynamics.cpp",
+      "sha256": "ed6c3c1d0cddde8aab37720421463d177818e2a2a093b134a3b25c097f7d566f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_dynamics.hpp",
+      "sha256": "7d57561e4daa33ca51e6c15231866cdd5c8372f9a7ae4b37f5ce748e1f7563b4"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/evaluator.hpp",
+      "sha256": "8e264457978f3f327ec49b170b261cfe6defe51070899481279e38826f2153ef"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald.cpp",
+      "sha256": "5cb66bdc71c9fe73902fd0535e62c58946d1c3e2c1a79c1e67ada8482d509a03"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite.cpp",
+      "sha256": "be518304d92e9404b32b8ce43781f1b9388276c3992964e6eed778a21e44f7a3"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_checkpoint.cpp",
+      "sha256": "ba9e2ef14d54285e7cf4789e99cc1b24784f870659ffbc7a36ed869bd01c148a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_dynamics.cpp",
+      "sha256": "572da4723ab1e5aac7ad2bbfb4633eb5e8ea7269c01b6bb27b4b023ca07895c0"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_dynamics.hpp",
+      "sha256": "1a164e49524a1ffbde5494394eaf1a24c1dd9bc3bc4486d4cfd7b7b45024fb46"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_evaluator.hpp",
+      "sha256": "2aa019a77f5e8262679516e3d5248038195e7ece0ab6aa1dbaa64061bd72b8b2"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.cpp",
+      "sha256": "64cb0cb85ddce5dd57a81753207428e58e6c98bcd71c81e4633db03f04748268"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.hpp",
+      "sha256": "1b79cd6be3a9ad536fbefb1ef48e859fce60a89512b005fa22df5395db438422"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/neighbor_pair.hpp",
+      "sha256": "a985dcbccadfe08f86a6fcde55ed2548a69446157381cb4b5608edd9e6ac16e7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/api.cpp",
+      "sha256": "cf9c310e838645e6ca22e17640ae1c45633f0936954cbd3319fc5f7b589df7aa"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/checkpoint.cpp",
+      "sha256": "ff5c065c34f6365382db230404492a9d3ae9911b87283f59602a5ea40dc5e9cc"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/common.cpp",
+      "sha256": "9bc8289e08f3e6ad421de67526b5b3bba267ccc685c827d6871ceb769789b07a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/dynamics.hpp",
+      "sha256": "5a27800bd344258ca339cdb607ac1dba607a7d5fffd0420aedcbf00baf8c702a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/integrator.cpp",
+      "sha256": "40f2d7ce309c54c1733f182275c077f65b73d85964510115e1e07f46cbb2d034"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/sha256.cpp",
+      "sha256": "e22588ec5726230d38337506fc584f21656335a05cf8541d515db7f5c000778b"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/sha256.hpp",
+      "sha256": "e8962e70506eae8ba7a9fbfd54b76045ca465c272f741a18d606439a4eb2d68f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/api.cpp",
+      "sha256": "1fbfd621ede2865617017545f7fc0b5e7f0e8b79e8f3451d9f007eeff57bd52f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.cpp",
+      "sha256": "68a2800fc00be65986b6e0dea6251dd1b0af13fb2efa63fc3fd19c25f9696761"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.hpp",
+      "sha256": "5223a732add22d7085936e247be97ddf0a8b9de385035a6b41a10e908fc2aa79"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/model.hpp",
+      "sha256": "9225959127393ff0750e1fb4e8939af83cdfd27c7c594764e196ac6201cb6df9"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_evaluator.cpp",
+      "sha256": "47d690b5c925dcd3d53ec3ee6d425f76590d4d4004ba82c880a5331df29530ea"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_evaluator.hpp",
+      "sha256": "24ff103ed46b9906f632ad1be3820be8812276d941c8c645425fe5e954ce9814"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_provider.h",
+      "sha256": "a1532cc7b78890561b8126c5d2ad2c13f8994498e32a90e4c99838e14744511a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/backend.hpp",
+      "sha256": "7ccb4d7503e89f8ee16936a400cc203a83c8804438792264471d8aabc63bb48e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.cpp",
+      "sha256": "0adb6d7b3cec8baffaabb5f654346ea8552f5dd0c3e0756686ab8ee5bc97bd12"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.hpp",
+      "sha256": "1ddf6e0c32e346d236fc906e291c457afb590927aa0c3c1420b697c66692207e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/provider.h",
+      "sha256": "5072ebddc1dc58c0a8b96f9905ea78f155fe9aa316d6dffb4f5ab2db5fff5992"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/stub.cpp",
+      "sha256": "7ee0b03076189f9a40fd729fabcd9a8c6583fe964dcf867d1debbb6e8b9de36f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "09ec7faa945e63efdb97a8ab5c431b4a7381caa863b76ddb489378259f3016cb"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "c2cec10e2013515a1860f68fbfd6f614d322c550771a72be5060b6affa4c4a85"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "493c673f5d454f52782fbeb65bee203c2a816b88b4c6a9cf558d910d966f91fd"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "52b25c48b62439ebad2fadabca33bd4075ec195cc5ca86c10bf54d91d2187018"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "5e17ef99216f70a11d34dbc102ed600eeb4d82a2d32a7fac883c9b190fb42794"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.cpp",
+      "sha256": "be0ab8988c49c034ae1cff7c268c5865fd291cdcb64c831c61e41734f611c22a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.hpp",
+      "sha256": "be267c392950469bfdd1c1c955bcf4be821c8109ac898027513cf9c795314236"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/provider.h",
+      "sha256": "9594e9be351a15a07b802d2f4d50f7aa7d182011b858640eeef2449fc5310d2f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "path": "rust/cpu-kernel/Cargo.toml",
+      "sha256": "eb489ba207d9c2500967a48f02a09dd0d2978087a91678511274330bf50a5450"
+    },
+    {
+      "path": "rust/cpu-kernel/src/direct_ewald.rs",
+      "sha256": "b43463c37ad4c18adb040656b159a7c9af49719eb180ee7660d8025068f7eb45"
+    },
+    {
+      "path": "rust/cpu-kernel/src/kernel.rs",
+      "sha256": "aca40401f47947423c277af1c095adb09223dfd523aa9449badb631bcbe30e3e"
+    },
+    {
+      "path": "rust/cpu-kernel/src/lib.rs",
+      "sha256": "ffcf89486f460f300ce4e12b726226002f684e5ec8529b5c590561487e28c351"
+    },
+    {
+      "path": "rust/cpu-kernel/src/particle_mesh_reciprocal.rs",
+      "sha256": "557caba0f2e371188ae90838316cdc592d957d2930081e8a578dccd64e0d7eb9"
+    },
+    {
+      "path": "rust_engine_v2/Cargo.lock",
+      "sha256": "af9ae63166c087bdd885980e0f7a4d870eaec78a3f285b28263b18139b248041"
+    },
+    {
+      "path": "rust_engine_v2/Cargo.toml",
+      "sha256": "7babe881df4d0fc7fe3c49b63a5ddc08a0b4b07735ad747d3a7e0f157a67cf29"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py",
+      "sha256": "4cc5df7d90607a7c131c58c35b5a3012cf045c141ffb284c0dc95c06c28f72d1"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "b4b9b114e03f61ce0ac2dc2c0ae3f9936c58b76cd01888b4f6ede66aef834d85"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "1a8eb07877cc5143a4403f6e870417fd4ba08314c6acf2b9cb413f74abc47949"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "eb7d14533cfbe8005ac12299ab6dc52ee35a5ddbdca9abafc374dd257a220c7e"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+      "sha256": "3af3a925249222952e41ff4ffaf8e786cf7d39546581e0ea8c55547709ddfcd0"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "a7a7880767ace09ffb846661ca9bb89fad87f342be108010351913ba8092c6b0"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "ace8ae27f08c1861951315914cee6fff22121eb7251cc2b69fc9e774b6b364ed"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "f06273c73ca89d89c62e8e809e9d039cfe5a04aa1004785342b9027b18ed9592"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py",
+      "sha256": "fe1291d2b4b0ea658540ede6313388cbcc03f54b7310feb59278390da94176df"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py",
+      "sha256": "ed4415b511f02743bdca7056f69697adc89603ba37ed7e216d0a1e8cb60dc5bc"
+    },
+    {
+      "path": "tools/__init__.py",
+      "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py",
+      "sha256": "206dc29a22d237b4fb2bac5a39207b22c4bf2a45e64b9af95e3533e80ba913a6"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "24c4d12eb900e8ae4b161d077087f744f4a6e75cfb560f7e0cc6103fe1baa471"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "84a1c370ae167ae0381f0e71e58179c10a8f5904d1c30d73ada5b8fde5686a9b"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "1d070624f097c13f1b98af80fcfcf24cf69f8c3d0cf83c1eca6d419c1e32b270"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py",
+      "sha256": "123134cb834feb62a8d09246019890b0a252880e82494b7880c2f37a88b62d80"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py",
+      "sha256": "dfa61f5165dce940a8f2e1103f1a96180a448f2cc01daa03e310d07fccdeeb87"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+      "sha256": "31e5cf90f813d989fd96b44a2938f9392172820bd498b105b44eda0c4d8f1895"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "c8650c61c1dd586e53394a1aad883e9a5db64943bc097e41bc7f6e4d6ce1eb93"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "242d0409bc088a40e4ab00e13428fe98b0857523dc6953eb75d8ba7a0d0c47a2"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "182b4a838586ae9f118afed6de7e92158fa7ceb9a81635465ce0e0f62133b7a5"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py",
+      "sha256": "66d67e2f87218966ec62884d5695913f2444cb08b22ebfc7ab9a22ce95565216"
+    }
+  ],
+  "schema_id": "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_sources/1.0.0",
+  "scope": "particle_mesh_ewald_composite_dynamics_stateful_short_parent_force_scratch_current_sources_tests_evidence_target_architecture_and_inherited_predecessors"
+}

@@ -853,6 +853,8 @@ bg_status evaluate_prevalidated(
     const bg_direct_ewald_model_v1 &direct_model,
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model,
     bg_system *short_system_scratch,
+    cpu::Evaluation *short_parent_evaluation_scratch,
+    uint8_t *inout_rust_cpu_forcefield_validated,
     bool compute_forces,
     Evaluation *out_evaluation,
     bg_direct_ewald_error_v1 *out_error) {
@@ -871,6 +873,16 @@ bg_status evaluate_prevalidated(
                 BG_STATUS_UNSUPPORTED_BACKEND,
                 "particle-mesh Ewald composite internal evaluator requires an explicit CPU lane");
     }
+
+    const bool stateful_scratch = short_system_scratch != nullptr;
+    if ((short_parent_evaluation_scratch != nullptr) != stateful_scratch ||
+        (inout_rust_cpu_forcefield_validated != nullptr) !=
+            stateful_scratch) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "particle-mesh composite stateful scratch and validation-cache pointers must be all null or all non-null");
+    }
+
     bg_system local_short_system;
     bg_system *short_system = short_system_scratch;
     if (short_system == nullptr) {
@@ -903,21 +915,39 @@ bg_status evaluate_prevalidated(
             short_system->position_z.begin());
     }
 
-    cpu::Evaluation short_evaluation;
+    cpu::Evaluation local_short_evaluation;
+    cpu::Evaluation *short_evaluation = &local_short_evaluation;
+    const bool reuse_short_parent_force_storage =
+        stateful_scratch && compute_forces;
+    if (reuse_short_parent_force_storage) {
+        short_evaluation = short_parent_evaluation_scratch;
+    }
     bg_status status = BG_STATUS_INTERNAL_ERROR;
     if (cpp_lane) {
-        status = cpu::evaluate(
-            *short_system, forcefield, compute_forces, &short_evaluation);
+        status = reuse_short_parent_force_storage
+            ? cpu::evaluate_reusing_force_storage(
+                  *short_system, forcefield, true, short_evaluation)
+            : cpu::evaluate(
+                  *short_system, forcefield, compute_forces,
+                  short_evaluation);
     } else {
-        status = rust_cpu::evaluate(
-            *short_system, forcefield, compute_forces, &short_evaluation);
+        status = reuse_short_parent_force_storage
+            ? rust_cpu::evaluate_reusing_force_storage(
+                  *short_system,
+                  forcefield,
+                  true,
+                  inout_rust_cpu_forcefield_validated,
+                  short_evaluation)
+            : rust_cpu::evaluate(
+                  *short_system, forcefield, compute_forces,
+                  short_evaluation);
     }
     if (status != BG_STATUS_OK) {
         return status;
     }
     const std::size_t atom_count = direct_model.atom_count;
-    if (!short_parent_is_valid(
-            short_evaluation, compute_forces, atom_count)) {
+    const cpu::Evaluation &short_result = *short_evaluation;
+    if (!short_parent_is_valid(short_result, compute_forces, atom_count)) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "particle-mesh Ewald composite short parent returned inconsistent energy or forces");
@@ -988,16 +1018,16 @@ bg_status evaluate_prevalidated(
 
     Evaluation candidate;
     candidate.short_harmonic_bond =
-        short_evaluation.energy.harmonic_bond_kcal_per_mol;
+        short_result.energy.harmonic_bond_kcal_per_mol;
     candidate.short_harmonic_angle =
-        short_evaluation.energy.harmonic_angle_kcal_per_mol;
+        short_result.energy.harmonic_angle_kcal_per_mol;
     candidate.short_periodic_torsion =
-        short_evaluation.energy.periodic_torsion_kcal_per_mol;
+        short_result.energy.periodic_torsion_kcal_per_mol;
     candidate.short_lennard_jones =
-        short_evaluation.energy.lennard_jones_kcal_per_mol;
+        short_result.energy.lennard_jones_kcal_per_mol;
     candidate.short_coulomb =
-        short_evaluation.energy.coulomb_kcal_per_mol;
-    candidate.short_total = short_evaluation.energy.total_kcal_per_mol;
+        short_result.energy.coulomb_kcal_per_mol;
+    candidate.short_total = short_result.energy.total_kcal_per_mol;
     candidate.pme_real_space = direct_evaluation.energy.real_space;
     candidate.pme_reciprocal_space =
         reciprocal_evaluation.reciprocal_space_kcal_per_mol;
@@ -1027,9 +1057,9 @@ bg_status evaluate_prevalidated(
                     reciprocal_evaluation.forces[atom][2],
             }};
             candidate.forces[atom] = {{
-                short_evaluation.force_x[atom] + pme_force[0],
-                short_evaluation.force_y[atom] + pme_force[1],
-                short_evaluation.force_z[atom] + pme_force[2],
+                short_result.force_x[atom] + pme_force[0],
+                short_result.force_y[atom] + pme_force[1],
+                short_result.force_z[atom] + pme_force[2],
             }};
             if (std::any_of(
                     candidate.forces[atom].begin(),
@@ -1210,8 +1240,8 @@ bg_context_evaluate_particle_mesh_ewald_composite_v1(
         Evaluation evaluation;
         status = evaluate_prevalidated(
             lane, *system, *forcefield, *direct_model,
-            *reciprocal_model, nullptr, out_forces != nullptr, &evaluation,
-            out_error);
+            *reciprocal_model, nullptr, nullptr, nullptr,
+            out_forces != nullptr, &evaluation, out_error);
         if (status != BG_STATUS_OK) {
             return status;
         }
