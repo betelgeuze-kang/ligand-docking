@@ -15,6 +15,7 @@ struct bg_particle_mesh_ewald_composite_simulation_v1 final {
     std::unique_ptr<bg_simulation> simulation;
     bg_direct_ewald_model_v1 direct_model;
     bg_particle_mesh_reciprocal_model_v1 reciprocal_model;
+    bg_system short_system_scratch;
     std::array<uint8_t, 32> static_fingerprint{};
 };
 

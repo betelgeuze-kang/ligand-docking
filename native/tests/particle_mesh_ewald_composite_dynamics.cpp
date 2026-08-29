@@ -30,6 +30,7 @@
 
 namespace {
 
+constexpr std::size_t kAtomCount = 4U;
 constexpr double kAccelerationConversion = 4.184e-4;
 
 enum class PairProvenance { exclusion, explicit_zero_scale };
@@ -71,6 +72,8 @@ void require_exact(double actual, double expected, const char *message) {
 
 using ForceScratchSnapshot = betelgeuze::native::tests::
     ParticleMeshEwaldCompositeForceScratchSnapshot;
+using ShortSystemScratchSnapshot = betelgeuze::native::tests::
+    ParticleMeshEwaldCompositeShortSystemScratchSnapshot;
 
 ForceScratchSnapshot force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
@@ -96,6 +99,119 @@ void require_force_scratch_sizes(
         snapshot.sizes == std::array<std::size_t, 3>{
             expected, expected, expected},
         message);
+}
+
+ShortSystemScratchSnapshot short_system_scratch_snapshot(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
+    return betelgeuze::native::tests::
+        particle_mesh_ewald_composite_short_system_scratch_snapshot(
+            simulation);
+}
+
+void require_same_short_system_scratch_storage(
+    const ShortSystemScratchSnapshot &actual,
+    const ShortSystemScratchSnapshot &expected,
+    const char *message) {
+    require(
+        actual.addresses == expected.addresses &&
+            actual.capacities == expected.capacities,
+        message);
+}
+
+void require_short_system_scratch_layout(
+    const ShortSystemScratchSnapshot &snapshot,
+    const char *message) {
+    require(
+        snapshot.unit_system == BG_UNIT_SYSTEM_ANGSTROM_KCAL_MOL,
+        message);
+    require(
+        snapshot.sizes == std::array<std::size_t, 8>{
+            kAtomCount, kAtomCount, kAtomCount, kAtomCount,
+            kAtomCount, kAtomCount, kAtomCount, kAtomCount},
+        message);
+    for (std::size_t channel = 0U; channel < snapshot.addresses.size();
+         ++channel) {
+        require(
+            snapshot.addresses[channel] != nullptr &&
+                snapshot.capacities[channel] >= kAtomCount,
+            message);
+        for (std::size_t other = channel + 1U;
+             other < snapshot.addresses.size(); ++other) {
+            require(
+                snapshot.addresses[channel] != snapshot.addresses[other],
+                message);
+        }
+    }
+    for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+        require_exact(snapshot.addresses[7][atom], 0.0, message);
+    }
+}
+
+void require_short_system_scratch_positions_current(
+    const ShortSystemScratchSnapshot &snapshot,
+    const bg_particle_soa_view &view,
+    const char *message) {
+    const std::array<const double *, 8> owner_addresses{{
+        view.position_x_angstrom,
+        view.position_y_angstrom,
+        view.position_z_angstrom,
+        view.velocity_x_angstrom_per_femtosecond,
+        view.velocity_y_angstrom_per_femtosecond,
+        view.velocity_z_angstrom_per_femtosecond,
+        view.mass_dalton,
+        view.charge_elementary,
+    }};
+    for (const double *const scratch_address : snapshot.addresses) {
+        for (const double *const owner_address : owner_addresses) {
+            require(
+                scratch_address != owner_address,
+                "short-system scratch aliased authoritative owner storage");
+        }
+    }
+    const std::array<const double *, 3> positions{{
+        view.position_x_angstrom,
+        view.position_y_angstrom,
+        view.position_z_angstrom,
+    }};
+    for (std::size_t axis = 0U; axis < positions.size(); ++axis) {
+        require(positions[axis] != nullptr, message);
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            require_exact(
+                snapshot.addresses[axis][atom],
+                positions[axis][atom],
+                message);
+        }
+    }
+}
+
+using PositionBits =
+    std::array<std::array<std::uint64_t, kAtomCount>, 3>;
+
+PositionBits short_system_scratch_position_bits(
+    const ShortSystemScratchSnapshot &snapshot) {
+    PositionBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits(snapshot.addresses[axis][atom]);
+        }
+    }
+    return result;
+}
+
+PositionBits view_position_bits(const bg_particle_soa_view &view) {
+    const std::array<const double *, 3> positions{{
+        view.position_x_angstrom,
+        view.position_y_angstrom,
+        view.position_z_angstrom,
+    }};
+    PositionBits result{};
+    for (std::size_t axis = 0U; axis < result.size(); ++axis) {
+        require(positions[axis] != nullptr, "particle position was null");
+        for (std::size_t atom = 0U; atom < kAtomCount; ++atom) {
+            result[axis][atom] = bits(positions[axis][atom]);
+        }
+    }
+    return result;
 }
 
 template <typename Type, typename = void>
@@ -454,6 +570,22 @@ SimulationPtr make_simulation(
     return SimulationPtr(raw);
 }
 
+bg_particle_soa_view simulation_view(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
+    bg_particle_soa_view view{};
+    require_status(
+        bg_particle_soa_view_init(
+            &view, sizeof(view), BG_ABI_VERSION),
+        BG_STATUS_OK,
+        "particle-view initializer failed");
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
+            simulation, &view),
+        BG_STATUS_OK,
+        "particle-view query failed");
+    return view;
+}
+
 bg_dynamics_report_v1 integrate(
     const bg_context *context,
     bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
@@ -707,6 +839,217 @@ void verify_force_output_scratch_reuse() {
     }
 }
 
+void verify_short_system_scratch_reuse() {
+    const Fixture fixture;
+    for (const bg_backend lane :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        auto context = make_context(lane);
+        auto system = make_system(fixture, fixture.charge);
+        auto forcefield = make_forcefield(fixture);
+        auto direct = make_direct_model(fixture);
+        auto reciprocal = make_reciprocal_model(fixture);
+        auto simulation = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+
+        const ShortSystemScratchSnapshot initial =
+            short_system_scratch_snapshot(simulation.get());
+        require_short_system_scratch_layout(
+            initial, "new PME short-system scratch layout was invalid");
+        require_short_system_scratch_positions_current(
+            initial, simulation_view(simulation.get()),
+            "new PME short-system scratch positions differed from owner state");
+
+        const auto before_zero = checkpoint(simulation.get());
+        integrate(context.get(), simulation.get(), UINT64_C(0));
+        require(
+            checkpoint(simulation.get()) == before_zero,
+            "zero-step PME scratch evaluation changed checkpoint state");
+        const ShortSystemScratchSnapshot after_zero =
+            short_system_scratch_snapshot(simulation.get());
+        require_same_short_system_scratch_storage(
+            after_zero, initial,
+            "zero-step evaluation replaced PME short-system scratch storage");
+        require_short_system_scratch_layout(
+            after_zero,
+            "zero-step evaluation changed PME short-system scratch layout");
+        require_short_system_scratch_positions_current(
+            after_zero, simulation_view(simulation.get()),
+            "zero-step PME short-system scratch positions were stale");
+
+        for (const std::uint64_t step_count :
+             {UINT64_C(1), UINT64_C(2)}) {
+            integrate(context.get(), simulation.get(), step_count);
+            const ShortSystemScratchSnapshot current =
+                short_system_scratch_snapshot(simulation.get());
+            require_same_short_system_scratch_storage(
+                current, initial,
+                "integration replaced PME short-system scratch storage");
+            require_short_system_scratch_layout(
+                current,
+                "integration changed PME short-system scratch layout");
+            require_short_system_scratch_positions_current(
+                current, simulation_view(simulation.get()),
+                "integration left PME short-system scratch positions stale");
+        }
+
+        const auto saved = checkpoint(simulation.get());
+        auto peer = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
+                peer.get(), saved.data(), saved.size()),
+            BG_STATUS_OK,
+            "PME short-system scratch peer checkpoint load failed");
+
+        integrate(context.get(), simulation.get(), UINT64_C(1));
+        const ShortSystemScratchSnapshot before_load =
+            short_system_scratch_snapshot(simulation.get());
+        const PositionBits state_b_scratch =
+            short_system_scratch_position_bits(before_load);
+        require_status(
+            bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
+                simulation.get(), saved.data(), saved.size()),
+            BG_STATUS_OK,
+            "PME short-system scratch checkpoint reload failed");
+        const ShortSystemScratchSnapshot after_load =
+            short_system_scratch_snapshot(simulation.get());
+        require_same_short_system_scratch_storage(
+            after_load, before_load,
+            "checkpoint reload replaced PME short-system scratch storage");
+        require_short_system_scratch_layout(
+            after_load,
+            "checkpoint reload changed PME short-system scratch layout");
+        require(
+            short_system_scratch_position_bits(after_load) ==
+                state_b_scratch,
+            "checkpoint reload unexpectedly rewrote private PME scratch state");
+        require(
+            short_system_scratch_position_bits(after_load) !=
+                view_position_bits(simulation_view(simulation.get())),
+            "checkpoint reload did not create stale PME short-system scratch");
+
+        const bg_dynamics_report_v1 restart_report =
+            integrate(context.get(), simulation.get(), UINT64_C(0));
+        const bg_dynamics_report_v1 peer_report =
+            integrate(context.get(), peer.get(), UINT64_C(0));
+        require(
+            std::memcmp(
+                &restart_report, &peer_report, sizeof(restart_report)) == 0,
+            "post-checkpoint PME scratch resync changed report bits");
+        require(
+            checkpoint(simulation.get()) == saved &&
+                checkpoint(peer.get()) == saved,
+            "post-checkpoint PME scratch resync changed checkpoint bits");
+        const ShortSystemScratchSnapshot after_restart_evaluation =
+            short_system_scratch_snapshot(simulation.get());
+        require_same_short_system_scratch_storage(
+            after_restart_evaluation, initial,
+            "post-checkpoint evaluation replaced PME short-system scratch storage");
+        require_short_system_scratch_layout(
+            after_restart_evaluation,
+            "post-checkpoint evaluation changed PME short-system scratch layout");
+        require_short_system_scratch_positions_current(
+            after_restart_evaluation, simulation_view(simulation.get()),
+            "post-checkpoint PME short-system scratch positions were stale");
+    }
+}
+
+void expect_short_system_scratch_drift_failure(
+    const bg_context *context,
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    const char *message) {
+    const auto before = checkpoint(simulation);
+    const bg_particle_soa_view view_before = simulation_view(simulation);
+    const std::array<const double *, 8> addresses_before{{
+        view_before.position_x_angstrom,
+        view_before.position_y_angstrom,
+        view_before.position_z_angstrom,
+        view_before.velocity_x_angstrom_per_femtosecond,
+        view_before.velocity_y_angstrom_per_femtosecond,
+        view_before.velocity_z_angstrom_per_femtosecond,
+        view_before.mass_dalton,
+        view_before.charge_elementary,
+    }};
+    bg_dynamics_report_v1 report{};
+    init_report(&report);
+    report.steps_completed = UINT64_C(91);
+    report.absolute_step = UINT64_C(92);
+    report.total_kcal_per_mol = 93.0;
+    const bg_dynamics_report_v1 report_before = report;
+    bg_direct_ewald_error_v1 error{};
+    init_error(&error);
+    error.code = BG_DIRECT_EWALD_ERROR_NONFINITE_RESULT;
+    std::memcpy(error.detail, "stale", sizeof("stale"));
+    require_status(
+        bg_context_integrate_particle_mesh_ewald_composite_v1(
+            context, simulation, UINT64_C(1), &report, &error),
+        BG_STATUS_INTERNAL_ERROR,
+        message);
+    require(
+        std::memcmp(&report, &report_before, sizeof(report)) == 0,
+        "PME short-system scratch drift changed report output");
+    require(
+        error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            error.detail[0] == '\0',
+        "PME short-system scratch drift retained a typed Ewald error");
+    require(
+        checkpoint(simulation) == before,
+        "PME short-system scratch drift changed checkpoint state");
+    const bg_particle_soa_view view_after = simulation_view(simulation);
+    const std::array<const double *, 8> addresses_after{{
+        view_after.position_x_angstrom,
+        view_after.position_y_angstrom,
+        view_after.position_z_angstrom,
+        view_after.velocity_x_angstrom_per_femtosecond,
+        view_after.velocity_y_angstrom_per_femtosecond,
+        view_after.velocity_z_angstrom_per_femtosecond,
+        view_after.mass_dalton,
+        view_after.charge_elementary,
+    }};
+    require(
+        addresses_after == addresses_before,
+        "PME short-system scratch drift changed particle storage identity");
+}
+
+void verify_short_system_scratch_drift_fails_closed() {
+    const Fixture fixture;
+    auto system = make_system(fixture, fixture.charge);
+    auto forcefield = make_forcefield(fixture);
+    auto direct = make_direct_model(fixture);
+    auto reciprocal = make_reciprocal_model(fixture);
+
+    for (const bg_backend lane :
+         {BG_BACKEND_CPP_CPU_REFERENCE, BG_BACKEND_RUST_CPU}) {
+        auto context = make_context(lane);
+        auto unit_drift = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+        betelgeuze::native::tests::
+            set_particle_mesh_ewald_composite_short_system_scratch_unit_for_test(
+                unit_drift.get(), static_cast<bg_unit_system>(0));
+        expect_short_system_scratch_drift_failure(
+            context.get(), unit_drift.get(),
+            "PME short-system scratch unit drift did not fail closed");
+
+        auto shape_drift = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+        betelgeuze::native::tests::
+            truncate_particle_mesh_ewald_composite_short_system_scratch_for_test(
+                shape_drift.get());
+        expect_short_system_scratch_drift_failure(
+            context.get(), shape_drift.get(),
+            "PME short-system scratch shape drift did not fail closed");
+
+        auto negative_zero = make_simulation(
+            system.get(), forcefield.get(), direct.get(), reciprocal.get());
+        betelgeuze::native::tests::
+            set_particle_mesh_ewald_composite_short_system_scratch_charge_for_test(
+                negative_zero.get(), -0.0);
+        expect_short_system_scratch_drift_failure(
+            context.get(), negative_zero.get(),
+            "PME short-system scratch negative-zero charge did not fail closed");
+    }
+}
+
 void verify_late_typed_failure_rolls_back() {
     constexpr double timestep = 0.01;
     const Fixture base;
@@ -783,6 +1126,14 @@ void verify_late_typed_failure_rolls_back() {
                 simulation.get(), 64U);
         const ForceScratchSnapshot reserved =
             force_scratch_snapshot(simulation.get());
+        const ShortSystemScratchSnapshot short_system_reserved =
+            short_system_scratch_snapshot(simulation.get());
+        require_short_system_scratch_layout(
+            short_system_reserved,
+            "late-failure PME short-system scratch layout was invalid");
+        require_short_system_scratch_positions_current(
+            short_system_reserved, simulation_view(simulation.get()),
+            "late-failure PME short-system scratch started stale");
         const auto before = checkpoint(simulation.get());
         for (std::size_t attempt = 0U; attempt < 2U; ++attempt) {
             bg_dynamics_report_v1 report{};
@@ -823,6 +1174,14 @@ void verify_late_typed_failure_rolls_back() {
             require_force_scratch_sizes(
                 after_failure, base.x.size(),
                 "late evaluator failure retained the wrong scratch size");
+            const ShortSystemScratchSnapshot short_system_after_failure =
+                short_system_scratch_snapshot(simulation.get());
+            require_same_short_system_scratch_storage(
+                short_system_after_failure, short_system_reserved,
+                "late direct-local failure replaced PME short-system scratch storage");
+            require_short_system_scratch_layout(
+                short_system_after_failure,
+                "late direct-local failure changed PME short-system scratch layout");
         }
     }
 }
@@ -1075,6 +1434,8 @@ int main() {
         "profile mismatch");
     verify_runtime_and_checkpoint_identity();
     verify_force_output_scratch_reuse();
+    verify_short_system_scratch_reuse();
+    verify_short_system_scratch_drift_fails_closed();
     verify_zero_step_and_restart();
     verify_deep_ownership_and_constraints();
     verify_checkpoint_rejections();

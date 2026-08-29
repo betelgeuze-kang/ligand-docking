@@ -188,7 +188,8 @@ bool owner_storage_overlaps(
     const bg_particle_mesh_ewald_composite_simulation_v1 &owner,
     const ByteRange &output) noexcept {
     if (fixed_storage_overlaps(&owner, sizeof(owner), output) ||
-        model_storage_overlaps(owner.direct_model, output)) {
+        model_storage_overlaps(owner.direct_model, output) ||
+        system_storage_overlaps(owner.short_system_scratch, output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -509,7 +510,8 @@ bg_status evaluate_composite_provider(
     const bg_status status = particle_mesh_ewald_composite::evaluate_prevalidated(
         context.backend, system, simulation->forcefield,
         provider->owner->direct_model, provider->owner->reciprocal_model,
-        compute_forces, &combined, &local_error);
+        &provider->owner->short_system_scratch, compute_forces, &combined,
+        &local_error);
     if (status != BG_STATUS_OK) {
         if (local_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
             *provider->typed_error = local_error;
@@ -750,6 +752,11 @@ bg_particle_mesh_ewald_composite_simulation_v1_create(
         if (status != BG_STATUS_OK) {
             return status;
         }
+        candidate->short_system_scratch = candidate->simulation->system;
+        std::fill(
+            candidate->short_system_scratch.charge.begin(),
+            candidate->short_system_scratch.charge.end(),
+            0.0);
 
         bg_context validation_context{};
         validation_context.backend = BG_BACKEND_CPP_CPU_REFERENCE;
@@ -763,8 +770,8 @@ bg_particle_mesh_ewald_composite_simulation_v1_create(
         status = particle_mesh_ewald_composite::evaluate_prevalidated(
             validation_context.backend, candidate->simulation->system,
             candidate->simulation->forcefield, candidate->direct_model,
-            candidate->reciprocal_model, false, &initial_evaluation,
-            &initial_error);
+            candidate->reciprocal_model, &candidate->short_system_scratch,
+            false, &initial_evaluation, &initial_error);
         if (status != BG_STATUS_OK) {
             if (initial_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
                 commit_typed_error(
