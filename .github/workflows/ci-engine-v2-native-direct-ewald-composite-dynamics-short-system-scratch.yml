@@ -175,7 +175,33 @@ jobs:
           rustup toolchain install 1.93.0 --profile minimal
           rustup override set 1.93.0
       - name: Exact export regression
+        shell: bash
         run: |
           cmake -S . -B build/direct-ewald-short-system-scratch-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/direct-ewald-short-system-scratch-macos --target betelgeuze_engine --parallel 2
+          build_log="$RUNNER_TEMP/direct-ewald-short-system-scratch-macos-build.log"
+          set -o pipefail
+          set +e
+          cmake --build build/direct-ewald-short-system-scratch-macos --target betelgeuze_engine --parallel 2 2>&1 | tee "$build_log"
+          build_pipeline_status=("${PIPESTATUS[@]}")
+          set -e
+          test "${#build_pipeline_status[@]}" -eq 2
+          build_status="${build_pipeline_status[0]}"
+          tee_status="${build_pipeline_status[1]}"
+          if [ "$tee_status" -ne 0 ]; then
+            exit "$tee_status"
+          fi
+          if [ "$build_status" -ne 0 ]; then
+            if ! grep -Fq "xcrun_db-" "$build_log" ||
+               ! grep -Fq "errno=Invalid argument" "$build_log" ||
+               ! grep -Fq "cannot update the lock file" "$build_log" ||
+               ! grep -Fq "because --locked was passed" "$build_log"; then
+              exit "$build_status"
+            fi
+            retry_tmp="$(mktemp -d "$RUNNER_TEMP/direct-ewald-short-system-scratch.XXXXXX")"
+            export TMPDIR="$retry_tmp"
+            host_target="$(rustc -vV | sed -n 's/^host: //p')"
+            test -n "$host_target"
+            cargo metadata --manifest-path rust/Cargo.toml --locked --filter-platform "$host_target" --format-version 1 >/dev/null
+            cmake --build build/direct-ewald-short-system-scratch-macos --target betelgeuze_engine --parallel 2
+          fi
           ctest --test-dir build/direct-ewald-short-system-scratch-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

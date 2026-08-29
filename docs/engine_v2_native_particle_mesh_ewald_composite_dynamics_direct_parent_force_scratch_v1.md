@@ -27,6 +27,17 @@ triggers, four immutable job bodies, and a 252-row source manifest. Behavioral
 tests prove transform anchor drift is rejected and unrelated frozen-input
 sentinels survive.
 
+The exact-head audit also exposed one isolated macOS hosted-runner failure
+signature: an `xcrun_db` temporary-cache `EINVAL` was immediately followed by
+Cargo reporting the unchanged locked workspace as needing a lock-file update.
+The affected inherited workflow now retries its build once, and only when
+all four exact failure signatures are present. The retry moves `TMPDIR` under
+`RUNNER_TEMP` and first requires host-target `cargo metadata --locked` to
+succeed. Every other failure remains fail-closed; `--locked` is retained and
+no lock file is generated, changed, or removed. This bounded reliability fix
+raises the exact delta from 19 to 20 paths without changing the source-manifest
+row count of 252 or the 68-path trigger set.
+
 ## Boundary
 
 This is not an allocation-free, failure-retention, timing, performance,

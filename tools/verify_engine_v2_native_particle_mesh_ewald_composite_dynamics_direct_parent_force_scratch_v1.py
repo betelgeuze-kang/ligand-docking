@@ -30,6 +30,10 @@ PREDECESSOR_WORKFLOW_RELATIVE_PATH = Path(
     ".github/workflows/ci-engine-v2-native-direct-ewald-composite-"
     "dynamics-ewald-parent-force-scratch.yml"
 )
+MACOS_RETRY_WORKFLOW_RELATIVE_PATH = Path(
+    ".github/workflows/ci-engine-v2-native-direct-ewald-composite-"
+    "dynamics-short-system-scratch.yml"
+)
 DOC_RELATIVE_PATH = Path(
     "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
     "direct_parent_force_scratch_v1.md"
@@ -171,6 +175,7 @@ EXPECTED_DELTA_PATHS = tuple(
         | {
             PREDECESSOR_WORKFLOW_RELATIVE_PATH,
             PREDECESSOR_UNIT_RELATIVE_PATH,
+            MACOS_RETRY_WORKFLOW_RELATIVE_PATH,
         },
         key=lambda path: path.as_posix(),
     )
@@ -178,8 +183,7 @@ EXPECTED_DELTA_PATHS = tuple(
 REQUIRED_TRIGGER_PATHS = (
     ".github/workflows/ci-engine-v2-native-direct-ewald-composite-"
     "dynamics-force-scratch.yml",
-    ".github/workflows/ci-engine-v2-native-direct-ewald-composite-"
-    "dynamics-short-system-scratch.yml",
+    MACOS_RETRY_WORKFLOW_RELATIVE_PATH.as_posix(),
     ".github/workflows/ci-engine-v2-native-direct-ewald-composite-"
     "dynamics-short-parent-force-scratch.yml",
     ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-"
@@ -323,6 +327,9 @@ EXPECTED_PREDECESSOR_WORKFLOW_SHA256 = (
 )
 EXPECTED_PREDECESSOR_UNIT_SHA256 = (
     "ee159c5170582db5b3d49d0e08d7a266344612ba337806c21dc0114e7d25f8a8"
+)
+EXPECTED_MACOS_RETRY_WORKFLOW_SHA256 = (
+    "59c6089e4273c2324953ac0916671a8b9580391324cf7d15255a84cb450a9c66"
 )
 
 RUST_BOUNDARY_COMMAND_STEP = "\n".join(
@@ -780,6 +787,7 @@ def discover_source_paths(root: Path = ROOT) -> list[Path]:
             INHERITED_MANIFEST_RELATIVE_PATH,
             PREDECESSOR_WORKFLOW_RELATIVE_PATH,
             PREDECESSOR_UNIT_RELATIVE_PATH,
+            MACOS_RETRY_WORKFLOW_RELATIVE_PATH,
             WORKFLOW_RELATIVE_PATH,
             DOC_RELATIVE_PATH,
             UNIT_RELATIVE_PATH,
@@ -879,6 +887,7 @@ def build_profile(manifest_raw: bytes) -> dict:
             "git_object_probes_lazy_fetch_disabled": True,
             "reviewed_head_optional_locally": True,
             "workflow_architecture_target_and_inherited_heads_explicitly_fetched": True,
+            "macos_locked_cargo_exact_signature_retry_bounded": True,
         },
         "authority": dict(AUTHORITY),
         "operational_boundary": {
@@ -1397,6 +1406,64 @@ def replace_count_exact(
     return source.replace(old, new)
 
 
+def expected_macos_lock_transient_retry_workflow(frozen: str) -> str:
+    source = replace_exact(
+        frozen,
+        "      - name: Exact export regression\n        run: |\n",
+        "      - name: Exact export regression\n"
+        "        shell: bash\n"
+        "        run: |\n",
+        "macOS locked-Cargo explicit Bash shell",
+    )
+    old = """          cmake --build build/direct-ewald-short-system-scratch-macos --target betelgeuze_engine --parallel 2
+"""
+    new = """          build_log="$RUNNER_TEMP/direct-ewald-short-system-scratch-macos-build.log"
+          set -o pipefail
+          set +e
+          cmake --build build/direct-ewald-short-system-scratch-macos --target betelgeuze_engine --parallel 2 2>&1 | tee "$build_log"
+          build_pipeline_status=("${PIPESTATUS[@]}")
+          set -e
+          test "${#build_pipeline_status[@]}" -eq 2
+          build_status="${build_pipeline_status[0]}"
+          tee_status="${build_pipeline_status[1]}"
+          if [ "$tee_status" -ne 0 ]; then
+            exit "$tee_status"
+          fi
+          if [ "$build_status" -ne 0 ]; then
+            if ! grep -Fq "xcrun_db-" "$build_log" ||
+               ! grep -Fq "errno=Invalid argument" "$build_log" ||
+               ! grep -Fq "cannot update the lock file" "$build_log" ||
+               ! grep -Fq "because --locked was passed" "$build_log"; then
+              exit "$build_status"
+            fi
+            retry_tmp="$(mktemp -d "$RUNNER_TEMP/direct-ewald-short-system-scratch.XXXXXX")"
+            export TMPDIR="$retry_tmp"
+            host_target="$(rustc -vV | sed -n 's/^host: //p')"
+            test -n "$host_target"
+            cargo metadata --manifest-path rust/Cargo.toml --locked --filter-platform "$host_target" --format-version 1 >/dev/null
+            cmake --build build/direct-ewald-short-system-scratch-macos --target betelgeuze_engine --parallel 2
+          fi
+"""
+    return replace_exact(
+        source, old, new, "macOS locked-Cargo hosted-runner retry"
+    )
+
+
+def require_macos_lock_transient_retry_workflow(root: Path = ROOT) -> None:
+    merge = ARCHITECTURE_PREDECESSOR["merge_commit"]
+    frozen_raw = git(
+        "show", f"{merge}:{MACOS_RETRY_WORKFLOW_RELATIVE_PATH.as_posix()}"
+    ).stdout
+    if sha(frozen_raw) != EXPECTED_MACOS_RETRY_WORKFLOW_SHA256:
+        fail("pristine macOS retry workflow digest drift")
+    expected = expected_macos_lock_transient_retry_workflow(
+        frozen_raw.decode()
+    )
+    current = (root / MACOS_RETRY_WORKFLOW_RELATIVE_PATH).read_text()
+    if current != expected:
+        fail("macOS locked-Cargo hosted-runner retry workflow drift")
+
+
 def expected_composite_evaluator_header(frozen: str) -> str:
     source = replace_exact(
         frozen,
@@ -1685,6 +1752,7 @@ def require_contracts(root: Path = ROOT) -> None:
     require_direct_parent_force_scratch_contract(root)
     require_predecessor_workflow_freeze(root)
     require_predecessor_unit_freeze(root)
+    require_macos_lock_transient_retry_workflow(root)
     require_workflow_contract((root / WORKFLOW_RELATIVE_PATH).read_text())
     observed_delta = current_delta_paths()
     if observed_delta != EXPECTED_DELTA_PATHS:

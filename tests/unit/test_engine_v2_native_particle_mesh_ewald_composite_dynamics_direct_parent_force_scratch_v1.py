@@ -13,9 +13,11 @@ def test_exact_profile_manifest_and_contracts() -> None:
     assert result["source_count"] == 252
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
+    validation = profile["validation"]
     assert implementation["successful_stateful_forceful_direct_parent_aos_storage_reused"]
     assert implementation["steady_state_direct_parent_force_storage_reused"]
     assert implementation["reciprocal_parent_force_storage_reused"] is False
+    assert validation["macos_locked_cargo_exact_signature_retry_bounded"]
     assert not any(profile["authority"].values())
     for key in ("allocation_free_claimed", "timing_claimed", "performance_claimed", "acceleration_claimed", "cross_lane_bit_parity_claimed", "unconditional_failure_storage_retention_claimed", "universal_failure_storage_retention_claimed", "all_failure_path_storage_retention_claimed"):
         assert implementation[key] is False
@@ -25,7 +27,7 @@ def test_exact_anchors_and_delta() -> None:
     assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 453
     assert verifier.PREDECESSOR["pull_request"] == 452
     assert verifier.INHERITED_PREDECESSOR["pull_request"] == 435
-    assert len(verifier.EXPECTED_DELTA_PATHS) == 19
+    assert len(verifier.EXPECTED_DELTA_PATHS) == 20
     assert verifier.current_delta_paths() == verifier.EXPECTED_DELTA_PATHS
 
 
@@ -76,6 +78,43 @@ def test_production_hashes_and_vendor_identity() -> None:
 def test_predecessor_freezes() -> None:
     verifier.require_predecessor_workflow_freeze(ROOT)
     verifier.require_predecessor_unit_freeze(ROOT)
+    verifier.require_macos_lock_transient_retry_workflow(ROOT)
+
+
+def test_macos_locked_cargo_transient_retry_is_exact_and_fail_closed() -> None:
+    frozen = verifier.git(
+        "show",
+        f"{verifier.ARCHITECTURE_PREDECESSOR['merge_commit']}:"
+        f"{verifier.MACOS_RETRY_WORKFLOW_RELATIVE_PATH.as_posix()}",
+    ).stdout.decode()
+    transformed = verifier.expected_macos_lock_transient_retry_workflow(frozen)
+    assert transformed == (
+        ROOT / verifier.MACOS_RETRY_WORKFLOW_RELATIVE_PATH
+    ).read_text()
+    for token in (
+        "        shell: bash",
+        'build_pipeline_status=("${PIPESTATUS[@]}")',
+        'tee_status="${build_pipeline_status[1]}"',
+        'grep -Fq "xcrun_db-"',
+        'grep -Fq "errno=Invalid argument"',
+        'grep -Fq "cannot update the lock file"',
+        'grep -Fq "because --locked was passed"',
+        'mktemp -d "$RUNNER_TEMP/direct-ewald-short-system-scratch.XXXXXX"',
+        'cargo metadata --manifest-path rust/Cargo.toml --locked',
+    ):
+        assert token in transformed
+    sentinel = "\n# unrelated-macos-workflow-sentinel\n"
+    assert verifier.expected_macos_lock_transient_retry_workflow(
+        frozen + sentinel
+    ).endswith(sentinel)
+    anchor = (
+        "          cmake --build build/direct-ewald-short-system-scratch-macos "
+        "--target betelgeuze_engine --parallel 2\n"
+    )
+    with pytest.raises(ValueError, match="transformation point drift"):
+        verifier.expected_macos_lock_transient_retry_workflow(
+            frozen.replace(anchor, "          drifted build anchor\n", 1)
+        )
 
 
 @pytest.mark.parametrize(
