@@ -110,6 +110,14 @@ bool system_storage_overlaps(
            vector_storage_overlaps(system.charge, output);
 }
 
+bool evaluation_storage_overlaps(
+    const cpu::Evaluation &evaluation,
+    const ByteRange &output) noexcept {
+    return vector_storage_overlaps(evaluation.force_x, output) ||
+           vector_storage_overlaps(evaluation.force_y, output) ||
+           vector_storage_overlaps(evaluation.force_z, output);
+}
+
 bool forcefield_storage_overlaps(
     const bg_forcefield &forcefield,
     const ByteRange &output) noexcept {
@@ -187,7 +195,9 @@ bool owner_storage_overlaps(
     const ByteRange &output) noexcept {
     if (fixed_storage_overlaps(&owner, sizeof(owner), output) ||
         model_storage_overlaps(owner.model, output) ||
-        system_storage_overlaps(owner.short_system_scratch, output)) {
+        system_storage_overlaps(owner.short_system_scratch, output) ||
+        evaluation_storage_overlaps(
+            owner.short_parent_evaluation_scratch, output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -507,6 +517,8 @@ bg_status evaluate_composite_provider(
         simulation->forcefield,
         provider->owner->model,
         &provider->owner->short_system_scratch,
+        &provider->owner->short_parent_evaluation_scratch,
+        &simulation->rust_cpu_forcefield_validated,
         compute_forces,
         &combined,
         provider->typed_error);
@@ -753,6 +765,8 @@ bg_direct_ewald_composite_simulation_v1_create(
             candidate->simulation->forcefield,
             candidate->model,
             &candidate->short_system_scratch,
+            &candidate->short_parent_evaluation_scratch,
+            &candidate->simulation->rust_cpu_forcefield_validated,
             false,
             &initial_evaluation,
             &initial_error);

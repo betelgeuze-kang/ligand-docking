@@ -583,6 +583,8 @@ bg_status evaluate_prevalidated(
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &model,
     bg_system *short_system_scratch,
+    cpu::Evaluation *short_parent_evaluation_scratch,
+    uint8_t *inout_rust_cpu_forcefield_validated,
     bool compute_forces,
     Evaluation *out_evaluation,
     ewald::Error *out_error) {
@@ -605,6 +607,15 @@ bg_status evaluate_prevalidated(
             return fail(
                 BG_STATUS_UNSUPPORTED_BACKEND,
                 "selected backend has no direct-Ewald composite evaluator");
+    }
+
+    const bool stateful_scratch = short_system_scratch != nullptr;
+    if ((short_parent_evaluation_scratch != nullptr) != stateful_scratch ||
+        (inout_rust_cpu_forcefield_validated != nullptr) !=
+            stateful_scratch) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "composite stateful scratch and validation-cache pointers must be all null or all non-null");
     }
 
     bg_system local_short_system;
@@ -639,19 +650,38 @@ bg_status evaluate_prevalidated(
             short_system->position_z.begin());
     }
 
-    cpu::Evaluation short_evaluation;
+    cpu::Evaluation local_short_evaluation;
+    cpu::Evaluation *short_evaluation = &local_short_evaluation;
+    const bool reuse_short_parent_force_storage =
+        stateful_scratch && compute_forces;
+    if (reuse_short_parent_force_storage) {
+        short_evaluation = short_parent_evaluation_scratch;
+    }
     bg_status status = BG_STATUS_OK;
     if (context.backend == BG_BACKEND_CPP_CPU_REFERENCE) {
-        status = cpu::evaluate(
-            *short_system, forcefield, compute_forces, &short_evaluation);
+        status = reuse_short_parent_force_storage
+            ? cpu::evaluate_reusing_force_storage(
+                  *short_system, forcefield, true, short_evaluation)
+            : cpu::evaluate(
+                  *short_system, forcefield, compute_forces,
+                  short_evaluation);
     } else {
-        status = rust_cpu::evaluate(
-            *short_system, forcefield, compute_forces, &short_evaluation);
+        status = reuse_short_parent_force_storage
+            ? rust_cpu::evaluate_reusing_force_storage(
+                  *short_system,
+                  forcefield,
+                  true,
+                  inout_rust_cpu_forcefield_validated,
+                  short_evaluation)
+            : rust_cpu::evaluate(
+                  *short_system, forcefield, compute_forces,
+                  short_evaluation);
     }
     if (status != BG_STATUS_OK) {
         return status;
     }
-    if (!short_energy_is_valid(short_evaluation)) {
+    const cpu::Evaluation &short_result = *short_evaluation;
+    if (!short_energy_is_valid(short_result)) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "short-range composite parent returned inconsistent energy");
@@ -680,7 +710,7 @@ bg_status evaluate_prevalidated(
 
     const double ewald_total = ewald_evaluation.energy.total();
     const double total =
-        short_evaluation.energy.total_kcal_per_mol + ewald_total;
+        short_result.energy.total_kcal_per_mol + ewald_total;
     if (!std::isfinite(total)) {
         return fail(
             BG_STATUS_NUMERICAL_ERROR,
@@ -690,9 +720,9 @@ bg_status evaluate_prevalidated(
     Evaluation candidate;
     if (compute_forces) {
         const std::size_t atom_count = model.atom_count;
-        if (short_evaluation.force_x.size() != atom_count ||
-            short_evaluation.force_y.size() != atom_count ||
-            short_evaluation.force_z.size() != atom_count ||
+        if (short_result.force_x.size() != atom_count ||
+            short_result.force_y.size() != atom_count ||
+            short_result.force_z.size() != atom_count ||
             ewald_evaluation.forces.size() != atom_count) {
             return fail(
                 BG_STATUS_INTERNAL_ERROR,
@@ -701,11 +731,11 @@ bg_status evaluate_prevalidated(
         candidate.forces.resize(atom_count);
         for (std::size_t atom = 0; atom < atom_count; ++atom) {
             candidate.forces[atom] = {{
-                short_evaluation.force_x[atom] +
+                short_result.force_x[atom] +
                     ewald_evaluation.forces[atom][0],
-                short_evaluation.force_y[atom] +
+                short_result.force_y[atom] +
                     ewald_evaluation.forces[atom][1],
-                short_evaluation.force_z[atom] +
+                short_result.force_z[atom] +
                     ewald_evaluation.forces[atom][2],
             }};
             if (std::any_of(
@@ -720,17 +750,17 @@ bg_status evaluate_prevalidated(
     }
 
     candidate.energy.short_harmonic_bond =
-        short_evaluation.energy.harmonic_bond_kcal_per_mol;
+        short_result.energy.harmonic_bond_kcal_per_mol;
     candidate.energy.short_harmonic_angle =
-        short_evaluation.energy.harmonic_angle_kcal_per_mol;
+        short_result.energy.harmonic_angle_kcal_per_mol;
     candidate.energy.short_periodic_torsion =
-        short_evaluation.energy.periodic_torsion_kcal_per_mol;
+        short_result.energy.periodic_torsion_kcal_per_mol;
     candidate.energy.short_lennard_jones =
-        short_evaluation.energy.lennard_jones_kcal_per_mol;
+        short_result.energy.lennard_jones_kcal_per_mol;
     candidate.energy.short_coulomb =
-        short_evaluation.energy.coulomb_kcal_per_mol;
+        short_result.energy.coulomb_kcal_per_mol;
     candidate.energy.short_total =
-        short_evaluation.energy.total_kcal_per_mol;
+        short_result.energy.total_kcal_per_mol;
     candidate.energy.ewald_real_space = ewald_evaluation.energy.real_space;
     candidate.energy.ewald_reciprocal_space =
         ewald_evaluation.energy.reciprocal_space;
@@ -894,8 +924,8 @@ bg_context_evaluate_direct_ewald_composite_v1(
         Evaluation evaluation;
         ewald::Error typed_error;
         status = evaluate_prevalidated(
-            *context, *system, *forcefield, *model, nullptr, compute_forces,
-            &evaluation, &typed_error);
+            *context, *system, *forcefield, *model, nullptr, nullptr, nullptr,
+            compute_forces, &evaluation, &typed_error);
         if (status != BG_STATUS_OK) {
             if (typed_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
                 commit_error(out_error, typed_error.code, typed_error.detail);
