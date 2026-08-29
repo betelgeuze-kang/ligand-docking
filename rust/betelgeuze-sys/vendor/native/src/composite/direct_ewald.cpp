@@ -585,6 +585,7 @@ bg_status evaluate_prevalidated(
     bg_system *short_system_scratch,
     cpu::Evaluation *short_parent_evaluation_scratch,
     uint8_t *inout_rust_cpu_forcefield_validated,
+    cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
     ewald::Error *out_error) {
@@ -616,6 +617,20 @@ bg_status evaluate_prevalidated(
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "composite stateful scratch and validation-cache pointers must be all null or all non-null");
+    }
+    const bool requires_stateful_force_output =
+        stateful_scratch && compute_forces;
+    if ((stateful_force_output != nullptr) !=
+        requires_stateful_force_output) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "composite stateful force output must be non-null exactly for force-producing stateful evaluation");
+    }
+    if (stateful_force_output == short_parent_evaluation_scratch &&
+        stateful_force_output != nullptr) {
+        return fail(
+            BG_STATUS_INTERNAL_ERROR,
+            "composite final force output must not alias short-parent force scratch");
     }
 
     bg_system local_short_system;
@@ -728,9 +743,14 @@ bg_status evaluate_prevalidated(
                 BG_STATUS_INTERNAL_ERROR,
                 "composite parent force counts are inconsistent");
         }
-        candidate.forces.resize(atom_count);
         for (std::size_t atom = 0; atom < atom_count; ++atom) {
-            candidate.forces[atom] = {{
+            const std::array<double, 9> parent_and_combined_forces{{
+                short_result.force_x[atom],
+                short_result.force_y[atom],
+                short_result.force_z[atom],
+                ewald_evaluation.forces[atom][0],
+                ewald_evaluation.forces[atom][1],
+                ewald_evaluation.forces[atom][2],
                 short_result.force_x[atom] +
                     ewald_evaluation.forces[atom][0],
                 short_result.force_y[atom] +
@@ -739,12 +759,40 @@ bg_status evaluate_prevalidated(
                     ewald_evaluation.forces[atom][2],
             }};
             if (std::any_of(
-                    candidate.forces[atom].begin(),
-                    candidate.forces[atom].end(),
+                    parent_and_combined_forces.begin(),
+                    parent_and_combined_forces.end(),
                     [](double value) { return !std::isfinite(value); })) {
                 return fail(
                     BG_STATUS_NUMERICAL_ERROR,
-                    "a composite force component is not finite");
+                    "a composite parent or combined force component is not finite");
+            }
+        }
+        if (stateful_force_output != nullptr) {
+            stateful_force_output->force_x.resize(atom_count);
+            stateful_force_output->force_y.resize(atom_count);
+            stateful_force_output->force_z.resize(atom_count);
+            for (std::size_t atom = 0; atom < atom_count; ++atom) {
+                stateful_force_output->force_x[atom] =
+                    short_result.force_x[atom] +
+                    ewald_evaluation.forces[atom][0];
+                stateful_force_output->force_y[atom] =
+                    short_result.force_y[atom] +
+                    ewald_evaluation.forces[atom][1];
+                stateful_force_output->force_z[atom] =
+                    short_result.force_z[atom] +
+                    ewald_evaluation.forces[atom][2];
+            }
+        } else {
+            candidate.forces.resize(atom_count);
+            for (std::size_t atom = 0; atom < atom_count; ++atom) {
+                candidate.forces[atom] = {{
+                    short_result.force_x[atom] +
+                        ewald_evaluation.forces[atom][0],
+                    short_result.force_y[atom] +
+                        ewald_evaluation.forces[atom][1],
+                    short_result.force_z[atom] +
+                        ewald_evaluation.forces[atom][2],
+                }};
             }
         }
     }
@@ -925,7 +973,7 @@ bg_context_evaluate_direct_ewald_composite_v1(
         ewald::Error typed_error;
         status = evaluate_prevalidated(
             *context, *system, *forcefield, *model, nullptr, nullptr, nullptr,
-            compute_forces, &evaluation, &typed_error);
+            nullptr, compute_forces, &evaluation, &typed_error);
         if (status != BG_STATUS_OK) {
             if (typed_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
                 commit_error(out_error, typed_error.code, typed_error.detail);
