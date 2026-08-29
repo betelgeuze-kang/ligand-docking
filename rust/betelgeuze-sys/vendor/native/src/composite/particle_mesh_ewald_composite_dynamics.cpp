@@ -124,6 +124,12 @@ bool evaluation_storage_overlaps(
     return vector_storage_overlaps(evaluation.forces, output);
 }
 
+bool evaluation_storage_overlaps(
+    const particle_mesh_reciprocal::Evaluation &evaluation,
+    const ByteRange &output) noexcept {
+    return vector_storage_overlaps(evaluation.forces, output);
+}
+
 bool forcefield_storage_overlaps(
     const bg_forcefield &forcefield,
     const ByteRange &output) noexcept {
@@ -207,7 +213,9 @@ bool owner_storage_overlaps(
         evaluation_storage_overlaps(
             owner.short_parent_evaluation_scratch, output) ||
         evaluation_storage_overlaps(
-            owner.direct_parent_evaluation_scratch, output)) {
+            owner.direct_parent_evaluation_scratch, output) ||
+        evaluation_storage_overlaps(
+            owner.reciprocal_parent_evaluation_scratch, output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -538,6 +546,7 @@ bg_status evaluate_composite_provider(
         &provider->owner->short_parent_evaluation_scratch,
         &simulation->rust_cpu_forcefield_validated,
         &provider->owner->direct_parent_evaluation_scratch,
+        &provider->owner->reciprocal_parent_evaluation_scratch,
         compute_forces ? out_evaluation : nullptr, compute_forces,
         &combined, &local_error);
     if (status != BG_STATUS_OK) {
@@ -785,8 +794,9 @@ bg_particle_mesh_ewald_composite_simulation_v1_create(
             candidate->reciprocal_model, &candidate->short_system_scratch,
             &candidate->short_parent_evaluation_scratch,
             &candidate->simulation->rust_cpu_forcefield_validated,
-            &candidate->direct_parent_evaluation_scratch, nullptr, false,
-            &initial_evaluation, &initial_error);
+            &candidate->direct_parent_evaluation_scratch,
+            &candidate->reciprocal_parent_evaluation_scratch, nullptr,
+            false, &initial_evaluation, &initial_error);
         if (status != BG_STATUS_OK) {
             if (initial_error.code != BG_DIRECT_EWALD_ERROR_NONE) {
                 commit_typed_error(

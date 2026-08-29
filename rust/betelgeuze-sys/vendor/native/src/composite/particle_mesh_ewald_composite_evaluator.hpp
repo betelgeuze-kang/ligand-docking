@@ -5,6 +5,7 @@
 
 #include "../cpu/evaluator.hpp"
 #include "../ewald/cpp_evaluator.hpp"
+#include "../particle_mesh_reciprocal/cpp_evaluator.hpp"
 
 #include <array>
 #include <cstdint>
@@ -35,15 +36,16 @@ struct Evaluation final {
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model);
 
 /*
- * The caller must first establish validate_static_compatibility(). The four
+ * The caller must first establish validate_static_compatibility(). The five
  * private scratch/cache pointers must be null for the stateless path or
  * non-null for the stateful path. The stateful force output must be non-null
  * exactly for a force-producing stateful call. A non-null short-system
  * scratch must be independent, deep-owned, shape/unit matched, and contain
  * exact +0.0 charges; only its positions are refreshed. Force-producing
- * stateful calls reuse the short and direct-local parents' Evaluation storage
- * and write the final force directly to the supplied SoA Evaluation after all
- * parent and combined force values have been validated. Stateless
+ * stateful calls reuse the short, direct-local, and reciprocal parents'
+ * Evaluation storage and write the final force directly to the supplied SoA
+ * Evaluation after all parent and combined force values have been validated.
+ * Stateless
  * force-producing calls retain the composite AoS force result. Force-free
  * calls leave the private force storage and Rust validation cache untouched.
  * Failed calls need not restore private derived scratch/cache contents.
@@ -58,6 +60,8 @@ struct Evaluation final {
     cpu::Evaluation *short_parent_evaluation_scratch,
     uint8_t *inout_rust_cpu_forcefield_validated,
     ewald::Evaluation *direct_parent_evaluation_scratch,
+    particle_mesh_reciprocal::Evaluation *
+        reciprocal_parent_evaluation_scratch,
     cpu::Evaluation *stateful_force_output,
     bool compute_forces,
     Evaluation *out_evaluation,
