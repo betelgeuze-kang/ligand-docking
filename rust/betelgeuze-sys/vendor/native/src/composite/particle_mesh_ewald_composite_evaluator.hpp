@@ -30,12 +30,20 @@ struct Evaluation final {
     const bg_direct_ewald_model_v1 &direct_model,
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model);
 
+/*
+ * The caller must first establish validate_static_compatibility(). A null
+ * short-system scratch preserves the stateless local-copy path. A non-null
+ * scratch must be independent, deep-owned, shape/unit matched, and contain
+ * exact +0.0 charges; only its positions are refreshed, and failed calls need
+ * not restore its private derived contents.
+ */
 [[nodiscard]] bg_status evaluate_prevalidated(
     bg_backend lane,
     const bg_system &system,
     const bg_forcefield &forcefield,
     const bg_direct_ewald_model_v1 &direct_model,
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model,
+    bg_system *short_system_scratch,
     bool compute_forces,
     Evaluation *out_evaluation,
     bg_direct_ewald_error_v1 *out_error);
