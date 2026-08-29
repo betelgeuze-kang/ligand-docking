@@ -12,6 +12,19 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+DIRECT_EWALD_PARENT_FORCE_SCRATCH_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_direct_ewald_composite_dynamics_"
+    "ewald_parent_force_scratch_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    DIRECT_EWALD_PARENT_FORCE_SCRATCH_EVIDENCE_PRESENT,
+    reason=(
+        "particle-mesh Ewald combined-force SoA evidence is verified from its "
+        "exact frozen PR 452 object after Direct-Ewald Ewald-parent force scratch "
+        "evidence is present"
+    ),
+)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:

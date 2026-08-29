@@ -874,10 +874,11 @@ bool evaluate_pair_corrections(
 
 }  // namespace
 
-bg_status evaluate(
+static bg_status evaluate_impl(
     const bg_system &system,
     const bg_direct_ewald_model_v1 &model,
     bool compute_forces,
+    bool reuse_force_storage,
     Evaluation *out_evaluation,
     Error *out_error) {
     if (out_evaluation == nullptr || out_error == nullptr) {
@@ -891,6 +892,9 @@ bg_status evaluate(
     }
     Evaluation result;
     if (compute_forces) {
+        if (reuse_force_storage) {
+            result.forces.swap(out_evaluation->forces);
+        }
         result.forces.assign(system.charge.size(), Vector3{});
     }
     const double coulomb_scale = kCoulombConstant / model.dielectric;
@@ -930,6 +934,26 @@ bg_status evaluate(
     }
     *out_evaluation = std::move(result);
     return BG_STATUS_OK;
+}
+
+bg_status evaluate(
+    const bg_system &system,
+    const bg_direct_ewald_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, false, out_evaluation, out_error);
+}
+
+bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_direct_ewald_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, true, out_evaluation, out_error);
 }
 
 }  // namespace betelgeuze::native::ewald::cpp_cpu

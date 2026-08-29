@@ -46,10 +46,11 @@ bool provider_code_is_valid(int32_t code) noexcept {
 
 }  // namespace
 
-bg_status evaluate(
+static bg_status evaluate_impl(
     const bg_system &system,
     const bg_direct_ewald_model_v1 &model,
     bool compute_forces,
+    bool reuse_force_storage,
     Evaluation *out_evaluation,
     Error *out_error) {
     static_assert(std::is_standard_layout_v<bg_rust_direct_ewald_system_v1>);
@@ -159,6 +160,9 @@ bg_status evaluate(
     provider_energy.abi_version = BG_RUST_DIRECT_EWALD_PROVIDER_ABI_VERSION;
 
     Evaluation candidate;
+    if (compute_forces && reuse_force_storage) {
+        candidate.forces.swap(out_evaluation->forces);
+    }
     bg_rust_direct_ewald_force_output_v1 provider_forces{};
     bg_rust_direct_ewald_force_output_v1 *provider_force_pointer = nullptr;
     std::vector<double> force_x;
@@ -231,6 +235,26 @@ bg_status evaluate(
     }
     *out_evaluation = std::move(candidate);
     return BG_STATUS_OK;
+}
+
+bg_status evaluate(
+    const bg_system &system,
+    const bg_direct_ewald_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, false, out_evaluation, out_error);
+}
+
+bg_status evaluate_reusing_force_storage(
+    const bg_system &system,
+    const bg_direct_ewald_model_v1 &model,
+    bool compute_forces,
+    Evaluation *out_evaluation,
+    Error *out_error) {
+    return evaluate_impl(
+        system, model, compute_forces, true, out_evaluation, out_error);
 }
 
 }  // namespace betelgeuze::native::ewald::rust_cpu
