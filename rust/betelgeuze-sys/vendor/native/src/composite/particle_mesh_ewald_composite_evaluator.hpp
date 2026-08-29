@@ -3,7 +3,10 @@
 
 #include "betelgeuze/particle_mesh_ewald_composite.h"
 
+#include "../cpu/evaluator.hpp"
+
 #include <array>
+#include <cstdint>
 #include <vector>
 
 namespace betelgeuze::native::particle_mesh_ewald_composite {
@@ -31,11 +34,14 @@ struct Evaluation final {
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model);
 
 /*
- * The caller must first establish validate_static_compatibility(). A null
- * short-system scratch preserves the stateless local-copy path. A non-null
- * scratch must be independent, deep-owned, shape/unit matched, and contain
- * exact +0.0 charges; only its positions are refreshed, and failed calls need
- * not restore its private derived contents.
+ * The caller must first establish validate_static_compatibility(). All three
+ * scratch/cache pointers must be null for the stateless path or non-null for
+ * the stateful path. A non-null short-system scratch must be independent,
+ * deep-owned, shape/unit matched, and contain exact +0.0 charges; only its
+ * positions are refreshed. Force-producing stateful calls reuse the short
+ * parent's Evaluation storage. Force-free calls leave that storage and the
+ * Rust validation cache untouched. Failed calls need not restore private
+ * derived scratch/cache contents.
  */
 [[nodiscard]] bg_status evaluate_prevalidated(
     bg_backend lane,
@@ -44,6 +50,8 @@ struct Evaluation final {
     const bg_direct_ewald_model_v1 &direct_model,
     const bg_particle_mesh_reciprocal_model_v1 &reciprocal_model,
     bg_system *short_system_scratch,
+    cpu::Evaluation *short_parent_evaluation_scratch,
+    uint8_t *inout_rust_cpu_forcefield_validated,
     bool compute_forces,
     Evaluation *out_evaluation,
     bg_direct_ewald_error_v1 *out_error);

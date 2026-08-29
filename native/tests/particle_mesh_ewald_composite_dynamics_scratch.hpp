@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 namespace betelgeuze::native::tests {
 
@@ -12,6 +13,13 @@ struct ParticleMeshEwaldCompositeForceScratchSnapshot final {
     std::array<const double *, 3> addresses{};
     std::array<std::size_t, 3> sizes{};
     std::array<std::size_t, 3> capacities{};
+};
+
+struct ParticleMeshEwaldCompositeShortParentForceScratchSnapshot final {
+    std::array<const double *, 3> addresses{};
+    std::array<std::size_t, 3> sizes{};
+    std::array<std::size_t, 3> capacities{};
+    uint8_t rust_cpu_forcefield_validated = UINT8_C(0);
 };
 
 struct ParticleMeshEwaldCompositeShortSystemScratchSnapshot final {
@@ -25,8 +33,16 @@ void reserve_particle_mesh_ewald_composite_force_scratch(
     bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
     std::size_t capacity);
 
+void reserve_particle_mesh_ewald_composite_short_parent_force_scratch(
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    std::size_t capacity);
+
 [[nodiscard]] ParticleMeshEwaldCompositeForceScratchSnapshot
 particle_mesh_ewald_composite_force_scratch_snapshot(
+    const bg_particle_mesh_ewald_composite_simulation_v1 *simulation);
+
+[[nodiscard]] ParticleMeshEwaldCompositeShortParentForceScratchSnapshot
+particle_mesh_ewald_composite_short_parent_force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation);
 
 [[nodiscard]] ParticleMeshEwaldCompositeShortSystemScratchSnapshot
