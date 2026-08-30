@@ -9,6 +9,19 @@ from tools import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_OWNER_RECIPROCAL_WORKSPACE_REUSE_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_owner_reciprocal_workspace_reuse_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_OWNER_RECIPROCAL_WORKSPACE_REUSE_EVIDENCE_PRESENT,
+    reason=(
+        "PME Rust reciprocal-provider reciprocal workspace phase-reuse "
+        "evidence is verified from its exact frozen PR 463 object after "
+        "owner reciprocal-workspace reuse evidence is present"
+    ),
+)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:

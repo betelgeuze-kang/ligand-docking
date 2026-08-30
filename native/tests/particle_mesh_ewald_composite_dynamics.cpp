@@ -199,6 +199,55 @@ void require_rust_reciprocal_provider_force_scratch_sizes(
         message);
 }
 
+void require_empty_rust_reciprocal_workspace(
+    const RustReciprocalProviderForceScratchSnapshot &snapshot,
+    const char *message) {
+    require(
+        snapshot.workspace_struct_size == 0U &&
+            snapshot.workspace_abi_version == 0U &&
+            snapshot.workspace_state ==
+                BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_EMPTY &&
+            snapshot.workspace_reserved0 == 0U &&
+            snapshot.workspace_storage == nullptr &&
+            snapshot.workspace_length == 0U &&
+            snapshot.workspace_capacity == 0U &&
+            snapshot.workspace_reserved ==
+                std::array<std::uint64_t, 4>{0U, 0U, 0U, 0U},
+        message);
+}
+
+void require_ready_rust_reciprocal_workspace(
+    const RustReciprocalProviderForceScratchSnapshot &snapshot,
+    std::size_t required_length,
+    const char *message) {
+    require(
+        snapshot.workspace_struct_size ==
+                sizeof(bg_rust_particle_mesh_reciprocal_workspace_v1) &&
+            snapshot.workspace_abi_version ==
+                BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION &&
+            snapshot.workspace_state ==
+                BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_READY &&
+            snapshot.workspace_reserved0 == 0U &&
+            snapshot.workspace_storage != nullptr &&
+            snapshot.workspace_length == required_length &&
+            snapshot.workspace_capacity >= required_length &&
+            snapshot.workspace_reserved ==
+                std::array<std::uint64_t, 4>{0U, 0U, 0U, 0U},
+        message);
+}
+
+void require_same_rust_reciprocal_workspace_storage(
+    const RustReciprocalProviderForceScratchSnapshot &actual,
+    const RustReciprocalProviderForceScratchSnapshot &expected,
+    std::size_t required_length,
+    const char *message) {
+    require_ready_rust_reciprocal_workspace(
+        actual, required_length, message);
+    require(
+        actual.workspace_storage == expected.workspace_storage,
+        message);
+}
+
 ShortSystemScratchSnapshot short_system_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
     return betelgeuze::native::tests::
@@ -2252,6 +2301,8 @@ void verify_reciprocal_parent_force_scratch_reuse() {
 
 void verify_rust_reciprocal_provider_force_scratch_reuse() {
     constexpr std::size_t kReservedCapacity = 64U;
+    constexpr std::size_t kReciprocalWorkspaceLength =
+        16U * 16U * 16U + 16U + 16U + 16U;
     const Fixture fixture;
 
     {
@@ -2274,6 +2325,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         require(
             initial.capacities == std::array<std::size_t, 3>{0U, 0U, 0U},
             "new C++-lane PME Rust reciprocal-provider force scratch retained capacity");
+        require_empty_rust_reciprocal_workspace(
+            initial,
+            "new C++-lane PME Rust reciprocal workspace was not empty");
 
         for (const std::uint64_t step_count : {
                  UINT64_C(0),
@@ -2301,6 +2355,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
                 current,
                 0U,
                 "C++-lane integration populated Rust reciprocal-provider force scratch");
+            require_empty_rust_reciprocal_workspace(
+                current,
+                "C++-lane integration populated the Rust reciprocal workspace");
         }
     }
 
@@ -2327,6 +2384,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
                     reserved.capacities[axis] >= kReservedCapacity,
                 "PME Rust reciprocal-provider force scratch reserve failed");
         }
+        require_empty_rust_reciprocal_workspace(
+            reserved,
+            "force-scratch reserve populated the Rust reciprocal workspace");
 
         for (const std::uint64_t step_count : {
                  UINT64_C(0),
@@ -2345,6 +2405,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
                 current,
                 0U,
                 "C++-lane integration populated reserved Rust reciprocal-provider scratch");
+            require_empty_rust_reciprocal_workspace(
+                current,
+                "C++-lane integration populated the reserved owner's Rust reciprocal workspace");
         }
     }
 
@@ -2366,6 +2429,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         integrate(rust_context.get(), simulation.get(), UINT64_C(1));
         const RustReciprocalProviderForceScratchSnapshot stale =
             rust_reciprocal_provider_force_scratch_snapshot(simulation.get());
+        require_ready_rust_reciprocal_workspace(
+            stale, kReciprocalWorkspaceLength,
+            "first stateful Rust forceful integration did not provision the reciprocal workspace");
         const ForceBits stale_bits =
             rust_reciprocal_provider_force_scratch_bits(stale);
         const auto rust_checkpoint = checkpoint(simulation.get());
@@ -2380,6 +2446,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
             peer_empty,
             0U,
             "checkpoint load populated an empty Rust reciprocal-provider scratch");
+        require_empty_rust_reciprocal_workspace(
+            peer_empty,
+            "checkpoint load populated the second owner's Rust reciprocal workspace");
 
         const bg_dynamics_report_v1 report =
             integrate(cpp_context.get(), simulation.get(), UINT64_C(1));
@@ -2395,6 +2464,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
             after_cpp,
             stale,
             "C++-lane integration replaced stale Rust reciprocal-provider scratch storage");
+        require_same_rust_reciprocal_workspace_storage(
+            after_cpp, stale, kReciprocalWorkspaceLength,
+            "C++-lane interleave replaced the owner-private Rust reciprocal workspace");
         require(
             rust_reciprocal_provider_force_scratch_bits(after_cpp) ==
                 stale_bits,
@@ -2409,6 +2481,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
             peer_after_cpp,
             0U,
             "C++-lane integration populated empty Rust reciprocal-provider scratch");
+        require_empty_rust_reciprocal_workspace(
+            peer_after_cpp,
+            "C++-lane integration populated the second owner's Rust reciprocal workspace");
         require(
             stale_bits != reciprocal_parent_force_scratch_bits(
                               reciprocal_parent_force_scratch_snapshot(
@@ -2436,6 +2511,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     require(
         initial.capacities == std::array<std::size_t, 3>{0U, 0U, 0U},
         "new Rust-lane PME reciprocal-provider force scratch retained capacity");
+    require_empty_rust_reciprocal_workspace(
+        initial,
+        "new Rust-lane owner reciprocal workspace was not empty");
 
     const ReciprocalParentForceScratchSnapshot initial_parent =
         reciprocal_parent_force_scratch_snapshot(simulation.get());
@@ -2478,6 +2556,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_cpp_seed,
         0U,
         "C++ seed populated Rust reciprocal-provider force scratch");
+    require_empty_rust_reciprocal_workspace(
+        after_cpp_seed,
+        "C++ seed populated the Rust reciprocal workspace");
 
     const auto rust_start = checkpoint(simulation.get());
     require_status(
@@ -2516,6 +2597,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
                 "PME Rust reciprocal-provider force scratch channels aliased");
         }
     }
+    require_empty_rust_reciprocal_workspace(
+        reserved,
+        "Rust reciprocal-provider force reserve populated the reciprocal workspace");
 
     const auto before_zero = checkpoint(simulation.get());
     const bg_dynamics_report_v1 zero_report =
@@ -2538,6 +2622,14 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_zero,
         0U,
         "zero-step integration populated Rust reciprocal-provider force scratch");
+    require_empty_rust_reciprocal_workspace(
+        after_zero,
+        "stateful Rust force-free evaluation populated the reciprocal workspace");
+    const RustReciprocalProviderForceScratchSnapshot peer_after_zero_workspace =
+        rust_reciprocal_provider_force_scratch_snapshot(peer.get());
+    require_empty_rust_reciprocal_workspace(
+        peer_after_zero_workspace,
+        "second owner's stateful Rust force-free evaluation populated the reciprocal workspace");
     const ReciprocalParentForceScratchSnapshot parent_after_zero =
         reciprocal_parent_force_scratch_snapshot(simulation.get());
     require_same_reciprocal_parent_force_scratch_storage(
@@ -2572,14 +2664,62 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
 
     bg_dynamics_report_v1 last_report{};
     init_report(&last_report);
+    const void *owner_workspace_storage = nullptr;
+    const void *peer_workspace_storage = nullptr;
     for (const std::uint64_t step_count : {
              UINT64_C(1),
              UINT64_C(2),
          }) {
         const bg_dynamics_report_v1 report =
             integrate(context.get(), simulation.get(), step_count);
+        const RustReciprocalProviderForceScratchSnapshot
+            owner_after_forceful =
+                rust_reciprocal_provider_force_scratch_snapshot(
+                    simulation.get());
+        require_ready_rust_reciprocal_workspace(
+            owner_after_forceful, kReciprocalWorkspaceLength,
+            "stateful Rust forceful evaluation did not retain a ready reciprocal workspace");
+        if (owner_workspace_storage == nullptr) {
+            owner_workspace_storage = owner_after_forceful.workspace_storage;
+        } else {
+            require(
+                owner_after_forceful.workspace_storage ==
+                    owner_workspace_storage,
+                "repeated stateful Rust forceful evaluation replaced the reciprocal workspace");
+        }
+        const RustReciprocalProviderForceScratchSnapshot peer_before_forceful =
+            rust_reciprocal_provider_force_scratch_snapshot(peer.get());
+        if (peer_workspace_storage == nullptr) {
+            require_empty_rust_reciprocal_workspace(
+                peer_before_forceful,
+                "first owner's Rust evaluation populated the second owner's reciprocal workspace");
+        } else {
+            require_ready_rust_reciprocal_workspace(
+                peer_before_forceful, kReciprocalWorkspaceLength,
+                "first owner's Rust evaluation changed the second owner's reciprocal workspace state");
+            require(
+                peer_before_forceful.workspace_storage ==
+                    peer_workspace_storage,
+                "first owner's Rust evaluation replaced the second owner's reciprocal workspace");
+        }
         const bg_dynamics_report_v1 peer_report =
             integrate(context.get(), peer.get(), step_count);
+        const RustReciprocalProviderForceScratchSnapshot peer_after_forceful =
+            rust_reciprocal_provider_force_scratch_snapshot(peer.get());
+        require_ready_rust_reciprocal_workspace(
+            peer_after_forceful, kReciprocalWorkspaceLength,
+            "second owner's stateful Rust forceful evaluation did not provision its reciprocal workspace");
+        if (peer_workspace_storage == nullptr) {
+            peer_workspace_storage = peer_after_forceful.workspace_storage;
+            require(
+                peer_workspace_storage != owner_workspace_storage,
+                "independent owners shared Rust reciprocal workspace storage");
+        } else {
+            require(
+                peer_after_forceful.workspace_storage ==
+                    peer_workspace_storage,
+                "repeated second-owner evaluation replaced its Rust reciprocal workspace");
+        }
         require(
             std::memcmp(&report, &peer_report, sizeof(report)) == 0,
             "reused Rust reciprocal-provider scratch changed integration report bits");
@@ -2597,6 +2737,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
             current,
             kAtomCount,
             "integration retained the wrong Rust reciprocal-provider scratch size");
+        require(
+            current.workspace_storage == owner_workspace_storage,
+            "integration replaced the first owner's Rust reciprocal workspace");
         const ForceBits current_bits =
             rust_reciprocal_provider_force_scratch_bits(current);
         require(
@@ -2640,6 +2783,12 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         state_b,
         reserved,
         "state-B integration replaced Rust reciprocal-provider scratch storage");
+    require_ready_rust_reciprocal_workspace(
+        state_b, kReciprocalWorkspaceLength,
+        "state-B integration did not retain a ready Rust reciprocal workspace");
+    require(
+        state_b.workspace_storage == owner_workspace_storage,
+        "state-B integration replaced the Rust reciprocal workspace");
     const ForceBits forces_b =
         rust_reciprocal_provider_force_scratch_bits(state_b);
     require(
@@ -2668,6 +2817,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_load,
         state_b,
         "checkpoint reload replaced Rust reciprocal-provider scratch storage");
+    require_same_rust_reciprocal_workspace_storage(
+        after_load, state_b, kReciprocalWorkspaceLength,
+        "checkpoint reload replaced the owner-private Rust reciprocal workspace");
     require(
         rust_reciprocal_provider_force_scratch_bits(after_load) == forces_b,
         "checkpoint reload unexpectedly rewrote stale Rust reciprocal-provider scratch");
@@ -2701,6 +2853,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_restart_zero,
         state_b,
         "zero-step restart replaced stale Rust reciprocal-provider scratch storage");
+    require_same_rust_reciprocal_workspace_storage(
+        after_restart_zero, state_b, kReciprocalWorkspaceLength,
+        "zero-step restart replaced the owner-private Rust reciprocal workspace");
     require(
         rust_reciprocal_provider_force_scratch_bits(after_restart_zero) ==
             forces_b,
@@ -2743,6 +2898,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_resync,
         reserved,
         "forceful restart replaced Rust reciprocal-provider scratch storage");
+    require_same_rust_reciprocal_workspace_storage(
+        after_resync, state_b, kReciprocalWorkspaceLength,
+        "forceful restart replaced the owner-private Rust reciprocal workspace");
     const ForceBits resynced_bits =
         rust_reciprocal_provider_force_scratch_bits(after_resync);
     require(
@@ -2795,6 +2953,57 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         BG_STATUS_OK,
         "pre-alias absolute-step query failed");
 
+    std::array<std::uint8_t, sizeof(bg_dynamics_report_v1)>
+        workspace_prefix_before_alias{};
+    std::memcpy(
+        workspace_prefix_before_alias.data(),
+        after_resync.workspace_storage,
+        workspace_prefix_before_alias.size());
+    auto *const workspace_report_alias =
+        reinterpret_cast<bg_dynamics_report_v1 *>(
+            const_cast<void *>(after_resync.workspace_storage));
+    bg_direct_ewald_error_v1 workspace_report_alias_error{};
+    init_error(&workspace_report_alias_error);
+    require_status(
+        bg_context_integrate_particle_mesh_ewald_composite_v1(
+            context.get(), simulation.get(), UINT64_C(1),
+            workspace_report_alias, &workspace_report_alias_error),
+        BG_STATUS_INVALID_ARGUMENT,
+        "integration report output aliased the Rust reciprocal workspace");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle-mesh composite dynamics report output must not overlap another output or input owner") ==
+                0,
+        "Rust reciprocal workspace report alias returned the wrong error");
+    require(
+        workspace_report_alias_error.code == BG_DIRECT_EWALD_ERROR_NONE &&
+            workspace_report_alias_error.detail[0] == '\0' &&
+            std::memcmp(
+                after_resync.workspace_storage,
+                workspace_prefix_before_alias.data(),
+                workspace_prefix_before_alias.size()) == 0 &&
+            checkpoint(simulation.get()) == before_alias,
+        "rejected Rust reciprocal workspace report alias changed backing, error, or owner state");
+
+    auto *const workspace_step_alias = reinterpret_cast<std::uint64_t *>(
+        const_cast<void *>(after_resync.workspace_storage));
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+            simulation.get(), workspace_step_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "absolute-step output aliased the Rust reciprocal workspace");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "absolute_step output must not overlap particle-mesh composite dynamics owner storage") ==
+                0 &&
+            std::memcmp(
+                after_resync.workspace_storage,
+                workspace_prefix_before_alias.data(),
+                workspace_prefix_before_alias.size()) == 0,
+        "Rust reciprocal workspace absolute-step alias changed backing or returned the wrong error");
+
     for (std::size_t axis = 0U; axis < after_resync.addresses.size(); ++axis) {
         auto *const aliased_step = reinterpret_cast<std::uint64_t *>(
             const_cast<double *>(after_resync.addresses[axis] + 1U));
@@ -2815,6 +3024,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
             after_step_alias,
             after_resync,
             "rejected absolute-step alias changed Rust reciprocal-provider scratch storage");
+        require_same_rust_reciprocal_workspace_storage(
+            after_step_alias, after_resync, kReciprocalWorkspaceLength,
+            "rejected absolute-step alias changed the Rust reciprocal workspace");
         require(
             rust_reciprocal_provider_force_scratch_bits(after_step_alias) ==
                     resynced_bits &&
@@ -2875,6 +3087,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_view_alias,
         after_resync,
         "rejected particle-view alias changed Rust reciprocal-provider scratch storage");
+    require_same_rust_reciprocal_workspace_storage(
+        after_view_alias, after_resync, kReciprocalWorkspaceLength,
+        "rejected particle-view alias changed the Rust reciprocal workspace");
     require(
         rust_reciprocal_provider_force_scratch_bits(after_view_alias) ==
                 resynced_bits &&
@@ -2913,6 +3128,26 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     require(
         absolute_step_after_view_alias == absolute_step_before_alias,
         "rejected particle-view alias changed authoritative step state");
+
+    auto *const workspace_view_alias =
+        reinterpret_cast<bg_particle_soa_view *>(
+            const_cast<void *>(after_resync.workspace_storage));
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
+            simulation.get(), workspace_view_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "particle-view output aliased the Rust reciprocal workspace");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle view output must not overlap particle-mesh composite dynamics owner storage") ==
+                0 &&
+            std::memcmp(
+                after_resync.workspace_storage,
+                workspace_prefix_before_alias.data(),
+                workspace_prefix_before_alias.size()) == 0 &&
+            checkpoint(simulation.get()) == before_alias,
+        "Rust reciprocal workspace particle-view alias changed backing/state or returned the wrong error");
 }
 
 void verify_short_system_scratch_reuse() {

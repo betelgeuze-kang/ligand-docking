@@ -10,6 +10,13 @@ extern "C" {
 
 #define BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION UINT32_C(1)
 #define BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY UINT32_C(256)
+#define BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_EMPTY UINT32_C(0)
+#define BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_READY \
+    UINT32_C(0x52575331)
+#define BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_LEASED \
+    UINT32_C(0x4c455331)
+#define BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_ELEMENT_SIZE_BYTES \
+    UINT32_C(16)
 
 typedef enum bg_rust_particle_mesh_reciprocal_error_code_v1 {
     BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_NONE = 0,
@@ -64,6 +71,18 @@ typedef struct bg_rust_particle_mesh_reciprocal_force_output_v1 {
     uint64_t reserved[4];
 } bg_rust_particle_mesh_reciprocal_force_output_v1;
 
+typedef struct bg_rust_particle_mesh_reciprocal_workspace_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint32_t state;
+    uint32_t reserved0;
+    void *storage;
+    /* Logical length and allocation capacity in frozen two-f64 complex elements. */
+    size_t length;
+    size_t capacity;
+    uint64_t reserved[4];
+} bg_rust_particle_mesh_reciprocal_workspace_v1;
+
 typedef struct bg_rust_particle_mesh_reciprocal_error_v1 {
     uint32_t struct_size;
     uint32_t abi_version;
@@ -89,6 +108,18 @@ int32_t bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
     bg_rust_particle_mesh_reciprocal_energy_v1 *out_energy,
     bg_rust_particle_mesh_reciprocal_force_output_v1 *out_forces,
     bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
+
+int32_t
+bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_v1(
+    const bg_rust_particle_mesh_reciprocal_system_v1 *system,
+    const bg_rust_particle_mesh_reciprocal_model_v1 *model,
+    bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace,
+    bg_rust_particle_mesh_reciprocal_energy_v1 *out_energy,
+    bg_rust_particle_mesh_reciprocal_force_output_v1 *out_forces,
+    bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
+
+void bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(
+    bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace);
 
 #if defined(__cplusplus)
 }  // extern "C"
