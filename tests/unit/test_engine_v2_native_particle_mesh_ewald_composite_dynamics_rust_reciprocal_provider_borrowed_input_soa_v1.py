@@ -4,35 +4,42 @@ from pathlib import Path
 import pytest
 
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_source_soa_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_v1
     as verifier,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_BORROWED_INPUT_SOA_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_borrowed_input_soa_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_BORROWED_INPUT_SOA_EVIDENCE_PRESENT,
-    reason=(
-        "PME Rust reciprocal provider force-source SoA evidence is verified "
-        "from its exact frozen PR 458 object after provider borrowed-input SoA "
-        "evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 278
+    assert result["source_count"] == 284
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
     validation = profile["validation"]
     for key in (
-        "successful_stateful_forceful_rust_reciprocal_provider_force_source_soa",
-        "steady_state_rust_reciprocal_provider_force_source_soa",
+        "all_hidden_rust_reciprocal_provider_modes_borrow_input_soa",
+        "energy_only_provider_input_borrowed",
+        "transactional_force_provider_input_borrowed",
+        "direct_force_provider_input_borrowed",
+        "provider_input_channels_borrowed_call_local",
+        "provider_channel_copy_allocations_elided",
+        "provider_position_aos_rematerialization_elided",
+        "provider_input_borrow_after_complete_alias_preflight",
+        "zero_count_null_channels_use_empty_slices",
+        "borrowed_input_not_retained",
+        "shared_owned_and_borrowed_calculation_pipeline",
+        "remaining_fallible_workspaces_preserved",
+        "energy_only_force_storage_disabled_preserved",
+        "transactional_force_internal_vec_preserved",
+        "direct_force_caller_owned_scratch_preserved",
+        "transactional_energy_and_force_commit_preserved",
+        "direct_energy_success_only_commit_preserved",
+        "stateless_hidden_rust_provider_uses_call_local_borrowed_input",
+        "stateful_force_free_hidden_rust_provider_uses_call_local_borrowed_input",
+        "stateful_forceful_hidden_rust_provider_uses_call_local_borrowed_input",
+        "public_bg_system_owned_storage_preserved",
+        "native_cpp_adapter_abi_preserved",
         "rust_only_forceful_stateful_dispatch",
         "provider_force_source_result_is_private_internal_cpp_type",
         "provider_force_scratch_is_composite_local_force_source",
@@ -53,11 +60,30 @@ def test_exact_profile_manifest_and_contracts() -> None:
         assert implementation[key]
     for key in (
         "allocation_free_claimed",
+        "provider_allocation_free_claimed",
+        "steady_state_allocation_free_claimed",
+        "all_remaining_allocations_elided_claimed",
+        "all_remaining_reciprocal_allocations_elided_claimed",
+        "transactional_force_internal_vec_allocation_elided_claimed",
+        "neutrality_sort_allocation_elided_claimed",
+        "particle_assignment_allocation_elided_claimed",
+        "spectrum_allocation_elided_claimed",
+        "fft_scratch_allocation_elided_claimed",
+        "reciprocal_axis_data_allocation_elided_claimed",
+        "universal_input_allocation_elision_claimed",
+        "public_api_zero_copy_input_claimed",
+        "public_bg_system_borrowed_ownership_claimed",
+        "persistent_input_view_claimed",
+        "cross_call_input_borrowing_claimed",
+        "universal_repository_input_borrowing_claimed",
         "universal_reciprocal_parent_allocation_elision_claimed",
+        "scientific_claimed",
+        "scientific_equivalence_claimed",
         "timing_claimed",
         "performance_claimed",
         "acceleration_claimed",
         "cross_lane_bit_parity_claimed",
+        "reciprocal_failure_storage_retention_claimed",
         "scientific_failure_force_storage_retention_claimed",
         "unconditional_failure_storage_retention_claimed",
         "fixed64_cpu_v7_qualification_invoked",
@@ -67,8 +93,18 @@ def test_exact_profile_manifest_and_contracts() -> None:
         assert implementation[key] is False
     for key in (
         "four_canonical_vendor_pairs_byte_identical",
-        "eight_production_paths_exact_hashes",
-        "native_regression_path_exact_hash",
+        "predecessor_eight_production_paths_exact_and_unchanged",
+        "predecessor_native_regression_path_exact_and_unchanged",
+        "single_rust_production_path_delta_exact",
+        "removed_provider_copy_allocation_sites_absent",
+        "borrowed_input_constructed_after_complete_preflight",
+        "zero_count_raw_slice_formation_avoided",
+        "borrowed_input_call_local_and_not_retained",
+        "owned_and_borrowed_pipeline_shared_exact",
+        "owned_and_three_borrowed_modes_bit_identical",
+        "four_input_channel_aliases_fail_before_borrow",
+        "provider_input_bits_retained_across_success_and_failure",
+        "remaining_allocation_failure_boundaries_preserved",
         "exact_public_symbol_surfaces",
         "internal_force_source_symbols_absent_from_public_surfaces",
         "checkpoint_and_static_fingerprint_unchanged",
@@ -87,24 +123,24 @@ def test_exact_profile_manifest_and_contracts() -> None:
 
 
 def test_exact_anchors_and_delta() -> None:
-    assert verifier.PREDECESSOR["pull_request"] == 457
+    assert verifier.PREDECESSOR["pull_request"] == 458
     assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 453
     assert verifier.INHERITED_PREDECESSOR["pull_request"] == 440
     assert verifier.DIRECT_FORCE_OUTPUT_PRECEDENT["pull_request"] == 380
     assert len(verifier.EVIDENCE_PATHS) == 6
-    assert len(verifier.IMPLEMENTATION_DELTA_PATHS) == 8
-    assert len(verifier.EXPECTED_DELTA_PATHS) == 17
+    assert len(verifier.IMPLEMENTATION_DELTA_PATHS) == 1
+    assert len(verifier.EXPECTED_DELTA_PATHS) == 9
     assert verifier.current_delta_paths() == verifier.EXPECTED_DELTA_PATHS
 
 
 def test_workflow_static_trigger_closure_and_bodies() -> None:
-    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 96
-    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 96
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 102
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 102
     workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     verifier.require_workflow_contract(workflow)
     assert workflow == verifier.expected_workflow_document()
     assert workflow.count(verifier.PINNED_CHECKOUT_ACTION) == 4
-    assert "refs/pull/457/head" in workflow
+    assert "refs/pull/458/head" in workflow
     assert verifier.PREDECESSOR["reviewed_head"] in workflow
     assert verifier.PREDECESSOR["merge_commit"] in workflow
     assert verifier.PREDECESSOR["merge_tree"] in workflow
@@ -127,9 +163,12 @@ def test_workflow_job_body_mutation_fails_closed(job: str) -> None:
         verifier.require_workflow_contract(mutated)
 
 
-def test_force_source_contract_hashes_and_mirrors() -> None:
-    verifier.require_rust_reciprocal_provider_force_source_soa_contract(ROOT)
-    assert len(verifier.EXPECTED_PRODUCTION_SHA256) == 8
+def test_borrowed_input_contract_hashes_and_frozen_predecessor_mirrors() -> None:
+    verifier.require_rust_reciprocal_provider_borrowed_input_soa_contract(ROOT)
+    assert len(verifier.EXPECTED_PREDECESSOR_PRODUCTION_SHA256) == 8
+    assert verifier.IMPLEMENTATION_DELTA_PATHS == (
+        verifier.RUST_RECIPROCAL_RELATIVE_PATH,
+    )
     assert len(verifier.CANONICAL_VENDOR_MIRROR_PAIRS) == 4
     for relative in verifier.CANONICAL_VENDOR_MIRROR_PAIRS:
         assert (
@@ -171,8 +210,8 @@ def test_predecessor_workflow_executes_exact_frozen_merge() -> None:
         ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH
     ).read_text()
     for token in (
-        "Materialize exact PR 457 evidence and reviewed head",
-        "Verify exact frozen PR 457 evidence",
+        "Materialize exact PR 458 evidence and reviewed head",
+        "Verify exact frozen PR 458 evidence",
         'git checkout --detach --quiet "$frozen"',
         "trap restore EXIT",
         verifier.PREDECESSOR["reviewed_head"],
@@ -202,8 +241,8 @@ def test_predecessor_unit_skip_is_exact_and_frozen() -> None:
     ).stdout.decode()
     transformed = verifier.expected_frozen_predecessor_unit(frozen)
     assert transformed == (ROOT / verifier.PREDECESSOR_UNIT_RELATIVE_PATH).read_text()
-    assert "PME_RUST_RECIPROCAL_PROVIDER_FORCE_SOURCE_SOA_EVIDENCE_PRESENT" in transformed
-    assert "exact frozen PR 457 object" in transformed
+    assert "PME_RUST_RECIPROCAL_PROVIDER_BORROWED_INPUT_SOA_EVIDENCE_PRESENT" in transformed
+    assert "exact frozen PR 458 object" in transformed
 
 
 def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
@@ -223,9 +262,12 @@ def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
 def test_manifest_and_profile_mutations_are_noncanonical() -> None:
     manifest_raw = (ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes()
     manifest = json.loads(manifest_raw)
-    assert len(manifest["files"]) == 278
+    assert len(manifest["files"]) == 284
     manifest["files"][0]["sha256"] = "0" * 64
     assert verifier.canonical_bytes(manifest) != manifest_raw
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     profile["authority"]["product_authority"] = True
+    assert profile != verifier.build_profile(manifest_raw)
+    profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
+    profile["implementation"]["allocation_free_claimed"] = True
     assert profile != verifier.build_profile(manifest_raw)
