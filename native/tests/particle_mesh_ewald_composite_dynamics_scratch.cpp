@@ -157,6 +157,21 @@ particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch_snapshot(
         scratch.y.capacity(),
         scratch.z.capacity(),
     };
+    snapshot.workspace_struct_size =
+        scratch.reciprocal_workspace.struct_size;
+    snapshot.workspace_abi_version =
+        scratch.reciprocal_workspace.abi_version;
+    snapshot.workspace_state = scratch.reciprocal_workspace.state;
+    snapshot.workspace_reserved0 = scratch.reciprocal_workspace.reserved0;
+    snapshot.workspace_storage = scratch.reciprocal_workspace.storage;
+    snapshot.workspace_length = scratch.reciprocal_workspace.length;
+    snapshot.workspace_capacity = scratch.reciprocal_workspace.capacity;
+    snapshot.workspace_reserved = {
+        scratch.reciprocal_workspace.reserved[0],
+        scratch.reciprocal_workspace.reserved[1],
+        scratch.reciprocal_workspace.reserved[2],
+        scratch.reciprocal_workspace.reserved[3],
+    };
     return snapshot;
 }
 

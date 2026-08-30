@@ -2,6 +2,7 @@
 #define BETELGEUZE_NATIVE_PARTICLE_MESH_RECIPROCAL_RUST_EVALUATOR_HPP
 
 #include "cpp_evaluator.hpp"
+#include "rust_provider.h"
 
 #include <vector>
 
@@ -11,6 +12,14 @@ struct ProviderForceScratch final {
     std::vector<double> x;
     std::vector<double> y;
     std::vector<double> z;
+    bg_rust_particle_mesh_reciprocal_workspace_v1 reciprocal_workspace{};
+
+    ProviderForceScratch() noexcept = default;
+    ~ProviderForceScratch() noexcept;
+    ProviderForceScratch(const ProviderForceScratch &) = delete;
+    ProviderForceScratch &operator=(const ProviderForceScratch &) = delete;
+    ProviderForceScratch(ProviderForceScratch &&) = delete;
+    ProviderForceScratch &operator=(ProviderForceScratch &&) = delete;
 };
 
 struct ProviderForceSourceResult final {

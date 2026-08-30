@@ -73,6 +73,27 @@ bool vector_storage_overlaps(
         values.data(), values.size() * sizeof(Type), output);
 }
 
+bool rust_reciprocal_workspace_storage_overlaps(
+    const bg_rust_particle_mesh_reciprocal_workspace_v1 &workspace,
+    const ByteRange &output) noexcept {
+    constexpr std::size_t kElementSize =
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_ELEMENT_SIZE_BYTES;
+    static_assert(kElementSize == 2U * sizeof(double));
+    if (workspace.length > workspace.capacity) {
+        return true;
+    }
+    if (workspace.capacity == 0U) {
+        return workspace.storage != nullptr || workspace.length != 0U;
+    }
+    if (workspace.storage == nullptr ||
+        workspace.capacity >
+            std::numeric_limits<std::size_t>::max() / kElementSize) {
+        return true;
+    }
+    return fixed_storage_overlaps(
+        workspace.storage, workspace.capacity * kElementSize, output);
+}
+
 bool counted_storage_overlaps(
     const void *pointer,
     uint64_t element_count,
@@ -221,7 +242,10 @@ bool owner_storage_overlaps(
         vector_storage_overlaps(
             owner.rust_reciprocal_provider_force_scratch.y, output) ||
         vector_storage_overlaps(
-            owner.rust_reciprocal_provider_force_scratch.z, output)) {
+            owner.rust_reciprocal_provider_force_scratch.z, output) ||
+        rust_reciprocal_workspace_storage_overlaps(
+            owner.rust_reciprocal_provider_force_scratch.reciprocal_workspace,
+            output)) {
         return true;
     }
     if (owner.simulation == nullptr) {
@@ -368,20 +392,10 @@ bg_status validate_integrate_outputs(
             BG_STATUS_INVALID_ARGUMENT,
             "particle-mesh composite dynamics typed-error output must be non-null and naturally aligned");
     }
-    bg_status status = validate_typed_error_descriptor(*out_error);
-    if (status != BG_STATUS_OK) {
-        return status;
-    }
     if (out_report != nullptr && !pointer_is_aligned(out_report)) {
         return fail(
             BG_STATUS_INVALID_ARGUMENT,
             "particle-mesh composite dynamics report output must be naturally aligned");
-    }
-    if (out_report != nullptr) {
-        status = validate_report_descriptor(*out_report);
-        if (status != BG_STATUS_OK) {
-            return status;
-        }
     }
 
     ByteRange error_range;
@@ -409,6 +423,17 @@ bg_status validate_integrate_outputs(
             return fail(
                 BG_STATUS_INVALID_ARGUMENT,
                 "particle-mesh composite dynamics report output must not overlap another output or input owner");
+        }
+    }
+
+    bg_status status = validate_typed_error_descriptor(*out_error);
+    if (status != BG_STATUS_OK) {
+        return status;
+    }
+    if (out_report != nullptr) {
+        status = validate_report_descriptor(*out_report);
+        if (status != BG_STATUS_OK) {
+            return status;
         }
     }
     return BG_STATUS_OK;

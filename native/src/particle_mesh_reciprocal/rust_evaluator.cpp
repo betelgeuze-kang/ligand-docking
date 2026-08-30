@@ -46,6 +46,11 @@ bool provider_code_is_valid(std::int32_t code) noexcept {
 
 }  // namespace
 
+ProviderForceScratch::~ProviderForceScratch() noexcept {
+    bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(
+        &reciprocal_workspace);
+}
+
 static bg_status evaluate_impl(
     const bg_system &system,
     const bg_particle_mesh_reciprocal_model_v1 &model,
@@ -69,6 +74,9 @@ static bg_status evaluate_impl(
             bg_rust_particle_mesh_reciprocal_force_output_v1>);
     static_assert(
         std::is_standard_layout_v<
+            bg_rust_particle_mesh_reciprocal_workspace_v1>);
+    static_assert(
+        std::is_standard_layout_v<
             bg_rust_particle_mesh_reciprocal_error_v1>);
     static_assert(
         sizeof(bg_rust_particle_mesh_reciprocal_system_v1) == 80U);
@@ -78,6 +86,46 @@ static bg_status evaluate_impl(
         sizeof(bg_rust_particle_mesh_reciprocal_energy_v1) == 48U);
     static_assert(
         sizeof(bg_rust_particle_mesh_reciprocal_force_output_v1) == 72U);
+    static_assert(
+        sizeof(bg_rust_particle_mesh_reciprocal_workspace_v1) == 72U);
+    static_assert(
+        alignof(bg_rust_particle_mesh_reciprocal_workspace_v1) == 8U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, struct_size) ==
+        0U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, abi_version) ==
+        4U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, state) == 8U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, reserved0) ==
+        12U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, storage) ==
+        16U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, length) ==
+        24U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, capacity) ==
+        32U);
+    static_assert(
+        offsetof(bg_rust_particle_mesh_reciprocal_workspace_v1, reserved) ==
+        40U);
+    static_assert(
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_EMPTY ==
+        UINT32_C(0));
+    static_assert(
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_READY ==
+        UINT32_C(0x52575331));
+    static_assert(
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_LEASED ==
+        UINT32_C(0x4c455331));
+    static_assert(!std::is_copy_constructible_v<ProviderForceScratch>);
+    static_assert(!std::is_copy_assignable_v<ProviderForceScratch>);
+    static_assert(!std::is_move_constructible_v<ProviderForceScratch>);
+    static_assert(!std::is_move_assignable_v<ProviderForceScratch>);
     static_assert(
         sizeof(bg_rust_particle_mesh_reciprocal_error_v1) == 304U);
 #define BG_ASSERT_PMR_CODE(name)                                          \
@@ -211,9 +259,10 @@ static bg_status evaluate_impl(
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
     const bool direct_force_output = reuse_force_storage && compute_forces;
     const std::int32_t raw_status = direct_force_output
-        ? bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
-              &provider_system, &provider_model, &provider_energy,
-              force_pointer, &provider_error)
+        ? bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_v1(
+              &provider_system, &provider_model,
+              &active_provider_force_scratch->reciprocal_workspace,
+              &provider_energy, force_pointer, &provider_error)
         : bg_rust_particle_mesh_reciprocal_evaluate_v1(
               &provider_system, &provider_model,
               compute_forces ? UINT8_C(1) : UINT8_C(0), &provider_energy,

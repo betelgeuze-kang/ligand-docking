@@ -3,6 +3,8 @@
 
 #include "betelgeuze/particle_mesh_ewald_composite_dynamics.h"
 
+#include "../src/particle_mesh_reciprocal/rust_provider.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -38,6 +40,15 @@ struct ParticleMeshEwaldCompositeRustReciprocalProviderForceScratchSnapshot fina
     std::array<const double *, 3> addresses{};
     std::array<std::size_t, 3> sizes{};
     std::array<std::size_t, 3> capacities{};
+    std::uint32_t workspace_struct_size = 0U;
+    std::uint32_t workspace_abi_version = 0U;
+    std::uint32_t workspace_state =
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_EMPTY;
+    std::uint32_t workspace_reserved0 = 0U;
+    const void *workspace_storage = nullptr;
+    std::size_t workspace_length = 0U;
+    std::size_t workspace_capacity = 0U;
+    std::array<std::uint64_t, 4> workspace_reserved{};
 };
 
 struct ParticleMeshEwaldCompositeShortSystemScratchSnapshot final {
