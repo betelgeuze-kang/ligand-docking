@@ -356,7 +356,6 @@ static bg_status evaluate_impl(
         static_cast<std::uint32_t>(sizeof(provider_error));
     provider_error.abi_version =
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
-    const bool direct_force_output = reuse_force_storage && compute_forces;
     std::int32_t raw_status;
     if (out_provider_force_source_result != nullptr) {
         raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
@@ -365,16 +364,20 @@ static bg_status evaluate_impl(
             &active_provider_force_scratch->neutrality_sort_scratch,
             &active_provider_force_scratch->particle_assignment_scratch,
             &provider_energy, force_pointer, &provider_error);
-    } else if (direct_force_output) {
+    } else if (reuse_force_storage && compute_forces) {
         raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_v1(
             &provider_system, &provider_model,
             &active_provider_force_scratch->reciprocal_workspace,
             &provider_energy, force_pointer, &provider_error);
+    } else if (compute_forces) {
+        raw_status =
+            bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+                &provider_system, &provider_model, &provider_energy,
+                force_pointer, &provider_error);
     } else {
         raw_status = bg_rust_particle_mesh_reciprocal_evaluate_v1(
             &provider_system, &provider_model,
-            compute_forces ? UINT8_C(1) : UINT8_C(0), &provider_energy,
-            force_pointer, &provider_error);
+            UINT8_C(0), &provider_energy, force_pointer, &provider_error);
     }
     const bg_status status = normalize_provider_status(raw_status);
     provider_error.detail[
