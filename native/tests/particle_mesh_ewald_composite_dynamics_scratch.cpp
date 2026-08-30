@@ -54,6 +54,23 @@ void reserve_particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratc
     scratch.z.reserve(capacity);
 }
 
+void shrink_particle_mesh_ewald_composite_rust_reciprocal_provider_neutrality_sort_scratch_for_test(
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    std::size_t logical_length) {
+    assert(simulation != nullptr);
+    auto &scratch = simulation->rust_reciprocal_provider_force_scratch
+                        .neutrality_sort_scratch;
+    assert(
+        scratch.state ==
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_STATE_READY);
+    assert(logical_length < scratch.length);
+    assert(logical_length < scratch.capacity);
+    // The descriptor exclusively owns a Vec<f64> allocation while no Rust Vec
+    // is live. f64 has no destructor, so shortening only converts the tail to
+    // spare capacity; the next provider prepare call rewrites it before use.
+    scratch.length = logical_length;
+}
+
 ParticleMeshEwaldCompositeForceScratchSnapshot
 particle_mesh_ewald_composite_force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
@@ -171,6 +188,24 @@ particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch_snapshot(
         scratch.reciprocal_workspace.reserved[1],
         scratch.reciprocal_workspace.reserved[2],
         scratch.reciprocal_workspace.reserved[3],
+    };
+    snapshot.neutrality_sort_struct_size =
+        scratch.neutrality_sort_scratch.struct_size;
+    snapshot.neutrality_sort_abi_version =
+        scratch.neutrality_sort_scratch.abi_version;
+    snapshot.neutrality_sort_state = scratch.neutrality_sort_scratch.state;
+    snapshot.neutrality_sort_reserved0 =
+        scratch.neutrality_sort_scratch.reserved0;
+    snapshot.neutrality_sort_storage =
+        scratch.neutrality_sort_scratch.storage;
+    snapshot.neutrality_sort_length = scratch.neutrality_sort_scratch.length;
+    snapshot.neutrality_sort_capacity =
+        scratch.neutrality_sort_scratch.capacity;
+    snapshot.neutrality_sort_reserved = {
+        scratch.neutrality_sort_scratch.reserved[0],
+        scratch.neutrality_sort_scratch.reserved[1],
+        scratch.neutrality_sort_scratch.reserved[2],
+        scratch.neutrality_sort_scratch.reserved[3],
     };
     return snapshot;
 }

@@ -49,6 +49,15 @@ struct ParticleMeshEwaldCompositeRustReciprocalProviderForceScratchSnapshot fina
     std::size_t workspace_length = 0U;
     std::size_t workspace_capacity = 0U;
     std::array<std::uint64_t, 4> workspace_reserved{};
+    std::uint32_t neutrality_sort_struct_size = 0U;
+    std::uint32_t neutrality_sort_abi_version = 0U;
+    std::uint32_t neutrality_sort_state =
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_STATE_EMPTY;
+    std::uint32_t neutrality_sort_reserved0 = 0U;
+    const void *neutrality_sort_storage = nullptr;
+    std::size_t neutrality_sort_length = 0U;
+    std::size_t neutrality_sort_capacity = 0U;
+    std::array<std::uint64_t, 4> neutrality_sort_reserved{};
 };
 
 struct ParticleMeshEwaldCompositeShortSystemScratchSnapshot final {
@@ -77,6 +86,10 @@ void reserve_particle_mesh_ewald_composite_reciprocal_parent_force_scratch(
 void reserve_particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch(
     bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
     std::size_t capacity);
+
+void shrink_particle_mesh_ewald_composite_rust_reciprocal_provider_neutrality_sort_scratch_for_test(
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    std::size_t logical_length);
 
 [[nodiscard]] ParticleMeshEwaldCompositeForceScratchSnapshot
 particle_mesh_ewald_composite_force_scratch_snapshot(
