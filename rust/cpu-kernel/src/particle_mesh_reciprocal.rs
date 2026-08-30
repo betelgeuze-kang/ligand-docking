@@ -164,8 +164,7 @@ use fft::Complex;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AllocationSite {
     ParticleAssignments,
-    SpectrumAndFftLineScratch,
-    ReciprocalAxisData,
+    ReciprocalWorkspace,
     ForceOutput,
     NeutralitySort,
 }
@@ -174,10 +173,9 @@ impl AllocationSite {
     const fn detail(self) -> &'static str {
         match self {
             Self::ParticleAssignments => "particle assignment allocation failed",
-            Self::SpectrumAndFftLineScratch => {
-                "particle-mesh spectrum and FFT line-scratch allocation failed"
+            Self::ReciprocalWorkspace => {
+                "particle-mesh spectrum, FFT line-scratch, and reciprocal axis-data allocation failed"
             }
-            Self::ReciprocalAxisData => "reciprocal axis-data allocation failed",
             Self::ForceOutput => "particle force-output allocation failed",
             Self::NeutralitySort => "neutrality summation scratch allocation failed",
         }
@@ -537,22 +535,33 @@ struct InternalEvaluation {
     evaluation: ParticleMeshReciprocalEvaluation,
 }
 
-fn spectrum_and_fft_line_scratch(
-    validated: &ValidatedInput,
-) -> Result<Vec<Complex>, AllocationFailure> {
-    let line_count = validated.dimensions.into_iter().max().unwrap_or(0);
-    let storage_count = validated
-        .mesh_point_count
-        .checked_add(line_count)
-        .expect("validated spectrum and FFT line-scratch count fits usize");
-    let mut storage = Vec::new();
-    fallible_reserve_exact(
-        &mut storage,
-        storage_count,
-        AllocationSite::SpectrumAndFftLineScratch,
-    )?;
-    storage.resize(storage_count, Complex::default());
-    Ok(storage)
+struct ReciprocalWorkspace {
+    storage: Vec<Complex>,
+}
+
+impl ReciprocalWorkspace {
+    fn new(validated: &ValidatedInput) -> Result<Self, AllocationFailure> {
+        let axis_data_count = reciprocal_axis_data_count(validated.dimensions);
+        let storage_count = validated
+            .mesh_point_count
+            .checked_add(axis_data_count)
+            .expect("validated reciprocal workspace count fits usize");
+        let mut storage = Vec::new();
+        fallible_reserve_exact(
+            &mut storage,
+            storage_count,
+            AllocationSite::ReciprocalWorkspace,
+        )?;
+        storage.resize(storage_count, Complex::default());
+        Ok(Self { storage })
+    }
+}
+
+fn reciprocal_axis_data_count(dimensions: [usize; 3]) -> usize {
+    dimensions
+        .into_iter()
+        .try_fold(0_usize, usize::checked_add)
+        .expect("validated reciprocal axis-data count fits usize")
 }
 
 #[derive(Clone, Copy)]
@@ -582,25 +591,44 @@ fn compute_with_transform<I: ReciprocalInput + ?Sized>(
         (0..particle_count)
             .map(|particle| assignment(input.position(particle), cell, validated.dimensions)),
     );
-    let mut spectrum_and_fft_line_storage =
-        spectrum_and_fft_line_scratch(&validated).map_err(ParticleMeshReciprocalError::from)?;
-    let (spectrum, fft_line_scratch) =
-        spectrum_and_fft_line_storage.split_at_mut(validated.mesh_point_count);
+    let mut reciprocal_workspace =
+        ReciprocalWorkspace::new(&validated).map_err(ParticleMeshReciprocalError::from)?;
+    let line_count = validated.dimensions.into_iter().max().unwrap_or(0);
+    let (spectrum, reciprocal_tail) = reciprocal_workspace
+        .storage
+        .split_at_mut(validated.mesh_point_count);
     debug_assert_eq!(
-        fft_line_scratch.len(),
-        validated.dimensions.into_iter().max().unwrap_or(0)
+        reciprocal_tail.len(),
+        reciprocal_axis_data_count(validated.dimensions)
     );
+    debug_assert!(line_count <= reciprocal_tail.len());
     spread_charges(spectrum, validated.dimensions, &assignments, charges);
-    transform(spectrum, validated.dimensions, false, fft_line_scratch);
+    transform(
+        spectrum,
+        validated.dimensions,
+        false,
+        &mut reciprocal_tail[..line_count],
+    );
 
-    let reciprocal = apply_reciprocal_operator(input, &validated, spectrum)?;
+    fill_reciprocal_axis_data(
+        &mut *reciprocal_tail,
+        validated.dimensions,
+        cell.lengths_angstrom,
+    );
+
+    let reciprocal = apply_reciprocal_operator(input, &validated, spectrum, &*reciprocal_tail);
     let reciprocal_space_kcal_per_mol = reciprocal.energy;
 
     let (forces_kcal_per_mol_angstrom, all_forces_are_finite) = if matches!(
         force_mode,
         ForceStorageMode::Transactional | ForceStorageMode::Direct(_)
     ) {
-        transform(spectrum, validated.dimensions, true, fft_line_scratch);
+        transform(
+            spectrum,
+            validated.dimensions,
+            true,
+            &mut reciprocal_tail[..line_count],
+        );
         let scaled_grid_multiplier = reciprocal.grid_derivative_scale / RESCUE_SCALE;
         let (forces, all_forces_are_finite) = match force_mode {
             ForceStorageMode::Transactional => {
@@ -677,19 +705,21 @@ fn apply_reciprocal_operator<I: ReciprocalInput + ?Sized>(
     input: &I,
     validated: &ValidatedInput,
     spectrum: &mut [Complex],
-) -> Result<ReciprocalOperator, ParticleMeshReciprocalError> {
+    reciprocal_axis_data: &[Complex],
+) -> ReciprocalOperator {
     let settings = input.settings();
-    let cell = input.cell();
     let alpha = settings.alpha_per_angstrom;
     let energy_prefactor = COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / settings.dielectric
         * core::f64::consts::TAU
         / validated.volume_angstrom_cubed;
     let grid_derivative_scale =
         2.0 * energy_prefactor * bounded_usize_to_f64(validated.mesh_point_count);
-    let dimension_data_storage = reciprocal_axis_data(validated.dimensions, cell.lengths_angstrom)
-        .map_err(ParticleMeshReciprocalError::from)?;
     let [x_count, y_count, z_count] = validated.dimensions;
-    let (x_axis_data, yz_axis_data) = dimension_data_storage.split_at(x_count);
+    debug_assert_eq!(
+        reciprocal_axis_data.len(),
+        reciprocal_axis_data_count(validated.dimensions)
+    );
+    let (x_axis_data, yz_axis_data) = reciprocal_axis_data.split_at(x_count);
     let (y_axis_data, z_axis_data) = yz_axis_data.split_at(y_count);
     debug_assert_eq!(z_axis_data.len(), z_count);
     let dimension_data = [x_axis_data, y_axis_data, z_axis_data];
@@ -704,12 +734,12 @@ fn apply_reciprocal_operator<I: ReciprocalInput + ?Sized>(
                     spectrum[grid_index] = Complex::default();
                     continue;
                 }
-                let wave_squared = dimension_data[0][x].wave_squared
-                    + dimension_data[1][y].wave_squared
-                    + dimension_data[2][z].wave_squared;
-                let assignment_modulus = dimension_data[0][x].assignment_modulus
-                    * dimension_data[1][y].assignment_modulus
-                    * dimension_data[2][z].assignment_modulus;
+                let wave_squared = dimension_data[0][x].real
+                    + dimension_data[1][y].real
+                    + dimension_data[2][z].real;
+                let assignment_modulus = dimension_data[0][x].imaginary
+                    * dimension_data[1][y].imaginary
+                    * dimension_data[2][z].imaginary;
                 let damping_exponent = -wave_squared / (4.0 * alpha * alpha);
                 let damping = libm::exp(damping_exponent);
                 let influence = damping / wave_squared / (assignment_modulus * assignment_modulus);
@@ -749,7 +779,7 @@ fn apply_reciprocal_operator<I: ReciprocalInput + ?Sized>(
             }
         }
     }
-    Ok(ReciprocalOperator {
+    ReciprocalOperator {
         energy: complete_energy(
             energy_prefactor,
             reciprocal_sum.total(),
@@ -757,7 +787,7 @@ fn apply_reciprocal_operator<I: ReciprocalInput + ?Sized>(
             has_rescued_energy,
         ),
         grid_derivative_scale,
-    })
+    }
 }
 
 fn complete_energy(
@@ -1117,22 +1147,13 @@ fn spread_charges(
     }
 }
 
-#[derive(Clone, Copy)]
-struct ReciprocalAxisData {
-    wave_squared: f64,
-    assignment_modulus: f64,
-}
-
-fn reciprocal_axis_data(
+fn fill_reciprocal_axis_data(
+    storage: &mut [Complex],
     dimensions: [usize; 3],
     cell_lengths: [f64; 3],
-) -> Result<Vec<ReciprocalAxisData>, AllocationFailure> {
-    let data_count = dimensions
-        .into_iter()
-        .try_fold(0_usize, usize::checked_add)
-        .expect("validated reciprocal axis-data count fits usize");
-    let mut data = Vec::new();
-    fallible_reserve_exact(&mut data, data_count, AllocationSite::ReciprocalAxisData)?;
+) {
+    debug_assert_eq!(storage.len(), reciprocal_axis_data_count(dimensions));
+    let mut storage_index = 0;
     for axis in 0..3 {
         let dimension = dimensions[axis];
         let cell_length = cell_lengths[axis];
@@ -1141,14 +1162,11 @@ fn reciprocal_axis_data(
             let wave = core::f64::consts::TAU * f64::from(signed_index) / cell_length;
             let angle =
                 core::f64::consts::TAU * f64::from(signed_index) / bounded_usize_to_f64(dimension);
-            data.push(ReciprocalAxisData {
-                wave_squared: wave * wave,
-                assignment_modulus: (2.0 + libm::cos(angle)) / 3.0,
-            });
+            storage[storage_index] = Complex::new(wave * wave, (2.0 + libm::cos(angle)) / 3.0);
+            storage_index += 1;
         }
     }
-    debug_assert_eq!(data.len(), data_count);
-    Ok(data)
+    debug_assert_eq!(storage_index, storage.len());
 }
 
 fn signed_mesh_index(index: usize, dimension: usize) -> i32 {
@@ -2752,14 +2770,30 @@ mod tests {
     }
 
     #[test]
-    fn reciprocal_axes_share_one_contiguous_noncubic_backing() {
+    fn reciprocal_workspace_has_exact_noncubic_spectrum_and_axis_tail_layout() {
         let dimensions = [4, 8, 16];
         let cell_lengths = [18.0, 20.0, 22.0];
-        let storage = reciprocal_axis_data(dimensions, cell_lengths)
-            .expect("validated reciprocal axes must allocate");
-        assert_eq!(storage.len(), dimensions.into_iter().sum::<usize>());
+        let validated = ValidatedInput {
+            dimensions,
+            mesh_point_count: 512,
+            volume_angstrom_cubed: 1.0,
+        };
+        let mut workspace = ReciprocalWorkspace::new(&validated)
+            .expect("validated reciprocal workspace must allocate");
+        assert_eq!(workspace.storage.len(), 540);
+        let storage_pointer = workspace.storage.as_ptr();
+        let (spectrum, reciprocal_tail) =
+            workspace.storage.split_at_mut(validated.mesh_point_count);
+        assert_eq!(spectrum.len(), 512);
+        assert_eq!(reciprocal_tail.len(), 28);
+        assert_eq!(spectrum.as_ptr(), storage_pointer);
+        assert_eq!(
+            spectrum.as_ptr().wrapping_add(spectrum.len()),
+            reciprocal_tail.as_ptr()
+        );
 
-        let (x_axis_data, yz_axis_data) = storage.split_at(dimensions[0]);
+        fill_reciprocal_axis_data(reciprocal_tail, dimensions, cell_lengths);
+        let (x_axis_data, yz_axis_data) = reciprocal_tail.split_at(dimensions[0]);
         let (y_axis_data, z_axis_data) = yz_axis_data.split_at(dimensions[1]);
         assert_eq!(
             [x_axis_data.len(), y_axis_data.len(), z_axis_data.len()],
@@ -2781,9 +2815,9 @@ mod tests {
                 let wave = core::f64::consts::TAU * f64::from(signed_index) / cell_lengths[axis];
                 let angle = core::f64::consts::TAU * f64::from(signed_index)
                     / bounded_usize_to_f64(dimensions[axis]);
-                assert_eq!(datum.wave_squared.to_bits(), (wave * wave).to_bits());
+                assert_eq!(datum.real.to_bits(), (wave * wave).to_bits());
                 assert_eq!(
-                    datum.assignment_modulus.to_bits(),
+                    datum.imaginary.to_bits(),
                     ((2.0 + libm::cos(angle)) / 3.0).to_bits()
                 );
             }
@@ -2871,24 +2905,68 @@ mod tests {
     }
 
     #[test]
-    fn noncubic_spectrum_and_fft_line_storage_has_exact_contiguous_split() {
-        let validated = ValidatedInput {
-            dimensions: [4, 8, 16],
-            mesh_point_count: 512,
-            volume_angstrom_cubed: 1.0,
-        };
-        let mut storage = spectrum_and_fft_line_scratch(&validated)
-            .expect("combined spectrum and FFT line storage must allocate");
-        assert_eq!(storage.len(), 528);
-        let storage_pointer = storage.as_ptr();
-        let (spectrum, fft_line_scratch) = storage.split_at_mut(validated.mesh_point_count);
-        assert_eq!(spectrum.len(), 512);
-        assert_eq!(fft_line_scratch.len(), 16);
-        assert_eq!(spectrum.as_ptr(), storage_pointer);
-        // SAFETY: The checked backing length is 528 and the split index is 512.
-        assert_eq!(fft_line_scratch.as_ptr(), unsafe {
-            storage_pointer.add(512)
-        });
+    fn reciprocal_workspace_tail_reuses_fft_prefix_around_exact_axis_phase() {
+        let input = fixture([4, 8, 16]);
+        let validated = validate(&input).expect("noncubic fixture must validate");
+        let dimensions = validated.dimensions;
+        let mut workspace = ReciprocalWorkspace::new(&validated)
+            .expect("validated reciprocal workspace must allocate");
+        let line_count = dimensions.into_iter().max().unwrap();
+        assert_eq!(line_count, 16);
+        let (spectrum, reciprocal_tail) =
+            workspace.storage.split_at_mut(validated.mesh_point_count);
+        let tail_pointer = reciprocal_tail.as_ptr();
+
+        for (index, value) in spectrum.iter_mut().enumerate() {
+            *value = Complex::new(libm::sin(0.37 * bounded_usize_to_f64(index)), 0.0);
+        }
+        reciprocal_tail.fill(Complex::new(f64::NAN, f64::NAN));
+        fft::fft_3d(
+            spectrum,
+            dimensions,
+            false,
+            &mut reciprocal_tail[..line_count],
+        );
+        assert!(reciprocal_tail[..line_count]
+            .iter()
+            .all(|value| value.real.is_finite() && value.imaginary.is_finite()));
+        assert!(reciprocal_tail[line_count..]
+            .iter()
+            .all(|value| value.real.is_nan() && value.imaginary.is_nan()));
+
+        fill_reciprocal_axis_data(reciprocal_tail, dimensions, input.cell.lengths_angstrom);
+        let axis_bits = reciprocal_tail
+            .iter()
+            .map(|value| [value.real.to_bits(), value.imaginary.to_bits()])
+            .collect::<Vec<_>>();
+        let reciprocal = apply_reciprocal_operator(&input, &validated, spectrum, reciprocal_tail);
+        assert!(reciprocal.energy.is_finite());
+        assert_eq!(
+            reciprocal_tail
+                .iter()
+                .map(|value| [value.real.to_bits(), value.imaginary.to_bits()])
+                .collect::<Vec<_>>(),
+            axis_bits
+        );
+
+        reciprocal_tail[..line_count].fill(Complex::new(f64::NAN, f64::NAN));
+        fft::fft_3d(
+            spectrum,
+            dimensions,
+            true,
+            &mut reciprocal_tail[..line_count],
+        );
+        assert_eq!(reciprocal_tail.as_ptr(), tail_pointer);
+        assert!(reciprocal_tail[..line_count]
+            .iter()
+            .all(|value| value.real.is_finite() && value.imaginary.is_finite()));
+        assert_eq!(
+            reciprocal_tail[line_count..]
+                .iter()
+                .map(|value| [value.real.to_bits(), value.imaginary.to_bits()])
+                .collect::<Vec<_>>(),
+            axis_bits[line_count..]
+        );
     }
 
     #[test]
@@ -3329,8 +3407,7 @@ mod tests {
         for site in [
             AllocationSite::NeutralitySort,
             AllocationSite::ParticleAssignments,
-            AllocationSite::SpectrumAndFftLineScratch,
-            AllocationSite::ReciprocalAxisData,
+            AllocationSite::ReciprocalWorkspace,
         ] {
             let mut energy = initialized_energy(501.0);
             let mut force_x = [601.0; 4];
@@ -3361,44 +3438,6 @@ mod tests {
             assert_eq!(force_z, [603.0; 4], "allocation site {site:?}");
         }
 
-        let mut energy = initialized_energy(701.0);
-        let mut force_x = [801.0; 5];
-        let mut force_y = [802.0; 5];
-        let mut force_z = [803.0; 5];
-        force_x[4] = 901.0;
-        force_y[4] = 902.0;
-        force_z[4] = 903.0;
-        let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
-        output.capacity = 4;
-        let mut error = initialized_error();
-        {
-            let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 1);
-            // SAFETY: The sole reciprocal-axis backing reserve remains the
-            // final fallible direct allocation before the first force write.
-            let status = unsafe {
-                super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
-                    &system,
-                    &model,
-                    &mut energy,
-                    &mut output,
-                    &mut error,
-                )
-            };
-            assert_eq!(status, STATUS_OUT_OF_MEMORY);
-        }
-        assert_eq!(
-            energy.reciprocal_space_kcal_per_mol.to_bits(),
-            701.0_f64.to_bits()
-        );
-        assert_eq!(force_x, [801.0, 801.0, 801.0, 801.0, 901.0]);
-        assert_eq!(force_y, [802.0, 802.0, 802.0, 802.0, 902.0]);
-        assert_eq!(force_z, [803.0, 803.0, 803.0, 803.0, 903.0]);
-        assert_eq!(position_x.map(f64::to_bits), input_before[0]);
-        assert_eq!(position_y.map(f64::to_bits), input_before[1]);
-        assert_eq!(position_z.map(f64::to_bits), input_before[2]);
-        assert_eq!(charges.map(f64::to_bits), input_before[3]);
-
         let mut energy = initialized_energy(1_001.0);
         let mut force_x = [1_101.0; 5];
         let mut force_y = [1_102.0; 5];
@@ -3411,9 +3450,9 @@ mod tests {
         let mut error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::SpectrumAndFftLineScratch, 1);
-            // SAFETY: The combined storage allocation precedes every caller
-            // force write, and the fifth elements are valid protected tails.
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 1);
+            // SAFETY: The reciprocal workspace allocation precedes every
+            // caller force write, and the fifth elements are protected tails.
             let status = unsafe {
                 super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
                     &system,
@@ -3427,7 +3466,7 @@ mod tests {
         }
         assert_eq!(
             provider_error_detail(&error),
-            AllocationSite::SpectrumAndFftLineScratch.detail()
+            AllocationSite::ReciprocalWorkspace.detail()
         );
         assert_eq!(
             energy.reciprocal_space_kcal_per_mol.to_bits(),
@@ -3443,7 +3482,7 @@ mod tests {
     }
 
     #[test]
-    fn provider_modes_share_one_reciprocal_axis_backing_and_leave_second_occurrence_pending() {
+    fn provider_modes_share_one_reciprocal_workspace_and_leave_second_occurrence_pending() {
         let position_x = [1.25, 5.1, 10.2, 15.4];
         let position_y = [2.5, 3.2, 12.3, 17.1];
         let position_z = [3.75, 8.4, 7.7, 19.3];
@@ -3462,7 +3501,7 @@ mod tests {
         let mut energy_only_error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 2);
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 2);
             // SAFETY: Valid immutable input and disjoint descriptors exercise
             // the energy-only provider with a null force output.
             assert_eq!(
@@ -3478,7 +3517,7 @@ mod tests {
                 },
                 STATUS_OK
             );
-            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalAxisData);
+            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalWorkspace);
         }
 
         let mut transactional_energy = initialized_energy(201.0);
@@ -3497,7 +3536,7 @@ mod tests {
         let mut transactional_error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 2);
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 2);
             // SAFETY: All transactional descriptors and channels are valid,
             // live, disjoint, and sized for the four-particle input.
             assert_eq!(
@@ -3513,7 +3552,7 @@ mod tests {
                 },
                 STATUS_OK
             );
-            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalAxisData);
+            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalWorkspace);
         }
 
         let mut direct_energy = initialized_energy(501.0);
@@ -3528,7 +3567,7 @@ mod tests {
         let mut direct_error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 2);
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 2);
             // SAFETY: The direct output follows the same valid live,
             // disjoint, and four-particle capacity contract.
             assert_eq!(
@@ -3543,7 +3582,7 @@ mod tests {
                 },
                 STATUS_OK
             );
-            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalAxisData);
+            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalWorkspace);
         }
 
         for actual_energy in [&energy_only, &transactional_energy, &direct_energy] {
@@ -3589,8 +3628,7 @@ mod tests {
     }
 
     #[test]
-    fn provider_modes_share_one_spectrum_and_fft_line_storage_and_leave_second_occurrence_pending()
-    {
+    fn first_reciprocal_workspace_oom_is_transactional_in_all_provider_modes() {
         let position_x = [1.25, 5.1, 10.2, 15.4];
         let position_y = [2.5, 3.2, 12.3, 17.1];
         let position_z = [3.75, 8.4, 7.7, 19.3];
@@ -3602,16 +3640,15 @@ mod tests {
             charges.map(f64::to_bits),
         ];
         let system = provider_system(&position_x, &position_y, &position_z, &charges);
-        let model = provider_model([4; 3]);
-        let expected = evaluate(&fixture([4; 3])).expect("owned baseline must evaluate");
+        let model = provider_model([4, 8, 16]);
 
         let mut energy_only = initialized_energy(11.0);
         let mut energy_only_error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::SpectrumAndFftLineScratch, 2);
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 1);
             // SAFETY: Valid immutable inputs and disjoint output descriptors
-            // exercise the single combined provider allocation.
+            // exercise the first and only reciprocal workspace allocation.
             assert_eq!(
                 unsafe {
                     super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
@@ -3623,9 +3660,8 @@ mod tests {
                         &mut energy_only_error,
                     )
                 },
-                STATUS_OK
+                STATUS_OUT_OF_MEMORY
             );
-            assert_injected_allocation_remains_pending(AllocationSite::SpectrumAndFftLineScratch);
         }
 
         let mut transactional_energy = initialized_energy(101.0);
@@ -3644,7 +3680,7 @@ mod tests {
         let mut transactional_error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::SpectrumAndFftLineScratch, 2);
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 1);
             // SAFETY: The provider descriptors and output channels are valid,
             // live, disjoint, and sized for all four particles.
             assert_eq!(
@@ -3658,9 +3694,8 @@ mod tests {
                         &mut transactional_error,
                     )
                 },
-                STATUS_OK
+                STATUS_OUT_OF_MEMORY
             );
-            assert_injected_allocation_remains_pending(AllocationSite::SpectrumAndFftLineScratch);
         }
 
         let mut direct_energy = initialized_energy(401.0);
@@ -3675,7 +3710,7 @@ mod tests {
         let mut direct_error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::SpectrumAndFftLineScratch, 2);
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalWorkspace, 1);
             // SAFETY: The reusable output follows the same valid live and
             // disjoint contract as the transactional output above.
             assert_eq!(
@@ -3688,52 +3723,33 @@ mod tests {
                         &mut direct_error,
                     )
                 },
-                STATUS_OK
+                STATUS_OUT_OF_MEMORY
             );
-            assert_injected_allocation_remains_pending(AllocationSite::SpectrumAndFftLineScratch);
         }
 
         assert_eq!(
             energy_only.reciprocal_space_kcal_per_mol.to_bits(),
-            expected.reciprocal_space_kcal_per_mol.to_bits()
+            11.0_f64.to_bits()
         );
         assert_eq!(
             transactional_energy.reciprocal_space_kcal_per_mol.to_bits(),
-            expected.reciprocal_space_kcal_per_mol.to_bits()
+            101.0_f64.to_bits()
         );
         assert_eq!(
             direct_energy.reciprocal_space_kcal_per_mol.to_bits(),
-            expected.reciprocal_space_kcal_per_mol.to_bits()
+            401.0_f64.to_bits()
         );
-        for (particle, expected_force) in expected.forces_kcal_per_mol_angstrom.iter().enumerate() {
-            assert_eq!(
-                transactional_x[particle].to_bits(),
-                expected_force[0].to_bits()
-            );
-            assert_eq!(
-                transactional_y[particle].to_bits(),
-                expected_force[1].to_bits()
-            );
-            assert_eq!(
-                transactional_z[particle].to_bits(),
-                expected_force[2].to_bits()
-            );
-            assert_eq!(direct_x[particle].to_bits(), expected_force[0].to_bits());
-            assert_eq!(direct_y[particle].to_bits(), expected_force[1].to_bits());
-            assert_eq!(direct_z[particle].to_bits(), expected_force[2].to_bits());
-        }
-        assert_eq!(transactional_x[4].to_bits(), 301.0_f64.to_bits());
-        assert_eq!(transactional_y[4].to_bits(), 302.0_f64.to_bits());
-        assert_eq!(transactional_z[4].to_bits(), 303.0_f64.to_bits());
-        assert_eq!(direct_x[4].to_bits(), 601.0_f64.to_bits());
-        assert_eq!(direct_y[4].to_bits(), 602.0_f64.to_bits());
-        assert_eq!(direct_z[4].to_bits(), 603.0_f64.to_bits());
+        assert_eq!(transactional_x, [201.0, 201.0, 201.0, 201.0, 301.0]);
+        assert_eq!(transactional_y, [202.0, 202.0, 202.0, 202.0, 302.0]);
+        assert_eq!(transactional_z, [203.0, 203.0, 203.0, 203.0, 303.0]);
+        assert_eq!(direct_x, [501.0, 501.0, 501.0, 501.0, 601.0]);
+        assert_eq!(direct_y, [502.0, 502.0, 502.0, 502.0, 602.0]);
+        assert_eq!(direct_z, [503.0, 503.0, 503.0, 503.0, 603.0]);
         for error in [&energy_only_error, &transactional_error, &direct_error] {
             assert_eq!(
-                error.typed_code,
-                ParticleMeshReciprocalErrorCodeV1::None as i32
+                provider_error_detail(error),
+                AllocationSite::ReciprocalWorkspace.detail()
             );
-            assert!(error.detail.iter().all(|byte| *byte == 0));
         }
         assert_eq!(position_x.map(f64::to_bits), input_before[0]);
         assert_eq!(position_y.map(f64::to_bits), input_before[1]);
@@ -4070,8 +4086,7 @@ mod tests {
         for site in [
             AllocationSite::NeutralitySort,
             AllocationSite::ParticleAssignments,
-            AllocationSite::SpectrumAndFftLineScratch,
-            AllocationSite::ReciprocalAxisData,
+            AllocationSite::ReciprocalWorkspace,
             AllocationSite::ForceOutput,
         ] {
             let mut energy = initialized_energy(101.0);
@@ -4120,8 +4135,7 @@ mod tests {
         for site in [
             AllocationSite::NeutralitySort,
             AllocationSite::ParticleAssignments,
-            AllocationSite::SpectrumAndFftLineScratch,
-            AllocationSite::ReciprocalAxisData,
+            AllocationSite::ReciprocalWorkspace,
         ] {
             let mut energy = initialized_energy(301.0);
             let mut error = initialized_error();
