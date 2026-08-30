@@ -798,6 +798,36 @@ bool reciprocal_parent_is_valid(
     return true;
 }
 
+bool rust_reciprocal_provider_force_source_is_valid(
+    const particle_mesh_reciprocal::rust_cpu::ProviderForceSourceResult
+        &result,
+    const particle_mesh_reciprocal::Error &error,
+    const particle_mesh_reciprocal::rust_cpu::ProviderForceScratch
+        &force_source,
+    std::size_t atom_count) noexcept {
+    if (error.code != BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE ||
+        !error.detail.empty() ||
+        !std::isfinite(result.reciprocal_space_kcal_per_mol) ||
+        force_source.x.size() != atom_count ||
+        force_source.y.size() != atom_count ||
+        force_source.z.size() != atom_count) {
+        return false;
+    }
+    const std::array<const std::vector<double> *, 3> force_channels{{
+        &force_source.x,
+        &force_source.y,
+        &force_source.z,
+    }};
+    for (const std::vector<double> *channel : force_channels) {
+        if (std::any_of(channel->begin(), channel->end(), [](double value) {
+                return !std::isfinite(value);
+            })) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool short_system_scratch_shape_matches(
     const bg_system &system,
     const bg_system &scratch) noexcept {
@@ -1026,9 +1056,13 @@ bg_status evaluate_prevalidated(
         &local_reciprocal_evaluation;
     const bool reuse_reciprocal_parent_force_storage =
         stateful_scratch && compute_forces;
-    if (reuse_reciprocal_parent_force_storage) {
+    const bool use_rust_reciprocal_provider_force_source =
+        !cpp_lane && reuse_reciprocal_parent_force_storage;
+    if (reuse_reciprocal_parent_force_storage && cpp_lane) {
         reciprocal_evaluation = reciprocal_parent_evaluation_scratch;
     }
+    particle_mesh_reciprocal::rust_cpu::ProviderForceSourceResult
+        rust_reciprocal_provider_result;
     particle_mesh_reciprocal::Error reciprocal_error;
     if (cpp_lane) {
         status = reuse_reciprocal_parent_force_storage
@@ -1040,12 +1074,13 @@ bg_status evaluate_prevalidated(
                   system, reciprocal_model, compute_forces,
                   reciprocal_evaluation, &reciprocal_error);
     } else {
-        status = reuse_reciprocal_parent_force_storage
+        status = use_rust_reciprocal_provider_force_source
             ? particle_mesh_reciprocal::rust_cpu::
-                  evaluate_reusing_force_storage(
-                      system, reciprocal_model, true,
+                  evaluate_reusing_provider_force_storage(
+                      system, reciprocal_model,
                       rust_reciprocal_provider_force_scratch,
-                      reciprocal_evaluation, &reciprocal_error)
+                      &rust_reciprocal_provider_result,
+                      &reciprocal_error)
             : particle_mesh_reciprocal::rust_cpu::evaluate(
                   system, reciprocal_model, compute_forces,
                   reciprocal_evaluation, &reciprocal_error);
@@ -1068,13 +1103,29 @@ bg_status evaluate_prevalidated(
     }
     const particle_mesh_reciprocal::Evaluation &reciprocal_result =
         *reciprocal_evaluation;
-    if (!reciprocal_parent_is_valid(
-            reciprocal_result, reciprocal_error, compute_forces,
-            atom_count)) {
+    const bool reciprocal_result_is_valid =
+        use_rust_reciprocal_provider_force_source
+        ? rust_reciprocal_provider_force_source_is_valid(
+              rust_reciprocal_provider_result, reciprocal_error,
+              *rust_reciprocal_provider_force_scratch, atom_count)
+        : reciprocal_parent_is_valid(
+              reciprocal_result, reciprocal_error, compute_forces,
+              atom_count);
+    if (!reciprocal_result_is_valid) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "particle-mesh Ewald composite reciprocal parent returned inconsistent energy, forces, or error state");
     }
+    const auto reciprocal_force_at = [&](std::size_t atom) {
+        if (use_rust_reciprocal_provider_force_source) {
+            return std::array<double, 3>{{
+                rust_reciprocal_provider_force_scratch->x[atom],
+                rust_reciprocal_provider_force_scratch->y[atom],
+                rust_reciprocal_provider_force_scratch->z[atom],
+            }};
+        }
+        return reciprocal_result.forces[atom];
+    };
 
     Evaluation candidate;
     candidate.short_harmonic_bond =
@@ -1089,8 +1140,9 @@ bg_status evaluate_prevalidated(
         short_result.energy.coulomb_kcal_per_mol;
     candidate.short_total = short_result.energy.total_kcal_per_mol;
     candidate.pme_real_space = direct_result.energy.real_space;
-    candidate.pme_reciprocal_space =
-        reciprocal_result.reciprocal_space_kcal_per_mol;
+    candidate.pme_reciprocal_space = use_rust_reciprocal_provider_force_source
+        ? rust_reciprocal_provider_result.reciprocal_space_kcal_per_mol
+        : reciprocal_result.reciprocal_space_kcal_per_mol;
     candidate.pme_self = direct_result.energy.self;
     candidate.pme_pair_correction =
         direct_result.energy.pair_correction;
@@ -1107,13 +1159,15 @@ bg_status evaluate_prevalidated(
     }
     if (compute_forces) {
         for (std::size_t atom = 0U; atom < atom_count; ++atom) {
+            const std::array<double, 3> reciprocal_force =
+                reciprocal_force_at(atom);
             const std::array<double, 3> pme_force{{
                 direct_result.forces[atom][0] +
-                    reciprocal_result.forces[atom][0],
+                    reciprocal_force[0],
                 direct_result.forces[atom][1] +
-                    reciprocal_result.forces[atom][1],
+                    reciprocal_force[1],
                 direct_result.forces[atom][2] +
-                    reciprocal_result.forces[atom][2],
+                    reciprocal_force[2],
             }};
             const std::array<double, 15> parent_and_combined_forces{{
                 short_result.force_x[atom],
@@ -1122,9 +1176,9 @@ bg_status evaluate_prevalidated(
                 direct_result.forces[atom][0],
                 direct_result.forces[atom][1],
                 direct_result.forces[atom][2],
-                reciprocal_result.forces[atom][0],
-                reciprocal_result.forces[atom][1],
-                reciprocal_result.forces[atom][2],
+                reciprocal_force[0],
+                reciprocal_force[1],
+                reciprocal_force[2],
                 pme_force[0],
                 pme_force[1],
                 pme_force[2],
@@ -1147,13 +1201,15 @@ bg_status evaluate_prevalidated(
             stateful_force_output->force_y.resize(atom_count);
             stateful_force_output->force_z.resize(atom_count);
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
+                const std::array<double, 3> reciprocal_force =
+                    reciprocal_force_at(atom);
                 const std::array<double, 3> pme_force{{
                     direct_result.forces[atom][0] +
-                        reciprocal_result.forces[atom][0],
+                        reciprocal_force[0],
                     direct_result.forces[atom][1] +
-                        reciprocal_result.forces[atom][1],
+                        reciprocal_force[1],
                     direct_result.forces[atom][2] +
-                        reciprocal_result.forces[atom][2],
+                        reciprocal_force[2],
                 }};
                 stateful_force_output->force_x[atom] =
                     short_result.force_x[atom] + pme_force[0];
@@ -1165,13 +1221,15 @@ bg_status evaluate_prevalidated(
         } else {
             candidate.forces.resize(atom_count);
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
+                const std::array<double, 3> reciprocal_force =
+                    reciprocal_force_at(atom);
                 const std::array<double, 3> pme_force{{
                     direct_result.forces[atom][0] +
-                        reciprocal_result.forces[atom][0],
+                        reciprocal_force[0],
                     direct_result.forces[atom][1] +
-                        reciprocal_result.forces[atom][1],
+                        reciprocal_force[1],
                     direct_result.forces[atom][2] +
-                        reciprocal_result.forces[atom][2],
+                        reciprocal_force[2],
                 }};
                 candidate.forces[atom] = {{
                     short_result.force_x[atom] + pme_force[0],

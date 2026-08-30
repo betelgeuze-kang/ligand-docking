@@ -9,6 +9,19 @@ from tools import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_FORCE_SOURCE_SOA_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_force_source_soa_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_FORCE_SOURCE_SOA_EVIDENCE_PRESENT,
+    reason=(
+        "PME Rust reciprocal provider direct force-SoA evidence is verified "
+        "from its exact frozen PR 457 object after provider force-source SoA "
+        "evidence is present"
+    ),
+)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:

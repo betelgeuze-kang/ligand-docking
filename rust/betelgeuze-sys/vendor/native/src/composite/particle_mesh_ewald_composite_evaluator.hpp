@@ -43,9 +43,11 @@ struct Evaluation final {
  * exactly for a force-producing stateful call. A non-null short-system
  * scratch must be independent, deep-owned, shape/unit matched, and contain
  * exact +0.0 charges; only its positions are refreshed. Force-producing
- * stateful calls reuse the short, direct-local, and reciprocal parents'
- * Evaluation storage and, on the Rust lane, the provider-facing reciprocal
- * SoA force storage. They write the final force directly to the supplied SoA
+ * stateful calls reuse the short and direct-local parents' Evaluation
+ * storage. The C++ lane also reuses the reciprocal parent's Evaluation
+ * storage. The Rust lane instead consumes the provider-facing reciprocal SoA
+ * force storage directly and leaves reciprocal-parent Evaluation storage
+ * untouched. Both lanes write the final force directly to the supplied SoA
  * Evaluation after all parent and combined force values have been validated.
  * Stateless force-producing calls retain the composite AoS force result.
  * Force-free calls leave the private force storage and Rust validation cache
