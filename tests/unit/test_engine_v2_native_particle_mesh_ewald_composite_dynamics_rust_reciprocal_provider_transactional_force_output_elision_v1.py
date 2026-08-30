@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import (
     verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1
     as verifier,
@@ -8,6 +10,20 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_OWNER_ZERO_STEP_WORKSPACE_REUSE_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_"
+    "profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_OWNER_ZERO_STEP_WORKSPACE_REUSE_EVIDENCE_PRESENT,
+    reason=(
+        "transactional force-output elision evidence is verified from its exact "
+        "frozen PR 467 object after owner zero-step reciprocal workspace reuse "
+        "evidence is present"
+    ),
+)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:

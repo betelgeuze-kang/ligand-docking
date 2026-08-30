@@ -2179,6 +2179,9 @@ fn canonical_particle_assignment_scratch_descriptor(
 #[derive(Clone, Copy)]
 enum ProviderForceMode {
     Transactional(u8),
+    EnergyWithWorkspace {
+        workspace: *mut ParticleMeshReciprocalWorkspaceV1,
+    },
     Direct {
         workspace: Option<*mut ParticleMeshReciprocalWorkspaceV1>,
         neutrality_sort_scratch: Option<*mut ParticleMeshReciprocalNeutralitySortScratchV1>,
@@ -2678,6 +2681,20 @@ fn evaluate_with_direct_force_output_and_workspace<I: ReciprocalInput + ?Sized>(
     .reciprocal_space_kcal_per_mol)
 }
 
+fn evaluate_energy_with_workspace<I: ReciprocalInput + ?Sized>(
+    input: &I,
+    workspace: &mut ReciprocalWorkspace,
+) -> Result<f64, ParticleMeshReciprocalError> {
+    Ok(compute_with_transform_and_workspace(
+        input,
+        fft::fft_3d,
+        ForceStorageMode::Disabled,
+        Some(workspace),
+    )?
+    .evaluation
+    .reciprocal_space_kcal_per_mol)
+}
+
 fn evaluate_with_direct_force_output_and_reusable_storage<I: ReciprocalInput + ?Sized>(
     input: &I,
     output: ParticleMeshReciprocalForceOutputV1,
@@ -2727,6 +2744,7 @@ unsafe fn evaluate_provider_impl(
     let (workspace_pointer, neutrality_sort_scratch_pointer, particle_assignment_scratch_pointer) =
         match force_mode {
             ProviderForceMode::Transactional(_) => (None, None, None),
+            ProviderForceMode::EnergyWithWorkspace { workspace } => (Some(workspace), None, None),
             ProviderForceMode::Direct {
                 workspace,
                 neutrality_sort_scratch,
@@ -2973,6 +2991,7 @@ unsafe fn evaluate_provider_impl(
                 "compute_forces must be exactly zero or one",
             ));
         }
+        ProviderForceMode::EnergyWithWorkspace { .. } => 0,
         ProviderForceMode::Direct { .. } => 1,
     };
     validate_header::<ParticleMeshReciprocalSystemV1>(
@@ -3133,6 +3152,16 @@ unsafe fn evaluate_provider_impl(
                 result.forces_kcal_per_mol_angstrom,
                 force_output,
             )
+        }
+        ProviderForceMode::EnergyWithWorkspace { .. } => {
+            let workspace = workspace_lease.as_mut().ok_or_else(|| {
+                ProviderFailure::invalid(
+                    "energy workspace is null after reciprocal provider preflight",
+                )
+            })?;
+            let energy = evaluate_energy_with_workspace(&input, workspace.workspace_mut())
+                .map_err(ProviderFailure::from)?;
+            (energy, Vec::new(), None)
         }
         ProviderForceMode::Direct { .. } => {
             let output = force_output.ok_or_else(|| {
@@ -3330,6 +3359,85 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_v1(
             if alias_safety.get() {
                 // SAFETY: Error storage was validated and fully proven
                 // disjoint from all caller descriptors and channels.
+                unsafe {
+                    write_provider_error(
+                        out_error,
+                        ParticleMeshReciprocalErrorCodeV1::None,
+                        "rust particle-mesh reciprocal provider panicked",
+                    )
+                };
+            }
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Evaluate reciprocal-only energy while leasing an owner-private reciprocal
+/// workspace whose Rust allocation persists across calls.
+///
+/// This hidden dynamics-only entry point is structurally force-free: it does
+/// not accept a force descriptor, neutrality-sort scratch, or particle-
+/// assignment scratch. Energy remains transactional and is committed only on
+/// success; the derived workspace payload may be rewritten once leased.
+///
+/// # Safety
+/// The base evaluator safety contract applies. `workspace` must point to an
+/// all-zero EMPTY descriptor or to a canonical READY descriptor previously
+/// returned by a compatible workspace-bearing provider entry. The descriptor
+/// and its complete allocation capacity must remain exclusively owned,
+/// initialized, writable, live, and disjoint from every other descriptor and
+/// channel for the call.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1(
+    system: *const ParticleMeshReciprocalSystemV1,
+    model: *const ParticleMeshReciprocalModelV1,
+    workspace: *mut ParticleMeshReciprocalWorkspaceV1,
+    out_energy: *mut ParticleMeshReciprocalEnergyV1,
+    out_error: *mut ParticleMeshReciprocalErrorV1,
+) -> i32 {
+    // SAFETY: Validation occurs before reading the initialized error descriptor.
+    let (_error_output, error_range) = match unsafe { validate_error_output(out_error) } {
+        Ok(validated) => validated,
+        Err(status) => return status,
+    };
+    let alias_safety = Cell::new(false);
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: The implementation preflights the workspace descriptor and
+        // its entire backing capacity alongside all established provider ranges
+        // before taking the RAII ownership lease or borrowing any channel.
+        unsafe {
+            evaluate_provider_impl(
+                system,
+                model,
+                ProviderForceMode::EnergyWithWorkspace { workspace },
+                out_energy,
+                ptr::null_mut(),
+                error_range,
+                &alias_safety,
+            )
+        }
+    }));
+    match outcome {
+        Ok(Ok(candidate)) => {
+            // SAFETY: Candidate energy is valid, the lease restored READY
+            // ownership during closure return, and no fallible work remains.
+            unsafe { commit_candidate(candidate, out_energy) };
+            // SAFETY: Error storage completed the full persistent alias preflight.
+            unsafe { write_provider_error(out_error, ParticleMeshReciprocalErrorCodeV1::None, "") };
+            STATUS_OK
+        }
+        Ok(Err(failure)) => {
+            if failure.may_write_error {
+                // SAFETY: The failure records whether error storage was fully
+                // proven safe before any potentially overlapping raw range.
+                unsafe { write_provider_error(out_error, failure.code, failure.detail) };
+            }
+            failure.status
+        }
+        Err(_) => {
+            if alias_safety.get() {
+                // SAFETY: All descriptor, backing-capacity, and channel ranges
+                // were proven disjoint before the leased computation began.
                 unsafe {
                     write_provider_error(
                         out_error,
@@ -4020,6 +4128,22 @@ mod tests {
             y: force_y.as_mut_ptr(),
             z: force_z.as_mut_ptr(),
             reserved: [0; 4],
+        }
+    }
+
+    unsafe fn evaluate_energy_with_owner_workspace(
+        system: *const ParticleMeshReciprocalSystemV1,
+        model: *const ParticleMeshReciprocalModelV1,
+        workspace: *mut ParticleMeshReciprocalWorkspaceV1,
+        energy: *mut ParticleMeshReciprocalEnergyV1,
+        error: *mut ParticleMeshReciprocalErrorV1,
+    ) -> i32 {
+        // SAFETY: Each test documents and owns the descriptor/channel storage
+        // supplied to this thin wrapper around the hidden energy-only entry.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1(
+                system, model, workspace, energy, error,
+            )
         }
     }
 
@@ -6258,6 +6382,575 @@ mod tests {
             energy.reciprocal_space_kcal_per_mol.to_bits(),
             101.0_f64.to_bits()
         );
+    }
+
+    #[test]
+    fn energy_workspace_cold_warm_interop_and_stateless_boundaries_are_frozen() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([4, 8, 16]);
+        let expected = evaluate(&fixture([4, 8, 16])).expect("baseline must evaluate");
+
+        for site in [
+            AllocationSite::NeutralitySort,
+            AllocationSite::ParticleAssignments,
+            AllocationSite::ReciprocalWorkspace,
+        ] {
+            let mut workspace = empty_workspace();
+            let workspace_before = descriptor_bytes(&workspace);
+            let mut energy = initialized_energy(11.0);
+            let mut error = initialized_error();
+            {
+                let _injection = AllocationFailureGuard::inject(site);
+                // SAFETY: Valid disjoint storage exercises each cold allocation
+                // while the force-free entry owns only the reciprocal workspace.
+                assert_eq!(
+                    unsafe {
+                        evaluate_energy_with_owner_workspace(
+                            &system,
+                            &model,
+                            &mut workspace,
+                            &mut energy,
+                            &mut error,
+                        )
+                    },
+                    STATUS_OUT_OF_MEMORY,
+                    "cold allocation site {site:?}"
+                );
+            }
+            assert_eq!(provider_error_detail(&error), site.detail());
+            assert_eq!(descriptor_bytes(&workspace), workspace_before);
+            assert_eq!(
+                energy.reciprocal_space_kcal_per_mol.to_bits(),
+                11.0_f64.to_bits()
+            );
+        }
+
+        let mut workspace = empty_workspace();
+        let mut energy = initialized_energy(101.0);
+        let mut error = initialized_error();
+        // SAFETY: Valid disjoint descriptors provision the owner workspace.
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(workspace.state, PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY);
+        assert_eq!(workspace.length, 4 * 8 * 16 + 4 + 8 + 16);
+        assert!(workspace.capacity >= workspace.length);
+        let workspace_pointer = workspace.storage;
+        let workspace_capacity = workspace.capacity;
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        assert_eq!(
+            error.typed_code,
+            ParticleMeshReciprocalErrorCodeV1::None as i32
+        );
+
+        for site in [
+            AllocationSite::ReciprocalWorkspace,
+            AllocationSite::ForceOutput,
+        ] {
+            energy.reciprocal_space_kcal_per_mol = 201.0;
+            let mut warm_error = initialized_error();
+            {
+                let _injection = AllocationFailureGuard::inject(site);
+                // SAFETY: Capacity-sufficient reuse allocates neither workspace
+                // storage nor force output in this structurally force-free entry.
+                assert_eq!(
+                    unsafe {
+                        evaluate_energy_with_owner_workspace(
+                            &system,
+                            &model,
+                            &mut workspace,
+                            &mut energy,
+                            &mut warm_error,
+                        )
+                    },
+                    STATUS_OK,
+                    "warm allocation site {site:?}"
+                );
+                assert_injected_allocation_remains_pending(site);
+            }
+            assert_eq!(workspace.storage, workspace_pointer);
+            assert_eq!(workspace.capacity, workspace_capacity);
+            assert_eq!(
+                energy.reciprocal_space_kcal_per_mol.to_bits(),
+                expected.reciprocal_space_kcal_per_mol.to_bits()
+            );
+        }
+
+        let workspace_before_stateless = descriptor_bytes(&workspace);
+        let workspace_bits_before_stateless = workspace_storage_bits(&workspace);
+        let mut stateless_energy = initialized_energy(301.0);
+        let mut stateless_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject(AllocationSite::ReciprocalWorkspace);
+            // SAFETY: The established stateless energy path remains call-local
+            // and must not borrow the separately retained owner workspace.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                        &system,
+                        &model,
+                        0,
+                        &mut stateless_energy,
+                        ptr::null_mut(),
+                        &mut stateless_error,
+                    )
+                },
+                STATUS_OUT_OF_MEMORY
+            );
+        }
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_stateless);
+        assert_eq!(
+            workspace_storage_bits(&workspace),
+            workspace_bits_before_stateless
+        );
+        assert_eq!(
+            stateless_energy.reciprocal_space_kcal_per_mol.to_bits(),
+            301.0_f64.to_bits()
+        );
+
+        let mut force_x = [401.0; 4];
+        let mut force_y = [402.0; 4];
+        let mut force_z = [403.0; 4];
+        let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
+        let mut force_error = initialized_error();
+        // SAFETY: The canonical READY workspace is interoperable with the
+        // existing direct-force workspace entry and all force channels are valid.
+        assert_eq!(
+            unsafe {
+                super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_v1(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut output,
+                    &mut force_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(workspace.storage, workspace_pointer);
+        assert_eq!(workspace.capacity, workspace_capacity);
+        for (particle, expected_force) in expected.forces_kcal_per_mol_angstrom.iter().enumerate() {
+            assert_eq!(force_x[particle].to_bits(), expected_force[0].to_bits());
+            assert_eq!(force_y[particle].to_bits(), expected_force[1].to_bits());
+            assert_eq!(force_z[particle].to_bits(), expected_force[2].to_bits());
+        }
+
+        let force_bits = [
+            force_x.map(f64::to_bits),
+            force_y.map(f64::to_bits),
+            force_z.map(f64::to_bits),
+        ];
+        let mut final_error = initialized_error();
+        // SAFETY: A workspace returned by the forceful sibling remains valid
+        // for the force-free entry, which has no way to access force channels.
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut final_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(workspace.storage, workspace_pointer);
+        assert_eq!(workspace.capacity, workspace_capacity);
+        assert_eq!(force_x.map(f64::to_bits), force_bits[0]);
+        assert_eq!(force_y.map(f64::to_bits), force_bits[1]);
+        assert_eq!(force_z.map(f64::to_bits), force_bits[2]);
+        // SAFETY: Canonical READY is exclusively owned after interoperation.
+        unsafe { super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace) };
+    }
+
+    #[test]
+    fn energy_workspace_growth_failure_and_panic_recover_ready_ownership() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let mut model = provider_model([4; 3]);
+        let mut workspace = empty_workspace();
+        let mut energy = initialized_energy(101.0);
+        let mut error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+
+        // SAFETY: Canonical READY grants exclusive access to the initialized
+        // derived payload between provider calls.
+        unsafe {
+            core::slice::from_raw_parts_mut(workspace.storage.cast::<Complex>(), workspace.length)
+                .fill(Complex::new(701.0, -702.0));
+        }
+        let retained_pointer = workspace.storage;
+        let retained_length = workspace.length;
+        let retained_capacity = workspace.capacity;
+        let retained_bits = workspace_storage_bits(&workspace);
+        model.mesh_dimensions = [16; 3];
+        energy.reciprocal_space_kcal_per_mol = 201.0;
+        let mut growth_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject(AllocationSite::ReciprocalWorkspace);
+            // SAFETY: Valid larger mesh forces workspace growth; reserve failure
+            // must restore the original READY raw parts and leave energy intact.
+            assert_eq!(
+                unsafe {
+                    evaluate_energy_with_owner_workspace(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut energy,
+                        &mut growth_error,
+                    )
+                },
+                STATUS_OUT_OF_MEMORY
+            );
+        }
+        assert_eq!(
+            provider_error_detail(&growth_error),
+            AllocationSite::ReciprocalWorkspace.detail()
+        );
+        assert_eq!(workspace.storage, retained_pointer);
+        assert_eq!(workspace.length, retained_length);
+        assert_eq!(workspace.capacity, retained_capacity);
+        assert_eq!(workspace_storage_bits(&workspace), retained_bits);
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            201.0_f64.to_bits()
+        );
+
+        let expected = evaluate(&fixture([16; 3])).expect("growth baseline must evaluate");
+        let mut recovery_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut recovery_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(workspace.state, PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY);
+        assert_eq!(workspace.length, 16 * 16 * 16 + 16 + 16 + 16);
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        let grown_pointer = workspace.storage;
+        let grown_capacity = workspace.capacity;
+
+        energy.reciprocal_space_kcal_per_mol = 301.0;
+        let mut panic_error = initialized_error();
+        {
+            let _panic = ReusableWorkspacePanicGuard::inject();
+            // SAFETY: The injected panic fires after capacity preparation and
+            // must unwind through the workspace lease before the ABI returns.
+            assert_eq!(
+                unsafe {
+                    evaluate_energy_with_owner_workspace(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut energy,
+                        &mut panic_error,
+                    )
+                },
+                STATUS_INTERNAL_ERROR
+            );
+        }
+        assert_eq!(
+            provider_error_detail(&panic_error),
+            "rust particle-mesh reciprocal provider panicked"
+        );
+        assert_eq!(workspace.state, PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY);
+        assert_eq!(workspace.storage, grown_pointer);
+        assert_eq!(workspace.capacity, grown_capacity);
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            301.0_f64.to_bits()
+        );
+
+        let mut post_panic_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut post_panic_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(workspace.storage, grown_pointer);
+        assert_eq!(workspace.capacity, grown_capacity);
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        // SAFETY: The recovered READY workspace is exclusively owned.
+        unsafe { super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace) };
+    }
+
+    #[test]
+    fn energy_workspace_malformed_leased_and_backing_aliases_fail_closed() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([16; 3]);
+        let mut energy = initialized_energy(101.0);
+
+        let mut null_error = initialized_error();
+        let null_error_before = descriptor_bytes(&null_error);
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    ptr::null_mut(),
+                    &mut energy,
+                    &mut null_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&null_error), null_error_before);
+
+        let mut misaligned_storage =
+            [0_u8; size_of::<ParticleMeshReciprocalWorkspaceV1>() + align_of::<u64>()];
+        let misaligned_offset = (0..align_of::<ParticleMeshReciprocalWorkspaceV1>())
+            .find(|offset| {
+                (misaligned_storage.as_ptr() as usize + offset)
+                    % align_of::<ParticleMeshReciprocalWorkspaceV1>()
+                    != 0
+            })
+            .expect("workspace alignment has a misaligned byte offset");
+        let misaligned_workspace = unsafe {
+            misaligned_storage
+                .as_mut_ptr()
+                .add(misaligned_offset)
+                .cast::<ParticleMeshReciprocalWorkspaceV1>()
+        };
+        let mut misaligned_error = initialized_error();
+        let misaligned_error_before = descriptor_bytes(&misaligned_error);
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    misaligned_workspace,
+                    &mut energy,
+                    &mut misaligned_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&misaligned_error), misaligned_error_before);
+
+        let mut malformed = ParticleMeshReciprocalWorkspaceV1 {
+            struct_size: 1,
+            ..empty_workspace()
+        };
+        let malformed_before = descriptor_bytes(&malformed);
+        let mut malformed_error = initialized_error();
+        let malformed_error_before = descriptor_bytes(&malformed_error);
+        assert_ne!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut malformed,
+                    &mut energy,
+                    &mut malformed_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(descriptor_bytes(&malformed), malformed_before);
+        assert_eq!(descriptor_bytes(&malformed_error), malformed_error_before);
+
+        let mut leased = canonical_workspace_descriptor(
+            PARTICLE_MESH_RECIPROCAL_WORKSPACE_LEASED,
+            ptr::null_mut(),
+            0,
+            0,
+        );
+        let leased_before = descriptor_bytes(&leased);
+        let mut leased_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut leased,
+                    &mut energy,
+                    &mut leased_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            provider_error_detail(&leased_error),
+            "reciprocal workspace is already leased"
+        );
+        assert_eq!(descriptor_bytes(&leased), leased_before);
+
+        let mut workspace = empty_workspace();
+        let mut provision_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut provision_error,
+                )
+            },
+            STATUS_OK
+        );
+
+        let aliased_error = workspace.storage.cast::<ParticleMeshReciprocalErrorV1>();
+        // SAFETY: The workspace allocation is naturally aligned and large
+        // enough for the initialized error descriptor written into its payload.
+        unsafe { ptr::write(aliased_error, initialized_error()) };
+        let workspace_before_error_alias = descriptor_bytes(&workspace);
+        let aliased_error_before = descriptor_bytes(aliased_error);
+        energy.reciprocal_space_kcal_per_mol = 201.0;
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    aliased_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_error_alias);
+        assert_eq!(descriptor_bytes(aliased_error), aliased_error_before);
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            201.0_f64.to_bits()
+        );
+
+        let mut recovery_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut recovery_error,
+                )
+            },
+            STATUS_OK
+        );
+        let aliased_energy = workspace.storage.cast::<ParticleMeshReciprocalEnergyV1>();
+        // SAFETY: The workspace allocation is naturally aligned and large
+        // enough for a complete initialized energy descriptor.
+        unsafe { ptr::write(aliased_energy, initialized_energy(301.0)) };
+        let workspace_before_energy_alias = descriptor_bytes(&workspace);
+        let aliased_energy_before = descriptor_bytes(aliased_energy);
+        let mut energy_alias_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    aliased_energy,
+                    &mut energy_alias_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_energy_alias);
+        assert_eq!(descriptor_bytes(aliased_energy), aliased_energy_before);
+
+        let mut recovery_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut recovery_error,
+                )
+            },
+            STATUS_OK
+        );
+        let workspace_before_input_alias = descriptor_bytes(&workspace);
+        let workspace_bits_before_input_alias = workspace_storage_bits(&workspace);
+        let alias_system = ParticleMeshReciprocalSystemV1 {
+            position_x: workspace.storage.cast::<f64>(),
+            ..system
+        };
+        energy.reciprocal_space_kcal_per_mol = 401.0;
+        let mut input_alias_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_energy_with_owner_workspace(
+                    &alias_system,
+                    &model,
+                    &mut workspace,
+                    &mut energy,
+                    &mut input_alias_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_input_alias);
+        assert_eq!(
+            workspace_storage_bits(&workspace),
+            workspace_bits_before_input_alias
+        );
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            401.0_f64.to_bits()
+        );
+        // SAFETY: The READY allocation remains exclusively owned after every
+        // fail-closed alias case.
+        unsafe { super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace) };
     }
 
     #[test]

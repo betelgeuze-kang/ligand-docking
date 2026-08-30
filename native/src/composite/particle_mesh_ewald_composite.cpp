@@ -1058,6 +1058,8 @@ bg_status evaluate_prevalidated(
         stateful_scratch && compute_forces;
     const bool use_rust_reciprocal_provider_force_source =
         !cpp_lane && reuse_reciprocal_parent_force_storage;
+    const bool reuse_rust_reciprocal_workspace =
+        !cpp_lane && stateful_scratch && !compute_forces;
     if (reuse_reciprocal_parent_force_storage && cpp_lane) {
         reciprocal_evaluation = reciprocal_parent_evaluation_scratch;
     }
@@ -1074,16 +1076,24 @@ bg_status evaluate_prevalidated(
                   system, reciprocal_model, compute_forces,
                   reciprocal_evaluation, &reciprocal_error);
     } else {
-        status = use_rust_reciprocal_provider_force_source
-            ? particle_mesh_reciprocal::rust_cpu::
-                  evaluate_reusing_provider_force_storage(
-                      system, reciprocal_model,
-                      rust_reciprocal_provider_force_scratch,
-                      &rust_reciprocal_provider_result,
-                      &reciprocal_error)
-            : particle_mesh_reciprocal::rust_cpu::evaluate(
-                  system, reciprocal_model, compute_forces,
-                  reciprocal_evaluation, &reciprocal_error);
+        if (use_rust_reciprocal_provider_force_source) {
+            status = particle_mesh_reciprocal::rust_cpu::
+                evaluate_reusing_provider_force_storage(
+                    system, reciprocal_model,
+                    rust_reciprocal_provider_force_scratch,
+                    &rust_reciprocal_provider_result,
+                    &reciprocal_error);
+        } else if (reuse_rust_reciprocal_workspace) {
+            status = particle_mesh_reciprocal::rust_cpu::
+                evaluate_reusing_force_storage(
+                    system, reciprocal_model, false,
+                    rust_reciprocal_provider_force_scratch,
+                    reciprocal_evaluation, &reciprocal_error);
+        } else {
+            status = particle_mesh_reciprocal::rust_cpu::evaluate(
+                system, reciprocal_model, compute_forces,
+                reciprocal_evaluation, &reciprocal_error);
+        }
     }
     if (status != BG_STATUS_OK) {
         if (reciprocal_error.code !=
