@@ -1951,10 +1951,7 @@ void verify_reciprocal_parent_force_scratch_reuse() {
     constexpr std::size_t kReservedCapacity = 64U;
     const Fixture fixture;
 
-    for (const bg_backend lane : {
-             BG_BACKEND_CPP_CPU_REFERENCE,
-             BG_BACKEND_RUST_CPU,
-         }) {
+    for (const bg_backend lane : {BG_BACKEND_CPP_CPU_REFERENCE}) {
         auto context = make_context(lane);
         auto system = make_system(fixture, fixture.charge);
         auto forcefield = make_forcefield(fixture);
@@ -2420,6 +2417,7 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     }
 
     auto context = make_context(BG_BACKEND_RUST_CPU);
+    auto cpp_context = make_context(BG_BACKEND_CPP_CPU_REFERENCE);
     auto system = make_system(fixture, fixture.charge);
     auto forcefield = make_forcefield(fixture);
     auto direct = make_direct_model(fixture);
@@ -2438,6 +2436,65 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     require(
         initial.capacities == std::array<std::size_t, 3>{0U, 0U, 0U},
         "new Rust-lane PME reciprocal-provider force scratch retained capacity");
+
+    const ReciprocalParentForceScratchSnapshot initial_parent =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    const ReciprocalParentForceScratchSnapshot initial_peer_parent =
+        reciprocal_parent_force_scratch_snapshot(peer.get());
+    require(
+        initial_parent.size == 0U && initial_parent.capacity == 0U &&
+            initial_peer_parent.size == 0U &&
+            initial_peer_parent.capacity == 0U,
+        "new Rust-lane PME reciprocal-parent force scratch was not empty");
+    betelgeuze::native::tests::
+        reserve_particle_mesh_ewald_composite_reciprocal_parent_force_scratch(
+            simulation.get(), kReservedCapacity);
+    const ReciprocalParentForceScratchSnapshot reserved_parent =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require(
+        reserved_parent.address != nullptr && reserved_parent.size == 0U &&
+            reserved_parent.capacity >= kReservedCapacity,
+        "Rust-lane PME reciprocal-parent force scratch reserve failed");
+
+    integrate(cpp_context.get(), simulation.get(), UINT64_C(1));
+    const ReciprocalParentForceScratchSnapshot stale_parent =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        stale_parent,
+        reserved_parent,
+        "C++ seed replaced the pre-reserved PME reciprocal-parent scratch storage");
+    require(
+        stale_parent.size == kAtomCount,
+        "C++ seed retained the wrong PME reciprocal-parent scratch size");
+    const ForceBits stale_parent_bits =
+        reciprocal_parent_force_scratch_bits(stale_parent);
+    const RustReciprocalProviderForceScratchSnapshot after_cpp_seed =
+        rust_reciprocal_provider_force_scratch_snapshot(simulation.get());
+    require_same_rust_reciprocal_provider_force_scratch_storage(
+        after_cpp_seed,
+        initial,
+        "C++ seed changed empty Rust reciprocal-provider scratch storage");
+    require_rust_reciprocal_provider_force_scratch_sizes(
+        after_cpp_seed,
+        0U,
+        "C++ seed populated Rust reciprocal-provider force scratch");
+
+    const auto rust_start = checkpoint(simulation.get());
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
+            peer.get(), rust_start.data(), rust_start.size()),
+        BG_STATUS_OK,
+        "Rust-lane peer checkpoint load after C++ reciprocal seed failed");
+    const ReciprocalParentForceScratchSnapshot peer_parent_after_load =
+        reciprocal_parent_force_scratch_snapshot(peer.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        peer_parent_after_load,
+        initial_peer_parent,
+        "checkpoint load changed empty peer reciprocal-parent scratch storage");
+    require(
+        peer_parent_after_load.size == 0U,
+        "checkpoint load populated empty peer reciprocal-parent force scratch");
+
     betelgeuze::native::tests::
         reserve_particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch(
             simulation.get(), kReservedCapacity);
@@ -2481,6 +2538,26 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         after_zero,
         0U,
         "zero-step integration populated Rust reciprocal-provider force scratch");
+    const ReciprocalParentForceScratchSnapshot parent_after_zero =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        parent_after_zero,
+        stale_parent,
+        "Rust zero-step integration replaced stale reciprocal-parent storage");
+    require(
+        parent_after_zero.size == kAtomCount &&
+            reciprocal_parent_force_scratch_bits(parent_after_zero) ==
+                stale_parent_bits,
+        "Rust zero-step integration changed stale reciprocal-parent force bits");
+    const ReciprocalParentForceScratchSnapshot peer_parent_after_zero =
+        reciprocal_parent_force_scratch_snapshot(peer.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        peer_parent_after_zero,
+        initial_peer_parent,
+        "Rust zero-step integration changed empty peer reciprocal-parent storage");
+    require(
+        peer_parent_after_zero.size == 0U,
+        "Rust zero-step integration populated empty peer reciprocal-parent scratch");
 
     const auto stateless_bits_for_owner = [&]() {
         Fixture current = fixture;
@@ -2528,13 +2605,28 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
                                     peer.get())),
             "Rust reciprocal-provider scratch differed from same-lane peer bits");
         require(
-            current_bits == reciprocal_parent_force_scratch_bits(
-                                reciprocal_parent_force_scratch_snapshot(
-                                    simulation.get())),
-            "Rust reciprocal-provider scratch differed from reciprocal-parent force bits");
-        require(
             current_bits == stateless_bits_for_owner(),
             "Rust reciprocal-provider scratch differed from stateless reciprocal force bits");
+        const ReciprocalParentForceScratchSnapshot current_parent =
+            reciprocal_parent_force_scratch_snapshot(simulation.get());
+        require_same_reciprocal_parent_force_scratch_storage(
+            current_parent,
+            stale_parent,
+            "Rust integration replaced stale reciprocal-parent scratch storage");
+        require(
+            current_parent.size == kAtomCount &&
+                reciprocal_parent_force_scratch_bits(current_parent) ==
+                    stale_parent_bits,
+            "Rust integration rewrote stale reciprocal-parent force bits");
+        const ReciprocalParentForceScratchSnapshot current_peer_parent =
+            reciprocal_parent_force_scratch_snapshot(peer.get());
+        require_same_reciprocal_parent_force_scratch_storage(
+            current_peer_parent,
+            initial_peer_parent,
+            "Rust integration changed empty peer reciprocal-parent scratch storage");
+        require(
+            current_peer_parent.size == 0U,
+            "Rust integration populated empty peer reciprocal-parent scratch");
     }
 
     const auto checkpoint_a = checkpoint(simulation.get());
@@ -2551,11 +2643,19 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     const ForceBits forces_b =
         rust_reciprocal_provider_force_scratch_bits(state_b);
     require(
-        forces_b != forces_a &&
-            forces_b == reciprocal_parent_force_scratch_bits(
-                            reciprocal_parent_force_scratch_snapshot(
-                                simulation.get())),
+        forces_b != forces_a && forces_b == stateless_bits_for_owner(),
         "state-B integration did not refresh Rust reciprocal-provider scratch");
+    const ReciprocalParentForceScratchSnapshot parent_at_state_b =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        parent_at_state_b,
+        stale_parent,
+        "state-B Rust integration replaced stale reciprocal-parent storage");
+    require(
+        parent_at_state_b.size == kAtomCount &&
+            reciprocal_parent_force_scratch_bits(parent_at_state_b) ==
+                stale_parent_bits,
+        "state-B Rust integration rewrote stale reciprocal-parent forces");
 
     require_status(
         bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
@@ -2571,6 +2671,17 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     require(
         rust_reciprocal_provider_force_scratch_bits(after_load) == forces_b,
         "checkpoint reload unexpectedly rewrote stale Rust reciprocal-provider scratch");
+    const ReciprocalParentForceScratchSnapshot parent_after_restart_load =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        parent_after_restart_load,
+        stale_parent,
+        "checkpoint reload replaced stale reciprocal-parent scratch storage");
+    require(
+        parent_after_restart_load.size == kAtomCount &&
+            reciprocal_parent_force_scratch_bits(parent_after_restart_load) ==
+                stale_parent_bits,
+        "checkpoint reload rewrote stale reciprocal-parent force bits");
 
     const bg_dynamics_report_v1 restart_zero =
         integrate(context.get(), simulation.get(), UINT64_C(0));
@@ -2594,6 +2705,26 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         rust_reciprocal_provider_force_scratch_bits(after_restart_zero) ==
             forces_b,
         "zero-step restart changed stale Rust reciprocal-provider scratch bits");
+    const ReciprocalParentForceScratchSnapshot parent_after_restart_zero =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        parent_after_restart_zero,
+        stale_parent,
+        "zero-step restart replaced stale reciprocal-parent scratch storage");
+    require(
+        parent_after_restart_zero.size == kAtomCount &&
+            reciprocal_parent_force_scratch_bits(parent_after_restart_zero) ==
+                stale_parent_bits,
+        "zero-step restart rewrote stale reciprocal-parent force bits");
+    const ReciprocalParentForceScratchSnapshot peer_parent_after_restart_zero =
+        reciprocal_parent_force_scratch_snapshot(peer.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        peer_parent_after_restart_zero,
+        initial_peer_parent,
+        "zero-step restart changed empty peer reciprocal-parent storage");
+    require(
+        peer_parent_after_restart_zero.size == 0U,
+        "zero-step restart populated empty peer reciprocal-parent scratch");
 
     const bg_dynamics_report_v1 restarted =
         integrate(context.get(), simulation.get(), UINT64_C(1));
@@ -2618,11 +2749,28 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         resynced_bits == rust_reciprocal_provider_force_scratch_bits(
                              rust_reciprocal_provider_force_scratch_snapshot(
                                  peer.get())) &&
-            resynced_bits == reciprocal_parent_force_scratch_bits(
-                                reciprocal_parent_force_scratch_snapshot(
-                                    simulation.get())) &&
             resynced_bits == stateless_bits_for_owner(),
         "forceful restart did not resynchronize Rust reciprocal-provider scratch");
+    const ReciprocalParentForceScratchSnapshot parent_after_resync =
+        reciprocal_parent_force_scratch_snapshot(simulation.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        parent_after_resync,
+        stale_parent,
+        "forceful Rust restart replaced stale reciprocal-parent scratch storage");
+    require(
+        parent_after_resync.size == kAtomCount &&
+            reciprocal_parent_force_scratch_bits(parent_after_resync) ==
+                stale_parent_bits,
+        "forceful Rust restart rewrote stale reciprocal-parent force bits");
+    const ReciprocalParentForceScratchSnapshot peer_parent_after_resync =
+        reciprocal_parent_force_scratch_snapshot(peer.get());
+    require_same_reciprocal_parent_force_scratch_storage(
+        peer_parent_after_resync,
+        initial_peer_parent,
+        "forceful Rust restart changed empty peer reciprocal-parent storage");
+    require(
+        peer_parent_after_resync.size == 0U,
+        "forceful Rust restart populated empty peer reciprocal-parent scratch");
 
     const auto before_alias = checkpoint(simulation.get());
     const bg_dynamics_report_v1 report_before_alias = last_report;
@@ -2670,6 +2818,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
         require(
             rust_reciprocal_provider_force_scratch_bits(after_step_alias) ==
                     resynced_bits &&
+                reciprocal_parent_force_scratch_bits(
+                    reciprocal_parent_force_scratch_snapshot(
+                        simulation.get())) == stale_parent_bits &&
                 checkpoint(simulation.get()) == before_alias &&
                 std::memcmp(
                     &last_report,
@@ -2727,6 +2878,9 @@ void verify_rust_reciprocal_provider_force_scratch_reuse() {
     require(
         rust_reciprocal_provider_force_scratch_bits(after_view_alias) ==
                 resynced_bits &&
+            reciprocal_parent_force_scratch_bits(
+                reciprocal_parent_force_scratch_snapshot(simulation.get())) ==
+                stale_parent_bits &&
             checkpoint(simulation.get()) == before_alias &&
             std::memcmp(
                 &last_report,
