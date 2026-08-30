@@ -94,6 +94,27 @@ bool rust_reciprocal_workspace_storage_overlaps(
         workspace.storage, workspace.capacity * kElementSize, output);
 }
 
+bool rust_reciprocal_neutrality_sort_scratch_storage_overlaps(
+    const bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1 &scratch,
+    const ByteRange &output) noexcept {
+    constexpr std::size_t kElementSize =
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_ELEMENT_SIZE_BYTES;
+    static_assert(kElementSize == sizeof(double));
+    if (scratch.length > scratch.capacity) {
+        return true;
+    }
+    if (scratch.capacity == 0U) {
+        return scratch.storage != nullptr || scratch.length != 0U;
+    }
+    if (scratch.storage == nullptr ||
+        scratch.capacity >
+            std::numeric_limits<std::size_t>::max() / kElementSize) {
+        return true;
+    }
+    return fixed_storage_overlaps(
+        scratch.storage, scratch.capacity * kElementSize, output);
+}
+
 bool counted_storage_overlaps(
     const void *pointer,
     uint64_t element_count,
@@ -245,6 +266,10 @@ bool owner_storage_overlaps(
             owner.rust_reciprocal_provider_force_scratch.z, output) ||
         rust_reciprocal_workspace_storage_overlaps(
             owner.rust_reciprocal_provider_force_scratch.reciprocal_workspace,
+            output) ||
+        rust_reciprocal_neutrality_sort_scratch_storage_overlaps(
+            owner.rust_reciprocal_provider_force_scratch
+                .neutrality_sort_scratch,
             output)) {
         return true;
     }
