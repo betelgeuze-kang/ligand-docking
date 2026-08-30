@@ -528,7 +528,7 @@ SUCCESSOR_VERIFY = """      - name: Verify bounded successor evidence
           python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1.json >/dev/null
           python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1.py
+          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1
           python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1.py"""
 
 PREDECESSOR_MATERIALIZE = """      - name: Materialize exact PR 466 evidence and reviewed head

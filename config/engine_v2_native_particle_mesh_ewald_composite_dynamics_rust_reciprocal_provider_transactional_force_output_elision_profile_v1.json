@@ -100,7 +100,7 @@
     "soa_to_aos_copy_elided_claimed": false,
     "source_manifest_entry_count": 333,
     "source_manifest_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1_sources.json",
-    "source_manifest_sha256": "07a8d7a62843305a2a6dd5062c97dc09c93624162af9f485b8473dd64fc3eae8",
+    "source_manifest_sha256": "2bbeaea1697c401bbaa875e86e4d616e25fa0b1e914b6307949188e65019505b",
     "steady_state_allocation_free_claimed": false
   },
   "operational_boundary": {
