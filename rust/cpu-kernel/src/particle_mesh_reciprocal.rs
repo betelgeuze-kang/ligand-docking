@@ -174,8 +174,6 @@ enum AllocationSite {
     ReciprocalAxisData,
     ForceOutput,
     NeutralitySort,
-    ProviderChannelCopy,
-    ProviderPositions,
 }
 
 impl AllocationSite {
@@ -187,8 +185,6 @@ impl AllocationSite {
             Self::ReciprocalAxisData => "reciprocal axis-data allocation failed",
             Self::ForceOutput => "particle force-output allocation failed",
             Self::NeutralitySort => "neutrality summation scratch allocation failed",
-            Self::ProviderChannelCopy => "provider input-channel copy allocation failed",
-            Self::ProviderPositions => "provider position copy allocation failed",
         }
     }
 }
@@ -374,6 +370,7 @@ impl Default for ParticleMeshReciprocalSettings {
 
 /// Complete owned input to the particle-mesh reciprocal evaluator.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct ParticleMeshReciprocalInput {
     pub positions: Vec<Position>,
     pub charges_elementary: Vec<f64>,
@@ -395,6 +392,36 @@ impl ParticleMeshReciprocalInput {
             cell,
             settings: ParticleMeshReciprocalSettings::default(),
         }
+    }
+}
+
+trait ReciprocalInput {
+    fn particle_count(&self) -> usize;
+    fn position(&self, particle: usize) -> Position;
+    fn charges_elementary(&self) -> &[f64];
+    fn cell(&self) -> OrthorhombicCell;
+    fn settings(&self) -> ParticleMeshReciprocalSettings;
+}
+
+impl ReciprocalInput for ParticleMeshReciprocalInput {
+    fn particle_count(&self) -> usize {
+        self.positions.len()
+    }
+
+    fn position(&self, particle: usize) -> Position {
+        self.positions[particle]
+    }
+
+    fn charges_elementary(&self) -> &[f64] {
+        &self.charges_elementary
+    }
+
+    fn cell(&self) -> OrthorhombicCell {
+        self.cell
+    }
+
+    fn settings(&self) -> ParticleMeshReciprocalSettings {
+        self.settings
     }
 }
 
@@ -491,15 +518,15 @@ pub fn evaluate(
     evaluate_with_force_option(input, true)
 }
 
-fn evaluate_with_force_option(
-    input: &ParticleMeshReciprocalInput,
+fn evaluate_with_force_option<I: ReciprocalInput + ?Sized>(
+    input: &I,
     compute_forces: bool,
 ) -> Result<ParticleMeshReciprocalEvaluation, ParticleMeshReciprocalError> {
     evaluate_with_transform(input, fft::fft_3d, compute_forces)
 }
 
-fn evaluate_with_transform(
-    input: &ParticleMeshReciprocalInput,
+fn evaluate_with_transform<I: ReciprocalInput + ?Sized>(
+    input: &I,
     transform: Transform3d,
     compute_forces: bool,
 ) -> Result<ParticleMeshReciprocalEvaluation, ParticleMeshReciprocalError> {
@@ -522,25 +549,25 @@ enum ForceStorageMode {
     Direct(ParticleMeshReciprocalForceOutputV1),
 }
 
-fn compute_with_transform(
-    input: &ParticleMeshReciprocalInput,
+fn compute_with_transform<I: ReciprocalInput + ?Sized>(
+    input: &I,
     transform: Transform3d,
     force_mode: ForceStorageMode,
 ) -> Result<InternalEvaluation, ParticleMeshReciprocalError> {
     let validated = validate(input)?;
+    let particle_count = input.particle_count();
+    let charges = input.charges_elementary();
+    let cell = input.cell();
     let mut assignments = Vec::new();
     fallible_reserve_exact(
         &mut assignments,
-        input.positions.len(),
+        particle_count,
         AllocationSite::ParticleAssignments,
     )
     .map_err(ParticleMeshReciprocalError::from)?;
     assignments.extend(
-        input
-            .positions
-            .iter()
-            .copied()
-            .map(|position| assignment(position, input.cell, validated.dimensions)),
+        (0..particle_count)
+            .map(|particle| assignment(input.position(particle), cell, validated.dimensions)),
     );
     let mut spectrum = Vec::new();
     fallible_reserve_exact(
@@ -550,12 +577,7 @@ fn compute_with_transform(
     )
     .map_err(ParticleMeshReciprocalError::from)?;
     spectrum.resize(validated.mesh_point_count, Complex::default());
-    spread_charges(
-        &mut spectrum,
-        validated.dimensions,
-        &assignments,
-        &input.charges_elementary,
-    );
+    spread_charges(&mut spectrum, validated.dimensions, &assignments, charges);
     transform(&mut spectrum, validated.dimensions, false)
         .map_err(ParticleMeshReciprocalError::from)?;
 
@@ -575,8 +597,8 @@ fn compute_with_transform(
                     &spectrum,
                     validated.dimensions,
                     &assignments,
-                    &input.charges_elementary,
-                    input.cell,
+                    charges,
+                    cell,
                     scaled_grid_multiplier,
                 )
                 .map_err(ParticleMeshReciprocalError::from)?;
@@ -591,8 +613,8 @@ fn compute_with_transform(
                         &spectrum,
                         validated.dimensions,
                         &assignments,
-                        &input.charges_elementary,
-                        input.cell,
+                        charges,
+                        cell,
                         scaled_grid_multiplier,
                         output,
                     )
@@ -640,24 +662,23 @@ struct ReciprocalOperator {
     grid_derivative_scale: f64,
 }
 
-fn apply_reciprocal_operator(
-    input: &ParticleMeshReciprocalInput,
+fn apply_reciprocal_operator<I: ReciprocalInput + ?Sized>(
+    input: &I,
     validated: &ValidatedInput,
     spectrum: &mut [Complex],
 ) -> Result<ReciprocalOperator, ParticleMeshReciprocalError> {
-    let alpha = input.settings.alpha_per_angstrom;
-    let energy_prefactor = COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / input.settings.dielectric
+    let settings = input.settings();
+    let cell = input.cell();
+    let alpha = settings.alpha_per_angstrom;
+    let energy_prefactor = COULOMB_KCAL_ANGSTROM_PER_MOL_E2 / settings.dielectric
         * core::f64::consts::TAU
         / validated.volume_angstrom_cubed;
     let grid_derivative_scale =
         2.0 * energy_prefactor * bounded_usize_to_f64(validated.mesh_point_count);
     let mut dimension_data = [Vec::new(), Vec::new(), Vec::new()];
     for (axis, data) in dimension_data.iter_mut().enumerate() {
-        *data = reciprocal_axis_data(
-            validated.dimensions[axis],
-            input.cell.lengths_angstrom[axis],
-        )
-        .map_err(ParticleMeshReciprocalError::from)?;
+        *data = reciprocal_axis_data(validated.dimensions[axis], cell.lengths_angstrom[axis])
+            .map_err(ParticleMeshReciprocalError::from)?;
     }
     let mut reciprocal_sum = CompensatedSum::default();
     let mut rescued_energy_scaled = CompensatedSum::default();
@@ -792,28 +813,33 @@ struct ValidatedInput {
 }
 
 #[allow(clippy::too_many_lines)]
-fn validate(
-    input: &ParticleMeshReciprocalInput,
+fn validate<I: ReciprocalInput + ?Sized>(
+    input: &I,
 ) -> Result<ValidatedInput, ParticleMeshReciprocalError> {
-    if input.positions.is_empty() {
+    let particle_count = input.particle_count();
+    let charges = input.charges_elementary();
+    let cell = input.cell();
+    let settings = input.settings();
+    if particle_count == 0 {
         return Err(ParticleMeshReciprocalError::new(
             ParticleMeshReciprocalErrorCode::EmptySystem,
             "at least one particle is required",
         ));
     }
-    if input.positions.len() > MAX_PARTICLE_COUNT {
+    if particle_count > MAX_PARTICLE_COUNT {
         return Err(ParticleMeshReciprocalError::new(
             ParticleMeshReciprocalErrorCode::CapacityExceeded,
             "particle count exceeds the frozen maximum",
         ));
     }
-    if input.positions.len() != input.charges_elementary.len() {
+    if particle_count != charges.len() {
         return Err(ParticleMeshReciprocalError::new(
             ParticleMeshReciprocalErrorCode::ChargeCountMismatch,
             "position count does not match charge count",
         ));
     }
-    for position in input.positions.iter().copied() {
+    for particle in 0..particle_count {
+        let position = input.position(particle);
         for coordinate in position.components() {
             if !coordinate.is_finite() {
                 return Err(ParticleMeshReciprocalError::new(
@@ -828,7 +854,7 @@ fn validate(
             }
         }
     }
-    for charge in input.charges_elementary.iter().copied() {
+    for charge in charges.iter().copied() {
         if !charge.is_finite() {
             return Err(ParticleMeshReciprocalError::new(
                 ParticleMeshReciprocalErrorCode::NonFiniteCharge,
@@ -843,8 +869,8 @@ fn validate(
             ));
         }
     }
-    let total_charge = accurate_order_independent_sum(&input.charges_elementary)
-        .map_err(ParticleMeshReciprocalError::from)?;
+    let total_charge =
+        accurate_order_independent_sum(charges).map_err(ParticleMeshReciprocalError::from)?;
     if total_charge != 0.0 {
         return Err(ParticleMeshReciprocalError::new(
             ParticleMeshReciprocalErrorCode::NonNeutralSystem,
@@ -852,7 +878,7 @@ fn validate(
         ));
     }
 
-    for length in input.cell.lengths_angstrom {
+    for length in cell.lengths_angstrom {
         if !length.is_finite()
             || !(MIN_CELL_LENGTH_ANGSTROM..=MAX_CELL_LENGTH_ANGSTROM).contains(&length)
         {
@@ -862,7 +888,7 @@ fn validate(
             ));
         }
     }
-    let volume_angstrom_cubed = cell_volume(input.cell);
+    let volume_angstrom_cubed = cell_volume(cell);
     if !volume_angstrom_cubed.is_finite() || volume_angstrom_cubed <= 0.0 {
         return Err(ParticleMeshReciprocalError::new(
             ParticleMeshReciprocalErrorCode::InvalidCell,
@@ -870,20 +896,20 @@ fn validate(
         ));
     }
     require_parameter_range(
-        input.settings.alpha_per_angstrom,
+        settings.alpha_per_angstrom,
         MIN_ALPHA_PER_ANGSTROM,
         MAX_ALPHA_PER_ANGSTROM,
         "alpha_per_angstrom is outside the frozen finite positive range",
     )?;
     require_parameter_range(
-        input.settings.dielectric,
+        settings.dielectric,
         MIN_DIELECTRIC,
         MAX_DIELECTRIC,
         "dielectric is outside the frozen finite positive range",
     )?;
 
     let mut dimensions = [0_usize; 3];
-    for (axis, dimension) in input.settings.mesh_dimensions.iter().copied().enumerate() {
+    for (axis, dimension) in settings.mesh_dimensions.iter().copied().enumerate() {
         if !dimension.is_power_of_two()
             || !(MIN_MESH_DIMENSION..=MAX_MESH_DIMENSION).contains(&dimension)
         {
@@ -909,7 +935,7 @@ fn validate(
             "mesh point count exceeds the frozen maximum",
         ));
     }
-    validate_work_limit(dimensions, mesh_point_count, input.positions.len())?;
+    validate_work_limit(dimensions, mesh_point_count, particle_count)?;
     Ok(ValidatedInput {
         dimensions,
         mesh_point_count,
@@ -1508,78 +1534,66 @@ fn overlaps_any(range: MemoryRange, candidates: &[Option<MemoryRange>]) -> bool 
         .any(|candidate| ranges_overlap(range, candidate))
 }
 
-unsafe fn copy_validated_slice<T: Copy>(
-    pointer: *const T,
-    length: usize,
-    site: AllocationSite,
-) -> Result<Vec<T>, ProviderFailure> {
-    if length == 0 {
-        return Ok(Vec::new());
-    }
-    let mut values = Vec::new();
-    fallible_reserve_exact(&mut values, length, site).map_err(ProviderFailure::from)?;
-    // SAFETY: The caller supplies `length` initialized elements and the range
-    // and alignment were preflighted. Copying removes all input borrows before
-    // any output is committed.
-    values.extend_from_slice(unsafe { core::slice::from_raw_parts(pointer, length) });
-    Ok(values)
+struct BorrowedProviderInput<'a> {
+    position_x: &'a [f64],
+    position_y: &'a [f64],
+    position_z: &'a [f64],
+    charges_elementary: &'a [f64],
+    cell: OrthorhombicCell,
+    settings: ParticleMeshReciprocalSettings,
 }
 
-fn provider_input(
-    system: ParticleMeshReciprocalSystemV1,
-    model: ParticleMeshReciprocalModelV1,
-) -> Result<ParticleMeshReciprocalInput, ProviderFailure> {
-    // SAFETY: Private-ABI channels were fully preflighted for range, alignment,
-    // and aliasing and remain initialized for the call.
-    let position_x = unsafe {
-        copy_validated_slice(
-            system.position_x,
-            system.atom_count,
-            AllocationSite::ProviderChannelCopy,
-        )?
-    };
-    // SAFETY: Same channel contract as position_x.
-    let position_y = unsafe {
-        copy_validated_slice(
-            system.position_y,
-            system.atom_count,
-            AllocationSite::ProviderChannelCopy,
-        )?
-    };
-    // SAFETY: Same channel contract as position_x.
-    let position_z = unsafe {
-        copy_validated_slice(
-            system.position_z,
-            system.atom_count,
-            AllocationSite::ProviderChannelCopy,
-        )?
-    };
-    // SAFETY: Same channel contract as position_x.
-    let charges = unsafe {
-        copy_validated_slice(
-            system.charge,
-            system.atom_count,
-            AllocationSite::ProviderChannelCopy,
-        )?
-    };
+impl ReciprocalInput for BorrowedProviderInput<'_> {
+    fn particle_count(&self) -> usize {
+        self.position_x.len()
+    }
 
-    let mut positions = Vec::new();
-    fallible_reserve_exact(
-        &mut positions,
-        system.atom_count,
-        AllocationSite::ProviderPositions,
-    )
-    .map_err(ProviderFailure::from)?;
-    positions.extend(
-        position_x
-            .into_iter()
-            .zip(position_y)
-            .zip(position_z)
-            .map(|((x, y), z)| Position::new(x, y, z)),
-    );
-    Ok(ParticleMeshReciprocalInput {
-        positions,
-        charges_elementary: charges,
+    fn position(&self, particle: usize) -> Position {
+        Position::new(
+            self.position_x[particle],
+            self.position_y[particle],
+            self.position_z[particle],
+        )
+    }
+
+    fn charges_elementary(&self) -> &[f64] {
+        self.charges_elementary
+    }
+
+    fn cell(&self) -> OrthorhombicCell {
+        self.cell
+    }
+
+    fn settings(&self) -> ParticleMeshReciprocalSettings {
+        self.settings
+    }
+}
+
+unsafe fn borrowed_provider_channel(
+    system: &ParticleMeshReciprocalSystemV1,
+    pointer: *const f64,
+) -> &[f64] {
+    if system.atom_count == 0 {
+        return &[];
+    }
+    // SAFETY: The provider preflight validated this channel's non-null,
+    // aligned, addressable range. The private FFI contract keeps every input
+    // element initialized and immutable for the duration of this call.
+    unsafe { core::slice::from_raw_parts(pointer, system.atom_count) }
+}
+
+unsafe fn provider_input<'a>(
+    system: &'a ParticleMeshReciprocalSystemV1,
+    model: ParticleMeshReciprocalModelV1,
+) -> BorrowedProviderInput<'a> {
+    // SAFETY: The caller completed descriptor, capacity, mutable-output
+    // disjointness, and input/output alias preflight before borrowing any raw
+    // channel. Each borrow is bounded by the local system descriptor lifetime.
+    BorrowedProviderInput {
+        position_x: unsafe { borrowed_provider_channel(system, system.position_x) },
+        position_y: unsafe { borrowed_provider_channel(system, system.position_y) },
+        position_z: unsafe { borrowed_provider_channel(system, system.position_z) },
+        charges_elementary: unsafe { borrowed_provider_channel(system, system.charge) },
         cell: OrthorhombicCell {
             lengths_angstrom: model.cell_lengths_angstrom,
         },
@@ -1588,7 +1602,7 @@ fn provider_input(
             mesh_dimensions: model.mesh_dimensions,
             dielectric: model.dielectric,
         },
-    })
+    }
 }
 
 unsafe fn gather_forces_into_provider_output(
@@ -1624,8 +1638,8 @@ unsafe fn gather_forces_into_provider_output(
     all_forces_are_finite
 }
 
-fn evaluate_with_direct_force_output(
-    input: &ParticleMeshReciprocalInput,
+fn evaluate_with_direct_force_output<I: ReciprocalInput + ?Sized>(
+    input: &I,
     output: ParticleMeshReciprocalForceOutputV1,
 ) -> Result<f64, ParticleMeshReciprocalError> {
     Ok(
@@ -1845,7 +1859,10 @@ unsafe fn evaluate_provider_impl(
         }
     }
 
-    let input = provider_input(system, model)?;
+    // SAFETY: All raw descriptor and channel ranges, capacities, mutable
+    // output disjointness, and input/output aliases were preflighted above.
+    // The borrowed input is consumed only by this call and is never retained.
+    let input = unsafe { provider_input(&system, model) };
     let (reciprocal_space_kcal_per_mol, forces, force_output) = match force_mode {
         ProviderForceMode::Transactional(_) => {
             let result = evaluate_with_force_option(&input, compute_forces == 1)
@@ -1952,8 +1969,8 @@ pub extern "C" fn bg_rust_particle_mesh_reciprocal_provider_abi_version_v1() -> 
 ///
 /// # Safety
 /// Every descriptor and non-null channel must remain initialized and valid for
-/// its declared extent for the call. Mutable outputs must not overlap one
-/// another or any input region.
+/// its declared extent for the call. Input channels must remain immutable for
+/// the call. Mutable outputs must not overlap one another or any input region.
 #[no_mangle]
 pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_v1(
     system: *const ParticleMeshReciprocalSystemV1,
@@ -1970,8 +1987,8 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_v1(
     };
     let alias_safety = Cell::new(false);
     let outcome = catch_unwind(AssertUnwindSafe(|| {
-        // SAFETY: All raw pointer validation and input copying is contained in
-        // the implementation before references or output writes are formed.
+        // SAFETY: The implementation validates every raw range and alias before
+        // borrowing input channels or writing outputs.
         unsafe {
             evaluate_provider_impl(
                 system,
@@ -2021,7 +2038,7 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_v1(
 /// reusable caller-owned force channels.
 ///
 /// This hidden dynamics-only entry point validates every descriptor, alias,
-/// capacity, input copy, and fallible allocation before the first force write.
+/// capacity, input borrow, and fallible allocation before the first force write.
 /// A late scientific failure or panic may therefore modify force channels;
 /// energy remains transactional and is committed only on success.
 ///
@@ -2043,8 +2060,8 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_reusing_force
     };
     let alias_safety = Cell::new(false);
     let outcome = catch_unwind(AssertUnwindSafe(|| {
-        // SAFETY: All raw pointer validation, input copying, and fallible work
-        // precedes direct force writes inside the implementation.
+        // SAFETY: All raw pointer validation, input borrowing, and fallible work
+        // precede direct force writes inside the implementation.
         unsafe {
             evaluate_provider_impl(
                 system,
@@ -2133,6 +2150,15 @@ mod tests {
             detail: [0xff; PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY],
             reserved: [0; 4],
         }
+    }
+
+    fn provider_error_detail(error: &ParticleMeshReciprocalErrorV1) -> &str {
+        let length = error
+            .detail
+            .iter()
+            .position(|byte| *byte == 0)
+            .unwrap_or(error.detail.len());
+        core::str::from_utf8(&error.detail[..length]).expect("provider detail must be UTF-8")
     }
 
     fn provider_system(
@@ -2270,6 +2296,57 @@ mod tests {
             2,
             "production ordering must use the allocation-free unstable primitive"
         );
+        for removed_copy in [
+            concat!("copy_validated_", "slice"),
+            concat!("ProviderChannel", "Copy"),
+            concat!("Provider", "Positions"),
+        ] {
+            assert!(
+                !production.contains(removed_copy),
+                "removed provider allocation path must not return through {removed_copy}"
+            );
+        }
+
+        let provider_channel = production
+            .split_once("unsafe fn borrowed_provider_channel")
+            .expect("borrowed provider channel helper must remain private")
+            .1
+            .split_once("unsafe fn provider_input")
+            .expect("borrowed provider input constructor must follow its helper")
+            .0;
+        assert!(
+            provider_channel
+                .find("if system.atom_count == 0")
+                .expect("zero-count provider channels must be explicit")
+                < provider_channel
+                    .find("core::slice::from_raw_parts")
+                    .expect("non-empty provider channels must be borrowed"),
+            "zero-count channels must become &[] before from_raw_parts"
+        );
+
+        let provider_impl = production
+            .split_once("unsafe fn evaluate_provider_impl")
+            .expect("provider implementation must remain explicit")
+            .1
+            .split_once("unsafe fn validate_error_output")
+            .expect("provider implementation boundary must remain explicit")
+            .0;
+        let borrow = provider_impl
+            .find("provider_input(&system, model)")
+            .expect("provider must construct a borrowed input");
+        for preflight in [
+            "if output.capacity < system.atom_count",
+            "require_disjoint_outputs(&mutable_ranges)",
+            "for input_range in input_ranges.into_iter().flatten()",
+        ] {
+            assert!(
+                provider_impl
+                    .find(preflight)
+                    .unwrap_or_else(|| panic!("missing provider preflight {preflight}"))
+                    < borrow,
+                "provider preflight {preflight} must precede raw input borrowing"
+            );
+        }
     }
 
     #[test]
@@ -2415,6 +2492,83 @@ mod tests {
         };
         assert_eq!(status, STATUS_OK);
         assert!(energy.reciprocal_space_kcal_per_mol.is_finite());
+    }
+
+    #[test]
+    fn borrowed_provider_input_preserves_channel_identity_length_and_bits() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([16; 3]);
+
+        // SAFETY: The descriptor channels are initialized, immutable, and
+        // live for the complete lifetime of this call-local borrowed view.
+        let input = unsafe { provider_input(&system, model) };
+        for (borrowed, original) in [
+            (input.position_x, position_x.as_slice()),
+            (input.position_y, position_y.as_slice()),
+            (input.position_z, position_z.as_slice()),
+            (input.charges_elementary, charges.as_slice()),
+        ] {
+            assert_eq!(borrowed.as_ptr(), original.as_ptr());
+            assert_eq!(borrowed.len(), original.len());
+            assert_eq!(
+                borrowed
+                    .iter()
+                    .copied()
+                    .map(f64::to_bits)
+                    .collect::<Vec<_>>(),
+                original
+                    .iter()
+                    .copied()
+                    .map(f64::to_bits)
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn zero_count_provider_accepts_null_channels_without_forming_raw_slices() {
+        let system = ParticleMeshReciprocalSystemV1 {
+            struct_size: 80,
+            abi_version: 1,
+            atom_count: 0,
+            position_x: ptr::null(),
+            position_y: ptr::null(),
+            position_z: ptr::null(),
+            charge: ptr::null(),
+            reserved: [0; 4],
+        };
+        let model = provider_model([4; 3]);
+        let mut energy = initialized_energy(123.0);
+        let mut error = initialized_error();
+        // SAFETY: Zero-length input channels may be null and no force output is
+        // requested. The provider must reach semantic empty-system validation.
+        let status = unsafe {
+            super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                &system,
+                &model,
+                0,
+                &mut energy,
+                ptr::null_mut(),
+                &mut error,
+            )
+        };
+        assert_eq!(status, STATUS_INVALID_ARGUMENT);
+        assert_eq!(
+            error.typed_code,
+            ParticleMeshReciprocalErrorCodeV1::EmptySystem as i32
+        );
+        assert_eq!(
+            provider_error_detail(&error),
+            "at least one particle is required"
+        );
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            123.0_f64.to_bits()
+        );
     }
 
     fn assert_error_code(
@@ -2801,13 +2955,40 @@ mod tests {
     }
 
     #[test]
-    fn direct_provider_force_output_is_bit_identical_and_preserves_tail_storage() {
+    fn owned_and_three_borrowed_output_modes_are_bit_identical_and_retain_inputs() {
         let position_x = [1.25, 5.1, 10.2, 15.4];
         let position_y = [2.5, 3.2, 12.3, 17.1];
         let position_z = [3.75, 8.4, 7.7, 19.3];
         let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let position_x_before = position_x.map(f64::to_bits);
+        let position_y_before = position_y.map(f64::to_bits);
+        let position_z_before = position_z.map(f64::to_bits);
+        let charges_before = charges.map(f64::to_bits);
         let system = provider_system(&position_x, &position_y, &position_z, &charges);
         let model = provider_model([16; 3]);
+        let owned = fixture([16; 3]);
+        let owned_with_forces = evaluate_with_force_option(&owned, true)
+            .expect("owned fixture must evaluate with forces");
+        let owned_energy_only = evaluate_with_force_option(&owned, false)
+            .expect("owned fixture must evaluate without forces");
+
+        let mut borrowed_energy_only = initialized_energy(11.0);
+        let mut borrowed_energy_only_error = initialized_error();
+        // SAFETY: Every input remains initialized, immutable, and live. The
+        // energy-only mode requires a null force descriptor.
+        assert_eq!(
+            unsafe {
+                super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                    &system,
+                    &model,
+                    0,
+                    &mut borrowed_energy_only,
+                    ptr::null_mut(),
+                    &mut borrowed_energy_only_error,
+                )
+            },
+            STATUS_OK
+        );
 
         let mut transactional_energy = initialized_energy(101.0);
         let mut transactional_x = [201.0; 5];
@@ -2862,9 +3043,39 @@ mod tests {
         );
 
         assert_eq!(
+            owned_with_forces.reciprocal_space_kcal_per_mol.to_bits(),
+            owned_energy_only.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        assert_eq!(
+            owned_with_forces.reciprocal_space_kcal_per_mol.to_bits(),
+            borrowed_energy_only.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        assert_eq!(
             transactional_energy.reciprocal_space_kcal_per_mol.to_bits(),
             direct_energy.reciprocal_space_kcal_per_mol.to_bits()
         );
+        assert_eq!(
+            owned_with_forces.reciprocal_space_kcal_per_mol.to_bits(),
+            transactional_energy.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        for (particle, owned_force) in owned_with_forces
+            .forces_kcal_per_mol_angstrom
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(
+                transactional_x[particle].to_bits(),
+                owned_force[0].to_bits()
+            );
+            assert_eq!(
+                transactional_y[particle].to_bits(),
+                owned_force[1].to_bits()
+            );
+            assert_eq!(
+                transactional_z[particle].to_bits(),
+                owned_force[2].to_bits()
+            );
+        }
         assert_eq!(
             transactional_x.map(f64::to_bits),
             direct_x.map(f64::to_bits)
@@ -2880,6 +3091,18 @@ mod tests {
         assert_eq!(direct_x[4].to_bits(), 301.0_f64.to_bits());
         assert_eq!(direct_y[4].to_bits(), 302.0_f64.to_bits());
         assert_eq!(direct_z[4].to_bits(), 303.0_f64.to_bits());
+        assert_eq!(position_x.map(f64::to_bits), position_x_before);
+        assert_eq!(position_y.map(f64::to_bits), position_y_before);
+        assert_eq!(position_z.map(f64::to_bits), position_z_before);
+        assert_eq!(charges.map(f64::to_bits), charges_before);
+        assert_eq!(
+            borrowed_energy_only_error.typed_code,
+            ParticleMeshReciprocalErrorCodeV1::None as i32
+        );
+        assert!(borrowed_energy_only_error
+            .detail
+            .iter()
+            .all(|byte| *byte == 0));
         assert_eq!(
             direct_error.typed_code,
             ParticleMeshReciprocalErrorCodeV1::None as i32
@@ -2893,6 +3116,12 @@ mod tests {
         let position_y = [2.5, 3.2, 12.3, 17.1];
         let position_z = [3.75, 8.4, 7.7, 19.3];
         let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let input_before = [
+            position_x.map(f64::to_bits),
+            position_y.map(f64::to_bits),
+            position_z.map(f64::to_bits),
+            charges.map(f64::to_bits),
+        ];
         let system = provider_system(&position_x, &position_y, &position_z, &charges);
         let model = provider_model([4; 3]);
 
@@ -2961,8 +3190,6 @@ mod tests {
         );
 
         for site in [
-            AllocationSite::ProviderChannelCopy,
-            AllocationSite::ProviderPositions,
             AllocationSite::NeutralitySort,
             AllocationSite::ParticleAssignments,
             AllocationSite::Spectrum,
@@ -3024,14 +3251,18 @@ mod tests {
         assert_eq!(force_x, [801.0; 4]);
         assert_eq!(force_y, [802.0; 4]);
         assert_eq!(force_z, [803.0; 4]);
+        assert_eq!(position_x.map(f64::to_bits), input_before[0]);
+        assert_eq!(position_y.map(f64::to_bits), input_before[1]);
+        assert_eq!(position_z.map(f64::to_bits), input_before[2]);
+        assert_eq!(charges.map(f64::to_bits), input_before[3]);
     }
 
     #[test]
     fn direct_provider_preflights_capacity_and_aliases_before_force_writes() {
         let mut position_x = [1.25, 5.1, 10.2, 15.4];
-        let position_y = [2.5, 3.2, 12.3, 17.1];
-        let position_z = [3.75, 8.4, 7.7, 19.3];
-        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let mut position_y = [2.5, 3.2, 12.3, 17.1];
+        let mut position_z = [3.75, 8.4, 7.7, 19.3];
+        let mut charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
         let system = provider_system(&position_x, &position_y, &position_z, &charges);
         let model = provider_model([4; 3]);
 
@@ -3093,40 +3324,67 @@ mod tests {
         assert_eq!(overlapping, [301.0; 4]);
         assert_eq!(separate_z, [303.0; 4]);
 
-        let mut input_alias_y = [401.0; 4];
-        let mut input_alias_z = [403.0; 4];
-        let mut input_alias_output = ParticleMeshReciprocalForceOutputV1 {
-            struct_size: 72,
-            abi_version: 1,
-            capacity: 4,
-            x: position_x.as_mut_ptr(),
-            y: input_alias_y.as_mut_ptr(),
-            z: input_alias_z.as_mut_ptr(),
-            reserved: [0; 4],
-        };
         let position_x_before = position_x;
-        let mut error = initialized_error();
-        // SAFETY: The x channel deliberately aliases readable position_x. The
-        // arithmetic range preflight must reject it before input copying/writes.
-        assert_eq!(
-            unsafe {
-                super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
-                    &system,
-                    &model,
-                    &mut energy,
-                    &mut input_alias_output,
-                    &mut error,
-                )
-            },
-            STATUS_INVALID_ARGUMENT
-        );
-        assert_eq!(position_x, position_x_before);
-        assert_eq!(input_alias_y, [401.0; 4]);
-        assert_eq!(input_alias_z, [403.0; 4]);
-        assert_eq!(
-            energy.reciprocal_space_kcal_per_mol.to_bits(),
-            101.0_f64.to_bits()
-        );
+        let position_y_before = position_y;
+        let position_z_before = position_z;
+        let charges_before = charges;
+        for (channel, alias_pointer) in [
+            ("position_x", position_x.as_mut_ptr()),
+            ("position_y", position_y.as_mut_ptr()),
+            ("position_z", position_z.as_mut_ptr()),
+            ("charge", charges.as_mut_ptr()),
+        ] {
+            let mut input_alias_y = [401.0; 4];
+            let mut input_alias_z = [403.0; 4];
+            let mut input_alias_output = ParticleMeshReciprocalForceOutputV1 {
+                struct_size: 72,
+                abi_version: 1,
+                capacity: 4,
+                x: alias_pointer,
+                y: input_alias_y.as_mut_ptr(),
+                z: input_alias_z.as_mut_ptr(),
+                reserved: [0; 4],
+            };
+            let mut alias_energy = initialized_energy(101.0);
+            let mut error = initialized_error();
+            // SAFETY: Force x deliberately aliases one initialized input
+            // channel. Arithmetic preflight must reject it before borrowing
+            // any input slice or writing any output.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+                        &system,
+                        &model,
+                        &mut alias_energy,
+                        &mut input_alias_output,
+                        &mut error,
+                    )
+                },
+                STATUS_INVALID_ARGUMENT,
+                "input channel {channel}"
+            );
+            assert_eq!(
+                error.typed_code,
+                ParticleMeshReciprocalErrorCodeV1::None as i32,
+                "input channel {channel}"
+            );
+            assert_eq!(
+                provider_error_detail(&error),
+                "particle-mesh reciprocal output storage must not overlap input storage",
+                "input channel {channel}"
+            );
+            assert_eq!(position_x, position_x_before, "input channel {channel}");
+            assert_eq!(position_y, position_y_before, "input channel {channel}");
+            assert_eq!(position_z, position_z_before, "input channel {channel}");
+            assert_eq!(charges, charges_before, "input channel {channel}");
+            assert_eq!(input_alias_y, [401.0; 4], "input channel {channel}");
+            assert_eq!(input_alias_z, [403.0; 4], "input channel {channel}");
+            assert_eq!(
+                alias_energy.reciprocal_space_kcal_per_mol.to_bits(),
+                101.0_f64.to_bits(),
+                "input channel {channel}"
+            );
+        }
 
         let non_neutral_charges = [0.95, -0.4, -0.6, 0.300_000_000_000_000_04];
         let non_neutral_system =
@@ -3208,6 +3466,12 @@ mod tests {
         let position_y = [2.5, 3.2, 12.3, 17.1];
         let position_z = [3.75, 8.4, 7.7, 19.3];
         let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let input_before = [
+            position_x.map(f64::to_bits),
+            position_y.map(f64::to_bits),
+            position_z.map(f64::to_bits),
+            charges.map(f64::to_bits),
+        ];
         let system = provider_system(&position_x, &position_y, &position_z, &charges);
         let model = provider_model([4; 3]);
 
@@ -3281,6 +3545,10 @@ mod tests {
         assert_ne!(direct_x, [401.0; 4]);
         assert_ne!(direct_y, [402.0; 4]);
         assert_ne!(direct_z, [403.0; 4]);
+        assert_eq!(position_x.map(f64::to_bits), input_before[0]);
+        assert_eq!(position_y.map(f64::to_bits), input_before[1]);
+        assert_eq!(position_z.map(f64::to_bits), input_before[2]);
+        assert_eq!(charges.map(f64::to_bits), input_before[3]);
     }
 
     #[test]
@@ -3289,6 +3557,12 @@ mod tests {
         let position_y = [2.5, 3.2, 12.3, 17.1];
         let position_z = [3.75, 8.4, 7.7, 19.3];
         let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let input_before = [
+            position_x.map(f64::to_bits),
+            position_y.map(f64::to_bits),
+            position_z.map(f64::to_bits),
+            charges.map(f64::to_bits),
+        ];
         let system = ParticleMeshReciprocalSystemV1 {
             struct_size: 80,
             abi_version: 1,
@@ -3310,8 +3584,6 @@ mod tests {
             reserved: [0; 4],
         };
         for site in [
-            AllocationSite::ProviderChannelCopy,
-            AllocationSite::ProviderPositions,
             AllocationSite::NeutralitySort,
             AllocationSite::ParticleAssignments,
             AllocationSite::Spectrum,
@@ -3361,6 +3633,45 @@ mod tests {
             assert_eq!(force_y, [202.0; 4]);
             assert_eq!(force_z, [203.0; 4]);
         }
+
+        for site in [
+            AllocationSite::NeutralitySort,
+            AllocationSite::ParticleAssignments,
+            AllocationSite::Spectrum,
+            AllocationSite::FftLineScratch,
+            AllocationSite::ReciprocalAxisData,
+        ] {
+            let mut energy = initialized_energy(301.0);
+            let mut error = initialized_error();
+            let _injection = AllocationFailureGuard::inject(site);
+            // SAFETY: Valid immutable inputs and disjoint descriptors exercise
+            // every allocation that remains in the borrowed energy-only path.
+            let status = unsafe {
+                super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                    &system,
+                    &model,
+                    0,
+                    &mut energy,
+                    ptr::null_mut(),
+                    &mut error,
+                )
+            };
+            assert_eq!(status, STATUS_OUT_OF_MEMORY, "allocation site {site:?}");
+            assert_eq!(
+                provider_error_detail(&error),
+                site.detail(),
+                "allocation site {site:?}"
+            );
+            assert_eq!(
+                energy.reciprocal_space_kcal_per_mol.to_bits(),
+                301.0_f64.to_bits(),
+                "allocation site {site:?}"
+            );
+        }
+        assert_eq!(position_x.map(f64::to_bits), input_before[0]);
+        assert_eq!(position_y.map(f64::to_bits), input_before[1]);
+        assert_eq!(position_z.map(f64::to_bits), input_before[2]);
+        assert_eq!(charges.map(f64::to_bits), input_before[3]);
 
         model.mesh_dimensions = [128; 3];
         let mut energy = initialized_energy(101.0);
