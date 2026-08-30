@@ -695,11 +695,13 @@ fn apply_reciprocal_operator<I: ReciprocalInput + ?Sized>(
         / validated.volume_angstrom_cubed;
     let grid_derivative_scale =
         2.0 * energy_prefactor * bounded_usize_to_f64(validated.mesh_point_count);
-    let mut dimension_data = [Vec::new(), Vec::new(), Vec::new()];
-    for (axis, data) in dimension_data.iter_mut().enumerate() {
-        *data = reciprocal_axis_data(validated.dimensions[axis], cell.lengths_angstrom[axis])
-            .map_err(ParticleMeshReciprocalError::from)?;
-    }
+    let dimension_data_storage = reciprocal_axis_data(validated.dimensions, cell.lengths_angstrom)
+        .map_err(ParticleMeshReciprocalError::from)?;
+    let [x_count, y_count, z_count] = validated.dimensions;
+    let (x_axis_data, yz_axis_data) = dimension_data_storage.split_at(x_count);
+    let (y_axis_data, z_axis_data) = yz_axis_data.split_at(y_count);
+    debug_assert_eq!(z_axis_data.len(), z_count);
+    let dimension_data = [x_axis_data, y_axis_data, z_axis_data];
     let mut reciprocal_sum = CompensatedSum::default();
     let mut rescued_energy_scaled = CompensatedSum::default();
     let mut has_rescued_energy = false;
@@ -1131,21 +1133,30 @@ struct ReciprocalAxisData {
 }
 
 fn reciprocal_axis_data(
-    dimension: usize,
-    cell_length: f64,
+    dimensions: [usize; 3],
+    cell_lengths: [f64; 3],
 ) -> Result<Vec<ReciprocalAxisData>, AllocationFailure> {
+    let data_count = dimensions
+        .into_iter()
+        .try_fold(0_usize, usize::checked_add)
+        .expect("validated reciprocal axis-data count fits usize");
     let mut data = Vec::new();
-    fallible_reserve_exact(&mut data, dimension, AllocationSite::ReciprocalAxisData)?;
-    for index in 0..dimension {
-        let signed_index = signed_mesh_index(index, dimension);
-        let wave = core::f64::consts::TAU * f64::from(signed_index) / cell_length;
-        let angle =
-            core::f64::consts::TAU * f64::from(signed_index) / bounded_usize_to_f64(dimension);
-        data.push(ReciprocalAxisData {
-            wave_squared: wave * wave,
-            assignment_modulus: (2.0 + libm::cos(angle)) / 3.0,
-        });
+    fallible_reserve_exact(&mut data, data_count, AllocationSite::ReciprocalAxisData)?;
+    for axis in 0..3 {
+        let dimension = dimensions[axis];
+        let cell_length = cell_lengths[axis];
+        for index in 0..dimension {
+            let signed_index = signed_mesh_index(index, dimension);
+            let wave = core::f64::consts::TAU * f64::from(signed_index) / cell_length;
+            let angle =
+                core::f64::consts::TAU * f64::from(signed_index) / bounded_usize_to_f64(dimension);
+            data.push(ReciprocalAxisData {
+                wave_squared: wave * wave,
+                assignment_modulus: (2.0 + libm::cos(angle)) / 3.0,
+            });
+        }
     }
+    debug_assert_eq!(data.len(), data_count);
     Ok(data)
 }
 
@@ -2750,6 +2761,45 @@ mod tests {
     }
 
     #[test]
+    fn reciprocal_axes_share_one_contiguous_noncubic_backing() {
+        let dimensions = [4, 8, 16];
+        let cell_lengths = [18.0, 20.0, 22.0];
+        let storage = reciprocal_axis_data(dimensions, cell_lengths)
+            .expect("validated reciprocal axes must allocate");
+        assert_eq!(storage.len(), dimensions.into_iter().sum::<usize>());
+
+        let (x_axis_data, yz_axis_data) = storage.split_at(dimensions[0]);
+        let (y_axis_data, z_axis_data) = yz_axis_data.split_at(dimensions[1]);
+        assert_eq!(
+            [x_axis_data.len(), y_axis_data.len(), z_axis_data.len()],
+            dimensions
+        );
+        assert_eq!(
+            x_axis_data.as_ptr().wrapping_add(x_axis_data.len()),
+            y_axis_data.as_ptr()
+        );
+        assert_eq!(
+            y_axis_data.as_ptr().wrapping_add(y_axis_data.len()),
+            z_axis_data.as_ptr()
+        );
+
+        let axes = [x_axis_data, y_axis_data, z_axis_data];
+        for (axis, axis_data) in axes.into_iter().enumerate() {
+            for (index, datum) in axis_data.iter().enumerate() {
+                let signed_index = signed_mesh_index(index, dimensions[axis]);
+                let wave = core::f64::consts::TAU * f64::from(signed_index) / cell_lengths[axis];
+                let angle = core::f64::consts::TAU * f64::from(signed_index)
+                    / bounded_usize_to_f64(dimensions[axis]);
+                assert_eq!(datum.wave_squared.to_bits(), (wave * wave).to_bits());
+                assert_eq!(
+                    datum.assignment_modulus.to_bits(),
+                    ((2.0 + libm::cos(angle)) / 3.0).to_bits()
+                );
+            }
+        }
+    }
+
+    #[test]
     fn log_rescue_preserves_normal_and_subnormal_force_domains() {
         let mut normal = ParticleMeshReciprocalInput::new(
             vec![Position::new(0.0, 0.0, 0.0), Position::new(4.0e8, 0.0, 0.0)],
@@ -3312,9 +3362,9 @@ mod tests {
         let mut error = initialized_error();
         {
             let _injection =
-                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 3);
-            // SAFETY: Valid disjoint output exercises the final fallible direct
-            // allocation before the first caller-visible force write.
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 1);
+            // SAFETY: The sole reciprocal-axis backing reserve remains the
+            // final fallible direct allocation before the first force write.
             let status = unsafe {
                 super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
                     &system,
@@ -3333,6 +3383,152 @@ mod tests {
         assert_eq!(force_x, [801.0, 801.0, 801.0, 801.0, 901.0]);
         assert_eq!(force_y, [802.0, 802.0, 802.0, 802.0, 902.0]);
         assert_eq!(force_z, [803.0, 803.0, 803.0, 803.0, 903.0]);
+        assert_eq!(position_x.map(f64::to_bits), input_before[0]);
+        assert_eq!(position_y.map(f64::to_bits), input_before[1]);
+        assert_eq!(position_z.map(f64::to_bits), input_before[2]);
+        assert_eq!(charges.map(f64::to_bits), input_before[3]);
+    }
+
+    #[test]
+    fn provider_modes_share_one_reciprocal_axis_backing_and_leave_second_occurrence_pending() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let input_before = [
+            position_x.map(f64::to_bits),
+            position_y.map(f64::to_bits),
+            position_z.map(f64::to_bits),
+            charges.map(f64::to_bits),
+        ];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([4, 8, 16]);
+        let expected = evaluate(&fixture([4, 8, 16])).expect("noncubic baseline must evaluate");
+
+        let mut energy_only = initialized_energy(101.0);
+        let mut energy_only_error = initialized_error();
+        {
+            let _injection =
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 2);
+            // SAFETY: Valid immutable input and disjoint descriptors exercise
+            // the energy-only provider with a null force output.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                        &system,
+                        &model,
+                        0,
+                        &mut energy_only,
+                        ptr::null_mut(),
+                        &mut energy_only_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalAxisData);
+        }
+
+        let mut transactional_energy = initialized_energy(201.0);
+        let mut transactional_x = [301.0; 5];
+        let mut transactional_y = [302.0; 5];
+        let mut transactional_z = [303.0; 5];
+        transactional_x[4] = 401.0;
+        transactional_y[4] = 402.0;
+        transactional_z[4] = 403.0;
+        let mut transactional_output = provider_force_output(
+            &mut transactional_x,
+            &mut transactional_y,
+            &mut transactional_z,
+        );
+        transactional_output.capacity = 4;
+        let mut transactional_error = initialized_error();
+        {
+            let _injection =
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 2);
+            // SAFETY: All transactional descriptors and channels are valid,
+            // live, disjoint, and sized for the four-particle input.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                        &system,
+                        &model,
+                        1,
+                        &mut transactional_energy,
+                        &mut transactional_output,
+                        &mut transactional_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalAxisData);
+        }
+
+        let mut direct_energy = initialized_energy(501.0);
+        let mut direct_x = [601.0; 5];
+        let mut direct_y = [602.0; 5];
+        let mut direct_z = [603.0; 5];
+        direct_x[4] = 701.0;
+        direct_y[4] = 702.0;
+        direct_z[4] = 703.0;
+        let mut direct_output = provider_force_output(&mut direct_x, &mut direct_y, &mut direct_z);
+        direct_output.capacity = 4;
+        let mut direct_error = initialized_error();
+        {
+            let _injection =
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 2);
+            // SAFETY: The direct output follows the same valid live,
+            // disjoint, and four-particle capacity contract.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+                        &system,
+                        &model,
+                        &mut direct_energy,
+                        &mut direct_output,
+                        &mut direct_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::ReciprocalAxisData);
+        }
+
+        for actual_energy in [&energy_only, &transactional_energy, &direct_energy] {
+            assert_eq!(
+                actual_energy.reciprocal_space_kcal_per_mol.to_bits(),
+                expected.reciprocal_space_kcal_per_mol.to_bits()
+            );
+        }
+        for (particle, expected_force) in expected.forces_kcal_per_mol_angstrom.iter().enumerate() {
+            assert_eq!(
+                transactional_x[particle].to_bits(),
+                expected_force[0].to_bits()
+            );
+            assert_eq!(
+                transactional_y[particle].to_bits(),
+                expected_force[1].to_bits()
+            );
+            assert_eq!(
+                transactional_z[particle].to_bits(),
+                expected_force[2].to_bits()
+            );
+            assert_eq!(direct_x[particle].to_bits(), expected_force[0].to_bits());
+            assert_eq!(direct_y[particle].to_bits(), expected_force[1].to_bits());
+            assert_eq!(direct_z[particle].to_bits(), expected_force[2].to_bits());
+        }
+        assert_eq!(transactional_x[4].to_bits(), 401.0_f64.to_bits());
+        assert_eq!(transactional_y[4].to_bits(), 402.0_f64.to_bits());
+        assert_eq!(transactional_z[4].to_bits(), 403.0_f64.to_bits());
+        assert_eq!(direct_x[4].to_bits(), 701.0_f64.to_bits());
+        assert_eq!(direct_y[4].to_bits(), 702.0_f64.to_bits());
+        assert_eq!(direct_z[4].to_bits(), 703.0_f64.to_bits());
+        for error in [&energy_only_error, &transactional_error, &direct_error] {
+            assert_eq!(
+                error.typed_code,
+                ParticleMeshReciprocalErrorCodeV1::None as i32
+            );
+            assert!(error.detail.iter().all(|byte| *byte == 0));
+        }
         assert_eq!(position_x.map(f64::to_bits), input_before[0]);
         assert_eq!(position_y.map(f64::to_bits), input_before[1]);
         assert_eq!(position_z.map(f64::to_bits), input_before[2]);

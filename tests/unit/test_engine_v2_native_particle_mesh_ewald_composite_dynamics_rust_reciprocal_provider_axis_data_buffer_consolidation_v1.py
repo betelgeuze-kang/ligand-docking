@@ -4,33 +4,27 @@ from pathlib import Path
 import pytest
 
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_axis_data_buffer_consolidation_v1
     as verifier,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_AXIS_DATA_BUFFER_CONSOLIDATION_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_axis_data_buffer_consolidation_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_AXIS_DATA_BUFFER_CONSOLIDATION_EVIDENCE_PRESENT,
-    reason=(
-        "PME Rust reciprocal provider FFT line-scratch reuse evidence is "
-        "verified from its exact frozen PR 460 object after axis-data buffer "
-        "consolidation evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 290
+    assert result["source_count"] == 296
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
     validation = profile["validation"]
     for key in (
+        "reciprocal_axis_data_uses_one_call_local_backing_buffer",
+        "reciprocal_axis_data_backing_length_is_sum_of_mesh_dimensions",
+        "reciprocal_axis_data_x_y_z_slices_contiguous_and_non_overlapping",
+        "reciprocal_axis_data_second_and_third_reserves_elided",
+        "reciprocal_axis_data_arithmetic_and_axis_order_preserved",
+        "reciprocal_axis_data_not_retained",
+        "all_provider_modes_single_reciprocal_axis_data_reserve",
         "call_local_fft_line_scratch_shared_by_forward_and_inverse",
         "fft_line_scratch_length_is_max_mesh_axis",
         "force_modes_single_fft_line_scratch_reserve",
@@ -96,6 +90,9 @@ def test_exact_profile_manifest_and_contracts() -> None:
         "owner_fft_scratch_reuse_claimed",
         "peak_memory_reduction_claimed",
         "reciprocal_axis_data_allocation_elided_claimed",
+        "persistent_reciprocal_axis_data_reuse_claimed",
+        "cross_call_reciprocal_axis_data_reuse_claimed",
+        "owner_reciprocal_axis_data_reuse_claimed",
         "universal_input_allocation_elision_claimed",
         "public_api_zero_copy_input_claimed",
         "public_bg_system_borrowed_ownership_claimed",
@@ -118,6 +115,12 @@ def test_exact_profile_manifest_and_contracts() -> None:
     ):
         assert implementation[key] is False
     for key in (
+        "single_reciprocal_axis_data_reserve_occurrence_exact",
+        "reciprocal_axis_slice_lengths_offsets_and_non_overlap_exact",
+        "reciprocal_axis_value_bits_and_x_y_z_order_preserved",
+        "second_reciprocal_axis_data_occurrence_injection_succeeds_exact_bits",
+        "first_reciprocal_axis_data_oom_transactional",
+        "predecessor_fft_line_scratch_contract_inherited",
         "single_call_local_fft_scratch_allocation_exact",
         "same_fft_scratch_identity_and_capacity_across_transforms",
         "fft_scratch_poison_overwritten_before_read",
@@ -157,7 +160,7 @@ def test_exact_profile_manifest_and_contracts() -> None:
 
 
 def test_exact_anchors_and_delta() -> None:
-    assert verifier.PREDECESSOR["pull_request"] == 459
+    assert verifier.PREDECESSOR["pull_request"] == 460
     assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 453
     assert verifier.INHERITED_PREDECESSOR["pull_request"] == 440
     assert verifier.DIRECT_FORCE_OUTPUT_PRECEDENT["pull_request"] == 380
@@ -168,13 +171,13 @@ def test_exact_anchors_and_delta() -> None:
 
 
 def test_workflow_static_trigger_closure_and_bodies() -> None:
-    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 108
-    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 108
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 114
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 114
     workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     verifier.require_workflow_contract(workflow)
     assert workflow == verifier.expected_workflow_document()
     assert workflow.count(verifier.PINNED_CHECKOUT_ACTION) == 4
-    assert "refs/pull/459/head" in workflow
+    assert "refs/pull/460/head" in workflow
     assert verifier.PREDECESSOR["reviewed_head"] in workflow
     assert verifier.PREDECESSOR["merge_commit"] in workflow
     assert verifier.PREDECESSOR["merge_tree"] in workflow
@@ -197,8 +200,8 @@ def test_workflow_job_body_mutation_fails_closed(job: str) -> None:
         verifier.require_workflow_contract(mutated)
 
 
-def test_fft_scratch_reuse_contract_hashes_and_frozen_predecessor_mirrors() -> None:
-    verifier.require_rust_reciprocal_provider_fft_line_scratch_reuse_contract(ROOT)
+def test_axis_data_buffer_contract_hashes_and_frozen_predecessor_mirrors() -> None:
+    verifier.require_rust_reciprocal_provider_axis_data_buffer_consolidation_contract(ROOT)
     assert len(verifier.EXPECTED_PREDECESSOR_PRODUCTION_SHA256) == 8
     assert verifier.IMPLEMENTATION_DELTA_PATHS == (
         verifier.RUST_RECIPROCAL_RELATIVE_PATH,
@@ -244,8 +247,8 @@ def test_predecessor_workflow_executes_exact_frozen_merge() -> None:
         ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH
     ).read_text()
     for token in (
-        "Materialize exact PR 459 evidence and reviewed head",
-        "Verify exact frozen PR 459 evidence",
+        "Materialize exact PR 460 evidence and reviewed head",
+        "Verify exact frozen PR 460 evidence",
         'git checkout --detach --quiet "$frozen"',
         "trap restore EXIT",
         verifier.PREDECESSOR["reviewed_head"],
@@ -275,8 +278,11 @@ def test_predecessor_unit_skip_is_exact_and_frozen() -> None:
     ).stdout.decode()
     transformed = verifier.expected_frozen_predecessor_unit(frozen)
     assert transformed == (ROOT / verifier.PREDECESSOR_UNIT_RELATIVE_PATH).read_text()
-    assert "PME_RUST_RECIPROCAL_PROVIDER_FFT_LINE_SCRATCH_REUSE_EVIDENCE_PRESENT" in transformed
-    assert "exact frozen PR 459 object" in transformed
+    assert (
+        "PME_RUST_RECIPROCAL_PROVIDER_AXIS_DATA_BUFFER_CONSOLIDATION_EVIDENCE_PRESENT"
+        in transformed
+    )
+    assert "exact frozen PR 460 object" in transformed
 
 
 def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
@@ -296,7 +302,7 @@ def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
 def test_manifest_and_profile_mutations_are_noncanonical() -> None:
     manifest_raw = (ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes()
     manifest = json.loads(manifest_raw)
-    assert len(manifest["files"]) == 290
+    assert len(manifest["files"]) == 296
     manifest["files"][0]["sha256"] = "0" * 64
     assert verifier.canonical_bytes(manifest) != manifest_raw
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
