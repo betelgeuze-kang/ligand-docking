@@ -71,6 +71,34 @@ void shrink_particle_mesh_ewald_composite_rust_reciprocal_provider_neutrality_so
     scratch.length = logical_length;
 }
 
+void shrink_particle_mesh_ewald_composite_rust_reciprocal_provider_particle_assignment_scratch_for_test(
+    bg_particle_mesh_ewald_composite_simulation_v1 *simulation,
+    std::size_t logical_length_bytes) {
+    assert(simulation != nullptr);
+    auto &scratch = simulation->rust_reciprocal_provider_force_scratch
+                        .particle_assignment_scratch;
+    assert(
+        scratch.struct_size ==
+        sizeof(bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1));
+    assert(
+        scratch.abi_version ==
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION);
+    assert(scratch.state == UINT32_C(0x50415331));
+    assert(scratch.reserved0 == 0U);
+    assert(scratch.storage != nullptr);
+    assert(
+        scratch.reserved[0] == 0U && scratch.reserved[1] == 0U &&
+        scratch.reserved[2] == 0U && scratch.reserved[3] == 0U);
+    assert(logical_length_bytes == 0U);
+    assert(logical_length_bytes < scratch.logical_length_bytes);
+    assert(logical_length_bytes <= scratch.allocation_capacity_bytes);
+    // The Rust implementation statically fixes ParticleAssignment as a
+    // no-drop type. Moving the complete opaque prefix to spare capacity neither
+    // reads nor writes its elements, and the next provider prepare call
+    // reconstructs the complete logical prefix.
+    scratch.logical_length_bytes = logical_length_bytes;
+}
+
 ParticleMeshEwaldCompositeForceScratchSnapshot
 particle_mesh_ewald_composite_force_scratch_snapshot(
     const bg_particle_mesh_ewald_composite_simulation_v1 *simulation) {
@@ -206,6 +234,26 @@ particle_mesh_ewald_composite_rust_reciprocal_provider_force_scratch_snapshot(
         scratch.neutrality_sort_scratch.reserved[1],
         scratch.neutrality_sort_scratch.reserved[2],
         scratch.neutrality_sort_scratch.reserved[3],
+    };
+    snapshot.particle_assignment_struct_size =
+        scratch.particle_assignment_scratch.struct_size;
+    snapshot.particle_assignment_abi_version =
+        scratch.particle_assignment_scratch.abi_version;
+    snapshot.particle_assignment_state =
+        scratch.particle_assignment_scratch.state;
+    snapshot.particle_assignment_reserved0 =
+        scratch.particle_assignment_scratch.reserved0;
+    snapshot.particle_assignment_storage =
+        scratch.particle_assignment_scratch.storage;
+    snapshot.particle_assignment_logical_length_bytes =
+        scratch.particle_assignment_scratch.logical_length_bytes;
+    snapshot.particle_assignment_allocation_capacity_bytes =
+        scratch.particle_assignment_scratch.allocation_capacity_bytes;
+    snapshot.particle_assignment_reserved = {
+        scratch.particle_assignment_scratch.reserved[0],
+        scratch.particle_assignment_scratch.reserved[1],
+        scratch.particle_assignment_scratch.reserved[2],
+        scratch.particle_assignment_scratch.reserved[3],
     };
     return snapshot;
 }

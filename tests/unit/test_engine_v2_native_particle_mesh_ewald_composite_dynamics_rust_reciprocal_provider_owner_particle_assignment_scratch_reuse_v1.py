@@ -4,29 +4,16 @@ from pathlib import Path
 import pytest
 
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_v1
     as verifier,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_OWNER_PARTICLE_ASSIGNMENT_SCRATCH_REUSE_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_OWNER_PARTICLE_ASSIGNMENT_SCRATCH_REUSE_EVIDENCE_PRESENT,
-    reason=(
-        "PME Rust reciprocal-provider owner neutrality-sort scratch reuse "
-        "evidence is verified from its exact frozen PR 465 object after "
-        "owner particle-assignment scratch reuse evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 320
+    assert result["source_count"] == 326
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
     validation = profile["validation"]
@@ -81,6 +68,35 @@ def test_exact_profile_manifest_and_contracts() -> None:
         "cross_call_neutrality_sort_scratch_reuse_claimed",
         "owner_neutrality_sort_scratch_reuse_claimed",
         "neutrality_sort_capacity_sufficient_reserve_elision_claimed",
+        "predecessor_owner_neutrality_sort_scratch_contract_inherited",
+        "private_particle_assignment_scratch_descriptor_zero_initializable",
+        "private_particle_assignment_scratch_descriptor_not_exported",
+        "private_particle_assignment_scratch_descriptor_not_checkpointed",
+        "particle_assignment_scratch_descriptor_uses_opaque_byte_units",
+        "particle_assignment_scratch_rust_origin_canonical_raw_parts_required",
+        "stateful_forceful_owner_particle_assignment_scratch_route_only",
+        "particle_assignment_scratch_reserve_precedes_clear",
+        "particle_assignment_scratch_fully_recomputed_each_call",
+        "changed_positions_recompute_particle_assignments",
+        "warm_same_shape_particle_assignment_reserve_elided",
+        "capacity_sufficient_particle_assignment_shape_reuse_without_reserve",
+        "growth_beyond_capacity_uses_one_particle_assignment_reserve",
+        "failed_particle_assignment_growth_retains_prior_raw_parts_and_payload",
+        "particle_assignment_scratch_lease_restored_after_success_failure_and_panic",
+        "particle_assignment_complete_capacity_alias_preflight",
+        "workspace_neutrality_and_particle_assignment_complete_capacities_pairwise_disjoint",
+        "owner_dynamics_output_preflight_includes_complete_particle_assignment_capacity",
+        "particle_assignment_destroy_ready_exactly_once",
+        "particle_assignment_destroy_null_empty_double_and_detectably_malformed_fail_closed",
+        "particle_assignment_destroy_safety_contract_requires_private_rust_origin_canonical_ready",
+        "independent_owners_use_independent_particle_assignment_storage",
+        "particle_assignment_later_failure_retention_is_conditional",
+        "three_owner_private_leases_restore_together",
+        "owner_route_uses_three_distinct_private_reusable_descriptors",
+        "persistent_particle_assignment_scratch_reuse_claimed",
+        "cross_call_particle_assignment_scratch_reuse_claimed",
+        "owner_particle_assignment_scratch_reuse_claimed",
+        "particle_assignment_capacity_sufficient_reserve_elision_claimed",
         "stateful_force_free_path_preserved",
         "stateless_path_preserved",
         "existing_transactional_provider_entrypoint_preserved",
@@ -108,6 +124,15 @@ def test_exact_profile_manifest_and_contracts() -> None:
         "transactional_neutrality_sort_scratch_reuse_claimed",
         "concurrent_neutrality_sort_scratch_use_claimed",
         "unconditional_neutrality_sort_failure_storage_retention_claimed",
+        "particle_assignment_c_layout_claimed",
+        "particle_assignment_size_bytes_claimed",
+        "particle_assignment_elements_need_drop",
+        "stateful_force_free_particle_assignment_scratch_reuse_claimed",
+        "stateless_particle_assignment_scratch_reuse_claimed",
+        "transactional_particle_assignment_scratch_reuse_claimed",
+        "concurrent_particle_assignment_scratch_use_claimed",
+        "provider_wide_particle_assignment_scratch_reuse_claimed",
+        "unconditional_particle_assignment_failure_storage_retention_claimed",
         "peak_memory_reduction_claimed",
         "timing_claimed",
         "performance_claimed",
@@ -126,6 +151,7 @@ def test_exact_profile_manifest_and_contracts() -> None:
         assert implementation[key] is False
     assert implementation["private_workspace_descriptor_size_bytes"] == 72
     assert implementation["private_neutrality_sort_scratch_descriptor_size_bytes"] == 72
+    assert implementation["private_particle_assignment_scratch_descriptor_size_bytes"] == 72
     for key in (
         "nine_production_path_delta_exact",
         "three_native_test_path_delta_exact",
@@ -160,6 +186,20 @@ def test_exact_profile_manifest_and_contracts() -> None:
         "neutrality_sort_destroy_null_empty_double_detectably_malformed_and_ready_contract_exact",
         "stateless_transactional_force_free_and_legacy_workspace_routes_preserved",
         "owner_checkpoint_private_scratch_exclusion_and_alias_semantics_unchanged",
+        "particle_assignment_descriptor_layout_byte_units_and_states_exact",
+        "particle_assignment_rust_origin_raw_parts_and_no_c_layout_claim_exact",
+        "particle_assignment_needs_drop_false_exact",
+        "workspace_neutrality_and_particle_assignment_descriptor_and_complete_capacity_disjointness_exact",
+        "owner_dynamics_output_complete_particle_assignment_capacity_overlap_exact",
+        "cold_particle_assignment_first_use_oom_order_detail_and_transactionality_exact",
+        "warm_same_shape_particle_assignment_occurrence_one_pending_and_bits_exact",
+        "particle_assignment_capacity_sufficient_and_growth_reserve_boundaries_exact",
+        "particle_assignment_full_recompute_and_changed_positions_exact",
+        "failed_particle_assignment_growth_prior_storage_retention_exact",
+        "particle_assignment_late_failure_retention_conditional_exact",
+        "panic_unwind_restores_ready_workspace_neutrality_and_particle_assignment_scratch",
+        "particle_assignment_destroy_null_empty_double_detectably_malformed_and_ready_contract_exact",
+        "stateless_transactional_force_free_and_legacy_workspace_neutrality_routes_preserved",
         "exact_public_symbol_surfaces",
         "checkpoint_and_static_fingerprint_unchanged",
         "predecessor_workflow_detaches_exact_merge_object",
@@ -171,10 +211,10 @@ def test_exact_profile_manifest_and_contracts() -> None:
 
 
 def test_exact_anchors_and_delta() -> None:
-    assert verifier.PREDECESSOR["pull_request"] == 464
-    assert verifier.PREDECESSOR["reviewed_head"] == "c3a212bff356675ae7a27bb3c54020b6436db6dd"
-    assert verifier.PREDECESSOR["merge_commit"] == "5a629c5fffbfc0e2526de953dcdaaa4d946a5ee9"
-    assert verifier.PREDECESSOR["merge_tree"] == "fc9c801052e3a87129696d51aa00068eb0bdc383"
+    assert verifier.PREDECESSOR["pull_request"] == 465
+    assert verifier.PREDECESSOR["reviewed_head"] == "0c6a50e85a4613baea889f6ded810a53955d6326"
+    assert verifier.PREDECESSOR["merge_commit"] == "dacb1fb5cb466a7ecb43b32b2a1039734bcfdfdb"
+    assert verifier.PREDECESSOR["merge_tree"] == "09ae686da88e9875bd0646aa9be6774063f1079a"
     assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 453
     assert verifier.INHERITED_PREDECESSOR["pull_request"] == 440
     assert verifier.DIRECT_FORCE_OUTPUT_PRECEDENT["pull_request"] == 380
@@ -186,13 +226,13 @@ def test_exact_anchors_and_delta() -> None:
 
 
 def test_workflow_static_trigger_closure_and_bodies() -> None:
-    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 138
-    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 138
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 144
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 144
     workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     verifier.require_workflow_contract(workflow)
     assert workflow == verifier.expected_workflow_document()
     assert workflow.count(verifier.PINNED_CHECKOUT_ACTION) == 4
-    assert "refs/pull/464/head" in workflow
+    assert "refs/pull/465/head" in workflow
     assert verifier.PREDECESSOR["reviewed_head"] in workflow
 
 
@@ -213,8 +253,8 @@ def test_workflow_job_body_mutation_fails_closed(job: str) -> None:
         verifier.require_workflow_contract(mutated)
 
 
-def test_owner_neutrality_source_hashes_mirrors_and_contract() -> None:
-    verifier.require_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_contract(ROOT)
+def test_owner_particle_assignment_source_hashes_mirrors_and_contract() -> None:
+    verifier.require_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_contract(ROOT)
     assert len(verifier.EXPECTED_PREDECESSOR_DELTA_SHA256) == 12
     assert len(verifier.EXPECTED_SUCCESSOR_DELTA_SHA256) == 12
     assert len(verifier.CANONICAL_VENDOR_MIRROR_PAIRS) == 4
@@ -232,6 +272,8 @@ def test_hidden_symbols_public_surface_and_checkpoint_freezes() -> None:
         assert verifier.OWNER_WORKSPACE_DESTROY_SYMBOL not in source
         assert verifier.OWNER_NEUTRALITY_SORT_PROVIDER_SYMBOL not in source
         assert verifier.OWNER_NEUTRALITY_SORT_DESTROY_SYMBOL not in source
+        assert verifier.OWNER_PARTICLE_ASSIGNMENT_PROVIDER_SYMBOL not in source
+        assert verifier.OWNER_PARTICLE_ASSIGNMENT_DESTROY_SYMBOL not in source
     for relative in verifier.FROZEN_CHECKPOINT_FINGERPRINT_PATHS:
         assert (ROOT / relative).read_bytes() == verifier.git(
             "show", f"{verifier.PREDECESSOR['merge_commit']}:{relative.as_posix()}"
@@ -254,8 +296,8 @@ def test_predecessor_workflow_executes_exact_frozen_merge() -> None:
     transformed = verifier.expected_frozen_predecessor_workflow(frozen)
     assert transformed == (ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH).read_text()
     for token in (
-        "Materialize exact PR 464 evidence and reviewed head",
-        "Verify exact frozen PR 464 evidence",
+        "Materialize exact PR 465 evidence and reviewed head",
+        "Verify exact frozen PR 465 evidence",
         'git checkout --detach --quiet "$frozen"',
         "trap restore EXIT",
         verifier.PREDECESSOR["reviewed_head"],
@@ -273,8 +315,8 @@ def test_predecessor_unit_skip_is_exact_and_frozen() -> None:
     ).stdout.decode()
     transformed = verifier.expected_frozen_predecessor_unit(frozen)
     assert transformed == (ROOT / verifier.PREDECESSOR_UNIT_RELATIVE_PATH).read_text()
-    assert "OWNER_NEUTRALITY_SORT_SCRATCH_REUSE_EVIDENCE_PRESENT" in transformed
-    assert "exact frozen PR 464 object" in transformed
+    assert "OWNER_PARTICLE_ASSIGNMENT_SCRATCH_REUSE_EVIDENCE_PRESENT" in transformed
+    assert "exact frozen PR 465 object" in transformed
 
 
 def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
@@ -290,7 +332,7 @@ def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
 def test_manifest_and_profile_mutations_are_noncanonical() -> None:
     manifest_raw = (ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes()
     manifest = json.loads(manifest_raw)
-    assert len(manifest["files"]) == 320
+    assert len(manifest["files"]) == 326
     manifest["files"][0]["sha256"] = "0" * 64
     assert verifier.canonical_bytes(manifest) != manifest_raw
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())

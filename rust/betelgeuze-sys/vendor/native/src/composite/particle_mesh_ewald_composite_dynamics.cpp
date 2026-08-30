@@ -115,6 +115,27 @@ bool rust_reciprocal_neutrality_sort_scratch_storage_overlaps(
         scratch.storage, scratch.capacity * kElementSize, output);
 }
 
+bool rust_reciprocal_particle_assignment_scratch_storage_overlaps(
+    const bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
+        &scratch,
+    const ByteRange &output) noexcept {
+    if (scratch.logical_length_bytes > scratch.allocation_capacity_bytes) {
+        return true;
+    }
+    if (scratch.allocation_capacity_bytes == 0U) {
+        return scratch.storage != nullptr ||
+               scratch.logical_length_bytes != 0U;
+    }
+    if (scratch.storage == nullptr ||
+        scratch.allocation_capacity_bytes >
+            static_cast<std::size_t>(
+                std::numeric_limits<std::ptrdiff_t>::max())) {
+        return true;
+    }
+    return fixed_storage_overlaps(
+        scratch.storage, scratch.allocation_capacity_bytes, output);
+}
+
 bool counted_storage_overlaps(
     const void *pointer,
     uint64_t element_count,
@@ -270,6 +291,10 @@ bool owner_storage_overlaps(
         rust_reciprocal_neutrality_sort_scratch_storage_overlaps(
             owner.rust_reciprocal_provider_force_scratch
                 .neutrality_sort_scratch,
+            output) ||
+        rust_reciprocal_particle_assignment_scratch_storage_overlaps(
+            owner.rust_reciprocal_provider_force_scratch
+                .particle_assignment_scratch,
             output)) {
         return true;
     }

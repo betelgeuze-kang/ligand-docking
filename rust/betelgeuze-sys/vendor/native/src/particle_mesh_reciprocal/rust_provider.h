@@ -103,6 +103,18 @@ typedef struct bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1 {
     uint64_t reserved[4];
 } bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1;
 
+typedef struct bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1 {
+    uint32_t struct_size;
+    uint32_t abi_version;
+    uint32_t state;
+    uint32_t reserved0;
+    void *storage;
+    /* Logical length and allocation capacity in opaque bytes. */
+    size_t logical_length_bytes;
+    size_t allocation_capacity_bytes;
+    uint64_t reserved[4];
+} bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1;
+
 typedef struct bg_rust_particle_mesh_reciprocal_error_v1 {
     uint32_t struct_size;
     uint32_t abi_version;
@@ -149,12 +161,29 @@ bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_an
     bg_rust_particle_mesh_reciprocal_force_output_v1 *out_forces,
     bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
 
+int32_t
+bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+    const bg_rust_particle_mesh_reciprocal_system_v1 *system,
+    const bg_rust_particle_mesh_reciprocal_model_v1 *model,
+    bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace,
+    bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
+        *neutrality_sort_scratch,
+    bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
+        *particle_assignment_scratch,
+    bg_rust_particle_mesh_reciprocal_energy_v1 *out_energy,
+    bg_rust_particle_mesh_reciprocal_force_output_v1 *out_forces,
+    bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
+
 void bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(
     bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace);
 
 void bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
     bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
         *neutrality_sort_scratch);
+
+void bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+    bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
+        *particle_assignment_scratch);
 
 #if defined(__cplusplus)
 }  // extern "C"

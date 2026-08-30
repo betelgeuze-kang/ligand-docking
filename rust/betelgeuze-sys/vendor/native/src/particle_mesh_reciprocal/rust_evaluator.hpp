@@ -15,6 +15,8 @@ struct ProviderForceScratch final {
     bg_rust_particle_mesh_reciprocal_workspace_v1 reciprocal_workspace{};
     bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
         neutrality_sort_scratch{};
+    bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
+        particle_assignment_scratch{};
 
     ProviderForceScratch() noexcept = default;
     ~ProviderForceScratch() noexcept;
