@@ -43,13 +43,29 @@ mod fft {
         }
     }
 
+    /// Allocate the one line buffer shared by every transform in one evaluation.
+    pub(crate) fn line_scratch(
+        dimensions: [usize; 3],
+    ) -> Result<Vec<Complex>, super::AllocationFailure> {
+        let line_count = dimensions.into_iter().max().unwrap_or(0);
+        let mut line = Vec::new();
+        super::fallible_reserve_exact(
+            &mut line,
+            line_count,
+            super::AllocationSite::FftLineScratch,
+        )?;
+        line.resize(line_count, Complex::default());
+        Ok(line)
+    }
+
     /// Apply the frozen separable z, y, x transform order in place.
     pub(crate) fn fft_3d(
         values: &mut [Complex],
         dimensions: [usize; 3],
         inverse: bool,
-    ) -> Result<(), super::AllocationFailure> {
-        transform_3d_with(values, dimensions, inverse, fft_1d)
+        line: &mut [Complex],
+    ) {
+        transform_3d_with(values, dimensions, inverse, line, fft_1d);
     }
 
     fn fft_1d(values: &mut [Complex], inverse: bool) {
@@ -103,18 +119,13 @@ mod fft {
         values: &mut [Complex],
         dimensions: [usize; 3],
         inverse: bool,
+        line: &mut [Complex],
         transform_1d: fn(&mut [Complex], bool),
-    ) -> Result<(), super::AllocationFailure> {
+    ) {
         let [x_count, y_count, z_count] = dimensions;
         debug_assert_eq!(values.len(), x_count * y_count * z_count);
         let line_count = x_count.max(y_count).max(z_count);
-        let mut line = Vec::new();
-        super::fallible_reserve_exact(
-            &mut line,
-            line_count,
-            super::AllocationSite::FftLineScratch,
-        )?;
-        line.resize(line_count, Complex::default());
+        debug_assert!(line.len() >= line_count);
 
         for x in 0..x_count {
             for y in 0..y_count {
@@ -149,7 +160,6 @@ mod fft {
                 }
             }
         }
-        Ok(())
     }
 
     pub(crate) const fn index(x: usize, y: usize, z: usize, dimensions: [usize; 3]) -> usize {
@@ -497,7 +507,7 @@ impl From<AllocationFailure> for ParticleMeshReciprocalError {
     }
 }
 
-type Transform3d = fn(&mut [Complex], [usize; 3], bool) -> Result<(), AllocationFailure>;
+type Transform3d = fn(&mut [Complex], [usize; 3], bool, &mut [Complex]);
 
 /// Evaluate the frozen scalar order-4 particle-mesh reciprocal term.
 ///
@@ -578,8 +588,14 @@ fn compute_with_transform<I: ReciprocalInput + ?Sized>(
     .map_err(ParticleMeshReciprocalError::from)?;
     spectrum.resize(validated.mesh_point_count, Complex::default());
     spread_charges(&mut spectrum, validated.dimensions, &assignments, charges);
-    transform(&mut spectrum, validated.dimensions, false)
-        .map_err(ParticleMeshReciprocalError::from)?;
+    let mut fft_line_scratch =
+        fft::line_scratch(validated.dimensions).map_err(ParticleMeshReciprocalError::from)?;
+    transform(
+        &mut spectrum,
+        validated.dimensions,
+        false,
+        &mut fft_line_scratch,
+    );
 
     let reciprocal = apply_reciprocal_operator(input, &validated, &mut spectrum)?;
     let reciprocal_space_kcal_per_mol = reciprocal.energy;
@@ -588,8 +604,12 @@ fn compute_with_transform<I: ReciprocalInput + ?Sized>(
         force_mode,
         ForceStorageMode::Transactional | ForceStorageMode::Direct(_)
     ) {
-        transform(&mut spectrum, validated.dimensions, true)
-            .map_err(ParticleMeshReciprocalError::from)?;
+        transform(
+            &mut spectrum,
+            validated.dimensions,
+            true,
+            &mut fft_line_scratch,
+        );
         let scaled_grid_multiplier = reciprocal.grid_derivative_scale / RESCUE_SCALE;
         let (forces, all_forces_are_finite) = match force_mode {
             ForceStorageMode::Transactional => {
@@ -2161,6 +2181,16 @@ mod tests {
         core::str::from_utf8(&error.detail[..length]).expect("provider detail must be UTF-8")
     }
 
+    fn assert_injected_allocation_remains_pending(site: AllocationSite) {
+        INJECTED_ALLOCATION_FAILURE.with(|injected| {
+            let request = injected
+                .get()
+                .expect("allocation failure injection must remain installed");
+            assert_eq!(request.site, site);
+            assert_eq!(request.matching_allocations_before_failure, 0);
+        });
+    }
+
     fn provider_system(
         position_x: &[f64],
         position_y: &[f64],
@@ -2641,12 +2671,12 @@ mod tests {
             values: &mut [Complex],
             dimensions: [usize; 3],
             inverse: bool,
-        ) -> Result<(), AllocationFailure> {
-            fft::fft_3d(values, dimensions, inverse)?;
+            line_scratch: &mut [Complex],
+        ) {
+            fft::fft_3d(values, dimensions, inverse, line_scratch);
             if inverse {
                 values[0].real = f64::INFINITY;
             }
-            Ok(())
         }
         let error = evaluate_with_transform(&fixture([4; 3]), poisoned_inverse, true)
             .expect_err("test-only poisoned inverse must fail closed");
@@ -2800,7 +2830,7 @@ mod tests {
     }
 
     #[test]
-    fn fft_is_z_fast_negative_nyquist_conjugate_symmetric_and_reversible() {
+    fn fft_reuses_one_line_scratch_overwrites_poison_and_remains_reversible() {
         assert_eq!(fft::index(0, 0, 1, [4, 8, 4]), 1);
         assert_eq!(fft::index(0, 1, 0, [4, 8, 4]), 4);
         assert_eq!(fft::index(1, 0, 0, [4, 8, 4]), 32);
@@ -2816,7 +2846,14 @@ mod tests {
             .map(|index| Complex::new(libm::sin(0.37 * bounded_usize_to_f64(index)), 0.0))
             .collect::<Vec<_>>();
         let mut transformed = original.clone();
-        fft::fft_3d(&mut transformed, dimensions, false).expect("forward FFT must allocate");
+        let mut line_scratch = fft::line_scratch(dimensions).expect("line scratch must allocate");
+        assert_eq!(line_scratch.len(), 8);
+        let line_pointer = line_scratch.as_ptr();
+        let line_capacity = line_scratch.capacity();
+        line_scratch.fill(Complex::new(f64::NAN, f64::NAN));
+        fft::fft_3d(&mut transformed, dimensions, false, &mut line_scratch);
+        assert_eq!(line_scratch.as_ptr(), line_pointer);
+        assert_eq!(line_scratch.capacity(), line_capacity);
         for x in 0..dimensions[0] {
             for y in 0..dimensions[1] {
                 for z in 0..dimensions[2] {
@@ -2833,10 +2870,48 @@ mod tests {
                 }
             }
         }
-        fft::fft_3d(&mut transformed, dimensions, true).expect("inverse FFT must allocate");
+        line_scratch.fill(Complex::new(f64::NAN, f64::NAN));
+        fft::fft_3d(&mut transformed, dimensions, true, &mut line_scratch);
+        assert_eq!(line_scratch.as_ptr(), line_pointer);
+        assert_eq!(line_scratch.capacity(), line_capacity);
         for (actual, expected) in transformed.iter().zip(original) {
             assert!((actual.real - expected.real).abs() <= 2.0e-12);
             assert!(actual.imaginary.abs() <= 2.0e-12);
+        }
+    }
+
+    #[test]
+    fn shared_fft_line_scratch_overwrites_poison_without_pipeline_bit_drift() {
+        fn poison_scratch_after_forward(
+            values: &mut [Complex],
+            dimensions: [usize; 3],
+            inverse: bool,
+            line_scratch: &mut [Complex],
+        ) {
+            fft::fft_3d(values, dimensions, inverse, line_scratch);
+            if !inverse {
+                line_scratch.fill(Complex::new(f64::NAN, f64::NAN));
+            }
+        }
+
+        let input = fixture([4, 8, 4]);
+        let expected = evaluate(&input).expect("baseline must evaluate");
+        let actual = evaluate_with_transform(&input, poison_scratch_after_forward, true)
+            .expect("poisoned shared scratch must be overwritten before every read");
+        assert_eq!(
+            actual.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        assert_eq!(actual.forces_kcal_per_mol_angstrom.len(), 4);
+        for (actual_force, expected_force) in actual
+            .forces_kcal_per_mol_angstrom
+            .iter()
+            .zip(expected.forces_kcal_per_mol_angstrom)
+        {
+            assert_eq!(
+                actual_force.map(f64::to_bits),
+                expected_force.map(f64::to_bits)
+            );
         }
     }
 
@@ -3226,31 +3301,161 @@ mod tests {
         }
 
         let mut energy = initialized_energy(701.0);
-        let mut force_x = [801.0; 4];
-        let mut force_y = [802.0; 4];
-        let mut force_z = [803.0; 4];
+        let mut force_x = [801.0; 5];
+        let mut force_y = [802.0; 5];
+        let mut force_z = [803.0; 5];
+        force_x[4] = 901.0;
+        force_y[4] = 902.0;
+        force_z[4] = 903.0;
         let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
+        output.capacity = 4;
         let mut error = initialized_error();
-        let _injection = AllocationFailureGuard::inject_at(AllocationSite::FftLineScratch, 2);
-        // SAFETY: The second FFT scratch allocation is the inverse transform,
-        // which must still fail before the first direct force write.
-        let status = unsafe {
-            super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
-                &system,
-                &model,
-                &mut energy,
-                &mut output,
-                &mut error,
-            )
-        };
-        assert_eq!(status, STATUS_OUT_OF_MEMORY);
+        {
+            let _injection =
+                AllocationFailureGuard::inject_at(AllocationSite::ReciprocalAxisData, 3);
+            // SAFETY: Valid disjoint output exercises the final fallible direct
+            // allocation before the first caller-visible force write.
+            let status = unsafe {
+                super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+                    &system,
+                    &model,
+                    &mut energy,
+                    &mut output,
+                    &mut error,
+                )
+            };
+            assert_eq!(status, STATUS_OUT_OF_MEMORY);
+        }
         assert_eq!(
             energy.reciprocal_space_kcal_per_mol.to_bits(),
             701.0_f64.to_bits()
         );
-        assert_eq!(force_x, [801.0; 4]);
-        assert_eq!(force_y, [802.0; 4]);
-        assert_eq!(force_z, [803.0; 4]);
+        assert_eq!(force_x, [801.0, 801.0, 801.0, 801.0, 901.0]);
+        assert_eq!(force_y, [802.0, 802.0, 802.0, 802.0, 902.0]);
+        assert_eq!(force_z, [803.0, 803.0, 803.0, 803.0, 903.0]);
+        assert_eq!(position_x.map(f64::to_bits), input_before[0]);
+        assert_eq!(position_y.map(f64::to_bits), input_before[1]);
+        assert_eq!(position_z.map(f64::to_bits), input_before[2]);
+        assert_eq!(charges.map(f64::to_bits), input_before[3]);
+    }
+
+    #[test]
+    fn force_modes_share_one_fft_scratch_and_leave_second_occurrence_pending() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let input_before = [
+            position_x.map(f64::to_bits),
+            position_y.map(f64::to_bits),
+            position_z.map(f64::to_bits),
+            charges.map(f64::to_bits),
+        ];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([4; 3]);
+        let expected = evaluate(&fixture([4; 3])).expect("owned baseline must evaluate");
+
+        let mut transactional_energy = initialized_energy(101.0);
+        let mut transactional_x = [201.0; 5];
+        let mut transactional_y = [202.0; 5];
+        let mut transactional_z = [203.0; 5];
+        transactional_x[4] = 301.0;
+        transactional_y[4] = 302.0;
+        transactional_z[4] = 303.0;
+        let mut transactional_output = provider_force_output(
+            &mut transactional_x,
+            &mut transactional_y,
+            &mut transactional_z,
+        );
+        transactional_output.capacity = 4;
+        let mut transactional_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject_at(AllocationSite::FftLineScratch, 2);
+            // SAFETY: The provider descriptors and output channels are valid,
+            // live, disjoint, and sized for all four particles.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_v1(
+                        &system,
+                        &model,
+                        1,
+                        &mut transactional_energy,
+                        &mut transactional_output,
+                        &mut transactional_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::FftLineScratch);
+        }
+
+        let mut direct_energy = initialized_energy(401.0);
+        let mut direct_x = [501.0; 5];
+        let mut direct_y = [502.0; 5];
+        let mut direct_z = [503.0; 5];
+        direct_x[4] = 601.0;
+        direct_y[4] = 602.0;
+        direct_z[4] = 603.0;
+        let mut direct_output = provider_force_output(&mut direct_x, &mut direct_y, &mut direct_z);
+        direct_output.capacity = 4;
+        let mut direct_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject_at(AllocationSite::FftLineScratch, 2);
+            // SAFETY: The reusable output follows the same valid live and
+            // disjoint contract as the transactional output above.
+            assert_eq!(
+                unsafe {
+                    super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+                        &system,
+                        &model,
+                        &mut direct_energy,
+                        &mut direct_output,
+                        &mut direct_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::FftLineScratch);
+        }
+
+        assert_eq!(
+            transactional_energy.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        assert_eq!(
+            direct_energy.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        for (particle, expected_force) in expected.forces_kcal_per_mol_angstrom.iter().enumerate() {
+            assert_eq!(
+                transactional_x[particle].to_bits(),
+                expected_force[0].to_bits()
+            );
+            assert_eq!(
+                transactional_y[particle].to_bits(),
+                expected_force[1].to_bits()
+            );
+            assert_eq!(
+                transactional_z[particle].to_bits(),
+                expected_force[2].to_bits()
+            );
+            assert_eq!(direct_x[particle].to_bits(), expected_force[0].to_bits());
+            assert_eq!(direct_y[particle].to_bits(), expected_force[1].to_bits());
+            assert_eq!(direct_z[particle].to_bits(), expected_force[2].to_bits());
+        }
+        assert_eq!(transactional_x[4].to_bits(), 301.0_f64.to_bits());
+        assert_eq!(transactional_y[4].to_bits(), 302.0_f64.to_bits());
+        assert_eq!(transactional_z[4].to_bits(), 303.0_f64.to_bits());
+        assert_eq!(direct_x[4].to_bits(), 601.0_f64.to_bits());
+        assert_eq!(direct_y[4].to_bits(), 602.0_f64.to_bits());
+        assert_eq!(direct_z[4].to_bits(), 603.0_f64.to_bits());
+        for error in [&transactional_error, &direct_error] {
+            assert_eq!(
+                error.typed_code,
+                ParticleMeshReciprocalErrorCodeV1::None as i32
+            );
+            assert!(error.detail.iter().all(|byte| *byte == 0));
+        }
         assert_eq!(position_x.map(f64::to_bits), input_before[0]);
         assert_eq!(position_y.map(f64::to_bits), input_before[1]);
         assert_eq!(position_z.map(f64::to_bits), input_before[2]);

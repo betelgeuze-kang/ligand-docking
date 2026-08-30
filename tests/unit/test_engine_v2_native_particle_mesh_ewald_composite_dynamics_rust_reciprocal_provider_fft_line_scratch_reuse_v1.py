@@ -4,33 +4,28 @@ from pathlib import Path
 import pytest
 
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_v1
     as verifier,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_FFT_LINE_SCRATCH_REUSE_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_fft_line_scratch_reuse_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_FFT_LINE_SCRATCH_REUSE_EVIDENCE_PRESENT,
-    reason=(
-        "PME Rust reciprocal provider borrowed-input SoA evidence is verified "
-        "from its exact frozen PR 459 object after FFT line-scratch reuse "
-        "evidence is present"
-    ),
-)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 284
+    assert result["source_count"] == 290
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
     implementation = profile["implementation"]
     validation = profile["validation"]
     for key in (
+        "call_local_fft_line_scratch_shared_by_forward_and_inverse",
+        "fft_line_scratch_length_is_max_mesh_axis",
+        "force_modes_single_fft_line_scratch_reserve",
+        "force_mode_second_fft_line_scratch_reserve_elided",
+        "energy_only_single_fft_line_scratch_reserve_preserved",
+        "fft_transform_arithmetic_and_axis_order_preserved",
+        "fft_line_scratch_overwrites_poison_before_read",
+        "fft_line_scratch_not_retained",
         "all_hidden_rust_reciprocal_provider_modes_borrow_input_soa",
         "energy_only_provider_input_borrowed",
         "transactional_force_provider_input_borrowed",
@@ -82,6 +77,11 @@ def test_exact_profile_manifest_and_contracts() -> None:
         "particle_assignment_allocation_elided_claimed",
         "spectrum_allocation_elided_claimed",
         "fft_scratch_allocation_elided_claimed",
+        "all_fft_scratch_allocations_elided_claimed",
+        "persistent_fft_scratch_reuse_claimed",
+        "cross_call_fft_scratch_reuse_claimed",
+        "owner_fft_scratch_reuse_claimed",
+        "peak_memory_reduction_claimed",
         "reciprocal_axis_data_allocation_elided_claimed",
         "universal_input_allocation_elision_claimed",
         "public_api_zero_copy_input_claimed",
@@ -105,6 +105,15 @@ def test_exact_profile_manifest_and_contracts() -> None:
     ):
         assert implementation[key] is False
     for key in (
+        "single_call_local_fft_scratch_allocation_exact",
+        "same_fft_scratch_identity_and_capacity_across_transforms",
+        "fft_scratch_poison_overwritten_before_read",
+        "second_fft_line_scratch_reserve_absent",
+        "second_occurrence_injection_succeeds_exact_bits",
+        "first_occurrence_fft_scratch_oom_transactional",
+        "direct_last_prewrite_axis_allocation_boundary_preserved",
+        "energy_only_fft_scratch_allocation_unchanged",
+        "predecessor_borrowed_input_contract_inherited",
         "four_canonical_vendor_pairs_byte_identical",
         "predecessor_eight_production_paths_exact_and_unchanged",
         "predecessor_native_regression_path_exact_and_unchanged",
@@ -127,7 +136,6 @@ def test_exact_profile_manifest_and_contracts() -> None:
         "provider_force_source_finite_scan_exact",
         "composite_preflight_then_final_commit_order_exact",
         "cpp_stateless_and_force_free_routes_preserved",
-        "inverse_fft_second_occurrence_failure_boundary_preserved",
         "late_scientific_failure_boundary_preserved",
         "predecessor_workflow_detaches_exact_merge_object",
     ):
@@ -136,7 +144,7 @@ def test_exact_profile_manifest_and_contracts() -> None:
 
 
 def test_exact_anchors_and_delta() -> None:
-    assert verifier.PREDECESSOR["pull_request"] == 458
+    assert verifier.PREDECESSOR["pull_request"] == 459
     assert verifier.ARCHITECTURE_PREDECESSOR["pull_request"] == 453
     assert verifier.INHERITED_PREDECESSOR["pull_request"] == 440
     assert verifier.DIRECT_FORCE_OUTPUT_PRECEDENT["pull_request"] == 380
@@ -147,13 +155,13 @@ def test_exact_anchors_and_delta() -> None:
 
 
 def test_workflow_static_trigger_closure_and_bodies() -> None:
-    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 102
-    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 102
+    assert len(verifier.REQUIRED_TRIGGER_PATHS) == 108
+    assert len(set(verifier.REQUIRED_TRIGGER_PATHS)) == 108
     workflow = (ROOT / verifier.WORKFLOW_RELATIVE_PATH).read_text()
     verifier.require_workflow_contract(workflow)
     assert workflow == verifier.expected_workflow_document()
     assert workflow.count(verifier.PINNED_CHECKOUT_ACTION) == 4
-    assert "refs/pull/458/head" in workflow
+    assert "refs/pull/459/head" in workflow
     assert verifier.PREDECESSOR["reviewed_head"] in workflow
     assert verifier.PREDECESSOR["merge_commit"] in workflow
     assert verifier.PREDECESSOR["merge_tree"] in workflow
@@ -176,8 +184,8 @@ def test_workflow_job_body_mutation_fails_closed(job: str) -> None:
         verifier.require_workflow_contract(mutated)
 
 
-def test_borrowed_input_contract_hashes_and_frozen_predecessor_mirrors() -> None:
-    verifier.require_rust_reciprocal_provider_borrowed_input_soa_contract(ROOT)
+def test_fft_scratch_reuse_contract_hashes_and_frozen_predecessor_mirrors() -> None:
+    verifier.require_rust_reciprocal_provider_fft_line_scratch_reuse_contract(ROOT)
     assert len(verifier.EXPECTED_PREDECESSOR_PRODUCTION_SHA256) == 8
     assert verifier.IMPLEMENTATION_DELTA_PATHS == (
         verifier.RUST_RECIPROCAL_RELATIVE_PATH,
@@ -223,8 +231,8 @@ def test_predecessor_workflow_executes_exact_frozen_merge() -> None:
         ROOT / verifier.PREDECESSOR_WORKFLOW_RELATIVE_PATH
     ).read_text()
     for token in (
-        "Materialize exact PR 458 evidence and reviewed head",
-        "Verify exact frozen PR 458 evidence",
+        "Materialize exact PR 459 evidence and reviewed head",
+        "Verify exact frozen PR 459 evidence",
         'git checkout --detach --quiet "$frozen"',
         "trap restore EXIT",
         verifier.PREDECESSOR["reviewed_head"],
@@ -236,7 +244,7 @@ def test_predecessor_workflow_executes_exact_frozen_merge() -> None:
     assert verifier.expected_frozen_predecessor_workflow(
         frozen + sentinel
     ).endswith(sentinel)
-    with pytest.raises(ValueError, match="transformation point drift"):
+    with pytest.raises(ValueError, match="drift"):
         verifier.expected_frozen_predecessor_workflow(
             frozen.replace(
                 "      - name: Verify bounded successor evidence\n",
@@ -254,8 +262,8 @@ def test_predecessor_unit_skip_is_exact_and_frozen() -> None:
     ).stdout.decode()
     transformed = verifier.expected_frozen_predecessor_unit(frozen)
     assert transformed == (ROOT / verifier.PREDECESSOR_UNIT_RELATIVE_PATH).read_text()
-    assert "PME_RUST_RECIPROCAL_PROVIDER_BORROWED_INPUT_SOA_EVIDENCE_PRESENT" in transformed
-    assert "exact frozen PR 458 object" in transformed
+    assert "PME_RUST_RECIPROCAL_PROVIDER_FFT_LINE_SCRATCH_REUSE_EVIDENCE_PRESENT" in transformed
+    assert "exact frozen PR 459 object" in transformed
 
 
 def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
@@ -275,7 +283,7 @@ def test_macos_locked_cargo_transient_retry_remains_exact() -> None:
 def test_manifest_and_profile_mutations_are_noncanonical() -> None:
     manifest_raw = (ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes()
     manifest = json.loads(manifest_raw)
-    assert len(manifest["files"]) == 284
+    assert len(manifest["files"]) == 290
     manifest["files"][0]["sha256"] = "0" * 64
     assert verifier.canonical_bytes(manifest) != manifest_raw
     profile = json.loads((ROOT / verifier.PROFILE_RELATIVE_PATH).read_bytes())
