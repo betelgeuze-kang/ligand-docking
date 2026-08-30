@@ -9,6 +9,19 @@ from tools import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_TRANSACTIONAL_FORCE_OUTPUT_ELISION_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_transactional_force_output_elision_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_TRANSACTIONAL_FORCE_OUTPUT_ELISION_EVIDENCE_PRESENT,
+    reason=(
+        "PME Rust reciprocal-provider owner particle-assignment scratch evidence "
+        "is verified from its exact frozen PR 466 object after transactional "
+        "force-output elision evidence is present"
+    ),
+)
 
 
 def test_exact_profile_manifest_and_contracts() -> None:

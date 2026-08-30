@@ -496,6 +496,47 @@ if(BUILD_TESTING)
     )
 
     add_executable(
+        betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+        tests/particle_mesh_reciprocal_rust_adapter_transactionality.cpp
+        src/particle_mesh_reciprocal/rust_evaluator.cpp
+        src/particle_mesh_reciprocal/cpp_evaluator.cpp
+    )
+    target_include_directories(
+        betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_compile_features(
+        betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+        PRIVATE cxx_std_17
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+                -UNDEBUG
+                -ffp-contract=off
+                -fno-fast-math
+        )
+    elseif(MSVC)
+        target_compile_options(
+            betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+            PRIVATE /W4 /WX /UNDEBUG /fp:strict
+        )
+    endif()
+    add_test(
+        NAME betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+        COMMAND betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality
+    )
+
+    add_executable(
         betelgeuze_engine_particle_mesh_ewald
         tests/particle_mesh_ewald.cpp
     )
