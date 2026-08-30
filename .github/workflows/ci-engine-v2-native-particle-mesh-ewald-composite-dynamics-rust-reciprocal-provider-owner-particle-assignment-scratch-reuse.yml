@@ -1,4 +1,4 @@
-name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse
+name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse
 
 on:
   pull_request:
@@ -300,7 +300,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-${{ github.ref }}
+  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -322,7 +322,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact PR 465 evidence and reviewed head
+      - name: Materialize exact PR 465 target, PR 453 architecture, PR 440 inherited evaluator, and PR 380 direct-output precedent
         shell: bash
         run: |
           set -euo pipefail
@@ -331,28 +331,28 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/465/head
           test "$(git rev-parse FETCH_HEAD)" = "0c6a50e85a4613baea889f6ded810a53955d6326"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "09ae686da88e9875bd0646aa9be6774063f1079a"
-      - name: Verify exact frozen PR 465 evidence
-        shell: bash
+          test "$(git rev-parse 35a8f0b0ba0e079bc2a1edee15d19ef2c2823f2a^{tree})" = "b22c5fd115a5c8e28856872df57127ecdd28d9b5"
+          git merge-base --is-ancestor 35a8f0b0ba0e079bc2a1edee15d19ef2c2823f2a dacb1fb5cb466a7ecb43b32b2a1039734bcfdfdb
+          git fetch --no-tags --depth=1 origin refs/pull/453/head
+          test "$(git rev-parse FETCH_HEAD)" = "68607f1b4c1311755b565a2ace2e681695d7f764"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "b22c5fd115a5c8e28856872df57127ecdd28d9b5"
+          test "$(git rev-parse 735883551510cbef91adc3e57dc131a1234b67fb^{tree})" = "6c2b6f3960b6df0592b78bb44e429389aa58bcbb"
+          git merge-base --is-ancestor 735883551510cbef91adc3e57dc131a1234b67fb 35a8f0b0ba0e079bc2a1edee15d19ef2c2823f2a
+          git fetch --no-tags --depth=1 origin refs/pull/440/head
+          test "$(git rev-parse FETCH_HEAD)" = "098bce0d726dbed6e4bf7b533e0445f81e244ea2"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "6c2b6f3960b6df0592b78bb44e429389aa58bcbb"
+          test "$(git rev-parse 6662f1b53829930a93de0f298b820d5a367cc3dc^{tree})" = "5a2d296e891fe89f3d48c3c6d7b1deb61e81a177"
+          git merge-base --is-ancestor 6662f1b53829930a93de0f298b820d5a367cc3dc dacb1fb5cb466a7ecb43b32b2a1039734bcfdfdb
+          git fetch --no-tags --depth=1 origin refs/pull/380/head
+          test "$(git rev-parse FETCH_HEAD)" = "c486e767b1452cffb9cfd998bc26d5e4403bbd76"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "5a2d296e891fe89f3d48c3c6d7b1deb61e81a177"
+      - name: Verify bounded successor evidence
         run: |
-          set -euo pipefail
-          frozen=dacb1fb5cb466a7ecb43b32b2a1039734bcfdfdb
-          frozen_tree=09ae686da88e9875bd0646aa9be6774063f1079a
-          current_sha="$(git rev-parse HEAD)"
-          restore() {
-            git checkout --detach --quiet "$current_sha"
-          }
-          trap restore EXIT
-          test "$(git rev-parse "$frozen"^{tree})" = "$frozen_tree"
-          git checkout --detach --quiet "$frozen"
-          test "$(git rev-parse HEAD)" = "$frozen"
-          test "$(git rev-parse HEAD^{tree})" = "$frozen_tree"
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_profile_v1.json >/dev/null
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_profile_v1_sources.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_v1.py
-          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_v1.py
-          restore
-          trap - EXIT
+          python3 tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_v1.py
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
@@ -367,18 +367,18 @@ jobs:
           rustup override set 1.93.0
       - name: Synthetic release and sanitizer regressions
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
 
   rust-boundaries:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-cargo
     steps:
       - name: Check out Rust sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -417,6 +417,6 @@ jobs:
           rustup override set 1.93.0
       - name: Exact export regression
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-macos --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

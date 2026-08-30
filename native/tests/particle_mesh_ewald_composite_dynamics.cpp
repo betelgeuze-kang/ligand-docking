@@ -32,6 +32,8 @@ namespace {
 
 constexpr std::size_t kAtomCount = 4U;
 constexpr double kAccelerationConversion = 4.184e-4;
+constexpr std::uint32_t kRustReciprocalParticleAssignmentScratchStateReady =
+    UINT32_C(0x50415331);
 
 enum class PairProvenance { exclusion, explicit_zero_scale };
 
@@ -297,6 +299,59 @@ void require_same_rust_reciprocal_neutrality_sort_scratch_storage(
         actual.neutrality_sort_storage == expected.neutrality_sort_storage &&
             actual.neutrality_sort_capacity ==
                 expected.neutrality_sort_capacity,
+        message);
+}
+
+void require_empty_rust_reciprocal_particle_assignment_scratch(
+    const RustReciprocalProviderForceScratchSnapshot &snapshot,
+    const char *message) {
+    require(
+        snapshot.particle_assignment_struct_size == 0U &&
+            snapshot.particle_assignment_abi_version == 0U &&
+            snapshot.particle_assignment_state == 0U &&
+            snapshot.particle_assignment_reserved0 == 0U &&
+            snapshot.particle_assignment_storage == nullptr &&
+            snapshot.particle_assignment_logical_length_bytes == 0U &&
+            snapshot.particle_assignment_allocation_capacity_bytes == 0U &&
+            snapshot.particle_assignment_reserved ==
+                std::array<std::uint64_t, 4>{0U, 0U, 0U, 0U},
+        message);
+}
+
+void require_ready_rust_reciprocal_particle_assignment_scratch(
+    const RustReciprocalProviderForceScratchSnapshot &snapshot,
+    const char *message) {
+    require(
+        snapshot.particle_assignment_struct_size ==
+                sizeof(
+                    bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1) &&
+            snapshot.particle_assignment_abi_version ==
+                BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION &&
+            snapshot.particle_assignment_state ==
+                kRustReciprocalParticleAssignmentScratchStateReady &&
+            snapshot.particle_assignment_reserved0 == 0U &&
+            snapshot.particle_assignment_storage != nullptr &&
+            snapshot.particle_assignment_logical_length_bytes != 0U &&
+            snapshot.particle_assignment_allocation_capacity_bytes >=
+                snapshot.particle_assignment_logical_length_bytes &&
+            snapshot.particle_assignment_reserved ==
+                std::array<std::uint64_t, 4>{0U, 0U, 0U, 0U},
+        message);
+}
+
+void require_same_rust_reciprocal_particle_assignment_scratch_storage(
+    const RustReciprocalProviderForceScratchSnapshot &actual,
+    const RustReciprocalProviderForceScratchSnapshot &expected,
+    const char *message) {
+    require_ready_rust_reciprocal_particle_assignment_scratch(
+        actual, message);
+    require(
+        actual.particle_assignment_storage ==
+                expected.particle_assignment_storage &&
+            actual.particle_assignment_logical_length_bytes ==
+                expected.particle_assignment_logical_length_bytes &&
+            actual.particle_assignment_allocation_capacity_bytes ==
+                expected.particle_assignment_allocation_capacity_bytes,
         message);
 }
 
@@ -2400,6 +2455,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_empty_rust_reciprocal_neutrality_sort_scratch(
             initial,
             "new C++-lane PME Rust neutrality-sort scratch was not empty");
+        require_empty_rust_reciprocal_particle_assignment_scratch(
+            initial,
+            "new C++-lane PME Rust particle-assignment scratch was not empty");
 
         for (const std::uint64_t step_count : {
                  UINT64_C(0),
@@ -2433,6 +2491,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             require_empty_rust_reciprocal_neutrality_sort_scratch(
                 current,
                 "C++-lane integration populated the Rust neutrality-sort scratch");
+            require_empty_rust_reciprocal_particle_assignment_scratch(
+                current,
+                "C++-lane integration populated the Rust particle-assignment scratch");
         }
     }
 
@@ -2465,6 +2526,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_empty_rust_reciprocal_neutrality_sort_scratch(
             reserved,
             "force-scratch reserve populated the Rust neutrality-sort scratch");
+        require_empty_rust_reciprocal_particle_assignment_scratch(
+            reserved,
+            "force-scratch reserve populated the Rust particle-assignment scratch");
 
         for (const std::uint64_t step_count : {
                  UINT64_C(0),
@@ -2489,6 +2553,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             require_empty_rust_reciprocal_neutrality_sort_scratch(
                 current,
                 "C++-lane integration populated the reserved owner's Rust neutrality-sort scratch");
+            require_empty_rust_reciprocal_particle_assignment_scratch(
+                current,
+                "C++-lane integration populated the reserved owner's Rust particle-assignment scratch");
         }
     }
 
@@ -2516,6 +2583,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_ready_rust_reciprocal_neutrality_sort_scratch(
             stale, kAtomCount,
             "first stateful Rust forceful integration did not provision the neutrality-sort scratch");
+        require_ready_rust_reciprocal_particle_assignment_scratch(
+            stale,
+            "first stateful Rust forceful integration did not provision the particle-assignment scratch");
         const NeutralitySortBits stale_neutrality_sort_bits =
             rust_reciprocal_neutrality_sort_scratch_bits(stale);
         const ForceBits stale_bits =
@@ -2538,6 +2608,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_empty_rust_reciprocal_neutrality_sort_scratch(
             peer_empty,
             "checkpoint load populated the second owner's Rust neutrality-sort scratch");
+        require_empty_rust_reciprocal_particle_assignment_scratch(
+            peer_empty,
+            "checkpoint load populated the second owner's Rust particle-assignment scratch");
 
         const bg_dynamics_report_v1 report =
             integrate(cpp_context.get(), simulation.get(), UINT64_C(1));
@@ -2559,6 +2632,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_same_rust_reciprocal_neutrality_sort_scratch_storage(
             after_cpp, stale, kAtomCount,
             "C++-lane interleave replaced the owner-private Rust neutrality-sort scratch");
+        require_same_rust_reciprocal_particle_assignment_scratch_storage(
+            after_cpp, stale,
+            "C++-lane interleave replaced the owner-private Rust particle-assignment scratch");
         require(
             rust_reciprocal_provider_force_scratch_bits(after_cpp) ==
                     stale_bits &&
@@ -2581,6 +2657,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_empty_rust_reciprocal_neutrality_sort_scratch(
             peer_after_cpp,
             "C++-lane integration populated the second owner's Rust neutrality-sort scratch");
+        require_empty_rust_reciprocal_particle_assignment_scratch(
+            peer_after_cpp,
+            "C++-lane integration populated the second owner's Rust particle-assignment scratch");
         require(
             stale_bits != reciprocal_parent_force_scratch_bits(
                               reciprocal_parent_force_scratch_snapshot(
@@ -2614,6 +2693,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_empty_rust_reciprocal_neutrality_sort_scratch(
         initial,
         "new Rust-lane owner neutrality-sort scratch was not empty");
+    require_empty_rust_reciprocal_particle_assignment_scratch(
+        initial,
+        "new Rust-lane owner particle-assignment scratch was not empty");
 
     const ReciprocalParentForceScratchSnapshot initial_parent =
         reciprocal_parent_force_scratch_snapshot(simulation.get());
@@ -2662,6 +2744,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_empty_rust_reciprocal_neutrality_sort_scratch(
         after_cpp_seed,
         "C++ seed populated the Rust neutrality-sort scratch");
+    require_empty_rust_reciprocal_particle_assignment_scratch(
+        after_cpp_seed,
+        "C++ seed populated the Rust particle-assignment scratch");
 
     const auto rust_start = checkpoint(simulation.get());
     require_status(
@@ -2706,6 +2791,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_empty_rust_reciprocal_neutrality_sort_scratch(
         reserved,
         "Rust reciprocal-provider force reserve populated the neutrality-sort scratch");
+    require_empty_rust_reciprocal_particle_assignment_scratch(
+        reserved,
+        "Rust reciprocal-provider force reserve populated the particle-assignment scratch");
 
     const auto before_zero = checkpoint(simulation.get());
     const bg_dynamics_report_v1 zero_report =
@@ -2734,6 +2822,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_empty_rust_reciprocal_neutrality_sort_scratch(
         after_zero,
         "stateful Rust force-free evaluation populated the neutrality-sort scratch");
+    require_empty_rust_reciprocal_particle_assignment_scratch(
+        after_zero,
+        "stateful Rust force-free evaluation populated the particle-assignment scratch");
     const RustReciprocalProviderForceScratchSnapshot peer_after_zero_workspace =
         rust_reciprocal_provider_force_scratch_snapshot(peer.get());
     require_empty_rust_reciprocal_workspace(
@@ -2742,6 +2833,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_empty_rust_reciprocal_neutrality_sort_scratch(
         peer_after_zero_workspace,
         "second owner's stateful Rust force-free evaluation populated the neutrality-sort scratch");
+    require_empty_rust_reciprocal_particle_assignment_scratch(
+        peer_after_zero_workspace,
+        "second owner's stateful Rust force-free evaluation populated the particle-assignment scratch");
     const ReciprocalParentForceScratchSnapshot parent_after_zero =
         reciprocal_parent_force_scratch_snapshot(simulation.get());
     require_same_reciprocal_parent_force_scratch_storage(
@@ -2797,6 +2891,12 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     std::size_t owner_neutrality_sort_capacity = 0U;
     const void *peer_neutrality_sort_storage = nullptr;
     std::size_t peer_neutrality_sort_capacity = 0U;
+    const void *owner_particle_assignment_storage = nullptr;
+    std::size_t owner_particle_assignment_logical_length_bytes = 0U;
+    std::size_t owner_particle_assignment_allocation_capacity_bytes = 0U;
+    const void *peer_particle_assignment_storage = nullptr;
+    std::size_t peer_particle_assignment_logical_length_bytes = 0U;
+    std::size_t peer_particle_assignment_allocation_capacity_bytes = 0U;
     for (const std::uint64_t step_count : {
              UINT64_C(1),
              UINT64_C(2),
@@ -2813,6 +2913,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_ready_rust_reciprocal_neutrality_sort_scratch(
             owner_after_forceful, kAtomCount,
             "stateful Rust forceful evaluation did not retain a ready neutrality-sort scratch");
+        require_ready_rust_reciprocal_particle_assignment_scratch(
+            owner_after_forceful,
+            "stateful Rust forceful evaluation did not retain a ready particle-assignment scratch");
         if (owner_workspace_storage == nullptr) {
             owner_workspace_storage = owner_after_forceful.workspace_storage;
         } else {
@@ -2841,6 +2944,33 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_neutrality_sort_scratch_bits(
                 owner_after_forceful) == expected_neutrality_sort_bits,
             "stateful Rust forceful evaluation retained the wrong neutrality-sort payload");
+        if (owner_particle_assignment_storage == nullptr) {
+            owner_particle_assignment_storage =
+                owner_after_forceful.particle_assignment_storage;
+            owner_particle_assignment_logical_length_bytes =
+                owner_after_forceful
+                    .particle_assignment_logical_length_bytes;
+            owner_particle_assignment_allocation_capacity_bytes =
+                owner_after_forceful
+                    .particle_assignment_allocation_capacity_bytes;
+            require(
+                owner_particle_assignment_storage !=
+                        owner_workspace_storage &&
+                    owner_particle_assignment_storage !=
+                        owner_neutrality_sort_storage,
+                "owner particle-assignment scratch shared another Rust scratch address");
+        } else {
+            require(
+                owner_after_forceful.particle_assignment_storage ==
+                        owner_particle_assignment_storage &&
+                    owner_after_forceful
+                            .particle_assignment_logical_length_bytes ==
+                        owner_particle_assignment_logical_length_bytes &&
+                    owner_after_forceful
+                            .particle_assignment_allocation_capacity_bytes ==
+                        owner_particle_assignment_allocation_capacity_bytes,
+                "repeated stateful Rust forceful evaluation replaced or resized the particle-assignment scratch");
+        }
         const RustReciprocalProviderForceScratchSnapshot peer_before_forceful =
             rust_reciprocal_provider_force_scratch_snapshot(peer.get());
         if (peer_workspace_storage == nullptr) {
@@ -2850,6 +2980,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             require_empty_rust_reciprocal_neutrality_sort_scratch(
                 peer_before_forceful,
                 "first owner's Rust evaluation populated the second owner's neutrality-sort scratch");
+            require_empty_rust_reciprocal_particle_assignment_scratch(
+                peer_before_forceful,
+                "first owner's Rust evaluation populated the second owner's particle-assignment scratch");
         } else {
             require_ready_rust_reciprocal_workspace(
                 peer_before_forceful, kReciprocalWorkspaceLength,
@@ -2871,6 +3004,19 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                         peer_before_forceful) ==
                         expected_neutrality_sort_bits,
                 "first owner's Rust evaluation changed the second owner's neutrality-sort scratch state");
+            require_ready_rust_reciprocal_particle_assignment_scratch(
+                peer_before_forceful,
+                "first owner's Rust evaluation changed the second owner's particle-assignment scratch state");
+            require(
+                peer_before_forceful.particle_assignment_storage ==
+                        peer_particle_assignment_storage &&
+                    peer_before_forceful
+                            .particle_assignment_logical_length_bytes ==
+                        peer_particle_assignment_logical_length_bytes &&
+                    peer_before_forceful
+                            .particle_assignment_allocation_capacity_bytes ==
+                        peer_particle_assignment_allocation_capacity_bytes,
+                "first owner's Rust evaluation changed the second owner's particle-assignment scratch state");
         }
         const bg_dynamics_report_v1 peer_report =
             integrate(context.get(), peer.get(), step_count);
@@ -2882,6 +3028,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         require_ready_rust_reciprocal_neutrality_sort_scratch(
             peer_after_forceful, kAtomCount,
             "second owner's stateful Rust forceful evaluation did not provision its neutrality-sort scratch");
+        require_ready_rust_reciprocal_particle_assignment_scratch(
+            peer_after_forceful,
+            "second owner's stateful Rust forceful evaluation did not provision its particle-assignment scratch");
         if (peer_workspace_storage == nullptr) {
             peer_workspace_storage = peer_after_forceful.workspace_storage;
             require(
@@ -2915,6 +3064,37 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_neutrality_sort_scratch_bits(
                 peer_after_forceful) == expected_neutrality_sort_bits,
             "second owner retained the wrong neutrality-sort payload");
+        if (peer_particle_assignment_storage == nullptr) {
+            peer_particle_assignment_storage =
+                peer_after_forceful.particle_assignment_storage;
+            peer_particle_assignment_logical_length_bytes =
+                peer_after_forceful
+                    .particle_assignment_logical_length_bytes;
+            peer_particle_assignment_allocation_capacity_bytes =
+                peer_after_forceful
+                    .particle_assignment_allocation_capacity_bytes;
+            require(
+                peer_particle_assignment_storage !=
+                        owner_particle_assignment_storage &&
+                    peer_particle_assignment_storage !=
+                        peer_workspace_storage &&
+                    peer_particle_assignment_storage !=
+                        peer_neutrality_sort_storage &&
+                    peer_particle_assignment_logical_length_bytes ==
+                        owner_particle_assignment_logical_length_bytes,
+                "independent owners did not retain disjoint same-shape particle-assignment scratch");
+        } else {
+            require(
+                peer_after_forceful.particle_assignment_storage ==
+                        peer_particle_assignment_storage &&
+                    peer_after_forceful
+                            .particle_assignment_logical_length_bytes ==
+                        peer_particle_assignment_logical_length_bytes &&
+                    peer_after_forceful
+                            .particle_assignment_allocation_capacity_bytes ==
+                        peer_particle_assignment_allocation_capacity_bytes,
+                "repeated second-owner evaluation replaced or resized its particle-assignment scratch");
+        }
         require(
             std::memcmp(&report, &peer_report, sizeof(report)) == 0,
             "reused Rust reciprocal-provider scratch changed integration report bits");
@@ -2941,6 +3121,14 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                 current.neutrality_sort_capacity ==
                     owner_neutrality_sort_capacity,
             "integration replaced or resized the first owner's Rust neutrality-sort scratch");
+        require(
+            current.particle_assignment_storage ==
+                    owner_particle_assignment_storage &&
+                current.particle_assignment_logical_length_bytes ==
+                    owner_particle_assignment_logical_length_bytes &&
+                current.particle_assignment_allocation_capacity_bytes ==
+                    owner_particle_assignment_allocation_capacity_bytes,
+            "integration replaced or resized the first owner's Rust particle-assignment scratch");
         const ForceBits current_bits =
             rust_reciprocal_provider_force_scratch_bits(current);
         require(
@@ -2996,11 +3184,14 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_same_rust_reciprocal_neutrality_sort_scratch_storage(
         state_b, state_a, kAtomCount,
         "state-B integration replaced or resized the Rust neutrality-sort scratch");
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        state_b, state_a,
+        "state-B integration replaced or resized the Rust particle-assignment scratch");
     const ForceBits forces_b =
         rust_reciprocal_provider_force_scratch_bits(state_b);
     require(
         forces_b != forces_a && forces_b == stateless_bits_for_owner(),
-        "state-B integration did not refresh Rust reciprocal-provider scratch");
+        "state-B integration did not recompute exact Rust reciprocal-provider force bits");
     const NeutralitySortBits neutrality_sort_b =
         rust_reciprocal_neutrality_sort_scratch_bits(state_b);
     require(
@@ -3036,6 +3227,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_same_rust_reciprocal_neutrality_sort_scratch_storage(
         after_load, state_b, kAtomCount,
         "checkpoint reload replaced or resized the owner-private Rust neutrality-sort scratch");
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        after_load, state_b,
+        "checkpoint reload replaced or resized the owner-private Rust particle-assignment scratch");
     require(
         rust_reciprocal_provider_force_scratch_bits(after_load) == forces_b,
         "checkpoint reload unexpectedly rewrote stale Rust reciprocal-provider scratch");
@@ -3079,6 +3273,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_same_rust_reciprocal_neutrality_sort_scratch_storage(
         after_restart_zero, state_b, kAtomCount,
         "zero-step restart replaced or resized the owner-private Rust neutrality-sort scratch");
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        after_restart_zero, state_b,
+        "zero-step restart replaced or resized the owner-private Rust particle-assignment scratch");
     require(
         rust_reciprocal_provider_force_scratch_bits(after_restart_zero) ==
                 forces_b &&
@@ -3129,6 +3326,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
     require_same_rust_reciprocal_neutrality_sort_scratch_storage(
         after_resync, state_b, kAtomCount,
         "forceful restart replaced or resized the owner-private Rust neutrality-sort scratch");
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        after_resync, state_b,
+        "forceful restart replaced or resized the owner-private Rust particle-assignment scratch");
     const ForceBits resynced_bits =
         rust_reciprocal_provider_force_scratch_bits(after_resync);
     require(
@@ -3189,7 +3389,7 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         "pre-alias absolute-step query failed");
     const NeutralitySortBits neutrality_sort_before_alias =
         rust_reciprocal_neutrality_sort_scratch_bits(after_resync);
-    const auto require_neutrality_alias_preserved_owner =
+    const auto require_private_scratch_alias_preserved_owner =
         [&](const char *message) {
             const RustReciprocalProviderForceScratchSnapshot current =
                 rust_reciprocal_provider_force_scratch_snapshot(
@@ -3200,6 +3400,8 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                 current, after_resync, kReciprocalWorkspaceLength, message);
             require_same_rust_reciprocal_neutrality_sort_scratch_storage(
                 current, after_resync, kAtomCount, message);
+            require_same_rust_reciprocal_particle_assignment_scratch_storage(
+                current, after_resync, message);
             const bg_particle_soa_view particles =
                 simulation_view(simulation.get());
             const std::array<const double *, 8> particle_addresses{{
@@ -3217,18 +3419,118 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                 bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
                     simulation.get(), &absolute_step),
                 BG_STATUS_OK,
-                "post-neutrality-alias absolute-step query failed");
+                "post-private-scratch-alias absolute-step query failed");
             require(
                 rust_reciprocal_provider_force_scratch_bits(current) ==
                         resynced_bits &&
                     rust_reciprocal_neutrality_sort_scratch_bits(current) ==
                         neutrality_sort_before_alias &&
                     checkpoint(simulation.get()) == before_alias &&
+                    std::memcmp(
+                        &last_report, &report_before_alias,
+                        sizeof(last_report)) == 0 &&
                     particle_addresses == particle_addresses_before_alias &&
                     view_position_bits(particles) == positions_before_alias &&
                     absolute_step == absolute_step_before_alias,
                 message);
         };
+
+    auto *const particle_assignment_storage = static_cast<std::uint8_t *>(
+        const_cast<void *>(after_resync.particle_assignment_storage));
+    const std::size_t particle_assignment_required_output_bytes = std::max({
+        sizeof(bg_dynamics_report_v1),
+        sizeof(bg_direct_ewald_error_v1),
+        sizeof(bg_particle_soa_view),
+        sizeof(std::uint64_t),
+    });
+    require(
+        after_resync.particle_assignment_logical_length_bytes >=
+                particle_assignment_required_output_bytes &&
+            after_resync.particle_assignment_allocation_capacity_bytes >=
+                after_resync.particle_assignment_logical_length_bytes,
+        "Rust particle-assignment logical prefix could not hold the alias probes");
+
+    auto *const assignment_report_alias =
+        reinterpret_cast<bg_dynamics_report_v1 *>(
+            particle_assignment_storage);
+    bg_direct_ewald_error_v1 assignment_report_alias_error{};
+    init_error(&assignment_report_alias_error);
+    require_status(
+        bg_context_integrate_particle_mesh_ewald_composite_v1(
+            context.get(), simulation.get(), UINT64_C(1),
+            assignment_report_alias, &assignment_report_alias_error),
+        BG_STATUS_INVALID_ARGUMENT,
+        "integration report output aliased the Rust particle-assignment logical prefix");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle-mesh composite dynamics report output must not overlap another output or input owner") ==
+                0 &&
+            assignment_report_alias_error.code ==
+                BG_DIRECT_EWALD_ERROR_NONE &&
+            assignment_report_alias_error.detail[0] == '\0',
+        "Rust particle-assignment logical-prefix report alias returned the wrong error");
+    require_private_scratch_alias_preserved_owner(
+        "rejected particle-assignment logical-prefix report alias changed scratch or owner state");
+
+    bg_dynamics_report_v1 assignment_error_alias_report{};
+    init_report(&assignment_error_alias_report);
+    const bg_dynamics_report_v1 assignment_error_alias_report_before =
+        assignment_error_alias_report;
+    auto *const assignment_error_alias =
+        reinterpret_cast<bg_direct_ewald_error_v1 *>(
+            particle_assignment_storage);
+    require_status(
+        bg_context_integrate_particle_mesh_ewald_composite_v1(
+            context.get(), simulation.get(), UINT64_C(1),
+            &assignment_error_alias_report, assignment_error_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "integration error output aliased the Rust particle-assignment logical prefix");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle-mesh composite dynamics typed-error output must not overlap an input owner") ==
+                0 &&
+            std::memcmp(
+                &assignment_error_alias_report,
+                &assignment_error_alias_report_before,
+                sizeof(assignment_error_alias_report)) == 0,
+        "Rust particle-assignment logical-prefix error alias returned the wrong error or changed report output");
+    require_private_scratch_alias_preserved_owner(
+        "rejected particle-assignment logical-prefix error alias changed scratch or owner state");
+
+    auto *const assignment_view_alias =
+        reinterpret_cast<bg_particle_soa_view *>(
+            particle_assignment_storage);
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
+            simulation.get(), assignment_view_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "particle-view output aliased the Rust particle-assignment logical prefix");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle view output must not overlap particle-mesh composite dynamics owner storage") ==
+            0,
+        "Rust particle-assignment logical-prefix particle-view alias returned the wrong error");
+    require_private_scratch_alias_preserved_owner(
+        "rejected particle-assignment logical-prefix particle-view alias changed scratch or owner state");
+
+    auto *const assignment_step_alias = reinterpret_cast<std::uint64_t *>(
+        particle_assignment_storage);
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+            simulation.get(), assignment_step_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "absolute-step output aliased the Rust particle-assignment logical prefix");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "absolute_step output must not overlap particle-mesh composite dynamics owner storage") ==
+            0,
+        "Rust particle-assignment logical-prefix absolute-step alias returned the wrong error");
+    require_private_scratch_alias_preserved_owner(
+        "rejected particle-assignment logical-prefix absolute-step alias changed scratch or owner state");
 
     auto *const neutrality_sort_storage = static_cast<std::uint8_t *>(
         const_cast<void *>(after_resync.neutrality_sort_storage));
@@ -3264,7 +3566,7 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                 BG_DIRECT_EWALD_ERROR_NONE &&
             neutrality_report_alias_error.detail[0] == '\0',
         "Rust neutrality-sort report alias returned the wrong error");
-    require_neutrality_alias_preserved_owner(
+    require_private_scratch_alias_preserved_owner(
         "rejected Rust neutrality-sort report alias changed private backing or owner state");
 
     bg_dynamics_report_v1 neutrality_error_alias_report{};
@@ -3290,7 +3592,7 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                 &neutrality_error_alias_report_before,
                 sizeof(neutrality_error_alias_report)) == 0,
         "Rust neutrality-sort error alias returned the wrong error or changed report output");
-    require_neutrality_alias_preserved_owner(
+    require_private_scratch_alias_preserved_owner(
         "rejected Rust neutrality-sort error alias changed private backing or owner state");
 
     auto *const neutrality_view_alias =
@@ -3306,7 +3608,7 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             "particle view output must not overlap particle-mesh composite dynamics owner storage") ==
             0,
         "Rust neutrality-sort particle-view alias returned the wrong error");
-    require_neutrality_alias_preserved_owner(
+    require_private_scratch_alias_preserved_owner(
         "rejected Rust neutrality-sort particle-view alias changed private backing or owner state");
 
     std::array<std::uint8_t, sizeof(bg_dynamics_report_v1)>
@@ -3523,7 +3825,7 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             "particle-mesh composite checkpoint input is shorter than its canonical header") ==
             0,
         "checkpoint input alias treated private neutrality-sort scratch as semantic owner storage");
-    require_neutrality_alias_preserved_owner(
+    require_private_scratch_alias_preserved_owner(
         "truncated checkpoint input alias changed private neutrality-sort backing or owner state");
 
     betelgeuze::native::tests::
@@ -3623,6 +3925,265 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_provider_force_scratch_bits(after_spare_resync) ==
                 stateless_bits_for_owner(),
         "post-spare-capacity evaluation did not exactly recover scratch and owner outputs");
+
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        after_spare_resync, after_resync,
+        "neutrality-sort recovery replaced or resized the particle-assignment scratch");
+    const auto assignment_checkpoint_before_shrink =
+        checkpoint(simulation.get());
+    const bg_particle_soa_view assignment_particles_before_alias =
+        simulation_view(simulation.get());
+    const PositionBits assignment_positions_before_alias =
+        view_position_bits(assignment_particles_before_alias);
+    const std::array<const double *, 8>
+        assignment_particle_addresses_before_alias{{
+            assignment_particles_before_alias.position_x_angstrom,
+            assignment_particles_before_alias.position_y_angstrom,
+            assignment_particles_before_alias.position_z_angstrom,
+            assignment_particles_before_alias
+                .velocity_x_angstrom_per_femtosecond,
+            assignment_particles_before_alias
+                .velocity_y_angstrom_per_femtosecond,
+            assignment_particles_before_alias
+                .velocity_z_angstrom_per_femtosecond,
+            assignment_particles_before_alias.mass_dalton,
+            assignment_particles_before_alias.charge_elementary,
+        }};
+    std::uint64_t assignment_absolute_step_before_alias = 0U;
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+            simulation.get(), &assignment_absolute_step_before_alias),
+        BG_STATUS_OK,
+        "pre-assignment-spare-alias absolute-step query failed");
+    const ForceBits assignment_force_bits_before_alias =
+        rust_reciprocal_provider_force_scratch_bits(after_spare_resync);
+    const NeutralitySortBits assignment_neutrality_bits_before_alias =
+        rust_reciprocal_neutrality_sort_scratch_bits(after_spare_resync);
+
+    betelgeuze::native::tests::
+        shrink_particle_mesh_ewald_composite_rust_reciprocal_provider_particle_assignment_scratch_for_test(
+            simulation.get(), 0U);
+    const RustReciprocalProviderForceScratchSnapshot assignment_spare =
+        rust_reciprocal_provider_force_scratch_snapshot(simulation.get());
+    require(
+        assignment_spare.particle_assignment_struct_size ==
+                sizeof(
+                    bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1) &&
+            assignment_spare.particle_assignment_abi_version ==
+                BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION &&
+            assignment_spare.particle_assignment_state ==
+                kRustReciprocalParticleAssignmentScratchStateReady &&
+            assignment_spare.particle_assignment_reserved0 == 0U &&
+            assignment_spare.particle_assignment_storage ==
+                after_spare_resync.particle_assignment_storage &&
+            assignment_spare.particle_assignment_logical_length_bytes == 0U &&
+            assignment_spare
+                    .particle_assignment_allocation_capacity_bytes ==
+                after_spare_resync
+                    .particle_assignment_allocation_capacity_bytes &&
+            assignment_spare.particle_assignment_reserved ==
+                std::array<std::uint64_t, 4>{0U, 0U, 0U, 0U},
+        "test-only particle-assignment shrink did not create a canonical all-spare READY allocation");
+    require(
+        checkpoint(simulation.get()) == assignment_checkpoint_before_shrink,
+        "private particle-assignment logical length entered checkpoint or static-fingerprint state");
+
+    const auto require_assignment_spare_alias_preserved_owner =
+        [&](const char *message) {
+            const RustReciprocalProviderForceScratchSnapshot current =
+                rust_reciprocal_provider_force_scratch_snapshot(
+                    simulation.get());
+            require_same_rust_reciprocal_provider_force_scratch_storage(
+                current, assignment_spare, message);
+            require_rust_reciprocal_provider_force_scratch_sizes(
+                current, kAtomCount, message);
+            require_same_rust_reciprocal_workspace_storage(
+                current, assignment_spare, kReciprocalWorkspaceLength,
+                message);
+            require_same_rust_reciprocal_neutrality_sort_scratch_storage(
+                current, assignment_spare, kAtomCount, message);
+            require(
+                current.particle_assignment_struct_size ==
+                        assignment_spare
+                            .particle_assignment_struct_size &&
+                    current.particle_assignment_abi_version ==
+                        assignment_spare
+                            .particle_assignment_abi_version &&
+                    current.particle_assignment_state ==
+                        assignment_spare.particle_assignment_state &&
+                    current.particle_assignment_reserved0 == 0U &&
+                    current.particle_assignment_storage ==
+                        assignment_spare.particle_assignment_storage &&
+                    current.particle_assignment_logical_length_bytes == 0U &&
+                    current.particle_assignment_allocation_capacity_bytes ==
+                        assignment_spare
+                            .particle_assignment_allocation_capacity_bytes &&
+                    current.particle_assignment_reserved ==
+                        assignment_spare.particle_assignment_reserved,
+                message);
+            const bg_particle_soa_view particles =
+                simulation_view(simulation.get());
+            const std::array<const double *, 8> particle_addresses{{
+                particles.position_x_angstrom,
+                particles.position_y_angstrom,
+                particles.position_z_angstrom,
+                particles.velocity_x_angstrom_per_femtosecond,
+                particles.velocity_y_angstrom_per_femtosecond,
+                particles.velocity_z_angstrom_per_femtosecond,
+                particles.mass_dalton,
+                particles.charge_elementary,
+            }};
+            std::uint64_t absolute_step = 0U;
+            require_status(
+                bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+                    simulation.get(), &absolute_step),
+                BG_STATUS_OK,
+                "post-assignment-spare-alias absolute-step query failed");
+            require(
+                rust_reciprocal_provider_force_scratch_bits(current) ==
+                        assignment_force_bits_before_alias &&
+                    rust_reciprocal_neutrality_sort_scratch_bits(current) ==
+                        assignment_neutrality_bits_before_alias &&
+                    checkpoint(simulation.get()) ==
+                        assignment_checkpoint_before_shrink &&
+                    particle_addresses ==
+                        assignment_particle_addresses_before_alias &&
+                    view_position_bits(particles) ==
+                        assignment_positions_before_alias &&
+                    absolute_step ==
+                        assignment_absolute_step_before_alias,
+                message);
+        };
+
+    auto *const assignment_spare_storage =
+        static_cast<std::uint8_t *>(const_cast<void *>(
+            assignment_spare.particle_assignment_storage));
+    const std::size_t assignment_spare_capacity =
+        assignment_spare.particle_assignment_allocation_capacity_bytes;
+    require(
+        assignment_spare_capacity >=
+            particle_assignment_required_output_bytes,
+        "particle-assignment spare capacity could not hold every output alias probe");
+    const auto assignment_capacity_tail =
+        [&](std::size_t output_size) -> std::uint8_t * {
+            require(
+                output_size <= assignment_spare_capacity,
+                "particle-assignment tail alias size exceeded allocation capacity");
+            return assignment_spare_storage +
+                assignment_spare_capacity - output_size;
+        };
+
+    auto *const assignment_spare_report_alias =
+        reinterpret_cast<bg_dynamics_report_v1 *>(
+            assignment_capacity_tail(sizeof(bg_dynamics_report_v1)));
+    bg_direct_ewald_error_v1 assignment_spare_report_error{};
+    init_error(&assignment_spare_report_error);
+    require_status(
+        bg_context_integrate_particle_mesh_ewald_composite_v1(
+            context.get(), simulation.get(), UINT64_C(1),
+            assignment_spare_report_alias,
+            &assignment_spare_report_error),
+        BG_STATUS_INVALID_ARGUMENT,
+        "integration report output aliased the Rust particle-assignment capacity tail");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle-mesh composite dynamics report output must not overlap another output or input owner") ==
+                0 &&
+            assignment_spare_report_error.code ==
+                BG_DIRECT_EWALD_ERROR_NONE &&
+            assignment_spare_report_error.detail[0] == '\0',
+        "Rust particle-assignment spare-tail report alias returned the wrong error");
+    require_assignment_spare_alias_preserved_owner(
+        "rejected particle-assignment spare-tail report alias changed scratch or owner state");
+
+    bg_dynamics_report_v1 assignment_spare_error_report{};
+    init_report(&assignment_spare_error_report);
+    const bg_dynamics_report_v1 assignment_spare_error_report_before =
+        assignment_spare_error_report;
+    auto *const assignment_spare_error_alias =
+        reinterpret_cast<bg_direct_ewald_error_v1 *>(
+            assignment_capacity_tail(sizeof(bg_direct_ewald_error_v1)));
+    require_status(
+        bg_context_integrate_particle_mesh_ewald_composite_v1(
+            context.get(), simulation.get(), UINT64_C(1),
+            &assignment_spare_error_report,
+            assignment_spare_error_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "integration error output aliased the Rust particle-assignment capacity tail");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle-mesh composite dynamics typed-error output must not overlap an input owner") ==
+                0 &&
+            std::memcmp(
+                &assignment_spare_error_report,
+                &assignment_spare_error_report_before,
+                sizeof(assignment_spare_error_report)) == 0,
+        "Rust particle-assignment spare-tail error alias returned the wrong error or changed report output");
+    require_assignment_spare_alias_preserved_owner(
+        "rejected particle-assignment spare-tail error alias changed scratch or owner state");
+
+    auto *const assignment_spare_view_alias =
+        reinterpret_cast<bg_particle_soa_view *>(
+            assignment_capacity_tail(sizeof(bg_particle_soa_view)));
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_particles(
+            simulation.get(), assignment_spare_view_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "particle-view output aliased the Rust particle-assignment capacity tail");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "particle view output must not overlap particle-mesh composite dynamics owner storage") ==
+            0,
+        "Rust particle-assignment spare-tail particle-view alias returned the wrong error");
+    require_assignment_spare_alias_preserved_owner(
+        "rejected particle-assignment spare-tail particle-view alias changed scratch or owner state");
+
+    auto *const assignment_spare_step_alias =
+        reinterpret_cast<std::uint64_t *>(
+            assignment_capacity_tail(sizeof(std::uint64_t)));
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_get_absolute_step(
+            simulation.get(), assignment_spare_step_alias),
+        BG_STATUS_INVALID_ARGUMENT,
+        "absolute-step output aliased the Rust particle-assignment capacity tail");
+    require(
+        std::strcmp(
+            bg_last_error_message(),
+            "absolute_step output must not overlap particle-mesh composite dynamics owner storage") ==
+            0,
+        "Rust particle-assignment spare-tail absolute-step alias returned the wrong error");
+    require_assignment_spare_alias_preserved_owner(
+        "rejected particle-assignment spare-tail absolute-step alias changed scratch or owner state");
+
+    require_status(
+        bg_particle_mesh_ewald_composite_simulation_v1_checkpoint_load(
+            peer.get(), assignment_checkpoint_before_shrink.data(),
+            assignment_checkpoint_before_shrink.size()),
+        BG_STATUS_OK,
+        "particle-assignment spare-capacity recovery peer checkpoint load failed");
+    const bg_dynamics_report_v1 assignment_recovery_report =
+        integrate(context.get(), simulation.get(), UINT64_C(1));
+    const bg_dynamics_report_v1 assignment_peer_recovery_report =
+        integrate(context.get(), peer.get(), UINT64_C(1));
+    const RustReciprocalProviderForceScratchSnapshot assignment_recovered =
+        rust_reciprocal_provider_force_scratch_snapshot(simulation.get());
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        assignment_recovered, after_spare_resync,
+        "post-spare-capacity evaluation replaced or resized the particle-assignment scratch");
+    require(
+        std::memcmp(
+            &assignment_recovery_report,
+            &assignment_peer_recovery_report,
+            sizeof(assignment_recovery_report)) == 0 &&
+            checkpoint(simulation.get()) == checkpoint(peer.get()) &&
+            rust_reciprocal_provider_force_scratch_bits(
+                assignment_recovered) == stateless_bits_for_owner() &&
+            rust_reciprocal_neutrality_sort_scratch_bits(
+                assignment_recovered) == expected_neutrality_sort_bits,
+        "post-particle-assignment-spare evaluation did not exactly recover scratch and owner outputs");
 }
 
 void verify_short_system_scratch_reuse() {

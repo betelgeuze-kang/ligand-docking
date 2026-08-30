@@ -619,6 +619,37 @@ impl NeutralitySortScratch {
     }
 }
 
+struct ParticleAssignmentScratch {
+    storage: Vec<ParticleAssignment>,
+}
+
+impl ParticleAssignmentScratch {
+    fn prepare<I: ReciprocalInput + ?Sized>(
+        &mut self,
+        input: &I,
+        validated: &ValidatedInput,
+    ) -> Result<(), AllocationFailure> {
+        let particle_count = input.particle_count();
+        if particle_count > self.storage.capacity() {
+            let additional = particle_count
+                .checked_sub(self.storage.len())
+                .expect("particle assignment scratch growth exceeds its current length");
+            fallible_reserve_exact(
+                &mut self.storage,
+                additional,
+                AllocationSite::ParticleAssignments,
+            )?;
+        }
+        self.storage.clear();
+        let cell = input.cell();
+        self.storage.extend(
+            (0..particle_count)
+                .map(|particle| assignment(input.position(particle), cell, validated.dimensions)),
+        );
+        Ok(())
+    }
+}
+
 fn reciprocal_axis_data_count(dimensions: [usize; 3]) -> usize {
     dimensions
         .into_iter()
@@ -653,6 +684,7 @@ fn compute_with_transform_and_workspace<I: ReciprocalInput + ?Sized>(
         force_mode,
         reusable_workspace,
         None,
+        None,
     )
 }
 
@@ -662,24 +694,22 @@ fn compute_with_transform_and_reusable_storage<I: ReciprocalInput + ?Sized>(
     force_mode: ForceStorageMode,
     reusable_workspace: Option<&mut ReciprocalWorkspace>,
     reusable_neutrality_sort_scratch: Option<&mut NeutralitySortScratch>,
+    reusable_particle_assignment_scratch: Option<&mut ParticleAssignmentScratch>,
 ) -> Result<InternalEvaluation, ParticleMeshReciprocalError> {
     #[cfg(test)]
     let is_reusing_workspace = reusable_workspace.is_some();
     let validated = validate_with_neutrality_sort_scratch(input, reusable_neutrality_sort_scratch)?;
-    let particle_count = input.particle_count();
     let charges = input.charges_elementary();
     let cell = input.cell();
-    let mut assignments = Vec::new();
-    fallible_reserve_exact(
-        &mut assignments,
-        particle_count,
-        AllocationSite::ParticleAssignments,
-    )
-    .map_err(ParticleMeshReciprocalError::from)?;
-    assignments.extend(
-        (0..particle_count)
-            .map(|particle| assignment(input.position(particle), cell, validated.dimensions)),
-    );
+    let mut local_particle_assignment_scratch = ParticleAssignmentScratch {
+        storage: Vec::new(),
+    };
+    let particle_assignment_scratch =
+        reusable_particle_assignment_scratch.unwrap_or(&mut local_particle_assignment_scratch);
+    particle_assignment_scratch
+        .prepare(input, &validated)
+        .map_err(ParticleMeshReciprocalError::from)?;
+    let assignments = &particle_assignment_scratch.storage;
     let mut local_workspace = None;
     let reciprocal_workspace = if let Some(workspace) = reusable_workspace {
         workspace
@@ -706,7 +736,7 @@ fn compute_with_transform_and_reusable_storage<I: ReciprocalInput + ?Sized>(
         reciprocal_axis_data_count(validated.dimensions)
     );
     debug_assert!(line_count <= reciprocal_tail.len());
-    spread_charges(spectrum, validated.dimensions, &assignments, charges);
+    spread_charges(spectrum, validated.dimensions, assignments, charges);
     transform(
         spectrum,
         validated.dimensions,
@@ -739,7 +769,7 @@ fn compute_with_transform_and_reusable_storage<I: ReciprocalInput + ?Sized>(
                 let forces = gather_forces(
                     spectrum,
                     validated.dimensions,
-                    &assignments,
+                    assignments,
                     charges,
                     cell,
                     scaled_grid_multiplier,
@@ -755,7 +785,7 @@ fn compute_with_transform_and_reusable_storage<I: ReciprocalInput + ?Sized>(
                     gather_forces_into_provider_output(
                         spectrum,
                         validated.dimensions,
-                        &assignments,
+                        assignments,
                         charges,
                         cell,
                         scaled_grid_multiplier,
@@ -1166,6 +1196,12 @@ struct ParticleAssignment {
     axes: [AxisAssignment; 3],
 }
 
+// Owner-private callers may test spare-capacity aliasing by shrinking only the
+// logical byte count before the next prepare overwrites every element. This is
+// sound only while assignment elements have no drop glue.
+const _: () = assert!(!std::mem::needs_drop::<ParticleAssignment>());
+const _: () = assert!(size_of::<ParticleAssignment>() != 0);
+
 fn assignment(
     position: Position,
     cell: OrthorhombicCell,
@@ -1415,6 +1451,9 @@ const PARTICLE_MESH_RECIPROCAL_WORKSPACE_LEASED: u32 = 0x4c45_5331;
 const PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_EMPTY: u32 = 0;
 const PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY: u32 = 0x4e53_5331;
 const PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_LEASED: u32 = 0x4e53_4c31;
+const PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_EMPTY: u32 = 0;
+const PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY: u32 = 0x5041_5331;
+const PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_LEASED: u32 = 0x5041_4c31;
 const PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY: usize = 256;
 const STATUS_OK: i32 = 0;
 const STATUS_INVALID_ARGUMENT: i32 = 1;
@@ -1527,6 +1566,19 @@ pub(crate) struct ParticleMeshReciprocalNeutralitySortScratchV1 {
     storage: *mut c_void,
     length: usize,
     capacity: usize,
+    reserved: [u64; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct ParticleMeshReciprocalParticleAssignmentScratchV1 {
+    struct_size: u32,
+    abi_version: u32,
+    state: u32,
+    reserved0: u32,
+    storage: *mut c_void,
+    logical_length_bytes: usize,
+    allocation_capacity_bytes: usize,
     reserved: [u64; 4],
 }
 
@@ -1885,6 +1937,143 @@ impl Drop for NeutralitySortScratchLease {
     }
 }
 
+#[derive(Clone, Copy)]
+enum ParticleAssignmentScratchSnapshot {
+    Empty,
+    Ready {
+        storage: *mut c_void,
+        logical_length_bytes: usize,
+        allocation_capacity_bytes: usize,
+    },
+    Leased,
+}
+
+#[derive(Clone, Copy)]
+struct ParticleAssignmentScratchPreflight {
+    pointer: *mut ParticleMeshReciprocalParticleAssignmentScratchV1,
+    snapshot: ParticleAssignmentScratchSnapshot,
+    descriptor_range: MemoryRange,
+    backing_range: Option<MemoryRange>,
+}
+
+struct ParticleAssignmentScratchLease {
+    descriptor: *mut ParticleMeshReciprocalParticleAssignmentScratchV1,
+    restore_empty_if_unallocated: bool,
+    scratch: Option<ParticleAssignmentScratch>,
+}
+
+impl ParticleAssignmentScratchLease {
+    unsafe fn acquire(preflight: ParticleAssignmentScratchPreflight) -> Self {
+        let (scratch, restore_empty_if_unallocated) = match preflight.snapshot {
+            ParticleAssignmentScratchSnapshot::Empty => (
+                ParticleAssignmentScratch {
+                    storage: Vec::new(),
+                },
+                true,
+            ),
+            ParticleAssignmentScratchSnapshot::Ready {
+                storage,
+                logical_length_bytes,
+                allocation_capacity_bytes,
+            } => {
+                // Conversion from the opaque byte-count descriptor deliberately
+                // occurs only after complete descriptor/backing alias preflight.
+                let element_size = size_of::<ParticleAssignment>();
+                let length = logical_length_bytes / element_size;
+                let capacity = allocation_capacity_bytes / element_size;
+                let values = if capacity == 0 {
+                    Vec::new()
+                } else {
+                    // SAFETY: The canonical READY descriptor owns exactly this
+                    // Rust Vec allocation. Preflight proved whole-element byte
+                    // counts, alignment, ordering, addressability, and complete
+                    // alias disjointness before this conversion and lease.
+                    unsafe {
+                        Vec::from_raw_parts(storage.cast::<ParticleAssignment>(), length, capacity)
+                    }
+                };
+                (ParticleAssignmentScratch { storage: values }, false)
+            }
+            ParticleAssignmentScratchSnapshot::Leased => {
+                unreachable!("leased particle assignment scratch cannot be acquired")
+            }
+        };
+        let storage = scratch.storage.as_ptr().cast_mut();
+        let length = scratch.storage.len();
+        let capacity = scratch.storage.capacity();
+        let external_storage = if capacity == 0 {
+            ptr::null_mut()
+        } else {
+            storage.cast::<c_void>()
+        };
+        // SAFETY: The descriptor is initialized, writable, and disjoint from
+        // every caller descriptor/channel and all three retained allocations.
+        unsafe {
+            ptr::write(
+                preflight.pointer,
+                canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_LEASED,
+                    external_storage,
+                    length,
+                    capacity,
+                ),
+            )
+        };
+        Self {
+            descriptor: preflight.pointer,
+            restore_empty_if_unallocated,
+            scratch: Some(scratch),
+        }
+    }
+
+    fn scratch_mut(&mut self) -> &mut ParticleAssignmentScratch {
+        self.scratch
+            .as_mut()
+            .expect("live particle assignment scratch lease owns storage")
+    }
+}
+
+impl Drop for ParticleAssignmentScratchLease {
+    fn drop(&mut self) {
+        let scratch = self
+            .scratch
+            .take()
+            .expect("particle assignment scratch lease restores exactly once");
+        let mut storage = ManuallyDrop::new(scratch.storage);
+        let length = storage.len();
+        let capacity = storage.capacity();
+        if self.restore_empty_if_unallocated && capacity == 0 {
+            // SAFETY: No allocation exists and the lease exclusively owns the
+            // descriptor. Restoring all-zero preserves cold-failure retention.
+            unsafe {
+                ptr::write(
+                    self.descriptor,
+                    empty_particle_assignment_scratch_descriptor(),
+                )
+            };
+            return;
+        }
+        let pointer = if capacity == 0 {
+            ptr::null_mut()
+        } else {
+            storage.as_mut_ptr().cast::<c_void>()
+        };
+        // SAFETY: ManuallyDrop transfers the Vec raw parts back to the canonical
+        // owner-private READY descriptor without exposing its element layout.
+        unsafe {
+            ptr::write(
+                self.descriptor,
+                canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    pointer,
+                    length,
+                    capacity,
+                ),
+            )
+        };
+    }
+}
+
 const fn empty_workspace_descriptor() -> ParticleMeshReciprocalWorkspaceV1 {
     ParticleMeshReciprocalWorkspaceV1 {
         struct_size: 0,
@@ -1949,12 +2138,51 @@ fn canonical_neutrality_sort_scratch_descriptor(
     }
 }
 
+const fn empty_particle_assignment_scratch_descriptor(
+) -> ParticleMeshReciprocalParticleAssignmentScratchV1 {
+    ParticleMeshReciprocalParticleAssignmentScratchV1 {
+        struct_size: 0,
+        abi_version: 0,
+        state: PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_EMPTY,
+        reserved0: 0,
+        storage: ptr::null_mut(),
+        logical_length_bytes: 0,
+        allocation_capacity_bytes: 0,
+        reserved: [0; 4],
+    }
+}
+
+fn canonical_particle_assignment_scratch_descriptor(
+    state: u32,
+    storage: *mut c_void,
+    length: usize,
+    capacity: usize,
+) -> ParticleMeshReciprocalParticleAssignmentScratchV1 {
+    let element_size = size_of::<ParticleAssignment>();
+    ParticleMeshReciprocalParticleAssignmentScratchV1 {
+        struct_size: u32::try_from(size_of::<ParticleMeshReciprocalParticleAssignmentScratchV1>())
+            .unwrap_or(0),
+        abi_version: PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION,
+        state,
+        reserved0: 0,
+        storage,
+        logical_length_bytes: length
+            .checked_mul(element_size)
+            .expect("validated assignment scratch length fits bytes"),
+        allocation_capacity_bytes: capacity
+            .checked_mul(element_size)
+            .expect("validated assignment scratch capacity fits bytes"),
+        reserved: [0; 4],
+    }
+}
+
 #[derive(Clone, Copy)]
 enum ProviderForceMode {
     Transactional(u8),
     Direct {
         workspace: Option<*mut ParticleMeshReciprocalWorkspaceV1>,
         neutrality_sort_scratch: Option<*mut ParticleMeshReciprocalNeutralitySortScratchV1>,
+        particle_assignment_scratch: Option<*mut ParticleMeshReciprocalParticleAssignmentScratchV1>,
     },
 }
 
@@ -2190,6 +2418,108 @@ unsafe fn preflight_neutrality_sort_scratch_descriptor(
     })
 }
 
+fn particle_assignment_scratch_descriptor_is_empty(
+    scratch: ParticleMeshReciprocalParticleAssignmentScratchV1,
+) -> bool {
+    scratch.struct_size == 0
+        && scratch.abi_version == 0
+        && scratch.state == PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_EMPTY
+        && scratch.reserved0 == 0
+        && scratch.storage.is_null()
+        && scratch.logical_length_bytes == 0
+        && scratch.allocation_capacity_bytes == 0
+        && reserved_is_zero(&scratch.reserved)
+}
+
+unsafe fn preflight_particle_assignment_scratch_descriptor(
+    pointer: *mut ParticleMeshReciprocalParticleAssignmentScratchV1,
+    descriptor_range: MemoryRange,
+) -> Result<ParticleAssignmentScratchPreflight, ProviderFailure> {
+    // SAFETY: The caller checked this fixed-size descriptor for non-nullness,
+    // natural alignment, addressability, and disjointness from error storage.
+    let scratch = unsafe { ptr::read(pointer) };
+    if particle_assignment_scratch_descriptor_is_empty(scratch) {
+        return Ok(ParticleAssignmentScratchPreflight {
+            pointer,
+            snapshot: ParticleAssignmentScratchSnapshot::Empty,
+            descriptor_range,
+            backing_range: None,
+        });
+    }
+    validate_header::<ParticleMeshReciprocalParticleAssignmentScratchV1>(
+        scratch.struct_size,
+        scratch.abi_version,
+        &scratch.reserved,
+        "particle assignment scratch",
+    )?;
+    if scratch.reserved0 != 0 {
+        return Err(ProviderFailure::abi(
+            "particle assignment scratch reserved0 must be zero",
+        ));
+    }
+    if !matches!(
+        scratch.state,
+        PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY
+            | PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_LEASED
+    ) {
+        return Err(ProviderFailure::abi(
+            "particle assignment scratch state is not canonical",
+        ));
+    }
+    if scratch.logical_length_bytes > scratch.allocation_capacity_bytes {
+        return Err(ProviderFailure::capacity(
+            "particle assignment scratch logical length exceeds allocation capacity",
+        ));
+    }
+    let element_size = size_of::<ParticleAssignment>();
+    if scratch.logical_length_bytes % element_size != 0
+        || scratch.allocation_capacity_bytes % element_size != 0
+    {
+        return Err(ProviderFailure::abi(
+            "particle assignment scratch byte counts are not whole elements",
+        ));
+    }
+    let backing_range = if scratch.allocation_capacity_bytes == 0 {
+        if !scratch.storage.is_null() || scratch.logical_length_bytes != 0 {
+            return Err(ProviderFailure::abi(
+                "empty particle assignment scratch raw parts are not canonical",
+            ));
+        }
+        None
+    } else {
+        if scratch.storage.is_null() {
+            return Err(ProviderFailure::invalid(
+                "particle assignment scratch storage is null",
+            ));
+        }
+        if (scratch.storage as usize) % align_of::<ParticleAssignment>() != 0 {
+            return Err(ProviderFailure::invalid(
+                "particle assignment scratch storage is not naturally aligned",
+            ));
+        }
+        checked_range(
+            scratch.storage.cast::<u8>().cast_const(),
+            scratch.allocation_capacity_bytes,
+            "particle assignment scratch storage is null",
+        )?
+    };
+    let snapshot = if scratch.state == PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY {
+        ParticleAssignmentScratchSnapshot::Ready {
+            storage: scratch.storage,
+            logical_length_bytes: scratch.logical_length_bytes,
+            allocation_capacity_bytes: scratch.allocation_capacity_bytes,
+        }
+    } else {
+        ParticleAssignmentScratchSnapshot::Leased
+    };
+    Ok(ParticleAssignmentScratchPreflight {
+        pointer,
+        snapshot,
+        descriptor_range,
+        backing_range,
+    })
+}
+
 fn ranges_overlap(first: MemoryRange, second: MemoryRange) -> bool {
     first.begin < second.end && second.begin < first.end
 }
@@ -2360,6 +2690,26 @@ fn evaluate_with_direct_force_output_and_reusable_storage<I: ReciprocalInput + ?
         ForceStorageMode::Direct(output),
         Some(workspace),
         Some(neutrality_sort_scratch),
+        None,
+    )?
+    .evaluation
+    .reciprocal_space_kcal_per_mol)
+}
+
+fn evaluate_with_direct_force_output_and_all_reusable_storage<I: ReciprocalInput + ?Sized>(
+    input: &I,
+    output: ParticleMeshReciprocalForceOutputV1,
+    workspace: &mut ReciprocalWorkspace,
+    neutrality_sort_scratch: &mut NeutralitySortScratch,
+    particle_assignment_scratch: &mut ParticleAssignmentScratch,
+) -> Result<f64, ParticleMeshReciprocalError> {
+    Ok(compute_with_transform_and_reusable_storage(
+        input,
+        fft::fft_3d,
+        ForceStorageMode::Direct(output),
+        Some(workspace),
+        Some(neutrality_sort_scratch),
+        Some(particle_assignment_scratch),
     )?
     .evaluation
     .reciprocal_space_kcal_per_mol)
@@ -2374,13 +2724,19 @@ unsafe fn evaluate_provider_impl(
     error_range: MemoryRange,
     alias_safety: &Cell<bool>,
 ) -> Result<ProviderCandidate, ProviderFailure> {
-    let (workspace_pointer, neutrality_sort_scratch_pointer) = match force_mode {
-        ProviderForceMode::Transactional(_) => (None, None),
-        ProviderForceMode::Direct {
-            workspace,
-            neutrality_sort_scratch,
-        } => (workspace, neutrality_sort_scratch),
-    };
+    let (workspace_pointer, neutrality_sort_scratch_pointer, particle_assignment_scratch_pointer) =
+        match force_mode {
+            ProviderForceMode::Transactional(_) => (None, None, None),
+            ProviderForceMode::Direct {
+                workspace,
+                neutrality_sort_scratch,
+                particle_assignment_scratch,
+            } => (
+                workspace,
+                neutrality_sort_scratch,
+                particle_assignment_scratch,
+            ),
+        };
     let system_range = checked_range(system_pointer, 1, "system descriptor is null")
         .map_err(ProviderFailure::without_error_write)?
         .expect("one-element system descriptor has a range");
@@ -2429,6 +2785,23 @@ unsafe fn evaluate_provider_impl(
         } else {
             None
         };
+    let particle_assignment_scratch_descriptor_range =
+        if let Some(pointer) = particle_assignment_scratch_pointer {
+            Some(
+                checked_range(
+                    pointer.cast_const(),
+                    1,
+                    "particle assignment scratch descriptor is null",
+                )
+                .map_err(ProviderFailure::without_error_write)?
+                .ok_or_else(|| {
+                    ProviderFailure::invalid("particle assignment scratch descriptor is null")
+                        .without_error_write()
+                })?,
+            )
+        } else {
+            None
+        };
     let descriptor_ranges = [
         Some(system_range),
         Some(model_range),
@@ -2436,6 +2809,7 @@ unsafe fn evaluate_provider_impl(
         force_descriptor_range,
         workspace_descriptor_range,
         neutrality_sort_scratch_descriptor_range,
+        particle_assignment_scratch_descriptor_range,
     ];
     if overlaps_any(error_range, &descriptor_ranges) {
         return Err(ProviderFailure::invalid(
@@ -2501,6 +2875,30 @@ unsafe fn evaluate_provider_impl(
         } else {
             None
         };
+    let particle_assignment_scratch_preflight = if let Some(descriptor_range) =
+        particle_assignment_scratch_descriptor_range
+    {
+        // SAFETY: The assignment descriptor has a valid fixed-size range
+        // and is disjoint from writable error storage. Opaque byte counts
+        // describe backing only; they are not converted to elements here.
+        let pointer = particle_assignment_scratch_pointer
+            .expect("particle assignment scratch range requires a pointer mode");
+        let preflight =
+            unsafe { preflight_particle_assignment_scratch_descriptor(pointer, descriptor_range) }
+                .map_err(ProviderFailure::without_error_write)?;
+        if preflight
+            .backing_range
+            .is_some_and(|range| ranges_overlap(error_range, range))
+        {
+            return Err(ProviderFailure::invalid(
+                "error output must not overlap particle assignment scratch storage",
+            )
+            .without_error_write());
+        }
+        Some(preflight)
+    } else {
+        None
+    };
 
     let input_channel_ranges = [
         checked_range(
@@ -2556,7 +2954,10 @@ unsafe fn evaluate_provider_impl(
         )
         .without_error_write());
     }
-    if workspace_preflight.is_none() && neutrality_sort_scratch_preflight.is_none() {
+    if workspace_preflight.is_none()
+        && neutrality_sort_scratch_preflight.is_none()
+        && particle_assignment_scratch_preflight.is_none()
+    {
         // Preserve the established stateless panic/error-write boundary. The
         // persistent entry delays this marker until its descriptor and entire
         // backing capacity complete the stronger alias preflight below.
@@ -2650,6 +3051,8 @@ unsafe fn evaluate_provider_impl(
         workspace_preflight.and_then(|workspace| workspace.backing_range),
         neutrality_sort_scratch_preflight.map(|scratch| scratch.descriptor_range),
         neutrality_sort_scratch_preflight.and_then(|scratch| scratch.backing_range),
+        particle_assignment_scratch_preflight.map(|scratch| scratch.descriptor_range),
+        particle_assignment_scratch_preflight.and_then(|scratch| scratch.backing_range),
     ];
     require_disjoint_outputs(&mutable_ranges)?;
     let input_ranges = [
@@ -2669,7 +3072,10 @@ unsafe fn evaluate_provider_impl(
         }
     }
 
-    if workspace_preflight.is_some() || neutrality_sort_scratch_preflight.is_some() {
+    if workspace_preflight.is_some()
+        || neutrality_sort_scratch_preflight.is_some()
+        || particle_assignment_scratch_preflight.is_some()
+    {
         alias_safety.set(true);
     }
     if workspace_preflight
@@ -2686,6 +3092,16 @@ unsafe fn evaluate_provider_impl(
             "neutrality sort scratch is already leased",
         ));
     }
+    if particle_assignment_scratch_preflight.is_some_and(|preflight| {
+        matches!(
+            preflight.snapshot,
+            ParticleAssignmentScratchSnapshot::Leased
+        )
+    }) {
+        return Err(ProviderFailure::invalid(
+            "particle assignment scratch is already leased",
+        ));
+    }
 
     let mut workspace_lease = workspace_preflight.map(|preflight| {
         // SAFETY: Header/raw-parts validation and complete descriptor, backing,
@@ -2697,6 +3113,12 @@ unsafe fn evaluate_provider_impl(
         // two-backing, error, input, and force alias preflight finished.
         unsafe { NeutralitySortScratchLease::acquire(preflight) }
     });
+    let mut particle_assignment_scratch_lease =
+        particle_assignment_scratch_preflight.map(|preflight| {
+            // SAFETY: Whole-element byte counts, raw-parts validity, and the
+            // complete three-descriptor/three-backing alias preflight finished.
+            unsafe { ParticleAssignmentScratchLease::acquire(preflight) }
+        });
 
     // SAFETY: All raw descriptor and channel ranges, capacities, mutable
     // output disjointness, and input/output aliases were preflighted above.
@@ -2719,8 +3141,21 @@ unsafe fn evaluate_provider_impl(
             let energy = match (
                 workspace_lease.as_mut(),
                 neutrality_sort_scratch_lease.as_mut(),
+                particle_assignment_scratch_lease.as_mut(),
             ) {
-                (Some(workspace), Some(neutrality_sort_scratch)) => {
+                (
+                    Some(workspace),
+                    Some(neutrality_sort_scratch),
+                    Some(particle_assignment_scratch),
+                ) => evaluate_with_direct_force_output_and_all_reusable_storage(
+                    &input,
+                    output,
+                    workspace.workspace_mut(),
+                    neutrality_sort_scratch.scratch_mut(),
+                    particle_assignment_scratch.scratch_mut(),
+                )
+                .map_err(ProviderFailure::from)?,
+                (Some(workspace), Some(neutrality_sort_scratch), None) => {
                     evaluate_with_direct_force_output_and_reusable_storage(
                         &input,
                         output,
@@ -2729,15 +3164,25 @@ unsafe fn evaluate_provider_impl(
                     )
                     .map_err(ProviderFailure::from)?
                 }
-                (Some(workspace), None) => evaluate_with_direct_force_output_and_workspace(
+                (Some(workspace), None, None) => evaluate_with_direct_force_output_and_workspace(
                     &input,
                     output,
                     workspace.workspace_mut(),
                 )
                 .map_err(ProviderFailure::from)?,
-                (None, None) => evaluate_with_direct_force_output(&input, output)
+                (None, None, None) => evaluate_with_direct_force_output(&input, output)
                     .map_err(ProviderFailure::from)?,
-                (None, Some(_)) => {
+                (_, None, Some(_)) => {
+                    return Err(ProviderFailure::invalid(
+                        "particle assignment scratch requires neutrality sort scratch and reciprocal workspace",
+                    ));
+                }
+                (None, Some(_), Some(_)) => {
+                    return Err(ProviderFailure::invalid(
+                        "particle assignment scratch requires neutrality sort scratch and reciprocal workspace",
+                    ));
+                }
+                (None, Some(_), None) => {
                     return Err(ProviderFailure::invalid(
                         "neutrality sort scratch requires a reciprocal workspace",
                     ));
@@ -2933,6 +3378,7 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_reusing_force
                 ProviderForceMode::Direct {
                     workspace: None,
                     neutrality_sort_scratch: None,
+                    particle_assignment_scratch: None,
                 },
                 out_energy,
                 out_forces,
@@ -3009,6 +3455,7 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_reusing_force
                 ProviderForceMode::Direct {
                     workspace: Some(workspace),
                     neutrality_sort_scratch: None,
+                    particle_assignment_scratch: None,
                 },
                 out_energy,
                 out_forces,
@@ -3088,6 +3535,7 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_reusing_force
                 ProviderForceMode::Direct {
                     workspace: Some(workspace),
                     neutrality_sort_scratch: Some(neutrality_sort_scratch),
+                    particle_assignment_scratch: None,
                 },
                 out_energy,
                 out_forces,
@@ -3117,6 +3565,88 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_reusing_force
             if alias_safety.get() {
                 // SAFETY: All descriptors, backing capacities, and channels
                 // were proven disjoint before the leased computation began.
+                unsafe {
+                    write_provider_error(
+                        out_error,
+                        ParticleMeshReciprocalErrorCodeV1::None,
+                        "rust particle-mesh reciprocal provider panicked",
+                    )
+                };
+            }
+            STATUS_INTERNAL_ERROR
+        }
+    }
+}
+
+/// Evaluate through the direct-force provider while leasing all three retained
+/// owner-private reciprocal, neutrality-sort, and particle-assignment stores.
+///
+/// # Safety
+/// The direct-force evaluator contract applies. `workspace`,
+/// `neutrality_sort_scratch`, and `particle_assignment_scratch` must each point
+/// to an all-zero EMPTY descriptor or to the matching canonical READY
+/// descriptor previously returned by this entry point. Every descriptor and
+/// its complete allocation capacity must remain exclusively owned, initialized,
+/// writable, live, and pairwise disjoint from every other descriptor and
+/// channel for the call.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+    system: *const ParticleMeshReciprocalSystemV1,
+    model: *const ParticleMeshReciprocalModelV1,
+    workspace: *mut ParticleMeshReciprocalWorkspaceV1,
+    neutrality_sort_scratch: *mut ParticleMeshReciprocalNeutralitySortScratchV1,
+    particle_assignment_scratch: *mut ParticleMeshReciprocalParticleAssignmentScratchV1,
+    out_energy: *mut ParticleMeshReciprocalEnergyV1,
+    out_forces: *mut ParticleMeshReciprocalForceOutputV1,
+    out_error: *mut ParticleMeshReciprocalErrorV1,
+) -> i32 {
+    // SAFETY: Validation occurs before reading the initialized error descriptor.
+    let (_error_output, error_range) = match unsafe { validate_error_output(out_error) } {
+        Ok(validated) => validated,
+        Err(status) => return status,
+    };
+    let alias_safety = Cell::new(false);
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: The implementation preflights all three descriptors and
+        // complete backing capacities alongside every provider range before
+        // any RAII ownership lease, byte-to-element conversion, or raw borrow.
+        unsafe {
+            evaluate_provider_impl(
+                system,
+                model,
+                ProviderForceMode::Direct {
+                    workspace: Some(workspace),
+                    neutrality_sort_scratch: Some(neutrality_sort_scratch),
+                    particle_assignment_scratch: Some(particle_assignment_scratch),
+                },
+                out_energy,
+                out_forces,
+                error_range,
+                &alias_safety,
+            )
+        }
+    }));
+    match outcome {
+        Ok(Ok(candidate)) => {
+            // SAFETY: Direct forces are complete, all leases restored canonical
+            // READY ownership during closure return, and no fallible work remains.
+            unsafe { commit_candidate(candidate, out_energy) };
+            // SAFETY: Error storage completed full persistent alias preflight.
+            unsafe { write_provider_error(out_error, ParticleMeshReciprocalErrorCodeV1::None, "") };
+            STATUS_OK
+        }
+        Ok(Err(failure)) => {
+            if failure.may_write_error {
+                // SAFETY: Failure tracks whether error storage completed every
+                // descriptor and full-capacity backing preflight.
+                unsafe { write_provider_error(out_error, failure.code, failure.detail) };
+            }
+            failure.status
+        }
+        Err(_) => {
+            if alias_safety.get() {
+                // SAFETY: All descriptors, complete backing capacities, and
+                // channels were proven disjoint before leased computation.
                 unsafe {
                     write_provider_error(
                         out_error,
@@ -3239,6 +3769,65 @@ pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_neutrality_sort_scratc
     }
 }
 
+/// Release a canonical owner-private particle-assignment scratch allocation.
+///
+/// Null, all-zero EMPTY, malformed, and currently LEASED descriptors are
+/// fail-closed no-ops. A canonical READY allocation is dropped exactly once and
+/// its descriptor becomes all-zero EMPTY before deallocation.
+///
+/// # Safety
+/// `scratch` must be null or point to initialized writable storage for one
+/// descriptor. A canonical READY descriptor must have originated from the
+/// paired evaluator and remain exclusively owned for this call.
+#[no_mangle]
+pub unsafe extern "C" fn bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+    scratch: *mut ParticleMeshReciprocalParticleAssignmentScratchV1,
+) {
+    let Some(descriptor_range) = checked_range(
+        scratch.cast_const(),
+        1,
+        "particle assignment scratch descriptor is null",
+    )
+    .ok()
+    .flatten() else {
+        return;
+    };
+    // SAFETY: Fixed-size range validation proved this descriptor readable. Any
+    // malformed state returns before byte counts become Vec element counts.
+    let Ok(preflight) =
+        (unsafe { preflight_particle_assignment_scratch_descriptor(scratch, descriptor_range) })
+    else {
+        return;
+    };
+    let ParticleAssignmentScratchSnapshot::Ready {
+        storage,
+        logical_length_bytes,
+        allocation_capacity_bytes,
+    } = preflight.snapshot
+    else {
+        return;
+    };
+    if preflight
+        .backing_range
+        .is_some_and(|range| ranges_overlap(range, descriptor_range))
+    {
+        return;
+    }
+    let element_size = size_of::<ParticleAssignment>();
+    let length = logical_length_bytes / element_size;
+    let capacity = allocation_capacity_bytes / element_size;
+    // SAFETY: Canonical READY raw parts were validated and are exclusively
+    // owned. Clearing first makes repeat destruction a no-op before deallocation.
+    unsafe { ptr::write(scratch, empty_particle_assignment_scratch_descriptor()) };
+    if capacity != 0 {
+        // SAFETY: The descriptor originated from this exact Rust Vec allocation;
+        // whole-element conversion occurs only after its final alias preflight.
+        drop(unsafe {
+            Vec::from_raw_parts(storage.cast::<ParticleAssignment>(), length, capacity)
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3292,6 +3881,10 @@ mod tests {
         empty_neutrality_sort_scratch_descriptor()
     }
 
+    fn empty_particle_assignment_scratch() -> ParticleMeshReciprocalParticleAssignmentScratchV1 {
+        empty_particle_assignment_scratch_descriptor()
+    }
+
     fn neutrality_sort_scratch_storage_bits(
         scratch: &ParticleMeshReciprocalNeutralitySortScratchV1,
     ) -> Vec<u64> {
@@ -3308,6 +3901,45 @@ mod tests {
             .iter()
             .map(|value| value.to_bits())
             .collect()
+    }
+
+    fn particle_assignment_scratch_storage_bits(
+        scratch: &ParticleMeshReciprocalParticleAssignmentScratchV1,
+    ) -> Vec<u64> {
+        assert_eq!(
+            scratch.state,
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY
+        );
+        assert_eq!(
+            scratch.logical_length_bytes % size_of::<ParticleAssignment>(),
+            0
+        );
+        let length = scratch.logical_length_bytes / size_of::<ParticleAssignment>();
+        if length == 0 {
+            return Vec::new();
+        }
+        // SAFETY: Tests inspect a live canonical READY scratch returned by the
+        // provider, bounded strictly by its initialized logical element count.
+        let assignments = unsafe {
+            core::slice::from_raw_parts(scratch.storage.cast::<ParticleAssignment>(), length)
+        };
+        particle_assignment_bits(assignments)
+    }
+
+    fn particle_assignment_bits(assignments: &[ParticleAssignment]) -> Vec<u64> {
+        let mut bits = Vec::with_capacity(assignments.len() * 3 * CARDINAL_B_SPLINE_ORDER * 3);
+        for assignment in assignments {
+            for axis in &assignment.axes {
+                bits.extend(
+                    axis.indices
+                        .iter()
+                        .map(|index| u64::try_from(*index).unwrap()),
+                );
+                bits.extend(axis.weights.iter().map(|value| value.to_bits()));
+                bits.extend(axis.derivatives.iter().map(|value| value.to_bits()));
+            }
+        }
+        bits
     }
 
     fn workspace_storage_bits(workspace: &ParticleMeshReciprocalWorkspaceV1) -> Vec<[u64; 2]> {
@@ -3408,6 +4040,33 @@ mod tests {
                 model,
                 workspace,
                 neutrality_sort_scratch,
+                energy,
+                forces,
+                error,
+            )
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    unsafe fn evaluate_with_all_owner_reusable_storage(
+        system: *const ParticleMeshReciprocalSystemV1,
+        model: *const ParticleMeshReciprocalModelV1,
+        workspace: *mut ParticleMeshReciprocalWorkspaceV1,
+        neutrality_sort_scratch: *mut ParticleMeshReciprocalNeutralitySortScratchV1,
+        particle_assignment_scratch: *mut ParticleMeshReciprocalParticleAssignmentScratchV1,
+        energy: *mut ParticleMeshReciprocalEnergyV1,
+        forces: *mut ParticleMeshReciprocalForceOutputV1,
+        error: *mut ParticleMeshReciprocalErrorV1,
+    ) -> i32 {
+        // SAFETY: Each test documents and owns every descriptor and channel
+        // supplied to this thin wrapper around the hidden triple-scratch entry.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+                system,
+                model,
+                workspace,
+                neutrality_sort_scratch,
+                particle_assignment_scratch,
                 energy,
                 forces,
                 error,
@@ -3575,6 +4234,13 @@ mod tests {
             size_of::<ParticleMeshReciprocalNeutralitySortScratchV1>(),
             72
         );
+        assert_eq!(
+            size_of::<ParticleMeshReciprocalParticleAssignmentScratchV1>(),
+            72
+        );
+        assert_eq!(size_of::<AxisAssignment>(), 96);
+        assert_eq!(size_of::<ParticleAssignment>(), 288);
+        assert!(!std::mem::needs_drop::<ParticleAssignment>());
         assert_eq!(size_of::<Complex>(), 16);
         assert_eq!(size_of::<ParticleMeshReciprocalErrorV1>(), 304);
         assert_eq!(align_of::<ParticleMeshReciprocalSystemV1>(), 8);
@@ -3586,6 +4252,11 @@ mod tests {
             align_of::<ParticleMeshReciprocalNeutralitySortScratchV1>(),
             8
         );
+        assert_eq!(
+            align_of::<ParticleMeshReciprocalParticleAssignmentScratchV1>(),
+            8
+        );
+        assert_eq!(align_of::<ParticleAssignment>(), 8);
         assert_eq!(align_of::<ParticleMeshReciprocalErrorV1>(), 8);
         assert_eq!(PARTICLE_MESH_RECIPROCAL_WORKSPACE_EMPTY, 0);
         assert_eq!(PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY, 0x5257_5331);
@@ -3599,6 +4270,18 @@ mod tests {
             PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_LEASED,
             0x4e53_4c31
         );
+        assert_eq!(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_EMPTY,
+            0
+        );
+        assert_eq!(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            0x5041_5331
+        );
+        assert_eq!(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_LEASED,
+            0x5041_4c31
+        );
         assert_ne!(
             PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY,
             PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY
@@ -3606,6 +4289,14 @@ mod tests {
         assert_ne!(
             PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_LEASED,
             PARTICLE_MESH_RECIPROCAL_WORKSPACE_LEASED
+        );
+        assert_ne!(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY
+        );
+        assert_ne!(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_LEASED,
+            PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_LEASED
         );
         assert_eq!(
             [
@@ -7315,6 +8006,1318 @@ mod tests {
         unsafe {
             super::bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
                 &mut scratch,
+            );
+            super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace);
+        }
+    }
+
+    #[test]
+    fn owner_particle_assignment_scratch_cold_warm_growth_overwrite_and_routes_are_frozen() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([4, 8, 16]);
+
+        for site in [
+            AllocationSite::NeutralitySort,
+            AllocationSite::ParticleAssignments,
+            AllocationSite::ReciprocalWorkspace,
+        ] {
+            let mut workspace = empty_workspace();
+            let workspace_empty = descriptor_bytes(&workspace);
+            let mut neutrality = empty_neutrality_sort_scratch();
+            let neutrality_empty = descriptor_bytes(&neutrality);
+            let mut assignments = empty_particle_assignment_scratch();
+            let assignments_empty = descriptor_bytes(&assignments);
+            let mut energy = initialized_energy(11.0);
+            let mut force_x = [21.0; 4];
+            let mut force_y = [22.0; 4];
+            let mut force_z = [23.0; 4];
+            let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
+            let mut error = initialized_error();
+            {
+                let _injection = AllocationFailureGuard::inject(site);
+                // SAFETY: Valid disjoint EMPTY descriptors exercise the frozen
+                // neutrality -> assignments -> reciprocal allocation order.
+                assert_eq!(
+                    unsafe {
+                        evaluate_with_all_owner_reusable_storage(
+                            &system,
+                            &model,
+                            &mut workspace,
+                            &mut neutrality,
+                            &mut assignments,
+                            &mut energy,
+                            &mut output,
+                            &mut error,
+                        )
+                    },
+                    STATUS_OUT_OF_MEMORY,
+                    "cold allocation site {site:?}"
+                );
+            }
+            assert_eq!(provider_error_detail(&error), site.detail());
+            assert_eq!(descriptor_bytes(&workspace), workspace_empty);
+            if site == AllocationSite::NeutralitySort {
+                assert_eq!(descriptor_bytes(&neutrality), neutrality_empty);
+            } else {
+                assert_eq!(
+                    neutrality.state,
+                    PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY
+                );
+                assert_eq!(neutrality.length, charges.len());
+            }
+            if site == AllocationSite::ReciprocalWorkspace {
+                assert_eq!(
+                    assignments.state,
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY
+                );
+                assert_eq!(
+                    assignments.logical_length_bytes,
+                    charges.len() * size_of::<ParticleAssignment>()
+                );
+            } else {
+                assert_eq!(descriptor_bytes(&assignments), assignments_empty);
+            }
+            assert_eq!(
+                energy.reciprocal_space_kcal_per_mol.to_bits(),
+                11.0_f64.to_bits()
+            );
+            assert_eq!(force_x, [21.0; 4]);
+            assert_eq!(force_y, [22.0; 4]);
+            assert_eq!(force_z, [23.0; 4]);
+            // SAFETY: Every canonical READY allocation, if any, is exclusively
+            // owned; EMPTY destruction is an idempotent no-op.
+            unsafe {
+                super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                    &mut assignments,
+                );
+                super::bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
+                    &mut neutrality,
+                );
+                super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace);
+            }
+            assert_eq!(descriptor_bytes(&workspace), workspace_empty);
+            assert_eq!(descriptor_bytes(&neutrality), neutrality_empty);
+            assert_eq!(descriptor_bytes(&assignments), assignments_empty);
+        }
+
+        let expected = evaluate(&fixture([4, 8, 16])).expect("baseline must evaluate");
+        let mut workspace = empty_workspace();
+        let workspace_empty = descriptor_bytes(&workspace);
+        let mut neutrality = empty_neutrality_sort_scratch();
+        let neutrality_empty = descriptor_bytes(&neutrality);
+        let mut assignments = empty_particle_assignment_scratch();
+        let assignments_empty = descriptor_bytes(&assignments);
+        let mut energy = initialized_energy(101.0);
+        let mut force_x = [201.0; 5];
+        let mut force_y = [202.0; 5];
+        let mut force_z = [203.0; 5];
+        force_x[4] = 301.0;
+        force_y[4] = 302.0;
+        force_z[4] = 303.0;
+        let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
+        output.capacity = charges.len();
+        let mut error = initialized_error();
+        {
+            let _injection =
+                AllocationFailureGuard::inject_at(AllocationSite::ParticleAssignments, 2);
+            // SAFETY: All descriptors/channels are valid, disjoint, and
+            // exclusively owned. Only the first four forces are writable. A
+            // second matching reserve would fail, freezing one cold occurrence.
+            assert_eq!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut output,
+                        &mut error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::ParticleAssignments);
+        }
+        let assignment_pointer = assignments.storage;
+        let assignment_capacity_bytes = assignments.allocation_capacity_bytes;
+        assert_eq!(
+            assignments.state,
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY
+        );
+        assert_eq!(
+            assignments.logical_length_bytes,
+            charges.len() * size_of::<ParticleAssignment>()
+        );
+        assert!(assignments.allocation_capacity_bytes >= assignments.logical_length_bytes);
+        assert!(!assignments.storage.is_null());
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        for particle in 0..charges.len() {
+            assert_eq!(
+                [
+                    force_x[particle].to_bits(),
+                    force_y[particle].to_bits(),
+                    force_z[particle].to_bits(),
+                ],
+                expected.forces_kcal_per_mol_angstrom[particle].map(f64::to_bits)
+            );
+        }
+        assert_eq!(force_x[4].to_bits(), 301.0_f64.to_bits());
+        assert_eq!(force_y[4].to_bits(), 302.0_f64.to_bits());
+        assert_eq!(force_z[4].to_bits(), 303.0_f64.to_bits());
+
+        let mut warm_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject(AllocationSite::ParticleAssignments);
+            // SAFETY: Capacity-sufficient assignment reuse must not reserve and
+            // therefore leaves the one-shot assignment failure pending.
+            assert_eq!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut output,
+                        &mut warm_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::ParticleAssignments);
+        }
+        assert_eq!(assignments.storage, assignment_pointer);
+        assert_eq!(
+            assignments.allocation_capacity_bytes,
+            assignment_capacity_bytes
+        );
+
+        let poison = assignment(
+            Position::new(17.25, 19.5, 21.75),
+            OrthorhombicCell {
+                lengths_angstrom: [18.0, 20.0, 22.0],
+            },
+            [4, 8, 16],
+        );
+        // SAFETY: The canonical READY descriptor exposes exactly four fully
+        // initialized ParticleAssignment elements; this test poisons only them.
+        unsafe {
+            core::slice::from_raw_parts_mut(
+                assignments.storage.cast::<ParticleAssignment>(),
+                charges.len(),
+            )
+            .fill(poison);
+        }
+        let poison_bits = particle_assignment_scratch_storage_bits(&assignments);
+        let changed_position_x = [1.75, 5.6, 10.7, 15.9];
+        let changed_position_y = [2.75, 3.45, 12.55, 17.35];
+        let changed_position_z = [3.5, 8.15, 7.45, 19.05];
+        let changed_system = provider_system(
+            &changed_position_x,
+            &changed_position_y,
+            &changed_position_z,
+            &charges,
+        );
+        let mut changed_input = fixture([4, 8, 16]);
+        changed_input.positions = (0..charges.len())
+            .map(|particle| {
+                Position::new(
+                    changed_position_x[particle],
+                    changed_position_y[particle],
+                    changed_position_z[particle],
+                )
+            })
+            .collect();
+        let changed_expected = evaluate(&changed_input).expect("changed input must evaluate");
+        let expected_assignments: Vec<_> = changed_input
+            .positions
+            .iter()
+            .copied()
+            .map(|position| assignment(position, changed_input.cell, [4, 8, 16]))
+            .collect();
+        let mut changed_error = initialized_error();
+        // SAFETY: Warm scratch is canonical READY. Prepare must clear and
+        // recompute every assignment from the changed particle order.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &changed_system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut changed_error,
+                )
+            },
+            STATUS_OK
+        );
+        let changed_bits = particle_assignment_scratch_storage_bits(&assignments);
+        assert_ne!(changed_bits, poison_bits);
+        assert_eq!(
+            changed_bits,
+            particle_assignment_bits(&expected_assignments)
+        );
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            changed_expected.reciprocal_space_kcal_per_mol.to_bits()
+        );
+        for particle in 0..charges.len() {
+            assert_eq!(
+                [
+                    force_x[particle].to_bits(),
+                    force_y[particle].to_bits(),
+                    force_z[particle].to_bits(),
+                ],
+                changed_expected.forces_kcal_per_mol_angstrom[particle].map(f64::to_bits)
+            );
+        }
+
+        let large_count = 32_usize;
+        let large_position_x: Vec<f64> = (0..large_count)
+            .map(|particle| bounded_usize_to_f64(particle) * 0.125)
+            .collect();
+        let large_position_y: Vec<f64> = (0..large_count)
+            .map(|particle| bounded_usize_to_f64(particle) * 0.25)
+            .collect();
+        let large_position_z: Vec<f64> = (0..large_count)
+            .map(|particle| bounded_usize_to_f64(particle) * 0.375)
+            .collect();
+        let large_charges: Vec<f64> = (0..large_count)
+            .map(|particle| if particle % 2 == 0 { 1.0 } else { -1.0 })
+            .collect();
+        let large_system = provider_system(
+            &large_position_x,
+            &large_position_y,
+            &large_position_z,
+            &large_charges,
+        );
+        let mut large_x = vec![401.0; large_count];
+        let mut large_y = vec![402.0; large_count];
+        let mut large_z = vec![403.0; large_count];
+        let mut large_output = provider_force_output(&mut large_x, &mut large_y, &mut large_z);
+        let assignment_before_growth = descriptor_bytes(&assignments);
+        let assignment_bits_before_growth = particle_assignment_scratch_storage_bits(&assignments);
+        let workspace_before_growth = descriptor_bytes(&workspace);
+        let mut growth_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject(AllocationSite::ParticleAssignments);
+            // SAFETY: Neutrality growth succeeds first; assignment reserve then
+            // fails before clear, retaining its prior logical payload exactly.
+            assert_eq!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &large_system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut large_output,
+                        &mut growth_error,
+                    )
+                },
+                STATUS_OUT_OF_MEMORY
+            );
+        }
+        assert_eq!(
+            provider_error_detail(&growth_error),
+            AllocationSite::ParticleAssignments.detail()
+        );
+        assert_eq!(neutrality.length, large_count);
+        assert!(neutrality.capacity >= large_count);
+        assert_eq!(descriptor_bytes(&assignments), assignment_before_growth);
+        assert_eq!(
+            particle_assignment_scratch_storage_bits(&assignments),
+            assignment_bits_before_growth
+        );
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_growth);
+        assert_eq!(large_x, vec![401.0; large_count]);
+        assert_eq!(large_y, vec![402.0; large_count]);
+        assert_eq!(large_z, vec![403.0; large_count]);
+
+        let mut growth_recovery_error = initialized_error();
+        // SAFETY: All three canonical descriptors recover after the injected
+        // reserve failure and may grow to the larger input.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &large_system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut large_output,
+                    &mut growth_recovery_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(
+            assignments.logical_length_bytes,
+            large_count * size_of::<ParticleAssignment>()
+        );
+        assert!(assignments.allocation_capacity_bytes >= assignments.logical_length_bytes);
+        assert!(assignments.allocation_capacity_bytes > assignment_capacity_bytes);
+
+        let mut shrink_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut shrink_error,
+                )
+            },
+            STATUS_OK
+        );
+        let assignment_before_old_routes = descriptor_bytes(&assignments);
+        let assignment_bits_before_old_routes =
+            particle_assignment_scratch_storage_bits(&assignments);
+        for route in 0..3 {
+            let mut route_error = initialized_error();
+            let status = {
+                let _injection =
+                    AllocationFailureGuard::inject(AllocationSite::ParticleAssignments);
+                // SAFETY: Every legacy route receives valid storage but no
+                // assignment descriptor, so its local allocation must fail.
+                unsafe {
+                    match route {
+                        0 => super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
+                            &system,
+                            &model,
+                            &mut energy,
+                            &mut output,
+                            &mut route_error,
+                        ),
+                        1 => super::bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_v1(
+                            &system,
+                            &model,
+                            &mut workspace,
+                            &mut energy,
+                            &mut output,
+                            &mut route_error,
+                        ),
+                        _ => evaluate_with_owner_reusable_storage(
+                            &system,
+                            &model,
+                            &mut workspace,
+                            &mut neutrality,
+                            &mut energy,
+                            &mut output,
+                            &mut route_error,
+                        ),
+                    }
+                }
+            };
+            assert_eq!(status, STATUS_OUT_OF_MEMORY, "legacy route {route}");
+            assert_eq!(
+                provider_error_detail(&route_error),
+                AllocationSite::ParticleAssignments.detail()
+            );
+            assert_eq!(descriptor_bytes(&assignments), assignment_before_old_routes);
+            assert_eq!(
+                particle_assignment_scratch_storage_bits(&assignments),
+                assignment_bits_before_old_routes
+            );
+        }
+
+        // SAFETY: Canonical READY descriptors are exclusively owned. Repeated
+        // destroys verify exact all-zero EMPTY idempotence.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut assignments,
+            );
+            super::bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
+                &mut neutrality,
+            );
+            super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace);
+        }
+        assert_eq!(descriptor_bytes(&assignments), assignments_empty);
+        assert_eq!(descriptor_bytes(&neutrality), neutrality_empty);
+        assert_eq!(descriptor_bytes(&workspace), workspace_empty);
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut assignments,
+            );
+            super::bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
+                &mut neutrality,
+            );
+            super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace);
+        }
+        assert_eq!(descriptor_bytes(&assignments), assignments_empty);
+        assert_eq!(descriptor_bytes(&neutrality), neutrality_empty);
+        assert_eq!(descriptor_bytes(&workspace), workspace_empty);
+    }
+
+    #[test]
+    fn owner_particle_assignment_scratch_late_error_and_panic_restore_three_leases() {
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([4, 8, 16]);
+        let mut workspace = empty_workspace();
+        let mut neutrality = empty_neutrality_sort_scratch();
+        let mut assignments = empty_particle_assignment_scratch();
+        let mut energy = initialized_energy(101.0);
+        let mut force_x = [201.0; 4];
+        let mut force_y = [202.0; 4];
+        let mut force_z = [203.0; 4];
+        let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
+        let mut error = initialized_error();
+        // SAFETY: Valid disjoint EMPTY descriptors establish all three retained
+        // allocations before late-failure restoration checks.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut error,
+                )
+            },
+            STATUS_OK
+        );
+        let workspace_pointer = workspace.storage;
+        let workspace_capacity = workspace.capacity;
+        let neutrality_pointer = neutrality.storage;
+        let neutrality_capacity = neutrality.capacity;
+        let assignment_pointer = assignments.storage;
+        let assignment_capacity_bytes = assignments.allocation_capacity_bytes;
+
+        energy.reciprocal_space_kcal_per_mol = 301.0;
+        force_x.fill(401.0);
+        force_y.fill(402.0);
+        force_z.fill(403.0);
+        let mut late_error = initialized_error();
+        {
+            let _late = LateNonFiniteResultGuard::inject();
+            // SAFETY: The injected scientific failure occurs after all three
+            // leases and direct force writes; every RAII lease must restore.
+            assert_eq!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut output,
+                        &mut late_error,
+                    )
+                },
+                STATUS_NUMERICAL_ERROR
+            );
+        }
+        assert_eq!(
+            late_error.typed_code,
+            ParticleMeshReciprocalErrorCodeV1::NonFiniteResult as i32
+        );
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            301.0_f64.to_bits()
+        );
+        assert_eq!(workspace.state, PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY);
+        assert_eq!(workspace.storage, workspace_pointer);
+        assert_eq!(workspace.capacity, workspace_capacity);
+        assert_eq!(
+            neutrality.state,
+            PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY
+        );
+        assert_eq!(neutrality.storage, neutrality_pointer);
+        assert_eq!(neutrality.capacity, neutrality_capacity);
+        assert_eq!(
+            assignments.state,
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY
+        );
+        assert_eq!(assignments.storage, assignment_pointer);
+        assert_eq!(
+            assignments.allocation_capacity_bytes,
+            assignment_capacity_bytes
+        );
+        assert_eq!(
+            assignments.logical_length_bytes,
+            charges.len() * size_of::<ParticleAssignment>()
+        );
+
+        energy.reciprocal_space_kcal_per_mol = 501.0;
+        force_x.fill(601.0);
+        force_y.fill(602.0);
+        force_z.fill(603.0);
+        let mut panic_error = initialized_error();
+        {
+            let _panic = ReusableWorkspacePanicGuard::inject();
+            // SAFETY: The injected panic occurs after all prepares. catch_unwind
+            // must run three drops before reporting the internal error.
+            assert_eq!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut output,
+                        &mut panic_error,
+                    )
+                },
+                STATUS_INTERNAL_ERROR
+            );
+        }
+        assert_eq!(
+            provider_error_detail(&panic_error),
+            "rust particle-mesh reciprocal provider panicked"
+        );
+        assert_eq!(
+            energy.reciprocal_space_kcal_per_mol.to_bits(),
+            501.0_f64.to_bits()
+        );
+        assert_eq!(force_x, [601.0; 4]);
+        assert_eq!(force_y, [602.0; 4]);
+        assert_eq!(force_z, [603.0; 4]);
+        assert_eq!(workspace.state, PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY);
+        assert_eq!(workspace.storage, workspace_pointer);
+        assert_eq!(workspace.capacity, workspace_capacity);
+        assert_eq!(
+            neutrality.state,
+            PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY
+        );
+        assert_eq!(neutrality.storage, neutrality_pointer);
+        assert_eq!(neutrality.capacity, neutrality_capacity);
+        assert_eq!(
+            assignments.state,
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY
+        );
+        assert_eq!(assignments.storage, assignment_pointer);
+        assert_eq!(
+            assignments.allocation_capacity_bytes,
+            assignment_capacity_bytes
+        );
+
+        let mut recovered_error = initialized_error();
+        // SAFETY: All three recovered READY descriptors are reusable.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut recovered_error,
+                )
+            },
+            STATUS_OK
+        );
+        // SAFETY: Canonical READY allocations remain exclusively owned.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut assignments,
+            );
+            super::bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
+                &mut neutrality,
+            );
+            super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace);
+        }
+    }
+
+    #[test]
+    fn owner_particle_assignment_scratch_malformed_busy_type_and_cross_aliases_fail_closed() {
+        // SAFETY: Null destruction is explicitly an idempotent no-op.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                ptr::null_mut(),
+            );
+        }
+        let position_x = [1.25, 5.1, 10.2, 15.4];
+        let position_y = [2.5, 3.2, 12.3, 17.1];
+        let position_z = [3.75, 8.4, 7.7, 19.3];
+        let charges = [0.7, -0.4, -0.6, 0.300_000_000_000_000_04];
+        let system = provider_system(&position_x, &position_y, &position_z, &charges);
+        let model = provider_model([4, 8, 16]);
+        let mut energy = initialized_energy(101.0);
+        let mut force_x = [201.0; 4];
+        let mut force_y = [202.0; 4];
+        let mut force_z = [203.0; 4];
+        let mut output = provider_force_output(&mut force_x, &mut force_y, &mut force_z);
+
+        let mut null_workspace = empty_workspace();
+        let null_workspace_before = descriptor_bytes(&null_workspace);
+        let mut null_neutrality = empty_neutrality_sort_scratch();
+        let null_neutrality_before = descriptor_bytes(&null_neutrality);
+        let mut null_error = initialized_error();
+        let null_error_before = descriptor_bytes(&null_error);
+        // SAFETY: A null assignment descriptor is deliberately invalid and
+        // must fail before any other descriptor lease or error write.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut null_workspace,
+                    &mut null_neutrality,
+                    ptr::null_mut(),
+                    &mut energy,
+                    &mut output,
+                    &mut null_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&null_workspace), null_workspace_before);
+        assert_eq!(descriptor_bytes(&null_neutrality), null_neutrality_before);
+        assert_eq!(descriptor_bytes(&null_error), null_error_before);
+
+        let element_size = size_of::<ParticleAssignment>();
+        let mut misaligned_storage = [0_u8; align_of::<ParticleAssignment>() + 1];
+        let misaligned_offset = (0..align_of::<ParticleAssignment>())
+            .find(|offset| {
+                (misaligned_storage.as_ptr() as usize + offset) % align_of::<ParticleAssignment>()
+                    != 0
+            })
+            .expect("assignment alignment has a misaligned byte offset");
+        // SAFETY: The offset lies inside local storage; preflight only observes
+        // this deliberately misaligned raw address and never dereferences it.
+        let misaligned_pointer = unsafe {
+            misaligned_storage
+                .as_mut_ptr()
+                .add(misaligned_offset)
+                .cast::<c_void>()
+        };
+        let oversized_capacity_bytes = ((isize::MAX as usize) / element_size + 1)
+            .checked_mul(element_size)
+            .expect("rounded oversized assignment byte count fits usize");
+        let end_overflow_address = usize::MAX & !(align_of::<ParticleAssignment>() - 1);
+        let dangling_assignment = ptr::dangling::<ParticleAssignment>()
+            .cast_mut()
+            .cast::<c_void>();
+        let malformed_cases = [
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                struct_size: 1,
+                ..empty_particle_assignment_scratch()
+            },
+            canonical_particle_assignment_scratch_descriptor(
+                PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                ptr::null_mut(),
+                0,
+                1,
+            ),
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                logical_length_bytes: element_size,
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    ptr::null_mut(),
+                    0,
+                    0,
+                )
+            },
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                reserved0: 1,
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    ptr::null_mut(),
+                    0,
+                    0,
+                )
+            },
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                reserved: [1, 0, 0, 0],
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    ptr::null_mut(),
+                    0,
+                    0,
+                )
+            },
+            canonical_particle_assignment_scratch_descriptor(0x554e_4b4e, ptr::null_mut(), 0, 0),
+            canonical_particle_assignment_scratch_descriptor(
+                PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY,
+                ptr::null_mut(),
+                0,
+                0,
+            ),
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                logical_length_bytes: 1,
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    dangling_assignment,
+                    0,
+                    1,
+                )
+            },
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                storage: dangling_assignment,
+                allocation_capacity_bytes: 1,
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    ptr::null_mut(),
+                    0,
+                    0,
+                )
+            },
+            canonical_particle_assignment_scratch_descriptor(
+                PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                misaligned_pointer,
+                1,
+                1,
+            ),
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                storage: dangling_assignment,
+                logical_length_bytes: element_size,
+                allocation_capacity_bytes: oversized_capacity_bytes,
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    ptr::null_mut(),
+                    0,
+                    0,
+                )
+            },
+            ParticleMeshReciprocalParticleAssignmentScratchV1 {
+                storage: end_overflow_address as *mut c_void,
+                logical_length_bytes: element_size,
+                allocation_capacity_bytes: element_size,
+                ..canonical_particle_assignment_scratch_descriptor(
+                    PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+                    ptr::null_mut(),
+                    0,
+                    0,
+                )
+            },
+        ];
+        for mut assignments in malformed_cases {
+            let mut workspace = empty_workspace();
+            let workspace_before = descriptor_bytes(&workspace);
+            let mut neutrality = empty_neutrality_sort_scratch();
+            let neutrality_before = descriptor_bytes(&neutrality);
+            let assignments_before = descriptor_bytes(&assignments);
+            let mut error = initialized_error();
+            let error_before = descriptor_bytes(&error);
+            // SAFETY: Every assignment descriptor is deliberately malformed.
+            // Preflight must not convert byte counts, lease/free, or write error.
+            assert_ne!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut output,
+                        &mut error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_eq!(descriptor_bytes(&workspace), workspace_before);
+            assert_eq!(descriptor_bytes(&neutrality), neutrality_before);
+            assert_eq!(descriptor_bytes(&assignments), assignments_before);
+            assert_eq!(descriptor_bytes(&error), error_before);
+            // SAFETY: Malformed assignment descriptors are destroy no-ops.
+            unsafe {
+                super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                    &mut assignments,
+                );
+            }
+            assert_eq!(descriptor_bytes(&assignments), assignments_before);
+        }
+
+        let mut swapped_workspace = canonical_workspace_descriptor(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            ptr::null_mut(),
+            0,
+            0,
+        );
+        let swapped_workspace_before = descriptor_bytes(&swapped_workspace);
+        let mut swapped_neutrality = empty_neutrality_sort_scratch();
+        let mut swapped_assignments = empty_particle_assignment_scratch();
+        let mut swapped_error = initialized_error();
+        let swapped_error_before = descriptor_bytes(&swapped_error);
+        // SAFETY: The workspace deliberately carries the distinct PAS1 tag and
+        // must be rejected before any descriptor lease or error write.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut swapped_workspace,
+                    &mut swapped_neutrality,
+                    &mut swapped_assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut swapped_error,
+                )
+            },
+            STATUS_ABI_MISMATCH
+        );
+        assert_eq!(
+            descriptor_bytes(&swapped_workspace),
+            swapped_workspace_before
+        );
+        assert_eq!(descriptor_bytes(&swapped_error), swapped_error_before);
+        // SAFETY: Type-swapped workspace is a malformed destroy no-op.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut swapped_workspace);
+        }
+        assert_eq!(
+            descriptor_bytes(&swapped_workspace),
+            swapped_workspace_before
+        );
+
+        let mut zero_capacity_ready = canonical_particle_assignment_scratch_descriptor(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            ptr::null_mut(),
+            0,
+            0,
+        );
+        // SAFETY: Canonical zero-capacity READY owns no allocation and destroy
+        // transitions it exactly to all-zero EMPTY.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut zero_capacity_ready,
+            );
+        }
+        assert_eq!(
+            descriptor_bytes(&zero_capacity_ready),
+            descriptor_bytes(&empty_particle_assignment_scratch())
+        );
+
+        let mut busy_workspace = empty_workspace();
+        let mut busy_neutrality = empty_neutrality_sort_scratch();
+        let mut busy_assignments = canonical_particle_assignment_scratch_descriptor(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_LEASED,
+            ptr::null_mut(),
+            0,
+            0,
+        );
+        let busy_before = descriptor_bytes(&busy_assignments);
+        let mut busy_error = initialized_error();
+        // SAFETY: Canonical LEASED is deliberately busy; complete disjoint
+        // preflight permits a diagnostic but never acquires or destroys it.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut busy_workspace,
+                    &mut busy_neutrality,
+                    &mut busy_assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut busy_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            provider_error_detail(&busy_error),
+            "particle assignment scratch is already leased"
+        );
+        assert_eq!(descriptor_bytes(&busy_assignments), busy_before);
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut busy_assignments,
+            );
+        }
+        assert_eq!(descriptor_bytes(&busy_assignments), busy_before);
+
+        let mut shared_descriptor = empty_workspace();
+        let shared_before = descriptor_bytes(&shared_descriptor);
+        let mut shared_neutrality = empty_neutrality_sort_scratch();
+        let mut shared_error = initialized_error();
+        // SAFETY: Workspace and assignment pointers deliberately designate the
+        // same 72-byte EMPTY descriptor. Pairwise preflight must reject it.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut shared_descriptor,
+                    &mut shared_neutrality,
+                    (&mut shared_descriptor as *mut ParticleMeshReciprocalWorkspaceV1)
+                        .cast::<ParticleMeshReciprocalParticleAssignmentScratchV1>(),
+                    &mut energy,
+                    &mut output,
+                    &mut shared_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&shared_descriptor), shared_before);
+
+        let mut self_alias = canonical_particle_assignment_scratch_descriptor(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            ptr::null_mut(),
+            1,
+            1,
+        );
+        self_alias.storage = (&mut self_alias
+            as *mut ParticleMeshReciprocalParticleAssignmentScratchV1)
+            .cast::<c_void>();
+        let self_alias_before = descriptor_bytes(&self_alias);
+        let mut self_workspace = empty_workspace();
+        let mut self_neutrality = empty_neutrality_sort_scratch();
+        let mut self_error = initialized_error();
+        // SAFETY: The claimed assignment backing deliberately overlaps its own
+        // descriptor; only integer ranges are examined before rejection.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut self_workspace,
+                    &mut self_neutrality,
+                    &mut self_alias,
+                    &mut energy,
+                    &mut output,
+                    &mut self_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&self_alias), self_alias_before);
+        // SAFETY: Self-aliased backing makes destroy a fail-closed no-op.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut self_alias,
+            );
+        }
+        assert_eq!(descriptor_bytes(&self_alias), self_alias_before);
+
+        let large_count = 32_usize;
+        let large_position_x: Vec<f64> = (0..large_count)
+            .map(|particle| bounded_usize_to_f64(particle) * 0.125)
+            .collect();
+        let large_position_y: Vec<f64> = (0..large_count)
+            .map(|particle| bounded_usize_to_f64(particle) * 0.25)
+            .collect();
+        let large_position_z: Vec<f64> = (0..large_count)
+            .map(|particle| bounded_usize_to_f64(particle) * 0.375)
+            .collect();
+        let large_charges: Vec<f64> = (0..large_count)
+            .map(|particle| if particle % 2 == 0 { 1.0 } else { -1.0 })
+            .collect();
+        let large_system = provider_system(
+            &large_position_x,
+            &large_position_y,
+            &large_position_z,
+            &large_charges,
+        );
+        let mut large_x = vec![0.0; large_count];
+        let mut large_y = vec![0.0; large_count];
+        let mut large_z = vec![0.0; large_count];
+        let mut large_output = provider_force_output(&mut large_x, &mut large_y, &mut large_z);
+        let mut workspace = empty_workspace();
+        let mut neutrality = empty_neutrality_sort_scratch();
+        let mut assignments = empty_particle_assignment_scratch();
+        let mut large_error = initialized_error();
+        // SAFETY: Valid large channels establish all three canonical READY
+        // allocations with 32 initialized logical assignment elements.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &large_system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut large_output,
+                    &mut large_error,
+                )
+            },
+            STATUS_OK
+        );
+        let workspace_before_cross = descriptor_bytes(&workspace);
+        let workspace_bits_before_cross = workspace_storage_bits(&workspace);
+        let neutrality_before_cross = descriptor_bytes(&neutrality);
+        let neutrality_bits_before_cross = neutrality_sort_scratch_storage_bits(&neutrality);
+        let assignments_before_cross = descriptor_bytes(&assignments);
+        let assignment_bits_before_cross = particle_assignment_scratch_storage_bits(&assignments);
+
+        let mut assignment_over_workspace = canonical_particle_assignment_scratch_descriptor(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            workspace.storage,
+            1,
+            1,
+        );
+        let assignment_over_workspace_before = descriptor_bytes(&assignment_over_workspace);
+        let mut cross_error = initialized_error();
+        // SAFETY: Forged assignment backing overlaps reciprocal workspace and
+        // is rejected before either allocation becomes a Vec owner.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &large_system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignment_over_workspace,
+                    &mut energy,
+                    &mut large_output,
+                    &mut cross_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_cross);
+        assert_eq!(
+            workspace_storage_bits(&workspace),
+            workspace_bits_before_cross
+        );
+        assert_eq!(
+            descriptor_bytes(&assignment_over_workspace),
+            assignment_over_workspace_before
+        );
+
+        let mut assignment_over_neutrality = canonical_particle_assignment_scratch_descriptor(
+            PARTICLE_MESH_RECIPROCAL_PARTICLE_ASSIGNMENT_SCRATCH_READY,
+            neutrality.storage,
+            1,
+            1,
+        );
+        let assignment_over_neutrality_before = descriptor_bytes(&assignment_over_neutrality);
+        let mut reverse_cross_error = initialized_error();
+        // SAFETY: Forged assignment backing overlaps neutrality storage and is
+        // rejected using complete capacity ranges before lease conversion.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &large_system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignment_over_neutrality,
+                    &mut energy,
+                    &mut large_output,
+                    &mut reverse_cross_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&neutrality), neutrality_before_cross);
+        assert_eq!(
+            neutrality_sort_scratch_storage_bits(&neutrality),
+            neutrality_bits_before_cross
+        );
+        assert_eq!(
+            descriptor_bytes(&assignment_over_neutrality),
+            assignment_over_neutrality_before
+        );
+
+        let mut workspace_over_assignment = canonical_workspace_descriptor(
+            PARTICLE_MESH_RECIPROCAL_WORKSPACE_READY,
+            assignments.storage,
+            1,
+            1,
+        );
+        let workspace_over_assignment_before = descriptor_bytes(&workspace_over_assignment);
+        let mut workspace_cross_error = initialized_error();
+        // SAFETY: Forged reciprocal backing overlaps the assignment allocation
+        // and is rejected before reconstructing any raw Vec parts.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &large_system,
+                    &model,
+                    &mut workspace_over_assignment,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut large_output,
+                    &mut workspace_cross_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            descriptor_bytes(&workspace_over_assignment),
+            workspace_over_assignment_before
+        );
+        assert_eq!(descriptor_bytes(&assignments), assignments_before_cross);
+        assert_eq!(
+            particle_assignment_scratch_storage_bits(&assignments),
+            assignment_bits_before_cross
+        );
+
+        let mut neutrality_over_assignment = canonical_neutrality_sort_scratch_descriptor(
+            PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_READY,
+            assignments.storage,
+            1,
+            1,
+        );
+        let neutrality_over_assignment_before = descriptor_bytes(&neutrality_over_assignment);
+        let mut neutrality_cross_error = initialized_error();
+        // SAFETY: Forged f64 scratch backing overlaps assignment storage and is
+        // rejected before taking either ownership lease.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &large_system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality_over_assignment,
+                    &mut assignments,
+                    &mut energy,
+                    &mut large_output,
+                    &mut neutrality_cross_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(
+            descriptor_bytes(&neutrality_over_assignment),
+            neutrality_over_assignment_before
+        );
+        assert_eq!(descriptor_bytes(&assignments), assignments_before_cross);
+
+        let mut shrink_error = initialized_error();
+        // SAFETY: The real descriptors remain canonical and shrink logical
+        // assignment length while preserving the larger allocation capacity.
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut output,
+                    &mut shrink_error,
+                )
+            },
+            STATUS_OK
+        );
+        assert_eq!(
+            assignments.logical_length_bytes,
+            charges.len() * element_size
+        );
+        assert!(
+            assignments.allocation_capacity_bytes - assignments.logical_length_bytes
+                >= charges.len() * size_of::<f64>()
+        );
+        let workspace_before_tail = descriptor_bytes(&workspace);
+        let neutrality_before_tail = descriptor_bytes(&neutrality);
+        let assignments_before_tail = descriptor_bytes(&assignments);
+        let assignment_bits_before_tail = particle_assignment_scratch_storage_bits(&assignments);
+        // SAFETY: Only a raw address inside spare capacity is formed. No slice,
+        // read, or write touches the logically uninitialized capacity tail.
+        let capacity_tail = unsafe {
+            assignments
+                .storage
+                .cast::<u8>()
+                .add(assignments.logical_length_bytes)
+                .cast::<f64>()
+        };
+        let mut tail_y = [701.0; 4];
+        let mut tail_z = [702.0; 4];
+        let mut tail_output = ParticleMeshReciprocalForceOutputV1 {
+            struct_size: u32::try_from(size_of::<ParticleMeshReciprocalForceOutputV1>()).unwrap(),
+            abi_version: PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION,
+            capacity: charges.len(),
+            x: capacity_tail,
+            y: tail_y.as_mut_ptr(),
+            z: tail_z.as_mut_ptr(),
+            reserved: [0; 4],
+        };
+        let mut tail_error = initialized_error();
+        assert_eq!(
+            unsafe {
+                evaluate_with_all_owner_reusable_storage(
+                    &system,
+                    &model,
+                    &mut workspace,
+                    &mut neutrality,
+                    &mut assignments,
+                    &mut energy,
+                    &mut tail_output,
+                    &mut tail_error,
+                )
+            },
+            STATUS_INVALID_ARGUMENT
+        );
+        assert_eq!(descriptor_bytes(&workspace), workspace_before_tail);
+        assert_eq!(descriptor_bytes(&neutrality), neutrality_before_tail);
+        assert_eq!(descriptor_bytes(&assignments), assignments_before_tail);
+        assert_eq!(
+            particle_assignment_scratch_storage_bits(&assignments),
+            assignment_bits_before_tail
+        );
+        assert_eq!(tail_y, [701.0; 4]);
+        assert_eq!(tail_z, [702.0; 4]);
+
+        let assignment_pointer_before_zero_length = assignments.storage;
+        let assignment_capacity_before_zero_length = assignments.allocation_capacity_bytes;
+        assignments.logical_length_bytes = 0;
+        let mut zero_length_error = initialized_error();
+        {
+            let _injection = AllocationFailureGuard::inject(AllocationSite::ParticleAssignments);
+            // SAFETY: ParticleAssignment is compile-time no-Drop. Shrinking only
+            // the Rust-origin logical byte count forgets no drop obligations;
+            // prepare performs no read and overwrites all four elements.
+            assert_eq!(
+                unsafe {
+                    evaluate_with_all_owner_reusable_storage(
+                        &system,
+                        &model,
+                        &mut workspace,
+                        &mut neutrality,
+                        &mut assignments,
+                        &mut energy,
+                        &mut output,
+                        &mut zero_length_error,
+                    )
+                },
+                STATUS_OK
+            );
+            assert_injected_allocation_remains_pending(AllocationSite::ParticleAssignments);
+        }
+        assert_eq!(assignments.storage, assignment_pointer_before_zero_length);
+        assert_eq!(
+            assignments.allocation_capacity_bytes,
+            assignment_capacity_before_zero_length
+        );
+        assert_eq!(
+            assignments.logical_length_bytes,
+            charges.len() * element_size
+        );
+
+        // SAFETY: Only the three actual canonical READY descriptors own their
+        // allocations. Every forged descriptor above was left untouched.
+        unsafe {
+            super::bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
+                &mut assignments,
+            );
+            super::bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
+                &mut neutrality,
             );
             super::bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(&mut workspace);
         }
