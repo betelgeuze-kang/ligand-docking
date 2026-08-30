@@ -1,4 +1,4 @@
-name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-transactional-force-output-elision
+name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse
 
 on:
   pull_request:
@@ -324,7 +324,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-transactional-force-output-elision-${{ github.ref }}
+  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -346,7 +346,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact PR 467 evidence and reviewed head
+      - name: Materialize exact PR 467 target and reviewed head
         shell: bash
         run: |
           set -euo pipefail
@@ -355,24 +355,13 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/467/head
           test "$(git rev-parse FETCH_HEAD)" = "8297f6e7a269386cf1b22c1764dfd52520c99ea3"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "5ba81cb4dd1f3762420fbb3282983608590ca9e1"
-      - name: Verify exact frozen PR 467 evidence
-        shell: bash
+      - name: Verify bounded successor evidence
         run: |
-          set -euo pipefail
-          frozen=16006a5f59949b8616b704383786a0945d197784
-          frozen_tree=5ba81cb4dd1f3762420fbb3282983608590ca9e1
-          current_sha="$(git rev-parse HEAD)"
-          restore() { git checkout --detach --quiet "$current_sha"; }
-          trap restore EXIT
-          git checkout --detach --quiet "$frozen"
-          test "$(git rev-parse HEAD^{tree})" = "$frozen_tree"
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1.json >/dev/null
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1_sources.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1
-          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1.py
-          restore
-          trap - EXIT
+          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_v1
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
@@ -387,18 +376,25 @@ jobs:
           rustup override set 1.93.0
       - name: Synthetic release and sanitizer regressions
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
+          test -n "$engine_library"
+          nm --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1'
+          if nm -D --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1'; then
+            echo "private reciprocal workspace symbol unexpectedly exported" >&2
+            exit 1
+          fi
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
 
   rust-boundaries:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-cargo
     steps:
       - name: Check out Rust sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -437,6 +433,6 @@ jobs:
           rustup override set 1.93.0
       - name: Exact export regression
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-macos --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-transactional-force-output-elision-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure

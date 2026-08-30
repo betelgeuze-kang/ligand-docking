@@ -260,8 +260,7 @@ static bg_status evaluate_impl(
             BG_STATUS_INTERNAL_ERROR,
             "Rust particle-mesh reciprocal provider-force source requires reusable force-producing evaluation");
     }
-    if (compute_forces && reuse_force_storage &&
-        provider_force_scratch == nullptr) {
+    if (reuse_force_storage && provider_force_scratch == nullptr) {
         return fail(
             BG_STATUS_INTERNAL_ERROR,
             "Rust particle-mesh reciprocal reusable provider-force scratch must not be null");
@@ -369,6 +368,12 @@ static bg_status evaluate_impl(
             &provider_system, &provider_model,
             &active_provider_force_scratch->reciprocal_workspace,
             &provider_energy, force_pointer, &provider_error);
+    } else if (reuse_force_storage) {
+        raw_status =
+            bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1(
+                &provider_system, &provider_model,
+                &active_provider_force_scratch->reciprocal_workspace,
+                &provider_energy, &provider_error);
     } else if (compute_forces) {
         raw_status =
             bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
