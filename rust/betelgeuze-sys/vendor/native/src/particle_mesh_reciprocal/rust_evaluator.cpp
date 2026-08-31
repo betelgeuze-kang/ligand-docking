@@ -15,6 +15,10 @@ namespace {
 
 constexpr std::size_t kMaxAtomCount = 4'096U;
 
+static_assert(std::is_nothrow_move_assignable_v<Evaluation>);
+static_assert(std::is_nothrow_swappable_v<decltype(Evaluation{}.forces)>);
+static_assert(std::is_nothrow_copy_assignable_v<std::array<double, 3>>);
+
 template <typename Value>
 const Value *data_or_null(const std::vector<Value> &values) noexcept {
     return values.empty() ? nullptr : values.data();
@@ -43,6 +47,40 @@ bool provider_code_is_valid(std::int32_t code) noexcept {
     return code >= BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_NONE &&
            code <= BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT;
 }
+
+class EvaluationForceStorageRollback final {
+  public:
+    EvaluationForceStorageRollback(
+        Evaluation *output,
+        Evaluation *candidate,
+        bool enabled) noexcept
+        : output_(enabled ? output : nullptr),
+          candidate_(enabled ? candidate : nullptr) {
+        if (output_ != nullptr) {
+            candidate_->forces.swap(output_->forces);
+        }
+    }
+
+    EvaluationForceStorageRollback(
+        const EvaluationForceStorageRollback &) = delete;
+    EvaluationForceStorageRollback &operator=(
+        const EvaluationForceStorageRollback &) = delete;
+
+    ~EvaluationForceStorageRollback() noexcept {
+        if (output_ != nullptr) {
+            candidate_->forces.swap(output_->forces);
+        }
+    }
+
+    void commit() noexcept {
+        output_ = nullptr;
+        candidate_ = nullptr;
+    }
+
+  private:
+    Evaluation *output_;
+    Evaluation *candidate_;
+};
 
 }  // namespace
 
@@ -326,9 +364,9 @@ static bg_status evaluate_impl(
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
 
     Evaluation candidate;
-    if (compute_forces && reuse_force_storage && out_evaluation != nullptr) {
-        candidate.forces.swap(out_evaluation->forces);
-    }
+    EvaluationForceStorageRollback evaluation_force_storage_rollback{
+        out_evaluation, &candidate,
+        compute_forces && reuse_force_storage && out_evaluation != nullptr};
     bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
     bg_rust_particle_mesh_reciprocal_force_output_v1 *force_pointer = nullptr;
     ProviderForceScratch local_provider_force_scratch;
@@ -364,9 +402,11 @@ static bg_status evaluate_impl(
             &active_provider_force_scratch->particle_assignment_scratch,
             &provider_energy, force_pointer, &provider_error);
     } else if (reuse_force_storage && compute_forces) {
-        raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_v1(
+        raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
             &provider_system, &provider_model,
             &active_provider_force_scratch->reciprocal_workspace,
+            &active_provider_force_scratch->neutrality_sort_scratch,
+            &active_provider_force_scratch->particle_assignment_scratch,
             &provider_energy, force_pointer, &provider_error);
     } else if (reuse_force_storage) {
         raw_status =
@@ -422,9 +462,6 @@ static bg_status evaluate_impl(
     candidate.reciprocal_space_kcal_per_mol =
         provider_energy.reciprocal_space_kcal_per_mol;
     if (compute_forces) {
-        if (out_evaluation != nullptr) {
-            candidate.forces.resize(atom_count);
-        }
         for (std::size_t atom = 0U; atom < atom_count; ++atom) {
             if (!std::isfinite(active_provider_force_scratch->x[atom]) ||
                 !std::isfinite(active_provider_force_scratch->y[atom]) ||
@@ -433,7 +470,10 @@ static bg_status evaluate_impl(
                     BG_STATUS_INTERNAL_ERROR,
                     "Rust particle-mesh reciprocal provider returned non-finite force on success");
             }
-            if (out_evaluation != nullptr) {
+        }
+        if (out_evaluation != nullptr) {
+            candidate.forces.resize(atom_count);
+            for (std::size_t atom = 0U; atom < atom_count; ++atom) {
                 candidate.forces[atom] = {
                     active_provider_force_scratch->x[atom],
                     active_provider_force_scratch->y[atom],
@@ -442,6 +482,7 @@ static bg_status evaluate_impl(
         }
     }
     if (out_evaluation != nullptr) {
+        evaluation_force_storage_rollback.commit();
         *out_evaluation = std::move(candidate);
     } else {
         *out_provider_force_source_result = ProviderForceSourceResult{

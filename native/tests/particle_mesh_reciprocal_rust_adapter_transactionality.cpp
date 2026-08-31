@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -50,6 +51,7 @@ struct FakeProviderState final {
     bool force_channels_written = false;
     bool return_late_numerical_error = false;
     bool return_late_energy_numerical_error = false;
+    bool return_nonfinite_force_on_success = false;
     bool late_failure_channels_written = false;
     bg_rust_particle_mesh_reciprocal_workspace_v1 *last_workspace = nullptr;
     bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
@@ -219,19 +221,6 @@ void require_only_direct_route() {
             "non-reuse forceful adapter selected the wrong Rust provider entry");
 }
 
-void require_only_workspace_route() {
-    require(fake_provider.abi_calls == 1U,
-            "workspace adapter did not perform one ABI query");
-    require(fake_provider.public_calls == 0U &&
-                fake_provider.direct_calls == 0U &&
-                fake_provider.workspace_calls == 1U &&
-                fake_provider.energy_workspace_calls == 0U &&
-                fake_provider.energy_workspace_neutrality_calls == 0U &&
-                fake_provider.energy_all_scratch_calls == 0U &&
-                fake_provider.triple_calls == 0U,
-            "reusable forceful adapter selected the wrong Rust provider entry");
-}
-
 void require_only_energy_all_scratch_route() {
     require(fake_provider.abi_calls == 1U,
             "energy-workspace adapter did not perform one ABI query");
@@ -245,9 +234,9 @@ void require_only_energy_all_scratch_route() {
             "reusable energy-only adapter did not select the all-scratch provider entry");
 }
 
-void require_only_triple_route() {
+void require_only_all_scratch_force_route() {
     require(fake_provider.abi_calls == 1U,
-            "provider-force-source adapter did not perform one ABI query");
+            "all-scratch force adapter did not perform one ABI query");
     require(fake_provider.public_calls == 0U &&
                 fake_provider.direct_calls == 0U &&
                 fake_provider.workspace_calls == 0U &&
@@ -255,7 +244,7 @@ void require_only_triple_route() {
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
                 fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 1U,
-            "provider-force-source adapter selected the wrong Rust provider entry");
+            "all-scratch force adapter selected the wrong Rust provider entry");
 }
 
 bg_system make_system() {
@@ -507,7 +496,7 @@ void verify_late_direct_failure_preserves_adapter_output() {
             "adapter did not propagate the late direct-provider typed error");
 }
 
-void verify_reusable_forceful_workspace_branch() {
+void verify_reusable_forceful_all_scratch_branch_and_transactionality() {
     reset_fake_provider();
     fake_provider.force_output_failure_pending = true;
     const bg_system system = make_system();
@@ -524,16 +513,116 @@ void verify_reusable_forceful_workspace_branch() {
                 system, model, true, &scratch, &output, &error) ==
                 BG_STATUS_OK,
             "reusable forceful Rust adapter evaluation failed");
-    require_only_workspace_route();
-    require(fake_provider.last_workspace == &scratch.reciprocal_workspace,
-            "reusable forceful adapter supplied the wrong workspace owner");
+    require_only_all_scratch_force_route();
+    require(fake_provider.last_workspace == &scratch.reciprocal_workspace &&
+                fake_provider.last_neutrality_sort_scratch ==
+                    &scratch.neutrality_sort_scratch &&
+                fake_provider.last_particle_assignment_scratch ==
+                    &scratch.particle_assignment_scratch,
+            "reusable forceful adapter supplied the wrong scratch owner");
     require(fake_provider.force_output_failure_pending &&
                 !fake_provider.force_output_failure_consumed,
-            "workspace provider entry consumed ForceOutput failure");
+            "all-scratch provider entry consumed ForceOutput failure");
     require_provider_evaluation_bits(output);
     require_provider_scratch_bits(scratch);
+    require(error.code == BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE &&
+                error.detail.empty(),
+            "successful reusable forceful evaluation returned a typed error");
     require(!fake_provider.descriptor_violation,
-            "workspace adapter supplied malformed provider descriptors");
+            "all-scratch adapter supplied malformed provider descriptors");
+
+    reset_fake_provider();
+    fake_provider.force_output_failure_pending = true;
+    fake_provider.return_late_numerical_error = true;
+    scratch.x = {1'701.0, 1'702.0};
+    scratch.y = {1'801.0, 1'802.0};
+    scratch.z = {1'901.0, 1'902.0};
+    output.reciprocal_space_kcal_per_mol = 2'001.0;
+    output.forces = {
+        {{2'101.0, 2'102.0, 2'103.0}},
+        {{2'201.0, 2'202.0, 2'203.0}},
+        {{2'301.0, 2'302.0, 2'303.0}},
+    };
+    const EvaluationSnapshot before = snapshot(output);
+    error = reciprocal::Error{
+        BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_PARAMETER,
+        "stale reusable forceful error"};
+    require(rust_cpu::evaluate_reusing_force_storage(
+                system, model, true, &scratch, &output, &error) ==
+                BG_STATUS_NUMERICAL_ERROR,
+            "adapter changed reusable forceful typed failure");
+    require_only_all_scratch_force_route();
+    require(fake_provider.last_workspace == &scratch.reciprocal_workspace &&
+                fake_provider.last_neutrality_sort_scratch ==
+                    &scratch.neutrality_sort_scratch &&
+                fake_provider.last_particle_assignment_scratch ==
+                    &scratch.particle_assignment_scratch,
+            "failed reusable forceful route lost scratch ownership");
+    require(fake_provider.force_output_failure_pending &&
+                !fake_provider.force_output_failure_consumed,
+            "failed all-scratch force route consumed ForceOutput failure");
+    require(fake_provider.force_channels_written &&
+                fake_provider.late_failure_channels_written,
+            "late reusable forceful failure did not write derived scratch");
+    require_same_snapshot(output, before);
+    require(error.code ==
+                    BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT &&
+                error.detail ==
+                    "particle-mesh reciprocal result is not finite",
+            "reusable forceful adapter did not propagate typed failure");
+    require_provider_scratch_bits(scratch);
+    require(!fake_provider.descriptor_violation,
+            "failed all-scratch adapter supplied malformed provider descriptors");
+
+    reset_fake_provider();
+    fake_provider.force_output_failure_pending = true;
+    fake_provider.return_nonfinite_force_on_success = true;
+    scratch.x = {3'101.0, 3'102.0};
+    scratch.y = {3'201.0, 3'202.0};
+    scratch.z = {3'301.0, 3'302.0};
+    output.reciprocal_space_kcal_per_mol = 3'401.0;
+    output.forces = {
+        {{3'501.0, 3'502.0, 3'503.0}},
+        {{3'601.0, 3'602.0, 3'603.0}},
+        {{3'701.0, 3'702.0, 3'703.0}},
+    };
+    const EvaluationSnapshot nonfinite_before = snapshot(output);
+    error = reciprocal::Error{
+        BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_PARAMETER,
+        "stale non-finite reusable forceful error"};
+    require(rust_cpu::evaluate_reusing_force_storage(
+                system, model, true, &scratch, &output, &error) ==
+                BG_STATUS_INTERNAL_ERROR,
+            "adapter accepted a non-finite force on provider success");
+    require_only_all_scratch_force_route();
+    require(fake_provider.last_workspace == &scratch.reciprocal_workspace &&
+                fake_provider.last_neutrality_sort_scratch ==
+                    &scratch.neutrality_sort_scratch &&
+                fake_provider.last_particle_assignment_scratch ==
+                    &scratch.particle_assignment_scratch,
+            "non-finite reusable forceful route lost scratch ownership");
+    require(fake_provider.force_output_failure_pending &&
+                !fake_provider.force_output_failure_consumed,
+            "non-finite all-scratch force route consumed ForceOutput failure");
+    require(fake_provider.force_channels_written &&
+                !fake_provider.late_failure_channels_written,
+            "non-finite success fake did not write derived scratch normally");
+    require_same_snapshot(output, nonfinite_before);
+    require(scratch.x.size() == kAtomCount &&
+                scratch.y.size() == kAtomCount &&
+                scratch.z.size() == kAtomCount &&
+                bits(scratch.x[0]) == bits(kProviderForces[0][0]) &&
+                bits(scratch.x[1]) == bits(kProviderForces[1][0]) &&
+                bits(scratch.y[0]) == bits(kProviderForces[0][1]) &&
+                bits(scratch.y[1]) == bits(kProviderForces[1][1]) &&
+                bits(scratch.z[0]) == bits(kProviderForces[0][2]) &&
+                std::isnan(scratch.z.back()),
+            "non-finite success did not remain confined to derived scratch");
+    require(error.code == BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE &&
+                error.detail.empty(),
+            "non-finite provider success fabricated a typed error");
+    require(!fake_provider.descriptor_violation,
+            "non-finite all-scratch adapter supplied malformed descriptors");
 }
 
 void verify_reusable_energy_workspace_branch_and_transactionality() {
@@ -633,7 +722,7 @@ void verify_provider_force_source_triple_branch() {
     require(rust_cpu::evaluate_reusing_provider_force_storage(
                 system, model, &scratch, &output, &error) == BG_STATUS_OK,
             "provider-force-source Rust adapter evaluation failed");
-    require_only_triple_route();
+    require_only_all_scratch_force_route();
     require(fake_provider.last_workspace == &scratch.reciprocal_workspace &&
                 fake_provider.last_neutrality_sort_scratch ==
                     &scratch.neutrality_sort_scratch &&
@@ -865,6 +954,25 @@ bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_an
     fake_provider.last_neutrality_sort_scratch = neutrality_sort_scratch;
     fake_provider.last_particle_assignment_scratch =
         particle_assignment_scratch;
+    if (workspace == nullptr || neutrality_sort_scratch == nullptr ||
+        particle_assignment_scratch == nullptr) {
+        fake_provider.descriptor_violation = true;
+        return BG_STATUS_INTERNAL_ERROR;
+    }
+    if (fake_provider.return_late_numerical_error) {
+        return write_provider_late_numerical_failure(
+            system, model, out_energy, out_forces, out_error);
+    }
+    if (fake_provider.return_nonfinite_force_on_success) {
+        const std::int32_t status = write_provider_success(
+            system, model, out_energy, out_forces, out_error);
+        if (status != BG_STATUS_OK) {
+            return status;
+        }
+        out_forces->z[kAtomCount - 1U] =
+            std::numeric_limits<double>::quiet_NaN();
+        return status;
+    }
     return write_provider_success(
         system, model, out_energy, out_forces, out_error);
 }
@@ -902,7 +1010,7 @@ int main() {
     verify_energy_only_public_branch();
     verify_nonreuse_forceful_direct_branch_and_transactional_peer();
     verify_late_direct_failure_preserves_adapter_output();
-    verify_reusable_forceful_workspace_branch();
+    verify_reusable_forceful_all_scratch_branch_and_transactionality();
     verify_reusable_energy_workspace_branch_and_transactionality();
     verify_reusable_energy_requires_scratch_owner();
     verify_provider_force_source_triple_branch();
