@@ -2858,9 +2858,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         rust_reciprocal_neutrality_sort_scratch_bits(after_zero) ==
             expected_neutrality_sort_bits,
         "stateful Rust force-free evaluation retained the wrong neutrality-sort payload");
-    require_empty_rust_reciprocal_particle_assignment_scratch(
+    require_ready_rust_reciprocal_particle_assignment_scratch(
         after_zero,
-        "stateful Rust force-free evaluation populated the particle-assignment scratch");
+        "stateful Rust force-free evaluation did not provision the particle-assignment scratch");
     const RustReciprocalProviderForceScratchSnapshot peer_after_zero_workspace =
         rust_reciprocal_provider_force_scratch_snapshot(peer.get());
     require_same_rust_reciprocal_provider_force_scratch_storage(
@@ -2881,19 +2881,27 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         rust_reciprocal_neutrality_sort_scratch_bits(
             peer_after_zero_workspace) == expected_neutrality_sort_bits,
         "second owner's stateful Rust force-free evaluation retained the wrong neutrality-sort payload");
-    require_empty_rust_reciprocal_particle_assignment_scratch(
+    require_ready_rust_reciprocal_particle_assignment_scratch(
         peer_after_zero_workspace,
-        "second owner's stateful Rust force-free evaluation populated the particle-assignment scratch");
-    require(
-        after_zero.workspace_storage !=
-                peer_after_zero_workspace.workspace_storage &&
-            after_zero.neutrality_sort_storage !=
-                peer_after_zero_workspace.neutrality_sort_storage &&
-            after_zero.workspace_storage !=
-                after_zero.neutrality_sort_storage &&
-            peer_after_zero_workspace.workspace_storage !=
-                peer_after_zero_workspace.neutrality_sort_storage,
-        "independent zero-step owners shared workspace or neutrality-sort storage");
+        "second owner's stateful Rust force-free evaluation did not provision its particle-assignment scratch");
+    const std::array<const void *, 6> zero_step_owner_storage{
+        after_zero.workspace_storage,
+        after_zero.neutrality_sort_storage,
+        after_zero.particle_assignment_storage,
+        peer_after_zero_workspace.workspace_storage,
+        peer_after_zero_workspace.neutrality_sort_storage,
+        peer_after_zero_workspace.particle_assignment_storage,
+    };
+    for (std::size_t index = 0U; index < zero_step_owner_storage.size();
+         ++index) {
+        for (std::size_t other = index + 1U;
+             other < zero_step_owner_storage.size(); ++other) {
+            require(
+                zero_step_owner_storage[index] !=
+                    zero_step_owner_storage[other],
+                "independent zero-step owners shared reusable Rust scratch storage");
+        }
+    }
     const ReciprocalParentForceScratchSnapshot parent_after_zero =
         reciprocal_parent_force_scratch_snapshot(simulation.get());
     require_same_reciprocal_parent_force_scratch_storage(
@@ -2958,9 +2966,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_neutrality_sort_scratch_bits(after_warm_zero) ==
                 expected_neutrality_sort_bits,
         "warm zero-step integration resized or changed the owner neutrality-sort payload");
-    require_empty_rust_reciprocal_particle_assignment_scratch(
-        after_warm_zero,
-        "warm zero-step integration populated owner particle-assignment scratch");
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        after_warm_zero, after_zero,
+        "warm zero-step integration replaced or resized the owner particle-assignment scratch");
     const RustReciprocalProviderForceScratchSnapshot peer_after_warm_zero =
         rust_reciprocal_provider_force_scratch_snapshot(peer.get());
     require_same_rust_reciprocal_provider_force_scratch_storage(
@@ -2988,9 +2996,9 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_neutrality_sort_scratch_bits(
                 peer_after_warm_zero) == expected_neutrality_sort_bits,
         "second owner's warm zero-step resized or changed its neutrality-sort payload");
-    require_empty_rust_reciprocal_particle_assignment_scratch(
-        peer_after_warm_zero,
-        "second owner's warm zero-step populated particle-assignment scratch");
+    require_same_rust_reciprocal_particle_assignment_scratch_storage(
+        peer_after_warm_zero, peer_after_zero_workspace,
+        "second owner's warm zero-step replaced or resized its particle-assignment scratch");
     const ReciprocalParentForceScratchSnapshot parent_after_warm_zero =
         reciprocal_parent_force_scratch_snapshot(simulation.get());
     require_same_reciprocal_parent_force_scratch_storage(
@@ -3040,12 +3048,18 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
         peer_after_warm_zero.neutrality_sort_storage;
     const std::size_t peer_neutrality_sort_capacity =
         peer_after_warm_zero.neutrality_sort_capacity;
-    const void *owner_particle_assignment_storage = nullptr;
-    std::size_t owner_particle_assignment_logical_length_bytes = 0U;
-    std::size_t owner_particle_assignment_allocation_capacity_bytes = 0U;
-    const void *peer_particle_assignment_storage = nullptr;
-    std::size_t peer_particle_assignment_logical_length_bytes = 0U;
-    std::size_t peer_particle_assignment_allocation_capacity_bytes = 0U;
+    const void *owner_particle_assignment_storage =
+        after_warm_zero.particle_assignment_storage;
+    const std::size_t owner_particle_assignment_logical_length_bytes =
+        after_warm_zero.particle_assignment_logical_length_bytes;
+    const std::size_t owner_particle_assignment_allocation_capacity_bytes =
+        after_warm_zero.particle_assignment_allocation_capacity_bytes;
+    const void *peer_particle_assignment_storage =
+        peer_after_warm_zero.particle_assignment_storage;
+    const std::size_t peer_particle_assignment_logical_length_bytes =
+        peer_after_warm_zero.particle_assignment_logical_length_bytes;
+    const std::size_t peer_particle_assignment_allocation_capacity_bytes =
+        peer_after_warm_zero.particle_assignment_allocation_capacity_bytes;
     for (const std::uint64_t step_count : {
              UINT64_C(1),
              UINT64_C(2),
@@ -3082,33 +3096,19 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_neutrality_sort_scratch_bits(
                 owner_after_forceful) == expected_neutrality_sort_bits,
             "stateful Rust forceful evaluation retained the wrong neutrality-sort payload");
-        if (owner_particle_assignment_storage == nullptr) {
-            owner_particle_assignment_storage =
-                owner_after_forceful.particle_assignment_storage;
-            owner_particle_assignment_logical_length_bytes =
+        require(
+            owner_after_forceful.particle_assignment_storage ==
+                    owner_particle_assignment_storage &&
                 owner_after_forceful
-                    .particle_assignment_logical_length_bytes;
-            owner_particle_assignment_allocation_capacity_bytes =
+                        .particle_assignment_logical_length_bytes ==
+                    owner_particle_assignment_logical_length_bytes &&
                 owner_after_forceful
-                    .particle_assignment_allocation_capacity_bytes;
-            require(
+                        .particle_assignment_allocation_capacity_bytes ==
+                    owner_particle_assignment_allocation_capacity_bytes &&
+                owner_particle_assignment_storage != owner_workspace_storage &&
                 owner_particle_assignment_storage !=
-                        owner_workspace_storage &&
-                    owner_particle_assignment_storage !=
-                        owner_neutrality_sort_storage,
-                "owner particle-assignment scratch shared another Rust scratch address");
-        } else {
-            require(
-                owner_after_forceful.particle_assignment_storage ==
-                        owner_particle_assignment_storage &&
-                    owner_after_forceful
-                            .particle_assignment_logical_length_bytes ==
-                        owner_particle_assignment_logical_length_bytes &&
-                    owner_after_forceful
-                            .particle_assignment_allocation_capacity_bytes ==
-                        owner_particle_assignment_allocation_capacity_bytes,
-                "repeated stateful Rust forceful evaluation replaced or resized the particle-assignment scratch");
-        }
+                    owner_neutrality_sort_storage,
+            "stateful Rust forceful evaluation replaced, resized, or aliased the zero-step particle-assignment scratch");
         const RustReciprocalProviderForceScratchSnapshot peer_before_forceful =
             rust_reciprocal_provider_force_scratch_snapshot(peer.get());
         require_ready_rust_reciprocal_workspace(
@@ -3132,25 +3132,19 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
                 rust_reciprocal_neutrality_sort_scratch_bits(
                     peer_before_forceful) == expected_neutrality_sort_bits,
             "first owner's Rust evaluation changed the second owner's zero-step neutrality-sort scratch");
-        if (peer_particle_assignment_storage == nullptr) {
-            require_empty_rust_reciprocal_particle_assignment_scratch(
-                peer_before_forceful,
-                "first owner's Rust evaluation populated the second owner's particle-assignment scratch");
-        } else {
-            require_ready_rust_reciprocal_particle_assignment_scratch(
-                peer_before_forceful,
-                "first owner's Rust evaluation changed the second owner's particle-assignment scratch state");
-            require(
-                peer_before_forceful.particle_assignment_storage ==
-                        peer_particle_assignment_storage &&
-                    peer_before_forceful
-                            .particle_assignment_logical_length_bytes ==
-                        peer_particle_assignment_logical_length_bytes &&
-                    peer_before_forceful
-                            .particle_assignment_allocation_capacity_bytes ==
-                        peer_particle_assignment_allocation_capacity_bytes,
-                "first owner's Rust evaluation changed the second owner's particle-assignment scratch state");
-        }
+        require_ready_rust_reciprocal_particle_assignment_scratch(
+            peer_before_forceful,
+            "first owner's Rust evaluation changed the second owner's particle-assignment scratch state");
+        require(
+            peer_before_forceful.particle_assignment_storage ==
+                    peer_particle_assignment_storage &&
+                peer_before_forceful
+                        .particle_assignment_logical_length_bytes ==
+                    peer_particle_assignment_logical_length_bytes &&
+                peer_before_forceful
+                        .particle_assignment_allocation_capacity_bytes ==
+                    peer_particle_assignment_allocation_capacity_bytes,
+            "first owner's Rust evaluation changed the second owner's zero-step particle-assignment scratch");
         const bg_dynamics_report_v1 peer_report =
             integrate(context.get(), peer.get(), step_count);
         const RustReciprocalProviderForceScratchSnapshot peer_after_forceful =
@@ -3184,37 +3178,23 @@ void verify_rust_reciprocal_provider_owner_scratch_reuse() {
             rust_reciprocal_neutrality_sort_scratch_bits(
                 peer_after_forceful) == expected_neutrality_sort_bits,
             "second owner retained the wrong neutrality-sort payload");
-        if (peer_particle_assignment_storage == nullptr) {
-            peer_particle_assignment_storage =
-                peer_after_forceful.particle_assignment_storage;
-            peer_particle_assignment_logical_length_bytes =
+        require(
+            peer_after_forceful.particle_assignment_storage ==
+                    peer_particle_assignment_storage &&
                 peer_after_forceful
-                    .particle_assignment_logical_length_bytes;
-            peer_particle_assignment_allocation_capacity_bytes =
+                        .particle_assignment_logical_length_bytes ==
+                    peer_particle_assignment_logical_length_bytes &&
                 peer_after_forceful
-                    .particle_assignment_allocation_capacity_bytes;
-            require(
+                        .particle_assignment_allocation_capacity_bytes ==
+                    peer_particle_assignment_allocation_capacity_bytes &&
                 peer_particle_assignment_storage !=
-                        owner_particle_assignment_storage &&
-                    peer_particle_assignment_storage !=
-                        peer_workspace_storage &&
-                    peer_particle_assignment_storage !=
-                        peer_neutrality_sort_storage &&
-                    peer_particle_assignment_logical_length_bytes ==
-                        owner_particle_assignment_logical_length_bytes,
-                "independent owners did not retain disjoint same-shape particle-assignment scratch");
-        } else {
-            require(
-                peer_after_forceful.particle_assignment_storage ==
-                        peer_particle_assignment_storage &&
-                    peer_after_forceful
-                            .particle_assignment_logical_length_bytes ==
-                        peer_particle_assignment_logical_length_bytes &&
-                    peer_after_forceful
-                            .particle_assignment_allocation_capacity_bytes ==
-                        peer_particle_assignment_allocation_capacity_bytes,
-                "repeated second-owner evaluation replaced or resized its particle-assignment scratch");
-        }
+                    owner_particle_assignment_storage &&
+                peer_particle_assignment_storage != peer_workspace_storage &&
+                peer_particle_assignment_storage !=
+                    peer_neutrality_sort_storage &&
+                peer_particle_assignment_logical_length_bytes ==
+                    owner_particle_assignment_logical_length_bytes,
+            "second-owner forceful evaluation replaced, resized, aliased, or shared its zero-step particle-assignment scratch");
         require(
             std::memcmp(&report, &peer_report, sizeof(report)) == 0,
             "reused Rust reciprocal-provider scratch changed integration report bits");

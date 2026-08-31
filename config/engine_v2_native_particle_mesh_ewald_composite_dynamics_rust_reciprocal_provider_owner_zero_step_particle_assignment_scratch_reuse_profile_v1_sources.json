@@ -1,0 +1,1418 @@
+{
+  "evidence_paths": [
+    ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-zero-step-particle-assignment-scratch-reuse.yml",
+    "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_profile_v1.json",
+    "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_profile_v1_sources.json",
+    "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1.md",
+    "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1.py",
+    "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1.py"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml",
+      "sha256": "f0c3b15158d3ac4f41686922dfa9b2025b6238128aa18d49545388b2f8382714"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-combined-force-soa.yml",
+      "sha256": "de0f94b85a83db7004a5572f6f8a17529fa2f4235b3d2c0469b0032325916c16"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-ewald-parent-force-scratch.yml",
+      "sha256": "9169fed91cd80febdd8c5748cebfbdf0d407bdd17dabd29ca872802ab409dc9c"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-force-scratch.yml",
+      "sha256": "5ee390c6f27bfaf827a5cca5a69064441f4c39f3681053eb092487bf45a48b05"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-short-parent-force-scratch.yml",
+      "sha256": "f07bc694ae999f100ff89da161e52be8a84c96933a0aaaa0106c449f10e3db49"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-short-system-scratch.yml",
+      "sha256": "39d18776acc0e4e1734b87ecbfbff6e1ab1d251757d313516d4a3dd16d62ccac"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-combined-force-soa.yml",
+      "sha256": "18b7ee208e0598d873cb49024bc8a97717c7a7090fdf2c16031f11a713905461"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-direct-parent-force-scratch.yml",
+      "sha256": "7abcb11cfcb597c7ffaf0c4b64dd37b48f7ca71762f11b7b208244fce8c57e8e"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml",
+      "sha256": "a6da103b38b1fa2335090f9630217ed8d18d0e06d90f1b8340da35c47f864474"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-reciprocal-parent-force-scratch.yml",
+      "sha256": "bb3ce30f3b8956c35f2666f4a29d8ac206c770c96d934c9afae381f69432a508"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-axis-data-buffer-consolidation.yml",
+      "sha256": "c74fb474e4ac6ed1d2f719a7ed7f1f7b1449f1f2969c84348e13a6c8ea3baff5"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-borrowed-input-soa.yml",
+      "sha256": "95e6ddf308bc519afca4ae6b52b377b290ae6413cbc5238d0e1b63b7fa6bff88"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-direct-force-soa.yml",
+      "sha256": "8ea897cfc0f219a75163604c06269019ba571cf5fd86312c658130fbe2cc61ec"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-fft-line-scratch-reuse.yml",
+      "sha256": "89af47436763fcd3d6a26e1f0a0f8d02b0a87408c849263a37902b2175296195"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-force-scratch.yml",
+      "sha256": "f967dd5a525db891c746885e4b0e82768c65f3fa73138eddf75cebdbaf312bb7"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-force-source-soa.yml",
+      "sha256": "c7e9cc10436fcbd4c5f6e428a1c78587e5e0ed687ad0435c85b26fd39eddb15e"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-neutrality-sort-scratch-reuse.yml",
+      "sha256": "2aa47d5d57a3e0717dba81d8b1b9fddca747694ac75360a8df6e0cd7698061c0"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-particle-assignment-scratch-reuse.yml",
+      "sha256": "d40260cf0a5be18001f77425115733cceb401cf6a47011dd6bcbb4baeb74b071"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-reciprocal-workspace-reuse.yml",
+      "sha256": "daf883aa48672f49b97434e7ce7c7a79e4edad7fd96ca30b56cc6d0a13553b4d"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-zero-step-neutrality-sort-scratch-reuse.yml",
+      "sha256": "43609981c1968ab90d9af0df7d602d418140b90adcb92d9ac4abc58dc3d7acb0"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-zero-step-particle-assignment-scratch-reuse.yml",
+      "sha256": "9179dc62815f276709696852adef90028cfb98b76884357c10aec1335485e038"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-zero-step-reciprocal-workspace-reuse.yml",
+      "sha256": "e26aa1f98e4aad93577c97a76224637dff7ace5eed06f85ad976a40e2cac1137"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-reciprocal-workspace-phase-reuse.yml",
+      "sha256": "2e285a35ca175674d296d1c5b95bc889e6bb2c014d00321cb4c2181092404932"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-spectrum-fft-line-buffer-consolidation.yml",
+      "sha256": "19e53331342e615c181e508d27fd11c01b7372ff503d4d8de2fcd38e13bbf41d"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-transactional-force-output-elision.yml",
+      "sha256": "5ecfe9107fe1bb8a25a7961ef6d6949b79635f18270d435b97d4ada3b79dc285"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-short-parent-force-scratch.yml",
+      "sha256": "05a7104cb62e476a59acdaef1c4514fcec5c55352dc59526136986b8c0b06f0e"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-short-system-scratch.yml",
+      "sha256": "3190394def0991c60d2894796a9d902de47654bb835dd9c950ca347b3946d7e8"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics.yml",
+      "sha256": "f7176de8cf46c6d8825289b0f3450de6a27740769dbe5e442e7487e9538a42af"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite.yml",
+      "sha256": "cb8ca0cd49e7a6f74aa5217aeba402daf04b7e3c7c4fca8bc9a3a68798867021"
+    },
+    {
+      "path": ".github/workflows/ci-engine-v2-native-particle-mesh-ewald.yml",
+      "sha256": "c846f163a57e67809d3bbfc6a651389cc27b9326d5fa007ccc9cbd0f1c587baf"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "23164e9e61ae4911c6b52bb991b1ae7b44df0e60163d1337b3eb09c299336b43"
+    },
+    {
+      "path": "config/engine_v2_direct_ewald_reference_profile_v1.json",
+      "sha256": "dd2c7460c2c3e7ea800da51e29bdf54d8933497ade086812d882a65cca4f4e6c"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1.json",
+      "sha256": "8ae38af90175e1e62eb54abb6727963a4439ece0fc4b622a4b0f4c9593c1a97f"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_profile_v1_sources.json",
+      "sha256": "1aed00454380e70338428b11e347b7d47f28b2b5f46e5e843612dca0ac361432"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_profile_v1.json",
+      "sha256": "50c50ba44f9d3ff32358454d0d9f81f2619265fdaa5a3e9fe9194f22848685b7"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_profile_v1_sources.json",
+      "sha256": "348ab691558af31b398c653d0c6399bc30c651bc7cc911edb35aedcda2ec9032"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_profile_v1.json",
+      "sha256": "e0749f0c16486e4ac726dadeb149080dfd15dd68905e874517f5d6981a18133b"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_profile_v1_sources.json",
+      "sha256": "b2aa88f0d544711461a18ec232667c3a213eaf04851b3301c6851d74b3cc5dcb"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1.json",
+      "sha256": "2c1a5c015cd4db903e359e6d18fb52ee70c583e1c2744409754b44352d201985"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
+      "sha256": "f1c41ad4ad774bd2d7ab1672df61792ad539f0c2c199b37511ed0f5783412467"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1.json",
+      "sha256": "42aad2692719d3d0233d9b71e24e6b49fe50a27fbc150d31fb4d9688ae84215f"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_profile_v1_sources.json",
+      "sha256": "1a7a284467958e7c153edb0afd86cc5ea4ad07b659266ecf59d9da7549a19d15"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_profile_v1.json",
+      "sha256": "745a4413cc875f143be460f372ad4ddc809af0588df65e736d68361fce418485"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_profile_v1_sources.json",
+      "sha256": "38d48a481963dc5a4a6202f6b6f794e9984e64ea43bb2ebd11a3aeb7e7815a1f"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_profile_v1.json",
+      "sha256": "8be1f7d28f936f78486bfabaf9fdfc2e1e334285864138639c796d36a454d3cb"
+    },
+    {
+      "path": "config/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_profile_v1_sources.json",
+      "sha256": "85c17310e995b8eb22028083694f710414e523884a0ae9834b5258dfcb6c48fd"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1.json",
+      "sha256": "375e9391bba5823ffe525f7f4748fbbf11a1c790f33171924719a7ec050476bc"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_cpu_profile_v1_sources.json",
+      "sha256": "0a29fd2bb36becee1f307c137c3e006597f21c63d98bae07ceaaf76b5738f1f1"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_profile_v1.json",
+      "sha256": "032222992ddefebf6e8b9a584f6c60b1c382efc1a470cc6b5eecb82a9ca6d76e"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_profile_v1_sources.json",
+      "sha256": "403e0a6724145f02f1e5fb598f1f640ca9b39e043705c60a5583b1af53a854e9"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_profile_v1.json",
+      "sha256": "3c1a55ec47caacd80dda77dab2aac3c407a3f39148a245419a09da19bef30c31"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_profile_v1_sources.json",
+      "sha256": "7abf0980148092be439216c530ae2558a6fdfc5cc00fe2986121f33f61855b7f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1.json",
+      "sha256": "32129a32d0b351ac265fda21906e707cc708c664241715b4d0d92fa3cc013b62"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_profile_v1_sources.json",
+      "sha256": "d428b3f18d26382fbb7e5e8a48f3a114eb953b8708bec77c4f00ec6c0d1bcc3f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1.json",
+      "sha256": "acca244232d196701044fd9ecbf6a2abce91cd03be966ead875c61cf42f75bab"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_profile_v1_sources.json",
+      "sha256": "030264269b2c438c11013c1e5a62e8c9745abcdf8567771ce990cf2f33e14f78"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_profile_v1.json",
+      "sha256": "ef269473df11b49aa1989340c345cbbe19759e85acd0bb132d4967ea0a6f3edf"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_profile_v1_sources.json",
+      "sha256": "5d700cb9cb94b5f4c148b69b941f4b4e6b5a2ffa52f02efbd3ce030748daf042"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_axis_data_buffer_consolidation_profile_v1.json",
+      "sha256": "33152ccf4589eaaf9c8b9be9ee6b901ed5ed4b631c3933ced40bd4f4171e1623"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_axis_data_buffer_consolidation_profile_v1_sources.json",
+      "sha256": "5379884390a9f9bdb220266ebb9ef3e62b4d1cfd79e749d3d74d01cfaeb8cd42"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_profile_v1.json",
+      "sha256": "78f64bdd903f5b4aacd1d304654ba086bfea1df65cbf480a5bf3f065a90c929b"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_profile_v1_sources.json",
+      "sha256": "c18328d50f88f78ec120f487efcc50020e9234bef8d36effd5d50b1ba7300abf"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_direct_force_soa_profile_v1.json",
+      "sha256": "147945e436f6a82fdba8ba953f5c8c746d79c55758e4632d4f4c6da74ea34df0"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_direct_force_soa_profile_v1_sources.json",
+      "sha256": "e0c0e52181bbd2962a85f2324d5ba854ea32f0e9629f5b85130706e5a7bc8ef0"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_profile_v1.json",
+      "sha256": "0c8419c5e3ae3b074ee85e65aff3aadc98fa3c92794793a7cecdca4241341c5a"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_profile_v1_sources.json",
+      "sha256": "c1a751dcc0686188bb4e3bdf16567eb469a419c0d42fd21e91b14d20d6c4de5e"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_scratch_profile_v1.json",
+      "sha256": "b54618cb99500f24e4a88873c9dd721b7d3b88c37dc2ca2dc70a5b6aa19fac9f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_scratch_profile_v1_sources.json",
+      "sha256": "50705977b571d4b3b45c0af56b453b017cdd8910ba4ee7e8945d2407055bb70d"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_source_soa_profile_v1.json",
+      "sha256": "27bc3cb8a8e631a94da59aa4591e66546bcf6d0ad89826c945e337684a1bf0af"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_source_soa_profile_v1_sources.json",
+      "sha256": "85c182fcdf844560fd7985693b2923ee50304acbd3a21ca7e008795b68af49c1"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_profile_v1.json",
+      "sha256": "4ee3d32e690401d06c18390d247e0ca492339b926ba55fab6e6f946ea12f7919"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_profile_v1_sources.json",
+      "sha256": "a19e69257a2b9c102bd37fc925969f042799fdbad92ff8fb82739b5eca6b97fe"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_profile_v1.json",
+      "sha256": "fd9e484e90da23c366ce6907f0382e940ff763afa5da8975b069e8bbc8478d9f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_profile_v1_sources.json",
+      "sha256": "b273e229de1948396ebc52f35c9247cfcc8f70676870271b30d796628367ce8e"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reciprocal_workspace_reuse_profile_v1.json",
+      "sha256": "34caf3981b79a40ff496b76ff6d6fe5e6aefdb69a34d7238c2e93f708d41bbb3"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reciprocal_workspace_reuse_profile_v1_sources.json",
+      "sha256": "8b140b96f482911fc5afe019645da5a8089b62d98fe9112af592c9b576f89a1a"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_neutrality_sort_scratch_reuse_profile_v1.json",
+      "sha256": "4f2c736dea22eceb1e513bfbefafe58ab7023091d24ff074200b4500dae2bd74"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_neutrality_sort_scratch_reuse_profile_v1_sources.json",
+      "sha256": "edbe07b4dfae3b8d9c871e035a057942bdda505b98b80c2e5ffecfde3478770f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_profile_v1.json",
+      "sha256": "54689a50a034f6963b3c3528901ed003fea2055ba39484ae2dd24fee3fded9e8"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_profile_v1_sources.json",
+      "sha256": "f29c2d548deda8785c99c6a88f9e93763226f5771e2cf0a90804cfff26f7e0db"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_reciprocal_workspace_phase_reuse_profile_v1.json",
+      "sha256": "ddf1aaf25370464dab2717f83ad4f746ce94cf0d4914adb198a1b57487f365e5"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_reciprocal_workspace_phase_reuse_profile_v1_sources.json",
+      "sha256": "f659b995b298aa5a79977a99a50ad9853f7e0c2786ea9331f8471a0673e72ba5"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_spectrum_fft_line_buffer_consolidation_profile_v1.json",
+      "sha256": "37c49e09578bd5ef369b3bdb19a119d7245fc236a898c27146c8b86276cda902"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_spectrum_fft_line_buffer_consolidation_profile_v1_sources.json",
+      "sha256": "f60c398fb3d6d657264734712d08a84edadd67bfabac7c66ebb49ab94c5c31ba"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1.json",
+      "sha256": "981d82cd35a966b3f3053d6b090e9e915cb15cf302893dbf5ed9d5209c422aba"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_profile_v1_sources.json",
+      "sha256": "2bbeaea1697c401bbaa875e86e4d616e25fa0b1e914b6307949188e65019505b"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_profile_v1.json",
+      "sha256": "cc7c92719b832c847f213ea02b9a46e75bfd7e79b291c28af59b24f5b0478d3f"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_profile_v1_sources.json",
+      "sha256": "c19ec3eb610bc07978b7cb96b0368043f9084a91d344c8515fa75140bb27c7f6"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_profile_v1.json",
+      "sha256": "72982489ea675272607013d9495f36ea5f649eb94f57d35e6a37a9e8ebfef476"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_profile_v1_sources.json",
+      "sha256": "691792ba1f59fb314bd7c4dc8b6ae746f25629a840b9e64da6b3f54eba561028"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1.json",
+      "sha256": "ea1a3c92bab2f6a9901aba9f296f7cb59aad2b9ebf4f5a0fa9bf35b7a0f153f7"
+    },
+    {
+      "path": "config/engine_v2_native_particle_mesh_reciprocal_cpu_profile_v1_sources.json",
+      "sha256": "2b60fd079ed8f2af6d023f0b57a0627b449dea4e4037d8ed6d323d4467c940a2"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md",
+      "sha256": "c83bc63611d99b652aa1e2f801ad14a8af0faf975c9b3267953b02a49490e5a8"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_v1.md",
+      "sha256": "7940226ca97a4fbaf01c1a60b5a3f2f7cb6fe8713d635956dd218fd12626a501"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_v1.md",
+      "sha256": "acf5976a54f41ae84deba0f9002d173da817a9441580e44e24ff0c94750251c3"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.md",
+      "sha256": "f9964a60244f3dbaa9de434b0c4f2c110ec3c6edbbf8c3d2be22036fa3a5dcaf"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.md",
+      "sha256": "69004e50840e416d6bfbd72ce291b8023fc24be43d74ab6773d32b04af329929"
+    },
+    {
+      "path": "docs/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.md",
+      "sha256": "e640221e290658da0ef758cd4c4b83037fade6ff433cdb45d204d82589e797f8"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_cpu_v1.md",
+      "sha256": "48b84be5159944eaa65a147d9f0dfceac2c8f553f632f66ae2bff9df0bf5227d"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.md",
+      "sha256": "07496d032f5104b1588de42275002164955b7592c0ca72011d63fb856c8ef1b9"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_v1.md",
+      "sha256": "bde5c3fd497a831a1c7ab661a8519d24d72c6da347927f4248dcd692bb8da7a8"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.md",
+      "sha256": "2c8e31ae6079309ac0255fb57620dd3cf0e8d5d66ae3e49a3534cf4f4514981e"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_v1.md",
+      "sha256": "cf448112b72951ae08971f4c7e8e9803012fedd39081e08b36d78c7afbc9e722"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_axis_data_buffer_consolidation_v1.md",
+      "sha256": "2fe5b70058625e20eba8aa91d590a8f04b149adc2d44c6f52faefd19c80c0026"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_v1.md",
+      "sha256": "57853debfabb6644cef5d83779ef09fe4cd9d6abb6cf598ab39102b32615868a"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_direct_force_soa_v1.md",
+      "sha256": "f68c82a5db5a93af67d7c9ef5cb004047f3ca491686770f79068245a3360abc3"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_v1.md",
+      "sha256": "ab19e4180d7636835c325066a581d390e9979949d48c5e4b78378b13e5c97a57"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_scratch_v1.md",
+      "sha256": "264e3b552e20b28771420b84ab5031f6860255dbee95ec4f695b11897a22d632"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_source_soa_v1.md",
+      "sha256": "ec0993afc6d2b05cdc0e63227f3cbe10b63b9ef2406c7aef1dd736303c69fa42"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_v1.md",
+      "sha256": "0cfbbf4f0e34e0bfc7bbdd9cef293662559f1c78c4c5c02932346bc7e57380e1"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_v1.md",
+      "sha256": "19eee67e60939b24d7c1d52a069367fc6843844eeac87aec5effefc91757edbf"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reciprocal_workspace_reuse_v1.md",
+      "sha256": "dcf266ab11eafa8dd87c9cce35298f4d8df174b096de0599d0ce64b04aa3b4f4"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_neutrality_sort_scratch_reuse_v1.md",
+      "sha256": "07096fef74e5f3927e587d5c32cd24470e06ffb006ac639c6f9556dc190f8a95"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1.md",
+      "sha256": "687f4b6cf07684c3d78b88ecad5e8632dd54135516e125fea2db32d4cfcc5767"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_v1.md",
+      "sha256": "7201f9401a4f77793b9891e28b7b9e80b47082ddec0dcffd754a9b3b5f4d8377"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_reciprocal_workspace_phase_reuse_v1.md",
+      "sha256": "5b94c5fa7a04e5f4a0a4770e40809b58e2b112e5859380ccd1c5e91acf9cc97a"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_spectrum_fft_line_buffer_consolidation_v1.md",
+      "sha256": "8af930f530a1d03ef981aea74a3a23a79f20e564a894a0bbc5abf4703192e1b5"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1.md",
+      "sha256": "6858bd3429517bb59077e2bad1ed373b6a90e004ce22c89700812c560a425dee"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.md",
+      "sha256": "417e017d77f85c3bf3f4228f0278768ad0c863a18c00872456099bee648de167"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_v1.md",
+      "sha256": "f4cd740c13f7429d72904830c974fb24b8803615a0717bbf820e418711d852df"
+    },
+    {
+      "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.md",
+      "sha256": "88bedd8ea7933cabee2db3c071262bb9e44432f2c049533a01442dd5d9f560e7"
+    },
+    {
+      "path": "include/betelgeuze/direct_ewald.h",
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
+    },
+    {
+      "path": "include/betelgeuze/direct_ewald_composite.h",
+      "sha256": "5d09bd7d13c57cb665a038b1a5fe48ce513a3b47b05a4955ee2695919b9ebbf7"
+    },
+    {
+      "path": "include/betelgeuze/direct_ewald_composite_dynamics.h",
+      "sha256": "62bd4b63f5f634966ed45d6781601c4d0b3eac30e3056cd2874d7e274d47ecf2"
+    },
+    {
+      "path": "include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_ewald.h",
+      "sha256": "e6e966fffe50163cc7d5e8eedfbc6d31b6c4ce54c754d424e1d9149e88913f4f"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_ewald_composite.h",
+      "sha256": "cb870cee2948ee096aa08f636b02343fb974e5a293240e4d65fe50c15442fabe"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_ewald_composite_dynamics.h",
+      "sha256": "1e127362b50dd7474ae1c2bab825049f0177ed66fcd50e4c017d0e035e12594a"
+    },
+    {
+      "path": "include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "path": "native/CMakeLists.txt",
+      "sha256": "2628fe8050f57a989a0663f876bc57fb0f20c577f3f605b333dab8cc94116de6"
+    },
+    {
+      "path": "native/betelgeuze_engine.exports",
+      "sha256": "d0c5ee0a8ad53cd1dd687412ae023c2f09f3a828f47768f325999ae6b6bf5968"
+    },
+    {
+      "path": "native/betelgeuze_engine.map",
+      "sha256": "9324b7e374bc0e6411211e590bad418dfda0783a292fba2bcacd6ff9419cd1ad"
+    },
+    {
+      "path": "native/src/composite/direct_ewald.cpp",
+      "sha256": "3de8a60acd02e4aa81b82dcbaf3ac29431e4908cdf0ae2b7226dc5c04d6e0a8d"
+    },
+    {
+      "path": "native/src/composite/direct_ewald_composite_checkpoint.cpp",
+      "sha256": "b503c471cb2e38a87d1f74499289fb0c606f65b0478e64cc6ca294b12caef537"
+    },
+    {
+      "path": "native/src/composite/direct_ewald_composite_dynamics.cpp",
+      "sha256": "1e4bbad54fefab1b4ec7de904ba6583c5294adb67f7325640270347efbf7f318"
+    },
+    {
+      "path": "native/src/composite/direct_ewald_composite_dynamics.hpp",
+      "sha256": "5c754cd3ef285c133c93def8cce1caec733a630b46fda497295e0eb20920df9e"
+    },
+    {
+      "path": "native/src/composite/evaluator.hpp",
+      "sha256": "2e8ec10ca8dd4b57eb25ba98cb2726e289aaf762c97d9c782f636907ba560d5f"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald.cpp",
+      "sha256": "5cb66bdc71c9fe73902fd0535e62c58946d1c3e2c1a79c1e67ada8482d509a03"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite.cpp",
+      "sha256": "03f0fd77ee9192f280b29b5fed38d80f48b62717de053ecbdb9e216c05328b14"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_checkpoint.cpp",
+      "sha256": "ba9e2ef14d54285e7cf4789e99cc1b24784f870659ffbc7a36ed869bd01c148a"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_dynamics.cpp",
+      "sha256": "6e765ef1f7906e2c7485a3093621105518e8856f7af627620db7ed21f483c50e"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_dynamics.hpp",
+      "sha256": "8af042929468d2de710c9512657f57da8e22b55d4038ed6a87341a214ef3c102"
+    },
+    {
+      "path": "native/src/composite/particle_mesh_ewald_composite_evaluator.hpp",
+      "sha256": "592903aa0699cec20b5e3d94d297c28692b27271cc25cc344fb258e93dbf8a0a"
+    },
+    {
+      "path": "native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "path": "native/src/cpu/evaluator.cpp",
+      "sha256": "64cb0cb85ddce5dd57a81753207428e58e6c98bcd71c81e4633db03f04748268"
+    },
+    {
+      "path": "native/src/cpu/evaluator.hpp",
+      "sha256": "1b79cd6be3a9ad536fbefb1ef48e859fce60a89512b005fa22df5395db438422"
+    },
+    {
+      "path": "native/src/cpu/neighbor_pair.hpp",
+      "sha256": "a985dcbccadfe08f86a6fcde55ed2548a69446157381cb4b5608edd9e6ac16e7"
+    },
+    {
+      "path": "native/src/dynamics/api.cpp",
+      "sha256": "cf9c310e838645e6ca22e17640ae1c45633f0936954cbd3319fc5f7b589df7aa"
+    },
+    {
+      "path": "native/src/dynamics/checkpoint.cpp",
+      "sha256": "ff5c065c34f6365382db230404492a9d3ae9911b87283f59602a5ea40dc5e9cc"
+    },
+    {
+      "path": "native/src/dynamics/common.cpp",
+      "sha256": "9bc8289e08f3e6ad421de67526b5b3bba267ccc685c827d6871ceb769789b07a"
+    },
+    {
+      "path": "native/src/dynamics/dynamics.hpp",
+      "sha256": "5a27800bd344258ca339cdb607ac1dba607a7d5fffd0420aedcbf00baf8c702a"
+    },
+    {
+      "path": "native/src/dynamics/integrator.cpp",
+      "sha256": "40f2d7ce309c54c1733f182275c077f65b73d85964510115e1e07f46cbb2d034"
+    },
+    {
+      "path": "native/src/dynamics/sha256.cpp",
+      "sha256": "e22588ec5726230d38337506fc584f21656335a05cf8541d515db7f5c000778b"
+    },
+    {
+      "path": "native/src/dynamics/sha256.hpp",
+      "sha256": "e8962e70506eae8ba7a9fbfd54b76045ca465c272f741a18d606439a4eb2d68f"
+    },
+    {
+      "path": "native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "path": "native/src/ewald/api.cpp",
+      "sha256": "1fbfd621ede2865617017545f7fc0b5e7f0e8b79e8f3451d9f007eeff57bd52f"
+    },
+    {
+      "path": "native/src/ewald/cpp_evaluator.cpp",
+      "sha256": "3a92e11c397211f15444956a86905b83abefc9be6f1c138c92e70c9d4da1c95a"
+    },
+    {
+      "path": "native/src/ewald/cpp_evaluator.hpp",
+      "sha256": "0d9ef05259fba9f3cf009964fe74124daff5c8aca42d957160bb21566ee2f00a"
+    },
+    {
+      "path": "native/src/ewald/model.hpp",
+      "sha256": "9225959127393ff0750e1fb4e8939af83cdfd27c7c594764e196ac6201cb6df9"
+    },
+    {
+      "path": "native/src/ewald/rust_evaluator.cpp",
+      "sha256": "d44988629467038d6a06d995e89255af6c8099fd8810daab0dc238bf2de77445"
+    },
+    {
+      "path": "native/src/ewald/rust_evaluator.hpp",
+      "sha256": "97b2505bf3cdc400d6a6872c07c00ef4db5246f7b3fb2d48f53c7c3064fdc55a"
+    },
+    {
+      "path": "native/src/ewald/rust_provider.h",
+      "sha256": "a1532cc7b78890561b8126c5d2ad2c13f8994498e32a90e4c99838e14744511a"
+    },
+    {
+      "path": "native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "path": "native/src/hip/backend.hpp",
+      "sha256": "7ccb4d7503e89f8ee16936a400cc203a83c8804438792264471d8aabc63bb48e"
+    },
+    {
+      "path": "native/src/hip/evaluator.cpp",
+      "sha256": "0adb6d7b3cec8baffaabb5f654346ea8552f5dd0c3e0756686ab8ee5bc97bd12"
+    },
+    {
+      "path": "native/src/hip/evaluator.hpp",
+      "sha256": "1ddf6e0c32e346d236fc906e291c457afb590927aa0c3c1420b697c66692207e"
+    },
+    {
+      "path": "native/src/hip/provider.h",
+      "sha256": "5072ebddc1dc58c0a8b96f9905ea78f155fe9aa316d6dffb4f5ab2db5fff5992"
+    },
+    {
+      "path": "native/src/hip/stub.cpp",
+      "sha256": "7ee0b03076189f9a40fd729fabcd9a8c6583fe964dcf867d1debbb6e8b9de36f"
+    },
+    {
+      "path": "native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "a83114cd49382cc1308fe3539d31ee6f48c563e9d195f1ba57874867af861711"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "96a9d76925a1ccf7230f219ec29a23128ef67e2e472a774aef89a076efd5a79b"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "5736bea79752ee779a29b3235fcc7e0f8cea1b663daecb067e553545fc823d77"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "b534e21c7f422115b9c9e76948904cca3e71ca2d8dc43e73be9acda9f5168db7"
+    },
+    {
+      "path": "native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "f79b6ad90481b8eb63b912f9c837b5c0e0d00056860f4a881b9068be4448974c"
+    },
+    {
+      "path": "native/src/rust/evaluator.cpp",
+      "sha256": "be0ab8988c49c034ae1cff7c268c5865fd291cdcb64c831c61e41734f611c22a"
+    },
+    {
+      "path": "native/src/rust/evaluator.hpp",
+      "sha256": "be267c392950469bfdd1c1c955bcf4be821c8109ac898027513cf9c795314236"
+    },
+    {
+      "path": "native/src/rust/provider.h",
+      "sha256": "9594e9be351a15a07b802d2f4d50f7aa7d182011b858640eeef2449fc5310d2f"
+    },
+    {
+      "path": "native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "path": "native/tests/check_exports.cmake",
+      "sha256": "2328606524cc22c67caa8032df50ab4b0859e0766989553e14c98e1e2dd2e8cc"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite.cpp",
+      "sha256": "ad0e8c882e7ffca3d619b118150c6b1f805553cd0f4c7784c3658cd4b2026e2e"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite_dynamics.cpp",
+      "sha256": "81a0a020f2a66a0d403838f3b9a7ac7553a880e105821a35d8a65cd4c0794916"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite_dynamics_scratch.cpp",
+      "sha256": "9c18bc8491a23103872b75039c63b57fde0913a33728f146cfab6d3cf87052d6"
+    },
+    {
+      "path": "native/tests/direct_ewald_composite_dynamics_scratch.hpp",
+      "sha256": "94efe472fe5d61d299a360e8ab137636a94a2d33b53b9e30b15350b0a30057a3"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite.cpp",
+      "sha256": "4bc4dd7d14b5eff7a7ca8abc59d94d4fbe41efbdf5f207683a430fef05b74519"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite_dynamics.cpp",
+      "sha256": "85dcd3e89a014039c00ae843f30ccb506a82e439a4b2d173243eacb9f2a60acb"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite_dynamics_scratch.cpp",
+      "sha256": "51c1b52d3713ed1375079da4af88d30ff4a4e49802f54b80e1e4c1a680cb2eeb"
+    },
+    {
+      "path": "native/tests/particle_mesh_ewald_composite_dynamics_scratch.hpp",
+      "sha256": "79ccaa31feb368d0e3384746a2d26cba04f985673fd10a4ef3d02db9a7d06db4"
+    },
+    {
+      "path": "native/tests/particle_mesh_reciprocal_rust_adapter_transactionality.cpp",
+      "sha256": "a568e2f92661605a3313676f819fbae39e7f45c33451d6c6749f7de97393670f"
+    },
+    {
+      "path": "rust/Cargo.lock",
+      "sha256": "8e302c5e9cf90b80232ce1f2df5f13df78095a344e978b47e0e6e3c9ef29db04"
+    },
+    {
+      "path": "rust/Cargo.toml",
+      "sha256": "4a0b23729baeec10cc0e57abd4fb199c762531124fabfa400c34b8475592281c"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/Cargo.toml",
+      "sha256": "d230b8a374197ab667dabb8fe89a7079fab2c12fcede14ef3de380e11ef6bce4"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/build.rs",
+      "sha256": "fb5901c3fe330d5576b36022cc33b21f8549115ec33a1d6bd94315dddf1d4b86"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/composite.rs",
+      "sha256": "0fa1fc422b1efc3c9b8e6efbdafa82c11844e576b67e28cb4ab88290ff5e6bb3"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/direct_ewald.rs",
+      "sha256": "4d353e778ea767c00d5008ffae378c9de56ea36a6ab1a17cf4b069be6f62fac9"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/direct_ewald_composite_dynamics.rs",
+      "sha256": "a3d3168fc98acce341415aa8fcd494923a974e5c42544d8019e57dceb7284fef"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/dynamics.rs",
+      "sha256": "d9c3babd0172938d8fc1272bc574235edd24dfda7af7931782395a6cfc3945b9"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/forcefield.rs",
+      "sha256": "679215a6b1acf3331334f0ae12c7beebe9ad0ab3bb793008d763b423f5ebca6c"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/lib.rs",
+      "sha256": "14b197a199895c139b5a3f1afeb90c08e2e981010c0b3f651d050bbef69e3c18"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald.rs",
+      "sha256": "7bc6804be5766c8a6a8e58bcf19d838b32044b63cf4a06a0ab885984d95c1366"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald_composite.rs",
+      "sha256": "ecd7fc2aa328e42878069973f2403f89bd74bf1c7872b073751eb96b0718e175"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_ewald_composite_dynamics.rs",
+      "sha256": "9f322e18582d1b4e4a726011d475ecb4654136d1829be517061203f8e015a036"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/src/particle_mesh_reciprocal.rs",
+      "sha256": "c36192f8e9383bbd3af76fc1c0b8cbd86c7685e82e9777de15e65c6aee1b608c"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/composite.rs",
+      "sha256": "94be8086c8459aceeeac3bbb20d49a5698238cfeee5aa57eafd9ed706601f497"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/direct_ewald_composite_dynamics.rs",
+      "sha256": "d9b88b6ab4389f1d98da3473ffbe8e821d46b9c5f48ab47f3ce532816c5de14e"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/fixtures/direct_ewald_v1.tsv",
+      "sha256": "a720c83852c79e401cb8838e9e20b2196985b6e424275949f77291b30b3da338"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/fixtures/particle_mesh_reciprocal_v1.tsv",
+      "sha256": "669e4409ba56897061976c38fbf53985fb1f744e8e5b3613512b0f957951deef"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite.rs",
+      "sha256": "1a4d7f4f3f7aa4f36156649e5b0187dc7271df546dd390ee4942b67b85bb7cc9"
+    },
+    {
+      "path": "rust/betelgeuze-runtime/tests/particle_mesh_ewald_composite_dynamics.rs",
+      "sha256": "0af46f8ab4e39485beb9024d3f37256812e659331cb95a89f0c0f8490217e402"
+    },
+    {
+      "path": "rust/betelgeuze-sys/Cargo.toml",
+      "sha256": "34954c1d72a7001c308cb45aa1aeb62de5c12711f0d56792f6ff2d7ff5d3bb0d"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/composite_header_c11.c",
+      "sha256": "40e411eb9e190798e1ca29ab7213d2b0d7a33443cc966477746eb3e6e492314f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/composite_layout_assertions.cpp",
+      "sha256": "cf7023d5e7c8c36b736c458a7e8b2f11dc2b70d67dbb55341f09abee302bcb58"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/direct_ewald_composite_dynamics_header_c11.c",
+      "sha256": "b30689b89fc38bbed1cae86bdbccfec452727dbdf43cdc13a0bc04f81dd970eb"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/direct_ewald_composite_dynamics_layout_assertions.cpp",
+      "sha256": "eff772c0ec517da72b77c446a615b67907c3cc6d8db47c233edf0f5b127a765e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_dynamics_header_c11.c",
+      "sha256": "0be5c678e263e42bd9298c1f57941dca27e6e417e232d45defa5173e598d2846"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_dynamics_layout_assertions.cpp",
+      "sha256": "2f4e6c952ebe6eff92c7ebf1f76b7c838d13de155674928c3857a8232dfee105"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_header_c11.c",
+      "sha256": "19c9fd6254f39bb98d18bab6443bc0ec5e3d8ee8e057a51350a9bedcb81d60e7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_composite_layout_assertions.cpp",
+      "sha256": "81e66ba6917d3b4fe23fe31d1ebc842485cd99d7e449a636387b8943ed171a4e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_header_c11.c",
+      "sha256": "90ccbb6406dd9f5b6bee3765a0d40c9bef27c7e8fb170987fab9fdf86831efdc"
+    },
+    {
+      "path": "rust/betelgeuze-sys/abi/particle_mesh_ewald_layout_assertions.cpp",
+      "sha256": "4c09dcb0faa9ba66857cf986034b9b7935af8ef676129101c6b025822ad5f89e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/build.rs",
+      "sha256": "113b98be26d12d00e15053810a6d44b805b8ef01c5996d7b7e1ba5210a367661"
+    },
+    {
+      "path": "rust/betelgeuze-sys/src/lib.rs",
+      "sha256": "7bdb74ef27c6f93ccc8b0fd074df8a7b787b68992decca8f564f0e65adcd6b97"
+    },
+    {
+      "path": "rust/betelgeuze-sys/tests/layout.rs",
+      "sha256": "882007754923983f2b8a85dd475e4fe8e53e13d226f238267fb81dea3ab7248d"
+    },
+    {
+      "path": "rust/betelgeuze-sys/tests/raw_smoke.rs",
+      "sha256": "4ce67e0d5e9b26ede31915266e610d256babcf35fee7a6a1298060df7b5549b0"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald.h",
+      "sha256": "f579560f91ffb5c48dce4b515f063c8ea9b52c94f00e2fb211cc8d808ed52bfa"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald_composite.h",
+      "sha256": "5d09bd7d13c57cb665a038b1a5fe48ce513a3b47b05a4955ee2695919b9ebbf7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/direct_ewald_composite_dynamics.h",
+      "sha256": "62bd4b63f5f634966ed45d6781601c4d0b3eac30e3056cd2874d7e274d47ecf2"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/engine.h",
+      "sha256": "1a140ce6f1d31d0cafb56a10c5ef0a311a47a22f19de06d1e50167dc2c7854a6"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald.h",
+      "sha256": "e6e966fffe50163cc7d5e8eedfbc6d31b6c4ce54c754d424e1d9149e88913f4f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald_composite.h",
+      "sha256": "cb870cee2948ee096aa08f636b02343fb974e5a293240e4d65fe50c15442fabe"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_ewald_composite_dynamics.h",
+      "sha256": "1e127362b50dd7474ae1c2bab825049f0177ed66fcd50e4c017d0e035e12594a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/include/betelgeuze/particle_mesh_reciprocal.h",
+      "sha256": "0bb53238d5347e7925d0229a8ed046985b57aad3a759b3eac069be24cc8c6034"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald.cpp",
+      "sha256": "3de8a60acd02e4aa81b82dcbaf3ac29431e4908cdf0ae2b7226dc5c04d6e0a8d"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_checkpoint.cpp",
+      "sha256": "b503c471cb2e38a87d1f74499289fb0c606f65b0478e64cc6ca294b12caef537"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_dynamics.cpp",
+      "sha256": "1e4bbad54fefab1b4ec7de904ba6583c5294adb67f7325640270347efbf7f318"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/direct_ewald_composite_dynamics.hpp",
+      "sha256": "5c754cd3ef285c133c93def8cce1caec733a630b46fda497295e0eb20920df9e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/evaluator.hpp",
+      "sha256": "2e8ec10ca8dd4b57eb25ba98cb2726e289aaf762c97d9c782f636907ba560d5f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald.cpp",
+      "sha256": "5cb66bdc71c9fe73902fd0535e62c58946d1c3e2c1a79c1e67ada8482d509a03"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite.cpp",
+      "sha256": "03f0fd77ee9192f280b29b5fed38d80f48b62717de053ecbdb9e216c05328b14"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_checkpoint.cpp",
+      "sha256": "ba9e2ef14d54285e7cf4789e99cc1b24784f870659ffbc7a36ed869bd01c148a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_dynamics.cpp",
+      "sha256": "6e765ef1f7906e2c7485a3093621105518e8856f7af627620db7ed21f483c50e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_dynamics.hpp",
+      "sha256": "8af042929468d2de710c9512657f57da8e22b55d4038ed6a87341a214ef3c102"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/composite/particle_mesh_ewald_composite_evaluator.hpp",
+      "sha256": "592903aa0699cec20b5e3d94d297c28692b27271cc25cc344fb258e93dbf8a0a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/context.cpp",
+      "sha256": "f06ab8d5955cff7040dd478b69b41e86b4ad8ee35a6c8380b0077480a42adc1c"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.cpp",
+      "sha256": "64cb0cb85ddce5dd57a81753207428e58e6c98bcd71c81e4633db03f04748268"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/evaluator.hpp",
+      "sha256": "1b79cd6be3a9ad536fbefb1ef48e859fce60a89512b005fa22df5395db438422"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/cpu/neighbor_pair.hpp",
+      "sha256": "a985dcbccadfe08f86a6fcde55ed2548a69446157381cb4b5608edd9e6ac16e7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/api.cpp",
+      "sha256": "cf9c310e838645e6ca22e17640ae1c45633f0936954cbd3319fc5f7b589df7aa"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/checkpoint.cpp",
+      "sha256": "ff5c065c34f6365382db230404492a9d3ae9911b87283f59602a5ea40dc5e9cc"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/common.cpp",
+      "sha256": "9bc8289e08f3e6ad421de67526b5b3bba267ccc685c827d6871ceb769789b07a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/dynamics.hpp",
+      "sha256": "5a27800bd344258ca339cdb607ac1dba607a7d5fffd0420aedcbf00baf8c702a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/integrator.cpp",
+      "sha256": "40f2d7ce309c54c1733f182275c077f65b73d85964510115e1e07f46cbb2d034"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/sha256.cpp",
+      "sha256": "e22588ec5726230d38337506fc584f21656335a05cf8541d515db7f5c000778b"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/dynamics/sha256.hpp",
+      "sha256": "e8962e70506eae8ba7a9fbfd54b76045ca465c272f741a18d606439a4eb2d68f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/evaluator.cpp",
+      "sha256": "91ee1516414ef11ba9757a564891413917c45a708a74b55b44204d560920be4c"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/api.cpp",
+      "sha256": "1fbfd621ede2865617017545f7fc0b5e7f0e8b79e8f3451d9f007eeff57bd52f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.cpp",
+      "sha256": "3a92e11c397211f15444956a86905b83abefc9be6f1c138c92e70c9d4da1c95a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/cpp_evaluator.hpp",
+      "sha256": "0d9ef05259fba9f3cf009964fe74124daff5c8aca42d957160bb21566ee2f00a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/model.hpp",
+      "sha256": "9225959127393ff0750e1fb4e8939af83cdfd27c7c594764e196ac6201cb6df9"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_evaluator.cpp",
+      "sha256": "d44988629467038d6a06d995e89255af6c8099fd8810daab0dc238bf2de77445"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_evaluator.hpp",
+      "sha256": "97b2505bf3cdc400d6a6872c07c00ef4db5246f7b3fb2d48f53c7c3064fdc55a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/ewald/rust_provider.h",
+      "sha256": "a1532cc7b78890561b8126c5d2ad2c13f8994498e32a90e4c99838e14744511a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/forcefield.cpp",
+      "sha256": "2ac4f1e8283e2582fd584458c73624d760d29fa9d06e2e0896dd419c68747c67"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/backend.hpp",
+      "sha256": "7ccb4d7503e89f8ee16936a400cc203a83c8804438792264471d8aabc63bb48e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.cpp",
+      "sha256": "0adb6d7b3cec8baffaabb5f654346ea8552f5dd0c3e0756686ab8ee5bc97bd12"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/evaluator.hpp",
+      "sha256": "1ddf6e0c32e346d236fc906e291c457afb590927aa0c3c1420b697c66692207e"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/provider.h",
+      "sha256": "5072ebddc1dc58c0a8b96f9905ea78f155fe9aa316d6dffb4f5ab2db5fff5992"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/hip/stub.cpp",
+      "sha256": "7ee0b03076189f9a40fd729fabcd9a8c6583fe964dcf867d1debbb6e8b9de36f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/internal.hpp",
+      "sha256": "496f57b703499ab08f3befb5aa7e8abc620f0b0bf2874c2506dc7104f477e74a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/api.cpp",
+      "sha256": "b6faa85b4d025029a9c2cf04d585960bbaef6b10703d273e2728bb24b3bed004"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.cpp",
+      "sha256": "a83114cd49382cc1308fe3539d31ee6f48c563e9d195f1ba57874867af861711"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/cpp_evaluator.hpp",
+      "sha256": "96a9d76925a1ccf7230f219ec29a23128ef67e2e472a774aef89a076efd5a79b"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/model.hpp",
+      "sha256": "ea0fdbdf1930d1b6611f02c09e41ddbcdf003bae11d8765118ad7eeee1708124"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.cpp",
+      "sha256": "5736bea79752ee779a29b3235fcc7e0f8cea1b663daecb067e553545fc823d77"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_evaluator.hpp",
+      "sha256": "b534e21c7f422115b9c9e76948904cca3e71ca2d8dc43e73be9acda9f5168db7"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/rust_provider.h",
+      "sha256": "f79b6ad90481b8eb63b912f9c837b5c0e0d00056860f4a881b9068be4448974c"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.cpp",
+      "sha256": "be0ab8988c49c034ae1cff7c268c5865fd291cdcb64c831c61e41734f611c22a"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/evaluator.hpp",
+      "sha256": "be267c392950469bfdd1c1c955bcf4be821c8109ac898027513cf9c795314236"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/rust/provider.h",
+      "sha256": "9594e9be351a15a07b802d2f4d50f7aa7d182011b858640eeef2449fc5310d2f"
+    },
+    {
+      "path": "rust/betelgeuze-sys/vendor/native/src/system.cpp",
+      "sha256": "e439421809d2f592d0e520ff1249d15afcfe231b3b09cba91afc8ddce4530858"
+    },
+    {
+      "path": "rust/cpu-kernel/Cargo.toml",
+      "sha256": "eb489ba207d9c2500967a48f02a09dd0d2978087a91678511274330bf50a5450"
+    },
+    {
+      "path": "rust/cpu-kernel/src/direct_ewald.rs",
+      "sha256": "b43463c37ad4c18adb040656b159a7c9af49719eb180ee7660d8025068f7eb45"
+    },
+    {
+      "path": "rust/cpu-kernel/src/kernel.rs",
+      "sha256": "aca40401f47947423c277af1c095adb09223dfd523aa9449badb631bcbe30e3e"
+    },
+    {
+      "path": "rust/cpu-kernel/src/lib.rs",
+      "sha256": "ffcf89486f460f300ce4e12b726226002f684e5ec8529b5c590561487e28c351"
+    },
+    {
+      "path": "rust/cpu-kernel/src/particle_mesh_reciprocal.rs",
+      "sha256": "6ffa417c9738692bcd28931929a4174c5316ef6f17c8c44fdf9609b9ff988248"
+    },
+    {
+      "path": "rust/reference-ewald/src/lib.rs",
+      "sha256": "2de8d94d69175053ccaf2a8057a385019fe5c398d7d95d96c84dc3d9bfafc99e"
+    },
+    {
+      "path": "rust_engine_v2/Cargo.lock",
+      "sha256": "af9ae63166c087bdd885980e0f7a4d870eaec78a3f285b28263b18139b248041"
+    },
+    {
+      "path": "rust_engine_v2/Cargo.toml",
+      "sha256": "7babe881df4d0fc7fe3c49b63a5ddc08a0b4b07735ad747d3a7e0f157a67cf29"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py",
+      "sha256": "4cc5df7d90607a7c131c58c35b5a3012cf045c141ffb284c0dc95c06c28f72d1"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_v1.py",
+      "sha256": "9ff2a94986344fdb3d311ac6a84518294670270a63bb19d5752f03f447050cb2"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_v1.py",
+      "sha256": "4848f6d9cd7289b613eaafbb657ecd9174cedd7b0721ed618f319f390abed789"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "b4b9b114e03f61ce0ac2dc2c0ae3f9936c58b76cd01888b4f6ede66aef834d85"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "1a8eb07877cc5143a4403f6e870417fd4ba08314c6acf2b9cb413f74abc47949"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "eb7d14533cfbe8005ac12299ab6dc52ee35a5ddbdca9abafc374dd257a220c7e"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+      "sha256": "3af3a925249222952e41ff4ffaf8e786cf7d39546581e0ea8c55547709ddfcd0"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py",
+      "sha256": "9f964d0d3afb70b079de3d02104fa36089a0e71e9a486065860b46c8c8324c63"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_v1.py",
+      "sha256": "35a94123d84078fb128840829be362e94430e93b30510869fc8ffb951550fab7"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "a7a7880767ace09ffb846661ca9bb89fad87f342be108010351913ba8092c6b0"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_v1.py",
+      "sha256": "51963c1228513c9abddebe990c8f4ff0e6031c5069435e88e28a3545e50cba7c"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_axis_data_buffer_consolidation_v1.py",
+      "sha256": "e3c51a4cbf0504f13c8243e7979e365c0fdfd2beb07431ff5a2333880fc4f8cd"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_v1.py",
+      "sha256": "1235f4422275ffc96e2ee4b33927225c0ea91b821f7a19dec99ecabd3f16bb13"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_direct_force_soa_v1.py",
+      "sha256": "f6224b5805452620c864353ea1237c0921cd032bc68139cbb21466277997a11c"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_v1.py",
+      "sha256": "6deb206171f42f17cdfff80074af04b3ca3e57c9ed8c8202cc7f8e5ef0dae5c1"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_scratch_v1.py",
+      "sha256": "cffc93d779395f951c76d2e460a8ae3f0c7989db27efe215b1c85413675c98ce"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_source_soa_v1.py",
+      "sha256": "0053061e31094f96254b8d1031892824999e8ee0e12176ca5b69bce501796fa2"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_v1.py",
+      "sha256": "df9029fd83111c982f90419cf23f012e40f337e6a838a532fca35e51fe479d81"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_v1.py",
+      "sha256": "eb83c19bf4a9d2358a2bef1b3fb664de69166458455680b00b844e3a8e2cd72b"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reciprocal_workspace_reuse_v1.py",
+      "sha256": "9bc4c1edc6978f6619724c86ce003381bf9f67b415fd9885aa8b722861f2b699"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_neutrality_sort_scratch_reuse_v1.py",
+      "sha256": "7c4021de4305433db37f41270d676c1de09b8b64e826456cf80c56b96991acbb"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1.py",
+      "sha256": "c4d01e5da78671b9478f766d84495b7e12f50a830a5abe4db2124e722bcf55d7"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_v1.py",
+      "sha256": "fcb7922884848cfeb3952811fc6b4401fd3d22f2349ee00e86b4ffa92936d822"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_reciprocal_workspace_phase_reuse_v1.py",
+      "sha256": "03a24164d1926c3672c1343d68bb75736ff5f4690625e5a490cb70e293b503be"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_spectrum_fft_line_buffer_consolidation_v1.py",
+      "sha256": "09b67145a5d847d867d5fe319a5b9d278c6ac838ca1c2685ded963e3ea135474"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1.py",
+      "sha256": "68b00a6146fb5587e5a0bb59619b4e7c399ce5d179bbd8caad6c9efdded38f6e"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "6efda893c2b7decbe4d642b5a6ad1913e456be69d3e8d8dcb85b7d8b95bad1b8"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "f06273c73ca89d89c62e8e809e9d039cfe5a04aa1004785342b9027b18ed9592"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py",
+      "sha256": "fe1291d2b4b0ea658540ede6313388cbcc03f54b7310feb59278390da94176df"
+    },
+    {
+      "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_cpu_v1.py",
+      "sha256": "ed4415b511f02743bdca7056f69697adc89603ba37ed7e216d0a1e8cb60dc5bc"
+    },
+    {
+      "path": "tools/__init__.py",
+      "sha256": "b95c399abddc84ccd0aeed7b6459ccdb09e5f42458089f8cb1b38abb2be277fd"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py",
+      "sha256": "206dc29a22d237b4fb2bac5a39207b22c4bf2a45e64b9af95e3533e80ba913a6"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_combined_force_soa_v1.py",
+      "sha256": "085572ea0e25e5c86f6a5d2e78c24e5a4a1cecfe95cab3aaba8c0a5949e8d4a9"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_v1.py",
+      "sha256": "0131afbb3c950a291a29aa57a90ae5c4fb7819fae3598ed581d55643f9ad1e68"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "24c4d12eb900e8ae4b161d077087f744f4a6e75cfb560f7e0cc6103fe1baa471"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "84a1c370ae167ae0381f0e71e58179c10a8f5904d1c30d73ada5b8fde5686a9b"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "1d070624f097c13f1b98af80fcfcf24cf69f8c3d0cf83c1eca6d419c1e32b270"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_v1.py",
+      "sha256": "123134cb834feb62a8d09246019890b0a252880e82494b7880c2f37a88b62d80"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_fixed64_cpu_profile_v7.py",
+      "sha256": "dfa61f5165dce940a8f2e1103f1a96180a448f2cc01daa03e310d07fccdeeb87"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_cpu_v1.py",
+      "sha256": "31e5cf90f813d989fd96b44a2938f9392172820bd498b105b44eda0c4d8f1895"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_combined_force_soa_v1.py",
+      "sha256": "adb0914fc90f3d7be593d0118d337aae1e45bb31e2eed06b7e194f9eb2f918e2"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_v1.py",
+      "sha256": "ff120cfd84afef23e1f804c3a1309e93846c9880e69925292ef67bdc07d2e2e7"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py",
+      "sha256": "c8650c61c1dd586e53394a1aad883e9a5db64943bc097e41bc7f6e4d6ce1eb93"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_v1.py",
+      "sha256": "819fc12eedd73b5184075b89a08bfef1552af96b12104e63f0e56e442a0fc9e9"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_axis_data_buffer_consolidation_v1.py",
+      "sha256": "d0ad58c69b1027660f0d399313eb47243b4602f9926c3788dd4e0ac3dba801d0"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_borrowed_input_soa_v1.py",
+      "sha256": "68ebf3be8e504b1757eb92e8e7f817beb98217e89c669e9a4b8d32ad323c8176"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_direct_force_soa_v1.py",
+      "sha256": "a02bbdc553005428edd16af403f5d4cd33aa3bd7b227682f608941f09d55e194"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_fft_line_scratch_reuse_v1.py",
+      "sha256": "4f7a6d57b6d4c030784006b1ecddfb6a3096405759856605bb01ec9199f68f28"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_scratch_v1.py",
+      "sha256": "8577111f909f74c908a4afcfdde7dbb30fba4423687484de4b77faafe99e5d17"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_source_soa_v1.py",
+      "sha256": "dc7952d633aef777a7e436a19fff978dd7b5810c12495829b8cf6d332bb233d4"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_neutrality_sort_scratch_reuse_v1.py",
+      "sha256": "00d34e356a423eab672de017bd8b97692893838395c68a7747fab0954aa81761"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_particle_assignment_scratch_reuse_v1.py",
+      "sha256": "3af321d794d46ff19703705155bcff802ae62aa232313a46ec5a1065fbafefde"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reciprocal_workspace_reuse_v1.py",
+      "sha256": "78e1e73696da45a7151b16aa139070be80a01ec01f72a38a10f30f89c938296a"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_neutrality_sort_scratch_reuse_v1.py",
+      "sha256": "4f355cf9c487106669d7b3dbf7e6aa59b517c50c0f1fc38ad08e0646fc9073fa"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1.py",
+      "sha256": "5f1b1ae91562b1741d5409058c42ff18bde544ee4f42f556a9a9ba26e38ca707"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_reciprocal_workspace_reuse_v1.py",
+      "sha256": "da345d4777a5d405bdabe6103e150d88be3d31f3a2d96d03cc9805be3d4d9309"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_reciprocal_workspace_phase_reuse_v1.py",
+      "sha256": "3aaf98d10adf5c33f16d515db77a8e32ff034851aafab8979dbcfa48adc96354"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_spectrum_fft_line_buffer_consolidation_v1.py",
+      "sha256": "c937bebf686cec36023f54eaad4034ae495ff02f631e7d7cbc43b7d5141d4039"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_transactional_force_output_elision_v1.py",
+      "sha256": "bf23f76dd2d47bfae4925ef8efba7ea3aacbdc8b6fb6649d5500b1bc795ba81a"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
+      "sha256": "242d0409bc088a40e4ab00e13428fe98b0857523dc6953eb75d8ba7a0d0c47a2"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_system_scratch_v1.py",
+      "sha256": "182b4a838586ae9f118afed6de7e92158fa7ceb9a81635465ce0e0f62133b7a5"
+    },
+    {
+      "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_v1.py",
+      "sha256": "66d67e2f87218966ec62884d5695913f2444cb08b22ebfc7ab9a22ce95565216"
+    }
+  ],
+  "schema_id": "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_sources/1.0.0",
+  "scope": "particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_current_sources_tests_evidence_pr469_target"
+}
