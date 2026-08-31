@@ -1,4 +1,4 @@
-name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle
+name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-two-symbol-dispatch-consolidation
 
 on:
   pull_request:
@@ -30,8 +30,8 @@ on:
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-reusable-forceful-all-scratch-reuse.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-stateless-forceful-all-scratch.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-stateless-energy-all-scratch.yml"
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-two-symbol-dispatch-consolidation.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml"
       - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml"
       - "CMakeLists.txt"
@@ -81,8 +81,8 @@ on:
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_profile_v1.json"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_profile_v1_sources.json"
       - "config/engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_profile_v1_sources.json"
@@ -104,8 +104,8 @@ on:
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_profile_v1_sources.json"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1_sources.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1_sources.json"
       - "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md"
       - "docs/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.md"
       - "docs/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.md"
@@ -135,8 +135,8 @@ on:
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_v1.md"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_v1.md"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1.md"
-      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.md"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.md"
+      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.md"
       - "tools/__init__.py"
       - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
       - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
@@ -167,8 +167,8 @@ on:
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_v1.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_v1.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
@@ -199,8 +199,8 @@ on:
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
   push:
     branches: ["main"]
     paths:
@@ -231,8 +231,8 @@ on:
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-owner-reusable-forceful-all-scratch-reuse.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-stateless-forceful-all-scratch.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-stateless-energy-all-scratch.yml"
-      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-two-symbol-dispatch-consolidation.yml"
+      - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle.yml"
       - ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-force-scratch.yml"
       - ".github/workflows/ci-engine-v2-native-direct-ewald-composite-dynamics-backend-preflight.yml"
       - "CMakeLists.txt"
@@ -282,8 +282,8 @@ on:
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_profile_v1.json"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_direct_parent_force_scratch_profile_v1_sources.json"
       - "config/engine_v2_native_direct_ewald_composite_dynamics_ewald_parent_force_scratch_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_reciprocal_parent_force_scratch_profile_v1_sources.json"
@@ -305,8 +305,8 @@ on:
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_profile_v1_sources.json"
-      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1_sources.json"
       - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1_sources.json"
+      - "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1_sources.json"
       - "docs/engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.md"
       - "docs/engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.md"
       - "docs/engine_v2_native_direct_ewald_composite_dynamics_short_system_scratch_v1.md"
@@ -336,8 +336,8 @@ on:
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_v1.md"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_v1.md"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1.md"
-      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.md"
       - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.md"
+      - "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.md"
       - "tools/__init__.py"
       - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
       - "tools/verify_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
@@ -368,8 +368,8 @@ on:
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_v1.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_v1.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1.py"
-      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
       - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.py"
+      - "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_force_scratch_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_backend_preflight_v1.py"
       - "tests/unit/test_engine_v2_native_direct_ewald_composite_dynamics_force_scratch_v1.py"
@@ -400,15 +400,15 @@ on:
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_forceful_all_scratch_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1.py"
-      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
       - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.py"
+      - "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-${{ github.ref }}
+  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-two-symbol-dispatch-consolidation-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -430,7 +430,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact PR 474 evidence and reviewed head
+      - name: Materialize exact PR 474 target and reviewed head
         shell: bash
         run: |
           set -euo pipefail
@@ -439,24 +439,13 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/474/head
           test "$(git rev-parse FETCH_HEAD)" = "35ae0586bd292e74fb9fd5a0146ece9fff9a6253"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "e2f14187838c32df1511201f35683c35a305f2eb"
-      - name: Verify exact frozen PR 474 evidence
-        shell: bash
+      - name: Verify bounded successor evidence
         run: |
-          set -euo pipefail
-          frozen=1d0d8123ddb120da8301e9c9725ac4098ef0480d
-          frozen_tree=e2f14187838c32df1511201f35683c35a305f2eb
-          current_sha="$(git rev-parse HEAD)"
-          restore() { git checkout --detach --quiet "$current_sha"; }
-          trap restore EXIT
-          git checkout --detach --quiet "$frozen"
-          test "$(git rev-parse HEAD^{tree})" = "$frozen_tree"
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1.json >/dev/null
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1_sources.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1
-          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1.py
-          restore
-          trap - EXIT
+          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
@@ -471,25 +460,25 @@ jobs:
           rustup override set 1.93.0
       - name: Synthetic release and sanitizer regressions
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
           test -n "$engine_library"
           nm --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1'
           if nm -D --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1'; then
             echo "private all-scratch energy symbol unexpectedly exported" >&2
             exit 1
           fi
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
 
   rust-boundaries:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-cargo
     steps:
       - name: Check out Rust sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -528,6 +517,6 @@ jobs:
           rustup override set 1.93.0
       - name: Exact export regression
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-macos --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-conditional-call-local-scratch-lifecycle-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-two-symbol-dispatch-consolidation-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
