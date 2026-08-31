@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import (
     verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1
     as verifier,
@@ -8,6 +10,19 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_TWO_SYMBOL_DISPATCH_CONSOLIDATION_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_TWO_SYMBOL_DISPATCH_CONSOLIDATION_EVIDENCE_PRESENT,
+    reason=(
+        "conditional call-local scratch lifecycle evidence is verified from "
+        "its exact frozen PR 474 object after two-symbol dispatch consolidation "
+        "evidence is present"
+    ),
+)
 
 
 def profile() -> dict:
