@@ -136,7 +136,7 @@
     "scratch_storage_footprint_reduction_claimed": false,
     "source_manifest_entry_count": 381,
     "source_manifest_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_profile_v1_sources.json",
-    "source_manifest_sha256": "3923b9e7392fc938684240b3e1990efa4d3dd6eb64b2044daeae9dadeb2db7c8",
+    "source_manifest_sha256": "f4b073b7992d72c17a6ab81831971492fae3c7c2f31d32c4e83dd5a8e4c21881",
     "stack_storage_reduction_claimed": false,
     "stateless_call_local_destroy_lifecycle_preserved": true,
     "stateless_energy_all_three_scratch_route_enabled": true,

@@ -24,7 +24,7 @@ STEM = (
 )
 WORKFLOW_STEM = (
     "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
-    "rust-reciprocal-provider-two-symbol-dispatch-consolidation"
+    "rust-reciprocal-provider-two-symbol-call-consolidation"
 )
 PREDECESSOR_STEM = (
     "engine_v2_native_particle_mesh_ewald_composite_dynamics_"
