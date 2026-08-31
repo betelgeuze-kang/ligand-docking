@@ -417,10 +417,12 @@ static bg_status evaluate_impl(
                 &active_provider_force_scratch->particle_assignment_scratch,
                 &provider_energy, &provider_error);
     } else if (compute_forces) {
-        raw_status =
-            bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_v1(
-                &provider_system, &provider_model, &provider_energy,
-                force_pointer, &provider_error);
+        raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+            &provider_system, &provider_model,
+            &active_provider_force_scratch->reciprocal_workspace,
+            &active_provider_force_scratch->neutrality_sort_scratch,
+            &active_provider_force_scratch->particle_assignment_scratch,
+            &provider_energy, force_pointer, &provider_error);
     } else {
         raw_status = bg_rust_particle_mesh_reciprocal_evaluate_v1(
             &provider_system, &provider_model,
