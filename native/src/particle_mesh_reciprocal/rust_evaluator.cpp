@@ -424,9 +424,13 @@ static bg_status evaluate_impl(
             &active_provider_force_scratch->particle_assignment_scratch,
             &provider_energy, force_pointer, &provider_error);
     } else {
-        raw_status = bg_rust_particle_mesh_reciprocal_evaluate_v1(
-            &provider_system, &provider_model,
-            UINT8_C(0), &provider_energy, force_pointer, &provider_error);
+        raw_status =
+            bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+                &provider_system, &provider_model,
+                &active_provider_force_scratch->reciprocal_workspace,
+                &active_provider_force_scratch->neutrality_sort_scratch,
+                &active_provider_force_scratch->particle_assignment_scratch,
+                &provider_energy, &provider_error);
     }
     const bg_status status = normalize_provider_status(raw_status);
     provider_error.detail[
