@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -369,10 +370,12 @@ static bg_status evaluate_impl(
         compute_forces && reuse_force_storage && out_evaluation != nullptr};
     bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
     bg_rust_particle_mesh_reciprocal_force_output_v1 *force_pointer = nullptr;
-    ProviderForceScratch local_provider_force_scratch;
-    ProviderForceScratch *active_provider_force_scratch =
-        reuse_force_storage ? provider_force_scratch
-                            : &local_provider_force_scratch;
+    std::optional<ProviderForceScratch> local_provider_force_scratch;
+    ProviderForceScratch *active_provider_force_scratch = provider_force_scratch;
+    if (!reuse_force_storage) {
+        active_provider_force_scratch =
+            &local_provider_force_scratch.emplace();
+    }
     if (compute_forces) {
         active_provider_force_scratch->x.resize(atom_count);
         active_provider_force_scratch->y.resize(atom_count);

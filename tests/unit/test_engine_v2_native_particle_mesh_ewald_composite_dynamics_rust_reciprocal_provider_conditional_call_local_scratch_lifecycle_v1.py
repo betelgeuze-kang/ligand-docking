@@ -1,28 +1,13 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_stateless_energy_all_scratch_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_CONDITIONAL_CALL_LOCAL_SCRATCH_LIFECYCLE_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_conditional_call_local_scratch_lifecycle_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_CONDITIONAL_CALL_LOCAL_SCRATCH_LIFECYCLE_EVIDENCE_PRESENT,
-    reason=(
-        "stateless energy all-scratch evidence is verified from its exact "
-        "frozen PR 473 object after conditional call-local scratch lifecycle "
-        "evidence is present"
-    ),
-)
 
 
 def profile() -> dict:
@@ -31,16 +16,23 @@ def profile() -> dict:
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 369
+    assert result["source_count"] == 375
     assert result["delta_path_count"] == 11
-    assert result["trigger_path_count"] == 186
+    assert result["trigger_path_count"] == 192
 
 
-def test_profile_scopes_stateless_energy_all_scratch_route() -> None:
+def test_profile_scopes_conditional_call_local_scratch_lifecycle_route() -> None:
     value = profile()
     implementation = value["implementation"]
     for key in (
-        "scope_is_only_native_stateless_energy_adapter_route",
+        "scope_is_only_native_provider_force_scratch_selection_lifecycle",
+        "conditional_call_local_provider_force_scratch_enabled",
+        "call_local_provider_force_scratch_emplaced_only_for_stateless_calls",
+        "call_local_provider_force_scratch_disengaged_for_reusable_calls",
+        "active_provider_force_scratch_uses_emplaced_owner_for_stateless_calls",
+        "active_provider_force_scratch_uses_external_owner_for_reusable_calls",
+        "call_local_optional_lifetime_spans_dispatch_validation_and_commit",
+        "cxx17_optional_support_inherited",
         "stateless_energy_all_three_scratch_route_enabled",
         "stateless_energy_public_transactional_route_removed_from_adapter",
         "existing_all_three_scratch_energy_entry_reused",
@@ -65,6 +57,27 @@ def test_profile_scopes_stateless_energy_all_scratch_route() -> None:
     assert abi["private_provider_abi_changed"] is False
     assert abi["new_private_hidden_symbol_added"] is False
     assert abi["reused_private_hidden_symbol"] == verifier.PRIVATE_SYMBOL
+
+
+def test_reusable_and_stateless_destroy_callback_lifetimes_are_exact() -> None:
+    value = profile()
+    implementation = value["implementation"]
+    for key in (
+        "reusable_unused_call_local_destroy_callbacks_elided",
+        "reusable_calls_have_zero_destroy_callbacks_before_external_owner_scope_exit",
+        "external_reusable_owner_matching_destroy_callbacks_exactly_once_each_at_scope_exit",
+        "reusable_forceful_lifecycle_tested_on_success_typed_failure_and_nonfinite_success",
+        "reusable_energy_lifecycle_tested_on_success_and_typed_failure",
+        "provider_force_source_success_lifecycle_tested",
+        "stateless_call_local_destroy_lifecycle_preserved",
+    ):
+        assert implementation[key] is True
+    validation = value["validation"]
+    assert validation["reusable_zero_destroy_callback_assertion_count_exact"] == 6
+    assert validation["external_owner_scope_destroy_assertion_count_exact"] == 3
+    assert validation["stateless_lifecycle_assertion_count_exact"] == 6
+    assert validation["predecessor_adapter_exact_optional_transform"] is True
+    assert validation["provider_dispatch_validation_and_commit_exact_predecessor_bytes"] is True
 
 
 def test_call_local_empty_descriptor_lifecycle_is_exact() -> None:
@@ -114,9 +127,16 @@ def test_profile_preserves_claim_and_operational_boundaries() -> None:
         "cross_call_scratch_reuse_claimed",
         "allocation_free_claimed",
         "allocation_count_claimed",
+        "allocation_behavior_changed_claimed",
         "provider_allocation_free_claimed",
         "steady_state_allocation_free_claimed",
         "production_allocation_elision_claimed",
+        "heap_allocation_elision_claimed",
+        "provider_allocation_elision_claimed",
+        "stack_storage_reduction_claimed",
+        "scratch_storage_footprint_reduction_claimed",
+        "object_size_reduction_claimed",
+        "destroy_callback_performance_improvement_claimed",
         "performance_claimed",
         "peak_memory_reduction_claimed",
         "acceleration_claimed",
@@ -147,16 +167,16 @@ def test_fake_provider_and_production_scope_are_bounded() -> None:
 
 def test_predecessor_and_public_contracts_are_frozen() -> None:
     value = profile()
-    assert value["target_predecessor"]["pull_request"] == 472
+    assert value["target_predecessor"]["pull_request"] == 473
     assert value["target_predecessor"]["reviewed_head"] == verifier.PREDECESSOR["reviewed_head"]
     assert value["target_predecessor"]["merge_commit"] == verifier.PREDECESSOR["merge_commit"]
     assert value["target_predecessor"]["merge_tree"] == verifier.PREDECESSOR["merge_tree"]
     assert value["abi"]["public_symbols"] == list(verifier.PUBLIC_SYMBOLS)
     validation = value["validation"]
     assert validation["exact_delta_path_count"] == 11
-    assert validation["source_manifest_entry_count_exact"] == 369
-    assert validation["pull_request_trigger_path_count_exact"] == 186
-    assert validation["push_trigger_path_count_exact"] == 186
+    assert validation["source_manifest_entry_count_exact"] == 375
+    assert validation["pull_request_trigger_path_count_exact"] == 192
+    assert validation["push_trigger_path_count_exact"] == 192
     assert validation["five_branch_two_symbol_adapter_dispatch_exact"] is True
     assert validation["raw_public_transactional_peer_exact_predecessor_bytes"] is True
     assert validation["public_transactional_provider_symbol_zero_adapter_call_sites"] is True
