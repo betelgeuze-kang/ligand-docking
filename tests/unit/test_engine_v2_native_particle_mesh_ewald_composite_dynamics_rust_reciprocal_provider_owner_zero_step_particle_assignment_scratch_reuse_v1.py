@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import (
     verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_owner_zero_step_particle_assignment_scratch_reuse_v1
     as verifier,
@@ -8,6 +10,20 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_OWNER_REUSABLE_FORCEFUL_ALL_SCRATCH_REUSE_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_owner_reusable_forceful_all_scratch_reuse_"
+    "profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_OWNER_REUSABLE_FORCEFUL_ALL_SCRATCH_REUSE_EVIDENCE_PRESENT,
+    reason=(
+        "owner zero-step particle-assignment scratch reuse evidence is verified "
+        "from its exact frozen PR 470 object after reusable forceful all-scratch "
+        "reuse evidence is present"
+    ),
+)
 
 
 def profile() -> dict:
