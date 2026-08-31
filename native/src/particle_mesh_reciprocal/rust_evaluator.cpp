@@ -371,23 +371,21 @@ static bg_status evaluate_impl(
     bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
     bg_rust_particle_mesh_reciprocal_force_output_v1 *force_pointer = nullptr;
     std::optional<ProviderForceScratch> local_provider_force_scratch;
-    ProviderForceScratch *active_provider_force_scratch = provider_force_scratch;
-    if (!reuse_force_storage) {
-        active_provider_force_scratch =
-            &local_provider_force_scratch.emplace();
-    }
+    ProviderForceScratch &active_provider_force_scratch =
+        reuse_force_storage ? *provider_force_scratch
+                            : local_provider_force_scratch.emplace();
     if (compute_forces) {
-        active_provider_force_scratch->x.resize(atom_count);
-        active_provider_force_scratch->y.resize(atom_count);
-        active_provider_force_scratch->z.resize(atom_count);
+        active_provider_force_scratch.x.resize(atom_count);
+        active_provider_force_scratch.y.resize(atom_count);
+        active_provider_force_scratch.z.resize(atom_count);
         provider_forces.struct_size =
             static_cast<std::uint32_t>(sizeof(provider_forces));
         provider_forces.abi_version =
             BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
         provider_forces.capacity = atom_count;
-        provider_forces.x = active_provider_force_scratch->x.data();
-        provider_forces.y = active_provider_force_scratch->y.data();
-        provider_forces.z = active_provider_force_scratch->z.data();
+        provider_forces.x = active_provider_force_scratch.x.data();
+        provider_forces.y = active_provider_force_scratch.y.data();
+        provider_forces.z = active_provider_force_scratch.z.data();
         force_pointer = &provider_forces;
     }
 
@@ -400,17 +398,17 @@ static bg_status evaluate_impl(
     if (compute_forces) {
         raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
             &provider_system, &provider_model,
-            &active_provider_force_scratch->reciprocal_workspace,
-            &active_provider_force_scratch->neutrality_sort_scratch,
-            &active_provider_force_scratch->particle_assignment_scratch,
+            &active_provider_force_scratch.reciprocal_workspace,
+            &active_provider_force_scratch.neutrality_sort_scratch,
+            &active_provider_force_scratch.particle_assignment_scratch,
             &provider_energy, force_pointer, &provider_error);
     } else {
         raw_status =
             bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
                 &provider_system, &provider_model,
-                &active_provider_force_scratch->reciprocal_workspace,
-                &active_provider_force_scratch->neutrality_sort_scratch,
-                &active_provider_force_scratch->particle_assignment_scratch,
+                &active_provider_force_scratch.reciprocal_workspace,
+                &active_provider_force_scratch.neutrality_sort_scratch,
+                &active_provider_force_scratch.particle_assignment_scratch,
                 &provider_energy, &provider_error);
     }
     const bg_status status = normalize_provider_status(raw_status);
@@ -450,9 +448,9 @@ static bg_status evaluate_impl(
         provider_energy.reciprocal_space_kcal_per_mol;
     if (compute_forces) {
         for (std::size_t atom = 0U; atom < atom_count; ++atom) {
-            if (!std::isfinite(active_provider_force_scratch->x[atom]) ||
-                !std::isfinite(active_provider_force_scratch->y[atom]) ||
-                !std::isfinite(active_provider_force_scratch->z[atom])) {
+            if (!std::isfinite(active_provider_force_scratch.x[atom]) ||
+                !std::isfinite(active_provider_force_scratch.y[atom]) ||
+                !std::isfinite(active_provider_force_scratch.z[atom])) {
                 return fail(
                     BG_STATUS_INTERNAL_ERROR,
                     "Rust particle-mesh reciprocal provider returned non-finite force on success");
@@ -462,9 +460,9 @@ static bg_status evaluate_impl(
             candidate.forces.resize(atom_count);
             for (std::size_t atom = 0U; atom < atom_count; ++atom) {
                 candidate.forces[atom] = {
-                    active_provider_force_scratch->x[atom],
-                    active_provider_force_scratch->y[atom],
-                    active_provider_force_scratch->z[atom]};
+                    active_provider_force_scratch.x[atom],
+                    active_provider_force_scratch.y[atom],
+                    active_provider_force_scratch.z[atom]};
             }
         }
     }
