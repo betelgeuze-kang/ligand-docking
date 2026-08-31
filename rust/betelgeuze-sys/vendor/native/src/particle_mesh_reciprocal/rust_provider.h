@@ -158,6 +158,16 @@ int32_t bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1(
     bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
 
 int32_t
+bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_v1(
+    const bg_rust_particle_mesh_reciprocal_system_v1 *system,
+    const bg_rust_particle_mesh_reciprocal_model_v1 *model,
+    bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace,
+    bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
+        *neutrality_sort_scratch,
+    bg_rust_particle_mesh_reciprocal_energy_v1 *out_energy,
+    bg_rust_particle_mesh_reciprocal_error_v1 *out_error);
+
+int32_t
 bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_v1(
     const bg_rust_particle_mesh_reciprocal_system_v1 *system,
     const bg_rust_particle_mesh_reciprocal_model_v1 *model,
