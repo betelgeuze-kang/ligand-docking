@@ -370,9 +370,10 @@ static bg_status evaluate_impl(
             &provider_energy, force_pointer, &provider_error);
     } else if (reuse_force_storage) {
         raw_status =
-            bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_v1(
+            bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_v1(
                 &provider_system, &provider_model,
                 &active_provider_force_scratch->reciprocal_workspace,
+                &active_provider_force_scratch->neutrality_sort_scratch,
                 &provider_energy, &provider_error);
     } else if (compute_forces) {
         raw_status =
