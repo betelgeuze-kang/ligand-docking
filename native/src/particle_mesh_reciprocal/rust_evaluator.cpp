@@ -368,12 +368,19 @@ static bg_status evaluate_impl(
     EvaluationForceStorageRollback evaluation_force_storage_rollback{
         out_evaluation, &candidate,
         compute_forces && reuse_force_storage && out_evaluation != nullptr};
-    bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
     std::optional<ProviderForceScratch> local_provider_force_scratch;
     ProviderForceScratch &active_provider_force_scratch =
         reuse_force_storage ? *provider_force_scratch
                             : local_provider_force_scratch.emplace();
+
+    bg_rust_particle_mesh_reciprocal_error_v1 provider_error{};
+    provider_error.struct_size =
+        static_cast<std::uint32_t>(sizeof(provider_error));
+    provider_error.abi_version =
+        BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
+    std::int32_t raw_status;
     if (compute_forces) {
+        bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
         active_provider_force_scratch.x.resize(atom_count);
         active_provider_force_scratch.y.resize(atom_count);
         active_provider_force_scratch.z.resize(atom_count);
@@ -385,15 +392,6 @@ static bg_status evaluate_impl(
         provider_forces.x = active_provider_force_scratch.x.data();
         provider_forces.y = active_provider_force_scratch.y.data();
         provider_forces.z = active_provider_force_scratch.z.data();
-    }
-
-    bg_rust_particle_mesh_reciprocal_error_v1 provider_error{};
-    provider_error.struct_size =
-        static_cast<std::uint32_t>(sizeof(provider_error));
-    provider_error.abi_version =
-        BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
-    std::int32_t raw_status;
-    if (compute_forces) {
         raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
             &provider_system, &provider_model,
             &active_provider_force_scratch.reciprocal_workspace,
