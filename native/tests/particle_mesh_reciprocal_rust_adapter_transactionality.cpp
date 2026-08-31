@@ -53,6 +53,17 @@ struct FakeProviderState final {
     bool return_late_energy_numerical_error = false;
     bool return_nonfinite_force_on_success = false;
     bool late_failure_channels_written = false;
+    bool triple_scratch_descriptors_were_empty = false;
+    bool triple_scratch_descriptors_were_distinct = false;
+    std::size_t workspace_destroy_calls = 0U;
+    std::size_t neutrality_sort_scratch_destroy_calls = 0U;
+    std::size_t particle_assignment_scratch_destroy_calls = 0U;
+    bool matching_workspace_destroyed = false;
+    bool matching_neutrality_sort_scratch_destroyed = false;
+    bool matching_particle_assignment_scratch_destroyed = false;
+    bool destroyed_workspace_was_empty = false;
+    bool destroyed_neutrality_sort_scratch_was_empty = false;
+    bool destroyed_particle_assignment_scratch_was_empty = false;
     bg_rust_particle_mesh_reciprocal_workspace_v1 *last_workspace = nullptr;
     bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
         *last_neutrality_sort_scratch = nullptr;
@@ -91,6 +102,41 @@ bool reserved_words_are_zero(const std::uint64_t (&values)[4]) noexcept {
         }
     }
     return true;
+}
+
+bool workspace_descriptor_is_empty(
+    const bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace) noexcept {
+    return workspace != nullptr && workspace->struct_size == 0U &&
+           workspace->abi_version == 0U &&
+           workspace->state ==
+               BG_RUST_PARTICLE_MESH_RECIPROCAL_WORKSPACE_STATE_EMPTY &&
+           workspace->reserved0 == 0U && workspace->storage == nullptr &&
+           workspace->length == 0U && workspace->capacity == 0U &&
+           reserved_words_are_zero(workspace->reserved);
+}
+
+bool neutrality_sort_scratch_descriptor_is_empty(
+    const bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
+        *scratch) noexcept {
+    return scratch != nullptr && scratch->struct_size == 0U &&
+           scratch->abi_version == 0U &&
+           scratch->state ==
+               BG_RUST_PARTICLE_MESH_RECIPROCAL_NEUTRALITY_SORT_SCRATCH_STATE_EMPTY &&
+           scratch->reserved0 == 0U && scratch->storage == nullptr &&
+           scratch->length == 0U && scratch->capacity == 0U &&
+           reserved_words_are_zero(scratch->reserved);
+}
+
+bool particle_assignment_scratch_descriptor_is_empty(
+    const bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
+        *scratch) noexcept {
+    return scratch != nullptr && scratch->struct_size == 0U &&
+           scratch->abi_version == 0U &&
+           scratch->state == UINT32_C(0) &&
+           scratch->reserved0 == 0U && scratch->storage == nullptr &&
+           scratch->logical_length_bytes == 0U &&
+           scratch->allocation_capacity_bytes == 0U &&
+           reserved_words_are_zero(scratch->reserved);
 }
 
 bool common_descriptors_are_valid(
@@ -208,17 +254,36 @@ void require_only_public_route() {
             "energy-only adapter selected the wrong Rust provider entry");
 }
 
-void require_only_direct_route() {
+void require_only_stateless_all_scratch_force_route() {
     require(fake_provider.abi_calls == 1U,
-            "direct adapter did not perform one ABI query");
+            "stateless all-scratch adapter did not perform one ABI query");
     require(fake_provider.public_calls == 0U &&
-                fake_provider.direct_calls == 1U &&
+                fake_provider.direct_calls == 0U &&
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
                 fake_provider.energy_all_scratch_calls == 0U &&
-                fake_provider.triple_calls == 0U,
-            "non-reuse forceful adapter selected the wrong Rust provider entry");
+                fake_provider.triple_calls == 1U,
+            "stateless forceful adapter selected the wrong Rust provider entry");
+}
+
+void require_stateless_all_scratch_lifecycle() {
+    require(fake_provider.triple_scratch_descriptors_were_empty,
+            "stateless forceful adapter did not supply initially EMPTY scratch descriptors");
+    require(fake_provider.triple_scratch_descriptors_were_distinct,
+            "stateless forceful adapter aliased call-local scratch descriptors");
+    require(fake_provider.workspace_destroy_calls == 1U &&
+                fake_provider.neutrality_sort_scratch_destroy_calls == 1U &&
+                fake_provider.particle_assignment_scratch_destroy_calls == 1U,
+            "stateless forceful adapter did not destroy each call-local scratch descriptor exactly once");
+    require(fake_provider.matching_workspace_destroyed &&
+                fake_provider.matching_neutrality_sort_scratch_destroyed &&
+                fake_provider.matching_particle_assignment_scratch_destroyed,
+            "stateless forceful adapter destroyed different scratch descriptors");
+    require(fake_provider.destroyed_workspace_was_empty &&
+                fake_provider.destroyed_neutrality_sort_scratch_was_empty &&
+                fake_provider.destroyed_particle_assignment_scratch_was_empty,
+            "stateless forceful adapter changed empty scratch descriptors before destruction");
 }
 
 void require_only_energy_all_scratch_route() {
@@ -368,7 +433,7 @@ void verify_energy_only_public_branch() {
             "energy-only adapter supplied malformed provider descriptors");
 }
 
-void verify_nonreuse_forceful_direct_branch_and_transactional_peer() {
+void verify_nonreuse_forceful_all_scratch_branch_and_transactional_peer() {
     reset_fake_provider();
     fake_provider.force_output_failure_pending = true;
     const bg_system system = make_system();
@@ -379,19 +444,19 @@ void verify_nonreuse_forceful_direct_branch_and_transactional_peer() {
     require(rust_cpu::evaluate(system, model, true, &output, &error) ==
                 BG_STATUS_OK,
             "non-reuse forceful Rust adapter evaluation failed");
-    require_only_direct_route();
-    require(fake_provider.direct_observed_pending_failure &&
-                fake_provider.force_output_failure_pending &&
+    require_only_stateless_all_scratch_force_route();
+    require_stateless_all_scratch_lifecycle();
+    require(fake_provider.force_output_failure_pending &&
                 !fake_provider.force_output_failure_consumed,
-            "direct provider entry consumed the force-output allocation failure");
+            "stateless all-scratch entry consumed the force-output allocation failure");
     require(fake_provider.force_channels_written,
-            "direct provider entry did not write caller-owned SoA channels");
+            "stateless all-scratch entry did not write call-local SoA channels");
     require_provider_evaluation_bits(output);
     require(error.code == BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE &&
                 error.detail.empty(),
-            "successful direct adapter evaluation returned a typed error");
+            "successful stateless all-scratch evaluation returned a typed error");
     require(!fake_provider.descriptor_violation,
-            "direct adapter supplied malformed provider descriptors");
+            "stateless all-scratch adapter supplied malformed provider descriptors");
 
     double force_x[kAtomCount] = {901.0, 902.0};
     double force_y[kAtomCount] = {903.0, 904.0};
@@ -464,7 +529,7 @@ void verify_nonreuse_forceful_direct_branch_and_transactional_peer() {
             "transactional raw failure returned the wrong diagnostic");
 }
 
-void verify_late_direct_failure_preserves_adapter_output() {
+void verify_late_stateless_all_scratch_failure_preserves_adapter_output() {
     reset_fake_provider();
     fake_provider.return_late_numerical_error = true;
     const bg_system system = make_system();
@@ -483,8 +548,9 @@ void verify_late_direct_failure_preserves_adapter_output() {
 
     require(rust_cpu::evaluate(system, model, true, &output, &error) ==
                 BG_STATUS_NUMERICAL_ERROR,
-            "adapter changed a late direct-provider numerical failure");
-    require_only_direct_route();
+            "adapter changed a late stateless all-scratch numerical failure");
+    require_only_stateless_all_scratch_force_route();
+    require_stateless_all_scratch_lifecycle();
     require(fake_provider.force_channels_written &&
                 fake_provider.late_failure_channels_written,
             "late-failure fake did not write disposable SoA channels");
@@ -493,7 +559,40 @@ void verify_late_direct_failure_preserves_adapter_output() {
                     BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT &&
                 error.detail ==
                     "particle-mesh reciprocal result is not finite",
-            "adapter did not propagate the late direct-provider typed error");
+            "adapter did not propagate the late stateless all-scratch typed error");
+}
+
+void verify_nonfinite_stateless_all_scratch_success_preserves_adapter_output() {
+    reset_fake_provider();
+    fake_provider.return_nonfinite_force_on_success = true;
+    const bg_system system = make_system();
+    const auto model = make_model();
+    reciprocal::Evaluation output;
+    output.reciprocal_space_kcal_per_mol = 1'311.0;
+    output.forces = {
+        {{1'321.0, 1'322.0, 1'323.0}},
+        {{1'331.0, 1'332.0, 1'333.0}},
+        {{1'341.0, 1'342.0, 1'343.0}},
+    };
+    const EvaluationSnapshot before = snapshot(output);
+    reciprocal::Error error{
+        BG_PARTICLE_MESH_RECIPROCAL_ERROR_INVALID_PARAMETER,
+        "stale non-finite stateless all-scratch error"};
+
+    require(rust_cpu::evaluate(system, model, true, &output, &error) ==
+                BG_STATUS_INTERNAL_ERROR,
+            "adapter accepted a non-finite stateless all-scratch force on provider success");
+    require_only_stateless_all_scratch_force_route();
+    require_stateless_all_scratch_lifecycle();
+    require(fake_provider.force_channels_written &&
+                !fake_provider.late_failure_channels_written,
+            "non-finite stateless success fake did not write call-local scratch normally");
+    require_same_snapshot(output, before);
+    require(error.code == BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONE &&
+                error.detail.empty(),
+            "non-finite stateless provider success fabricated a typed error");
+    require(!fake_provider.descriptor_violation,
+            "non-finite stateless all-scratch adapter supplied malformed descriptors");
 }
 
 void verify_reusable_forceful_all_scratch_branch_and_transactionality() {
@@ -954,6 +1053,18 @@ bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_an
     fake_provider.last_neutrality_sort_scratch = neutrality_sort_scratch;
     fake_provider.last_particle_assignment_scratch =
         particle_assignment_scratch;
+    fake_provider.triple_scratch_descriptors_were_empty =
+        workspace_descriptor_is_empty(workspace) &&
+        neutrality_sort_scratch_descriptor_is_empty(neutrality_sort_scratch) &&
+        particle_assignment_scratch_descriptor_is_empty(
+            particle_assignment_scratch);
+    fake_provider.triple_scratch_descriptors_were_distinct =
+        static_cast<const void *>(workspace) !=
+            static_cast<const void *>(neutrality_sort_scratch) &&
+        static_cast<const void *>(workspace) !=
+            static_cast<const void *>(particle_assignment_scratch) &&
+        static_cast<const void *>(neutrality_sort_scratch) !=
+            static_cast<const void *>(particle_assignment_scratch);
     if (workspace == nullptr || neutrality_sort_scratch == nullptr ||
         particle_assignment_scratch == nullptr) {
         fake_provider.descriptor_violation = true;
@@ -979,6 +1090,11 @@ bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_an
 
 extern "C" void bg_rust_particle_mesh_reciprocal_workspace_destroy_v1(
     bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace) {
+    ++fake_provider.workspace_destroy_calls;
+    fake_provider.matching_workspace_destroyed =
+        workspace == fake_provider.last_workspace;
+    fake_provider.destroyed_workspace_was_empty =
+        workspace_descriptor_is_empty(workspace);
     if (workspace != nullptr) {
         *workspace = bg_rust_particle_mesh_reciprocal_workspace_v1{};
     }
@@ -988,6 +1104,12 @@ extern "C" void
 bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_destroy_v1(
     bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
         *neutrality_sort_scratch) {
+    ++fake_provider.neutrality_sort_scratch_destroy_calls;
+    fake_provider.matching_neutrality_sort_scratch_destroyed =
+        neutrality_sort_scratch ==
+        fake_provider.last_neutrality_sort_scratch;
+    fake_provider.destroyed_neutrality_sort_scratch_was_empty =
+        neutrality_sort_scratch_descriptor_is_empty(neutrality_sort_scratch);
     if (neutrality_sort_scratch != nullptr) {
         *neutrality_sort_scratch =
             bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1{};
@@ -998,6 +1120,13 @@ extern "C" void
 bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_destroy_v1(
     bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
         *particle_assignment_scratch) {
+    ++fake_provider.particle_assignment_scratch_destroy_calls;
+    fake_provider.matching_particle_assignment_scratch_destroyed =
+        particle_assignment_scratch ==
+        fake_provider.last_particle_assignment_scratch;
+    fake_provider.destroyed_particle_assignment_scratch_was_empty =
+        particle_assignment_scratch_descriptor_is_empty(
+            particle_assignment_scratch);
     if (particle_assignment_scratch != nullptr) {
         *particle_assignment_scratch =
             bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1{};
@@ -1008,8 +1137,9 @@ int main() {
     static_assert(
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION == UINT32_C(1));
     verify_energy_only_public_branch();
-    verify_nonreuse_forceful_direct_branch_and_transactional_peer();
-    verify_late_direct_failure_preserves_adapter_output();
+    verify_nonreuse_forceful_all_scratch_branch_and_transactional_peer();
+    verify_late_stateless_all_scratch_failure_preserves_adapter_output();
+    verify_nonfinite_stateless_all_scratch_success_preserves_adapter_output();
     verify_reusable_forceful_all_scratch_branch_and_transactionality();
     verify_reusable_energy_workspace_branch_and_transactionality();
     verify_reusable_energy_requires_scratch_owner();
