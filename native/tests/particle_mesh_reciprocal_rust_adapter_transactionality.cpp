@@ -40,6 +40,7 @@ struct FakeProviderState final {
     std::size_t workspace_calls = 0U;
     std::size_t energy_workspace_calls = 0U;
     std::size_t energy_workspace_neutrality_calls = 0U;
+    std::size_t energy_all_scratch_calls = 0U;
     std::size_t triple_calls = 0U;
     std::uint8_t last_public_compute_forces = UINT8_C(0xff);
     bool descriptor_violation = false;
@@ -200,6 +201,7 @@ void require_only_public_route() {
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 0U,
             "energy-only adapter selected the wrong Rust provider entry");
 }
@@ -212,6 +214,7 @@ void require_only_direct_route() {
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 0U,
             "non-reuse forceful adapter selected the wrong Rust provider entry");
 }
@@ -224,20 +227,22 @@ void require_only_workspace_route() {
                 fake_provider.workspace_calls == 1U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 0U,
             "reusable forceful adapter selected the wrong Rust provider entry");
 }
 
-void require_only_energy_workspace_neutrality_route() {
+void require_only_energy_all_scratch_route() {
     require(fake_provider.abi_calls == 1U,
             "energy-workspace adapter did not perform one ABI query");
     require(fake_provider.public_calls == 0U &&
                 fake_provider.direct_calls == 0U &&
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
-                fake_provider.energy_workspace_neutrality_calls == 1U &&
+                fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 1U &&
                 fake_provider.triple_calls == 0U,
-            "reusable energy-only adapter did not select the workspace-plus-neutrality provider entry");
+            "reusable energy-only adapter did not select the all-scratch provider entry");
 }
 
 void require_only_triple_route() {
@@ -248,6 +253,7 @@ void require_only_triple_route() {
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 1U,
             "provider-force-source adapter selected the wrong Rust provider entry");
 }
@@ -540,7 +546,6 @@ void verify_reusable_energy_workspace_branch_and_transactionality() {
     const auto x = scratch.x;
     const auto y = scratch.y;
     const auto z = scratch.z;
-    const auto assignment = scratch.particle_assignment_scratch;
 
     reset_fake_provider();
     reciprocal::Evaluation output;
@@ -551,19 +556,19 @@ void verify_reusable_energy_workspace_branch_and_transactionality() {
                 system, model, false, &scratch, &output, &error) ==
                 BG_STATUS_OK,
             "reusable energy-only Rust adapter evaluation failed");
-    require_only_energy_workspace_neutrality_route();
+    require_only_energy_all_scratch_route();
     require(fake_provider.last_workspace == &scratch.reciprocal_workspace &&
                 fake_provider.last_neutrality_sort_scratch ==
-                    &scratch.neutrality_sort_scratch,
-            "reusable energy-only adapter supplied the wrong workspace or neutrality owner");
+                    &scratch.neutrality_sort_scratch &&
+                fake_provider.last_particle_assignment_scratch ==
+                    &scratch.particle_assignment_scratch,
+            "reusable energy-only adapter supplied the wrong scratch owner");
     require(bits(output.reciprocal_space_kcal_per_mol) ==
                     bits(kProviderEnergy) &&
                 output.forces.empty(),
             "reusable energy-only adapter returned the wrong result");
-    require(scratch.x == x && scratch.y == y && scratch.z == z &&
-                std::memcmp(&scratch.particle_assignment_scratch, &assignment,
-                            sizeof(assignment)) == 0,
-            "reusable energy-only adapter or fake provider touched force or assignment storage");
+    require(scratch.x == x && scratch.y == y && scratch.z == z,
+            "reusable energy-only adapter or fake provider touched force storage");
 
     reset_fake_provider();
     fake_provider.return_late_energy_numerical_error = true;
@@ -574,21 +579,21 @@ void verify_reusable_energy_workspace_branch_and_transactionality() {
                 system, model, false, &scratch, &output, &error) ==
                 BG_STATUS_NUMERICAL_ERROR,
             "adapter changed reusable energy-only typed failure");
-    require_only_energy_workspace_neutrality_route();
+    require_only_energy_all_scratch_route();
     require(fake_provider.last_workspace == &scratch.reciprocal_workspace &&
                 fake_provider.last_neutrality_sort_scratch ==
-                    &scratch.neutrality_sort_scratch,
-            "failed reusable energy-only route lost workspace or neutrality ownership");
+                    &scratch.neutrality_sort_scratch &&
+                fake_provider.last_particle_assignment_scratch ==
+                    &scratch.particle_assignment_scratch,
+            "failed reusable energy-only route lost scratch ownership");
     require_same_snapshot(output, before);
     require(error.code ==
                     BG_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT &&
                 error.detail ==
                     "particle-mesh reciprocal energy is not finite",
             "reusable energy-only adapter did not propagate typed failure");
-    require(scratch.x == x && scratch.y == y && scratch.z == z &&
-                std::memcmp(&scratch.particle_assignment_scratch, &assignment,
-                            sizeof(assignment)) == 0,
-            "failed reusable energy-only route or fake provider touched force or assignment storage");
+    require(scratch.x == x && scratch.y == y && scratch.z == z,
+            "failed reusable energy-only route or fake provider touched force storage");
 }
 
 void verify_reusable_energy_requires_scratch_owner() {
@@ -610,6 +615,7 @@ void verify_reusable_energy_requires_scratch_owner() {
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 0U,
             "null reusable energy scratch reached the fake provider");
     require_same_snapshot(output, before);
@@ -662,6 +668,7 @@ void verify_cpp_lane_remains_provider_independent() {
                 fake_provider.workspace_calls == 0U &&
                 fake_provider.energy_workspace_calls == 0U &&
                 fake_provider.energy_workspace_neutrality_calls == 0U &&
+                fake_provider.energy_all_scratch_calls == 0U &&
                 fake_provider.triple_calls == 0U,
             "C++ reciprocal evaluator entered a Rust provider branch");
     require(fake_provider.force_output_failure_pending &&
@@ -789,6 +796,41 @@ bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_s
     fake_provider.last_workspace = workspace;
     fake_provider.last_neutrality_sort_scratch = neutrality_sort_scratch;
     if (workspace == nullptr || neutrality_sort_scratch == nullptr ||
+        !common_descriptors_are_valid(system, model, out_energy, out_error)) {
+        fake_provider.descriptor_violation = true;
+        return BG_STATUS_INTERNAL_ERROR;
+    }
+    if (fake_provider.return_late_energy_numerical_error) {
+        out_energy->reciprocal_space_kcal_per_mol = kProviderEnergy;
+        clear_provider_error(out_error);
+        out_error->typed_code =
+            BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_NONFINITE_RESULT;
+        const char detail[] = "particle-mesh reciprocal energy is not finite";
+        static_assert(sizeof(detail) <= sizeof(out_error->detail));
+        std::memcpy(out_error->detail, detail, sizeof(detail));
+        return BG_STATUS_NUMERICAL_ERROR;
+    }
+    return write_provider_success(system, model, out_energy, nullptr, out_error);
+}
+
+extern "C" std::int32_t
+bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+    const bg_rust_particle_mesh_reciprocal_system_v1 *system,
+    const bg_rust_particle_mesh_reciprocal_model_v1 *model,
+    bg_rust_particle_mesh_reciprocal_workspace_v1 *workspace,
+    bg_rust_particle_mesh_reciprocal_neutrality_sort_scratch_v1
+        *neutrality_sort_scratch,
+    bg_rust_particle_mesh_reciprocal_particle_assignment_scratch_v1
+        *particle_assignment_scratch,
+    bg_rust_particle_mesh_reciprocal_energy_v1 *out_energy,
+    bg_rust_particle_mesh_reciprocal_error_v1 *out_error) {
+    ++fake_provider.energy_all_scratch_calls;
+    fake_provider.last_workspace = workspace;
+    fake_provider.last_neutrality_sort_scratch = neutrality_sort_scratch;
+    fake_provider.last_particle_assignment_scratch =
+        particle_assignment_scratch;
+    if (workspace == nullptr || neutrality_sort_scratch == nullptr ||
+        particle_assignment_scratch == nullptr ||
         !common_descriptors_are_valid(system, model, out_energy, out_error)) {
         fake_provider.descriptor_violation = true;
         return BG_STATUS_INTERNAL_ERROR;
