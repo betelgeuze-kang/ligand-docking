@@ -1,28 +1,13 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_two_symbol_dispatch_consolidation_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_active_scratch_reference_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_ACTIVE_SCRATCH_REFERENCE_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_active_scratch_reference_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_ACTIVE_SCRATCH_REFERENCE_EVIDENCE_PRESENT,
-    reason=(
-        "two-symbol dispatch consolidation evidence is verified from its "
-        "exact frozen PR 475 object after active scratch reference evidence "
-        "is present"
-    ),
-)
 
 
 def profile() -> dict:
@@ -31,30 +16,27 @@ def profile() -> dict:
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 381
+    assert result["source_count"] == 387
     assert result["delta_path_count"] == 10
-    assert result["trigger_path_count"] == 198
+    assert result["trigger_path_count"] == 204
 
 
-def test_profile_scopes_two_symbol_dispatch_consolidation() -> None:
+def test_profile_scopes_non_null_active_scratch_reference_binding() -> None:
     implementation = profile()["implementation"]
     for key in (
-        "scope_is_only_native_provider_dispatch_branch_and_callsite_consolidation",
-        "five_adapter_branches_collapsed_to_two_compute_forces_branches",
-        "dispatch_uses_compute_forces_only",
-        "dispatch_predicates_exclude_reuse_and_output_metadata",
-        "provider_force_source_guard_precedes_dispatch",
-        "reusable_owner_null_guard_precedes_dispatch",
-        "force_descriptor_pointer_preparation_precedes_dispatch",
-        "provider_validation_finiteness_rollback_and_commit_preserved",
-        "native_adapter_test_exact_predecessor_bytes",
-        "five_semantic_route_classes_preserved",
-        "adapter_uses_two_unique_provider_symbols",
+        "scope_is_only_native_provider_active_scratch_reference_binding_and_member_syntax",
+        "active_provider_force_scratch_is_non_null_reference_after_guard",
+        "active_provider_force_scratch_reference_bound_once",
+        "active_provider_force_scratch_pointer_reseating_removed",
+        "active_provider_force_scratch_pointer_member_access_removed",
+        "reusable_owner_pointer_parameter_preserved",
+        "reusable_owner_null_guard_precedes_reference_binding",
+        "reference_selection_uses_reuse_force_storage_only",
+        "stateless_reference_binds_emplaced_call_local_owner",
+        "reusable_reference_binds_external_owner",
+        "two_symbol_dispatch_and_five_semantic_routes_preserved",
     ):
         assert implementation[key] is True
-    assert implementation["five_adapter_branches_remain_distinct"] is False
-    assert implementation["force_private_symbol_adapter_callsite_count_exact"] == 1
-    assert implementation["energy_private_symbol_adapter_callsite_count_exact"] == 1
 
 
 def test_inherited_optional_owner_and_lifecycle_contracts_are_frozen() -> None:
@@ -73,7 +55,14 @@ def test_inherited_optional_owner_and_lifecycle_contracts_are_frozen() -> None:
     ):
         assert implementation[key] is True
     validation = profile()["validation"]
-    assert validation["conditional_optional_selection_exact_predecessor_bytes"] is True
+    assert validation["predecessor_adapter_exact_active_scratch_reference_transform"] is True
+    assert validation["active_scratch_reference_binding_source_exact"] is True
+    assert validation["active_scratch_reference_declaration_count_exact"] == 1
+    assert validation["active_scratch_reference_member_access_count_exact"] == 18
+    assert validation["active_scratch_pointer_declaration_count_exact"] == 0
+    assert validation["active_scratch_pointer_member_access_count_exact"] == 0
+    assert validation["active_scratch_reseating_branch_count_exact"] == 0
+    assert validation["optional_emplacement_count_exact"] == 1
     assert validation["native_adapter_test_exact_predecessor_bytes"] is True
     assert validation["native_adapter_test_five_semantic_classes_frozen"] is True
     assert validation["reusable_zero_destroy_callback_assertion_count_exact"] == 6
@@ -84,12 +73,12 @@ def test_inherited_optional_owner_and_lifecycle_contracts_are_frozen() -> None:
 def test_two_branch_dispatch_and_external_commit_boundaries_are_exact() -> None:
     validation = profile()["validation"]
     for key in (
-        "predecessor_adapter_exact_two_symbol_dispatch_transform",
-        "two_branch_two_symbol_adapter_dispatch_exact",
+        "two_branch_two_symbol_adapter_dispatch_exact_after_member_syntax_normalization",
         "dispatch_predicates_compute_forces_only",
         "provider_force_source_and_reusable_null_guards_precede_dispatch",
         "force_descriptor_pointer_preparation_precedes_dispatch",
-        "provider_validation_and_commit_exact_predecessor_bytes",
+        "provider_validation_and_commit_exact_after_member_syntax_normalization",
+        "reusable_owner_pointer_parameter_and_null_guard_preserved",
         "reusable_evaluation_force_storage_rollback_guard_exact_predecessor_bytes",
         "provider_force_scratch_destructor_exact_predecessor_bytes",
         "raw_public_transactional_peer_exact_predecessor_bytes",
@@ -132,6 +121,8 @@ def test_claim_boundaries_remain_explicitly_false() -> None:
         "peak_memory_reduction_claimed",
         "branch_reduction_performance_improvement_claimed",
         "callsite_reduction_performance_improvement_claimed",
+        "nullability_elision_performance_improvement_claimed",
+        "reference_binding_performance_improvement_claimed",
         "performance_claimed",
         "acceleration_claimed",
         "scientific_claimed",
@@ -146,13 +137,13 @@ def test_claim_boundaries_remain_explicitly_false() -> None:
 
 def test_predecessor_and_evidence_graph_are_exact() -> None:
     value = profile()
-    assert value["target_predecessor"]["pull_request"] == 474
+    assert value["target_predecessor"]["pull_request"] == 475
     assert value["target_predecessor"]["reviewed_head"] == verifier.PREDECESSOR["reviewed_head"]
     assert value["target_predecessor"]["merge_commit"] == verifier.PREDECESSOR["merge_commit"]
     assert value["target_predecessor"]["merge_tree"] == verifier.PREDECESSOR["merge_tree"]
     validation = value["validation"]
     assert validation["exact_delta_path_count"] == 10
     assert validation["implementation_delta_path_count"] == 2
-    assert validation["source_manifest_entry_count_exact"] == 381
-    assert validation["pull_request_trigger_path_count_exact"] == 198
-    assert validation["push_trigger_path_count_exact"] == 198
+    assert validation["source_manifest_entry_count_exact"] == 387
+    assert validation["pull_request_trigger_path_count_exact"] == 204
+    assert validation["push_trigger_path_count_exact"] == 204
