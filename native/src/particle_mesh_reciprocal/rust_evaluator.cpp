@@ -369,7 +369,6 @@ static bg_status evaluate_impl(
         out_evaluation, &candidate,
         compute_forces && reuse_force_storage && out_evaluation != nullptr};
     bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
-    bg_rust_particle_mesh_reciprocal_force_output_v1 *force_pointer = nullptr;
     std::optional<ProviderForceScratch> local_provider_force_scratch;
     ProviderForceScratch &active_provider_force_scratch =
         reuse_force_storage ? *provider_force_scratch
@@ -386,7 +385,6 @@ static bg_status evaluate_impl(
         provider_forces.x = active_provider_force_scratch.x.data();
         provider_forces.y = active_provider_force_scratch.y.data();
         provider_forces.z = active_provider_force_scratch.z.data();
-        force_pointer = &provider_forces;
     }
 
     bg_rust_particle_mesh_reciprocal_error_v1 provider_error{};
@@ -401,7 +399,7 @@ static bg_status evaluate_impl(
             &active_provider_force_scratch.reciprocal_workspace,
             &active_provider_force_scratch.neutrality_sort_scratch,
             &active_provider_force_scratch.particle_assignment_scratch,
-            &provider_energy, force_pointer, &provider_error);
+            &provider_energy, &provider_forces, &provider_error);
     } else {
         raw_status =
             bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
