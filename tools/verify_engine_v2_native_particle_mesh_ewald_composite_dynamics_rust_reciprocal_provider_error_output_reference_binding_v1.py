@@ -1,0 +1,839 @@
+#!/usr/bin/env python3
+"""Verify native PME Rust-adapter error-output reference binding."""
+from __future__ import annotations
+
+import argparse
+import ast
+import json
+from pathlib import Path
+import re
+import sys
+from typing import NoReturn
+
+from tools import (
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_v1
+    as predecessor_verifier,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+STEM = (
+    "engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_error_output_reference_binding"
+)
+WORKFLOW_STEM = (
+    "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
+    "rust-reciprocal-provider-error-output-reference-binding"
+)
+WORKFLOW_FILENAME_STEM = (
+    "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
+    "rust-reciprocal-provider-error-output-reference-binding"
+)
+PREDECESSOR_STEM = (
+    "engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding"
+)
+PREDECESSOR_WORKFLOW_STEM = (
+    "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
+    "rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding"
+)
+PREDECESSOR_WORKFLOW_FILENAME_STEM = (
+    "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
+    "rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding"
+)
+
+PROFILE_RELATIVE_PATH = Path("config/%s_profile_v1.json" % STEM)
+SOURCE_MANIFEST_RELATIVE_PATH = Path("config/%s_profile_v1_sources.json" % STEM)
+WORKFLOW_RELATIVE_PATH = Path(
+    ".github/workflows/%s.yml" % WORKFLOW_FILENAME_STEM
+)
+DOC_RELATIVE_PATH = Path("docs/%s_v1.md" % STEM)
+UNIT_RELATIVE_PATH = Path("tests/unit/test_%s_v1.py" % STEM)
+VERIFIER_RELATIVE_PATH = Path("tools/verify_%s_v1.py" % STEM)
+
+PREDECESSOR_PROFILE_RELATIVE_PATH = Path(
+    "config/%s_profile_v1.json" % PREDECESSOR_STEM
+)
+PREDECESSOR_MANIFEST_RELATIVE_PATH = Path(
+    "config/%s_profile_v1_sources.json" % PREDECESSOR_STEM
+)
+PREDECESSOR_WORKFLOW_RELATIVE_PATH = Path(
+    ".github/workflows/%s.yml" % PREDECESSOR_WORKFLOW_FILENAME_STEM
+)
+PREDECESSOR_DOC_RELATIVE_PATH = Path("docs/%s_v1.md" % PREDECESSOR_STEM)
+PREDECESSOR_UNIT_RELATIVE_PATH = Path("tests/unit/test_%s_v1.py" % PREDECESSOR_STEM)
+PREDECESSOR_VERIFIER_RELATIVE_PATH = Path(
+    "tools/verify_%s_v1.py" % PREDECESSOR_STEM
+)
+
+ADAPTER_RELATIVE_PATH = Path(
+    "native/src/particle_mesh_reciprocal/rust_evaluator.cpp"
+)
+VENDOR_ADAPTER_RELATIVE_PATH = Path(
+    "rust/betelgeuze-sys/vendor/native/src/particle_mesh_reciprocal/"
+    "rust_evaluator.cpp"
+)
+ADAPTER_TEST_RELATIVE_PATH = Path(
+    "native/tests/particle_mesh_reciprocal_rust_adapter_transactionality.cpp"
+)
+
+SCHEMA_ID = (
+    "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_error_output_reference_binding_profile/1.0.0"
+)
+SOURCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_error_output_reference_binding_sources/1.0.0"
+)
+PINNED_CHECKOUT_ACTION = (
+    "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
+)
+PRIVATE_SYMBOL = (
+    "bg_rust_particle_mesh_reciprocal_evaluate_energy_with_"
+    "workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1"
+)
+FORCE_PRIVATE_SYMBOL = (
+    "bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_"
+    "workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1"
+)
+
+PREDECESSOR = {
+    "pull_request": 483,
+    "reviewed_head": "9138a05e9730b1892ee56a3133ffc48f8439ee92",
+    "merge_commit": "e51f10d6034bc9abf86017b879a5b777834cb3db",
+    "merge_tree": "9e9fc3099422870ddb03d5ff01874480ba9c71be",
+    "profile_path": PREDECESSOR_PROFILE_RELATIVE_PATH.as_posix(),
+    "profile_sha256": (
+        "f9a3f0df78afe1207adef12c7b788b51cdf84e31aa378a7adbb54de4cc5b7ec9"
+    ),
+    "source_manifest_path": PREDECESSOR_MANIFEST_RELATIVE_PATH.as_posix(),
+    "source_manifest_sha256": (
+        "c0382ccb2d09fad33427bbe2d52cc7452a3bdea4aaddba1b17bae66eb0249479"
+    ),
+    "source_manifest_entry_count": 429,
+}
+
+PREDECESSOR_EVIDENCE_SHA256 = {
+    PREDECESSOR_WORKFLOW_RELATIVE_PATH: (
+        "7b3a6cce99090bef5276a825d431c476fa7f470b994950f41d15dc6ebcef2bbb"
+    ),
+    PREDECESSOR_PROFILE_RELATIVE_PATH: PREDECESSOR["profile_sha256"],
+    PREDECESSOR_MANIFEST_RELATIVE_PATH: PREDECESSOR["source_manifest_sha256"],
+    PREDECESSOR_DOC_RELATIVE_PATH: (
+        "d61b954676e51822d9a6a9236725f90caa4e1a8c239e495a6589c117ed12cb93"
+    ),
+    PREDECESSOR_UNIT_RELATIVE_PATH: (
+        "326410fec9e978913a075e3ab35a4e5226138b4285f556e9198c9cd51dfaf8d2"
+    ),
+    PREDECESSOR_VERIFIER_RELATIVE_PATH: (
+        "52261cae71e3bc9a193620c87682f3038ac4b2ed7ea8791554d3fe32719df69c"
+    ),
+}
+EXPECTED_PREDECESSOR_IMPLEMENTATION_SHA256 = (
+    "4219d43bb2f74fc86d2dc10981966c74eb999f9a423cbd8dc696f78d36a89e17"
+)
+EXPECTED_SUCCESSOR_IMPLEMENTATION_SHA256 = (
+    "41e772e5015a29c89fc99d34f13eb3c9352678c28f207a087949ef09ab9bbbfd"
+)
+EXPECTED_PREDECESSOR_ADAPTER_TEST_SHA256 = (
+    "4e106c951bb0bd666909a0cadcf703d34c0326519106ca9f7b70ddc07da3bf03"
+)
+
+EVIDENCE_PATHS = (
+    WORKFLOW_RELATIVE_PATH,
+    PROFILE_RELATIVE_PATH,
+    SOURCE_MANIFEST_RELATIVE_PATH,
+    DOC_RELATIVE_PATH,
+    UNIT_RELATIVE_PATH,
+    VERIFIER_RELATIVE_PATH,
+)
+PREDECESSOR_EVIDENCE_PATHS = (
+    PREDECESSOR_WORKFLOW_RELATIVE_PATH,
+    PREDECESSOR_PROFILE_RELATIVE_PATH,
+    PREDECESSOR_MANIFEST_RELATIVE_PATH,
+    PREDECESSOR_DOC_RELATIVE_PATH,
+    PREDECESSOR_UNIT_RELATIVE_PATH,
+    PREDECESSOR_VERIFIER_RELATIVE_PATH,
+)
+IMPLEMENTATION_DELTA_PATHS = (
+    ADAPTER_RELATIVE_PATH,
+    VENDOR_ADAPTER_RELATIVE_PATH,
+)
+EXPECTED_DELTA_PATHS = tuple(
+    sorted(
+        set(EVIDENCE_PATHS)
+        | set(IMPLEMENTATION_DELTA_PATHS)
+        | {PREDECESSOR_WORKFLOW_RELATIVE_PATH, PREDECESSOR_UNIT_RELATIVE_PATH},
+        key=lambda path: path.as_posix(),
+    )
+)
+
+OLD_ERROR_INITIALIZATION = "    *out_error = Error{};"
+NEW_ERROR_INITIALIZATION = """    Error &output_error = *out_error;
+    output_error = Error{};"""
+OLD_ERROR_MEMBER_ACCESS = "out_error->"
+NEW_ERROR_MEMBER_ACCESS = "output_error."
+
+sha = predecessor_verifier.sha
+git = predecessor_verifier.git
+canonical_bytes = predecessor_verifier.canonical_bytes
+
+
+def fail(message: str) -> NoReturn:
+    raise ValueError(message)
+
+
+def replace_once(source: str, old: str, new: str, label: str) -> str:
+    if source.count(old) != 1:
+        fail("%s replacement anchor drift" % label)
+    return source.replace(old, new, 1)
+
+
+def source_region(source: str, start: str, end: str, label: str) -> str:
+    if source.count(start) != 1:
+        fail("%s start marker drift" % label)
+    start_index = source.index(start)
+    end_index = source.find(end, start_index + len(start))
+    if end_index < 0:
+        fail("%s end marker drift" % label)
+    return source[start_index:end_index]
+
+
+def frozen_bytes(path: Path) -> bytes:
+    return git("show", "%s:%s" % (PREDECESSOR["merge_commit"], path)).stdout
+
+
+def require_predecessor() -> dict:
+    merge = PREDECESSOR["merge_commit"]
+    if git("cat-file", "-t", merge).stdout.strip() != b"commit":
+        fail("PR 483 predecessor merge is not a commit")
+    if git("rev-parse", "%s^{commit}" % merge).stdout.strip().decode() != merge:
+        fail("PR 483 predecessor merge identity drift")
+    tree = git("rev-parse", "%s^{tree}" % merge).stdout.strip().decode()
+    if tree != PREDECESSOR["merge_tree"]:
+        fail("PR 483 predecessor merge tree drift")
+    if git("merge-base", "--is-ancestor", merge, "HEAD", check=False).returncode != 0:
+        fail("HEAD does not descend from exact PR 483 predecessor")
+    for path, expected_sha in PREDECESSOR_EVIDENCE_SHA256.items():
+        if sha(frozen_bytes(path)) != expected_sha:
+            fail("exact frozen PR 483 evidence digest drift: %s" % path)
+    profile_raw = frozen_bytes(PREDECESSOR_PROFILE_RELATIVE_PATH)
+    manifest_raw = frozen_bytes(PREDECESSOR_MANIFEST_RELATIVE_PATH)
+    profile = json.loads(profile_raw)
+    manifest = json.loads(manifest_raw)
+    if canonical_bytes(profile) != profile_raw or canonical_bytes(manifest) != manifest_raw:
+        fail("PR 483 predecessor evidence is not canonical JSON")
+    rows = manifest.get("files")
+    if not isinstance(rows, list) or len(rows) != 429:
+        fail("PR 483 predecessor manifest count drift")
+    if [row.get("path") for row in rows] != sorted(
+        {row.get("path") for row in rows}
+    ):
+        fail("PR 483 predecessor manifest paths are not sorted and unique")
+    for path in (
+        PREDECESSOR_PROFILE_RELATIVE_PATH,
+        PREDECESSOR_MANIFEST_RELATIVE_PATH,
+        PREDECESSOR_DOC_RELATIVE_PATH,
+        PREDECESSOR_VERIFIER_RELATIVE_PATH,
+    ):
+        if (ROOT / path).read_bytes() != frozen_bytes(path):
+            fail("checked-out PR 483 predecessor evidence drift: %s" % path)
+    reviewed = PREDECESSOR["reviewed_head"]
+    if git("cat-file", "-e", "%s^{commit}" % reviewed, check=False).returncode == 0:
+        reviewed_tree = git("rev-parse", "%s^{tree}" % reviewed).stdout.strip().decode()
+        if reviewed_tree != PREDECESSOR["merge_tree"]:
+            fail("PR 483 reviewed-head tree drift")
+    return manifest
+
+
+def current_delta_paths() -> tuple[Path, ...]:
+    tracked = git(
+        "diff", "--name-only", PREDECESSOR["merge_commit"], "--"
+    ).stdout.decode().splitlines()
+    untracked = git(
+        "ls-files", "--others", "--exclude-standard"
+    ).stdout.decode().splitlines()
+    return tuple(
+        sorted({Path(path) for path in tracked + untracked}, key=lambda p: p.as_posix())
+    )
+
+
+def discover_source_paths(root: Path = ROOT) -> list[Path]:
+    manifest = require_predecessor()
+    paths = {Path(row["path"]) for row in manifest["files"]}
+    paths.update(IMPLEMENTATION_DELTA_PATHS)
+    paths.update(
+        (
+            PREDECESSOR_PROFILE_RELATIVE_PATH,
+            PREDECESSOR_MANIFEST_RELATIVE_PATH,
+            WORKFLOW_RELATIVE_PATH,
+            DOC_RELATIVE_PATH,
+            UNIT_RELATIVE_PATH,
+            VERIFIER_RELATIVE_PATH,
+        )
+    )
+    paths.difference_update((PROFILE_RELATIVE_PATH, SOURCE_MANIFEST_RELATIVE_PATH))
+    missing = [path.as_posix() for path in paths if not (root / path).is_file()]
+    if missing:
+        fail("missing source paths: %s" % missing)
+    result = sorted(paths, key=lambda path: path.as_posix())
+    if len(result) != 435:
+        fail("derived source-manifest count drift: %d" % len(result))
+    return result
+
+
+def build_source_manifest(root: Path = ROOT) -> dict:
+    rows = [
+        {"path": path.as_posix(), "sha256": sha((root / path).read_bytes())}
+        for path in discover_source_paths(root)
+    ]
+    return {
+        "schema_id": SOURCE_SCHEMA_ID,
+        "scope": (
+            "particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_"
+            "error_output_reference_binding_current_sources_tests_"
+            "evidence_pr483_target"
+        ),
+        "evidence_paths": sorted(path.as_posix() for path in EVIDENCE_PATHS),
+        "files": rows,
+    }
+
+
+def build_profile(manifest_raw: bytes, root: Path = ROOT) -> dict:
+    manifest = json.loads(manifest_raw)
+    profile = json.loads((root / PREDECESSOR_PROFILE_RELATIVE_PATH).read_bytes())
+    profile["schema_id"] = SCHEMA_ID
+    profile["profile_id"] = "%s_development_v1" % STEM
+    profile["target_predecessor"] = dict(PREDECESSOR)
+    implementation = profile["implementation"]
+    for stale_key in ("scope_is_only_native_evaluation_rollback_output_force_storage_binding",):
+        implementation.pop(stale_key, None)
+    implementation.update(
+        {
+            "scope_is_only_native_error_output_reference_binding": True,
+            "error_output_public_pointer_signatures_preserved": True,
+            "error_output_null_validation_precedes_reference_binding": True,
+            "error_output_reference_is_non_null_by_construction": True,
+            "error_output_reference_bound_once": True,
+            "error_output_initialization_uses_bound_reference": True,
+            "error_output_member_writes_use_bound_reference": True,
+            "error_output_empty_system_mapping_preserved": True,
+            "error_output_capacity_mapping_preserved": True,
+            "error_output_count_mismatch_mapping_preserved": True,
+            "error_output_provider_typed_mapping_preserved": True,
+            "error_output_unknown_provider_mapping_preserved": True,
+            "error_output_wrappers_preserved": True,
+            "five_semantic_route_dispatch_preserved": True,
+            "rollback_scratch_validation_and_commit_preserved": True,
+            "error_output_reference_binding_performance_improvement_claimed": False,
+            "error_output_reference_runtime_lifetime_enforcement_claimed": False,
+            "error_output_nullability_elision_claimed": False,
+            "error_output_object_layout_equivalence_claimed": False,
+            "source_manifest_path": SOURCE_MANIFEST_RELATIVE_PATH.as_posix(),
+            "source_manifest_sha256": sha(manifest_raw),
+            "source_manifest_entry_count": len(manifest["files"]),
+        }
+    )
+    validation = profile["validation"]
+    for stale_key in (
+        "predecessor_adapter_exact_evaluation_rollback_output_force_storage_binding_transform",
+        "evaluation_rollback_output_force_storage_binding_source_exact",
+        "adapter_outside_evaluation_rollback_output_force_storage_regions_exact_predecessor_bytes",
+    ):
+        validation.pop(stale_key, None)
+    validation.update(
+        {
+            "exact_delta_path_count": 10,
+            "implementation_delta_path_count": 2,
+            "successor_evidence_path_count": 6,
+            "predecessor_freeze_wiring_path_count": 2,
+            "source_manifest_entry_count_exact": 435,
+            "pull_request_trigger_path_count_exact": 252,
+            "push_trigger_path_count_exact": 252,
+            "predecessor_adapter_exact_error_output_reference_binding_transform": True,
+            "adapter_outside_error_output_binding_exact_predecessor_bytes": True,
+            "evaluate_impl_out_error_pointer_parameter_count_exact": 1,
+            "public_error_output_pointer_signature_count_exact": 4,
+            "error_output_null_check_count_exact": 1,
+            "error_output_reference_binding_count_exact": 1,
+            "error_output_reference_initialization_count_exact": 1,
+            "legacy_error_output_initialization_count_exact": 0,
+            "legacy_error_output_member_access_count_exact": 0,
+            "bound_error_output_member_access_count_exact": 8,
+            "bound_error_output_code_write_count_exact": 4,
+            "bound_error_output_detail_write_count_exact": 4,
+            "error_output_null_check_precedes_reference_binding": True,
+            "error_output_reference_binding_precedes_initialization": True,
+            "public_wrappers_exact_predecessor_bytes": True,
+            "dispatch_rollback_scratch_validation_commit_exact_predecessor_bytes": True,
+            "canonical_vendor_adapter_byte_identical": True,
+            "native_adapter_test_exact_predecessor_bytes": True,
+            "predecessor_workflow_detaches_exact_merge_object": True,
+            "predecessor_unit_skips_only_when_successor_profile_exists": True,
+        }
+    )
+    return profile
+
+
+def expected_predecessor_workflow() -> str:
+    expected = frozen_bytes(PREDECESSOR_WORKFLOW_RELATIVE_PATH).decode()
+    for predecessor_path, successor_path in zip(
+        PREDECESSOR_EVIDENCE_PATHS, EVIDENCE_PATHS, strict=True
+    ):
+        anchor = '      - "%s"\n' % predecessor_path.as_posix()
+        if expected.count(anchor) != 2:
+            fail("exact PR 483 workflow trigger anchor drift: %s" % predecessor_path)
+        expected = expected.replace(
+            anchor, anchor + '      - "%s"\n' % successor_path.as_posix()
+        )
+    old_region = source_region(
+        expected,
+        "      - name: Materialize exact PR 482 target and reviewed head\n",
+        "\n\n  native-linux:\n",
+        "exact PR 483 immutable-evidence block",
+    )
+    new_region = """      - name: Materialize exact PR 483 evidence and reviewed head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse e51f10d6034bc9abf86017b879a5b777834cb3db^{tree})" = "9e9fc3099422870ddb03d5ff01874480ba9c71be"
+          git merge-base --is-ancestor e51f10d6034bc9abf86017b879a5b777834cb3db HEAD
+          git fetch --no-tags --depth=1 origin refs/pull/483/head
+          test "$(git rev-parse FETCH_HEAD)" = "9138a05e9730b1892ee56a3133ffc48f8439ee92"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "9e9fc3099422870ddb03d5ff01874480ba9c71be"
+      - name: Verify exact frozen PR 483 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          frozen=e51f10d6034bc9abf86017b879a5b777834cb3db
+          frozen_tree=9e9fc3099422870ddb03d5ff01874480ba9c71be
+          current_sha="$(git rev-parse HEAD)"
+          restore() { git checkout --detach --quiet "$current_sha"; }
+          trap restore EXIT
+          git checkout --detach --quiet "$frozen"
+          test "$(git rev-parse HEAD^{tree})" = "$frozen_tree"
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_profile_v1_sources.json >/dev/null
+          python3 -m pip install pytest==8.3.5
+          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_v1
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_v1.py
+          restore
+          trap - EXIT"""
+    return replace_once(
+        expected, old_region, new_region, "exact PR 483 predecessor workflow transform"
+    )
+
+
+def expected_predecessor_unit() -> str:
+    expected = frozen_bytes(PREDECESSOR_UNIT_RELATIVE_PATH).decode()
+    expected = replace_once(
+        expected,
+        "from pathlib import Path\n",
+        "from pathlib import Path\n\nimport pytest\n",
+        "exact PR 483 unit pytest import",
+    )
+    skip = """ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_ERROR_OUTPUT_REFERENCE_BINDING_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_error_output_reference_binding_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_ERROR_OUTPUT_REFERENCE_BINDING_EVIDENCE_PRESENT,
+    reason=(
+        "evaluation rollback output force-storage binding evidence is verified from its "
+        "exact frozen PR 483 object after error output reference binding evidence is present"
+    ),
+)"""
+    return replace_once(
+        expected,
+        "ROOT = Path(__file__).resolve().parents[2]",
+        skip,
+        "exact PR 483 unit successor skip",
+    )
+
+
+def expected_successor_workflow() -> str:
+    old_hyphen = "rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding"
+    new_hyphen = "rust-reciprocal-provider-error-output-reference-binding"
+    old_underscore = "rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding"
+    new_underscore = "rust_reciprocal_provider_error_output_reference_binding"
+    expected = frozen_bytes(PREDECESSOR_WORKFLOW_RELATIVE_PATH).decode()
+    expected = expected.replace(old_hyphen, new_hyphen)
+    expected = expected.replace(old_underscore, new_underscore)
+    for predecessor_path, successor_path in zip(
+        PREDECESSOR_EVIDENCE_PATHS, EVIDENCE_PATHS, strict=True
+    ):
+        anchor = '      - "%s"\n' % successor_path.as_posix()
+        if expected.count(anchor) != 2:
+            fail("successor workflow trigger anchor drift: %s" % successor_path)
+        expected = expected.replace(
+            anchor, '      - "%s"\n' % predecessor_path.as_posix() + anchor
+        )
+    replacements = (
+        ("Materialize exact PR 482 target", "Materialize exact PR 483 target"),
+        ("8decdf9ca7129bb5669d5217e611f52860ac779c", PREDECESSOR["merge_commit"]),
+        ("44e57663a0243d16b4805fe97c5655ee028f8c84", PREDECESSOR["merge_tree"]),
+        ("refs/pull/482/head", "refs/pull/483/head"),
+        ("3f8e3f2acfdd3cbc3514feffa17e2e74e300598c", PREDECESSOR["reviewed_head"]),
+    )
+    for old, new in replacements:
+        if old not in expected:
+            fail("successor workflow predecessor pin anchor drift: %s" % old)
+        expected = expected.replace(old, new)
+    return expected
+
+
+def workflow_trigger_paths(workflow: str, event: str, end: str) -> tuple[str, ...]:
+    region = source_region(
+        workflow, "  %s:\n" % event, "  %s:\n" % end, "%s trigger" % event
+    )
+    return tuple(re.findall(r'^      - "([^"]+)"$', region, flags=re.MULTILINE))
+
+
+def require_workflow_contract(root: Path = ROOT) -> None:
+    predecessor = (root / PREDECESSOR_WORKFLOW_RELATIVE_PATH).read_text()
+    successor = (root / WORKFLOW_RELATIVE_PATH).read_text()
+    if predecessor != expected_predecessor_workflow():
+        fail("PR 483 predecessor workflow is not the exact frozen-object transform")
+    if successor != expected_successor_workflow():
+        fail("successor workflow is not the exact PR 483-derived transform")
+    expected_names = {
+        PREDECESSOR_WORKFLOW_RELATIVE_PATH: PREDECESSOR_WORKFLOW_STEM,
+        WORKFLOW_RELATIVE_PATH: WORKFLOW_STEM,
+    }
+    for path, expected_name in expected_names.items():
+        workflow = (root / path).read_text()
+        pull_paths = workflow_trigger_paths(workflow, "pull_request", "push")
+        push_paths = workflow_trigger_paths(workflow, "push", "workflow_dispatch")
+        if len(pull_paths) != 252 or len(set(pull_paths)) != 252:
+            fail("workflow 252-path unique pull-request trigger drift: %s" % path)
+        if push_paths != pull_paths:
+            fail("workflow pull-request/push trigger symmetry drift: %s" % path)
+        if workflow.count("name: %s\n" % expected_name) != 1:
+            fail("workflow name drift: %s" % path)
+        if workflow.count(PINNED_CHECKOUT_ACTION) != 4:
+            fail("workflow checkout pin drift: %s" % path)
+        if "--refresh" in workflow:
+            fail("workflow must not refresh evidence: %s" % path)
+    for path in EVIDENCE_PATHS + PREDECESSOR_EVIDENCE_PATHS:
+        token = '      - "%s"\n' % path.as_posix()
+        if successor.count(token) != 2:
+            fail("successor workflow evidence trigger drift: %s" % path)
+        if predecessor.count(token) != 2:
+            fail("predecessor workflow successor trigger drift: %s" % path)
+    for token in (
+        "git checkout --detach --quiet \"$frozen\"",
+        PREDECESSOR["merge_commit"],
+        PREDECESSOR["merge_tree"],
+        "refs/pull/483/head",
+        PREDECESSOR["reviewed_head"],
+    ):
+        if token not in predecessor:
+            fail("PR 483 predecessor workflow freeze drift: %s" % token)
+
+
+def require_predecessor_unit_freeze(root: Path = ROOT) -> None:
+    source = (root / PREDECESSOR_UNIT_RELATIVE_PATH).read_text()
+    if source != expected_predecessor_unit():
+        fail("PR 483 predecessor unit is not the exact frozen-object transform")
+    tree = ast.parse(source)
+    constants = {
+        value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance((value := node.value), str)
+    }
+    if not any("PR 483 object" in value for value in constants):
+        fail("PR 483 predecessor unit frozen-object reason drift")
+    if source.count("pytest.mark.skipif(") != 1:
+        fail("PR 483 predecessor unit skip drift")
+
+
+
+def expected_successor_adapter() -> str:
+    frozen_source = frozen_bytes(ADAPTER_RELATIVE_PATH).decode()
+    if frozen_source.count(OLD_ERROR_INITIALIZATION) != 1:
+        fail("exact PR 483 error-output initialization anchor drift")
+    if frozen_source.count(OLD_ERROR_MEMBER_ACCESS) != 8:
+        fail("exact PR 483 error-output member access count drift")
+    expected = replace_once(
+        frozen_source,
+        OLD_ERROR_INITIALIZATION,
+        NEW_ERROR_INITIALIZATION,
+        "error-output reference binding",
+    )
+    expected = expected.replace(OLD_ERROR_MEMBER_ACCESS, NEW_ERROR_MEMBER_ACCESS)
+    if expected.count(NEW_ERROR_MEMBER_ACCESS) != 8:
+        fail("error-output reference member rewrite count drift")
+    return expected
+
+
+def require_error_output_contract(root: Path = ROOT) -> None:
+    frozen = frozen_bytes(ADAPTER_RELATIVE_PATH)
+    if sha(frozen) != EXPECTED_PREDECESSOR_IMPLEMENTATION_SHA256:
+        fail("exact PR 483 adapter digest drift")
+    expected = expected_successor_adapter()
+    for path in IMPLEMENTATION_DELTA_PATHS:
+        raw = (root / path).read_bytes()
+        if sha(raw) != EXPECTED_SUCCESSOR_IMPLEMENTATION_SHA256:
+            fail("successor adapter digest drift: %s" % path)
+        if raw.decode() != expected:
+            fail("adapter is not the exact PR 483 error-output transform: %s" % path)
+
+    canonical = (root / ADAPTER_RELATIVE_PATH).read_text()
+    vendor = (root / VENDOR_ADAPTER_RELATIVE_PATH).read_text()
+    if canonical != vendor:
+        fail("canonical/vendor adapter byte identity drift")
+    evaluate_impl = source_region(
+        canonical,
+        "static bg_status evaluate_impl(\n",
+        "\nbg_status evaluate(\n",
+        "evaluate_impl",
+    )
+    frozen_wrappers = source_region(
+        frozen.decode(),
+        "\nbg_status evaluate(\n",
+        "\n}  // namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu",
+        "exact PR 483 public wrappers",
+    )
+    wrappers = source_region(
+        canonical,
+        "\nbg_status evaluate(\n",
+        "\n}  // namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu",
+        "public wrappers",
+    )
+    if wrappers != frozen_wrappers:
+        fail("public error-output wrappers changed from exact PR 483 bytes")
+    if canonical.count("Error *out_error)") != 4:
+        fail("public/evaluate_impl error-output pointer signature count drift")
+    if evaluate_impl.count("Error *out_error)") != 1:
+        fail("evaluate_impl error-output pointer parameter count drift")
+    if evaluate_impl.count("out_error == nullptr") != 1:
+        fail("error-output null validation count drift")
+    if evaluate_impl.count("Error &output_error = *out_error;") != 1:
+        fail("error-output reference binding count drift")
+    if evaluate_impl.count("output_error = Error{};") != 1:
+        fail("error-output reference initialization count drift")
+    if evaluate_impl.count(OLD_ERROR_INITIALIZATION) != 0:
+        fail("legacy pointer initialization remains")
+    if evaluate_impl.count(OLD_ERROR_MEMBER_ACCESS) != 0:
+        fail("legacy pointer member access remains")
+    if evaluate_impl.count(NEW_ERROR_MEMBER_ACCESS) != 8:
+        fail("bound error-output member access count drift")
+    if evaluate_impl.count("output_error.code") != 4:
+        fail("bound error-output code write count drift")
+    if evaluate_impl.count("output_error.detail") != 4:
+        fail("bound error-output detail write count drift")
+    null_check = evaluate_impl.index("out_error == nullptr")
+    reference_binding = evaluate_impl.index("Error &output_error = *out_error;")
+    initialization = evaluate_impl.index("output_error = Error{};")
+    if not null_check < reference_binding < initialization:
+        fail("error-output null-check/reference/initialization order drift")
+    for token in (
+        "BG_PARTICLE_MESH_RECIPROCAL_ERROR_EMPTY_SYSTEM",
+        "BG_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY_EXCEEDED",
+        "BG_PARTICLE_MESH_RECIPROCAL_ERROR_CHARGE_COUNT_MISMATCH",
+        "static_cast<bg_particle_mesh_reciprocal_error_code>(",
+        "provider_error.detail",
+        "evaluation_force_storage_rollback.commit();",
+    ):
+        if evaluate_impl.count(token) < 1:
+            fail("error-output inherited mapping/commit drift: %s" % token)
+    test_raw = (root / ADAPTER_TEST_RELATIVE_PATH).read_bytes()
+    if sha(frozen_bytes(ADAPTER_TEST_RELATIVE_PATH)) != EXPECTED_PREDECESSOR_ADAPTER_TEST_SHA256:
+        fail("exact PR 483 native adapter test digest drift")
+    if sha(test_raw) != EXPECTED_PREDECESSOR_ADAPTER_TEST_SHA256:
+        fail("native adapter test changed from exact PR 483 bytes")
+
+
+def require_docs_contract(root: Path = ROOT) -> None:
+    doc = (root / DOC_RELATIVE_PATH).read_text()
+    required = (
+        "exact PR 483 predecessor",
+        "`Error *out_error`",
+        "`Error &output_error = *out_error`",
+        "null/XOR output check remains before reference creation",
+        "three public\nwrappers retain their `Error *` signatures",
+        "three public wrapper bodies and pointer signatures",
+        "exactly eight",
+        "same caller-owned object",
+        "does not provide runtime lifetime enforcement",
+        "all five semantic dispatch routes",
+        "`EvaluationForceStorageRollback` activation, restore, and commit behavior",
+        "canonical and vendored\nadapters",
+        "byte for byte",
+        "fake-provider transactionality test still covers all five route\nclasses",
+        "No public header, Rust provider, provider ABI, linked symbol, checkpoint",
+        "four blockers",
+        "32 unresolved operational decisions",
+        "no\nperformance, allocation, object-size, stack-size, acceleration, scientific",
+    )
+    for token in required:
+        if token not in doc:
+            fail("documentation contract drift: %s" % token)
+
+
+def require_profile_and_manifest(root: Path = ROOT) -> tuple[dict, dict]:
+    manifest_raw = (root / SOURCE_MANIFEST_RELATIVE_PATH).read_bytes()
+    profile_raw = (root / PROFILE_RELATIVE_PATH).read_bytes()
+    manifest = json.loads(manifest_raw)
+    profile = json.loads(profile_raw)
+    if canonical_bytes(manifest) != manifest_raw or canonical_bytes(profile) != profile_raw:
+        fail("successor evidence is not canonical JSON")
+    if manifest != build_source_manifest(root):
+        fail("source manifest drift; run verifier with --refresh")
+    if profile != build_profile(manifest_raw, root):
+        fail("profile drift; run verifier with --refresh")
+    implementation = profile["implementation"]
+    for key in (
+        "scope_is_only_native_error_output_reference_binding",
+        "error_output_public_pointer_signatures_preserved",
+        "error_output_null_validation_precedes_reference_binding",
+        "error_output_reference_is_non_null_by_construction",
+        "error_output_reference_bound_once",
+        "error_output_initialization_uses_bound_reference",
+        "error_output_member_writes_use_bound_reference",
+        "error_output_empty_system_mapping_preserved",
+        "error_output_capacity_mapping_preserved",
+        "error_output_count_mismatch_mapping_preserved",
+        "error_output_provider_typed_mapping_preserved",
+        "error_output_unknown_provider_mapping_preserved",
+        "error_output_wrappers_preserved",
+        "five_semantic_route_dispatch_preserved",
+        "rollback_scratch_validation_and_commit_preserved",
+        "evaluation_rollback_candidate_force_storage_type_alias_exact",
+        "evaluation_rollback_candidate_force_storage_type_derived_from_evaluation_member",
+        "evaluation_rollback_candidate_force_storage_nothrow_swap_assertion_exact",
+        "evaluation_rollback_candidate_force_storage_is_non_null_reference",
+        "evaluation_rollback_candidate_force_storage_reference_bound_once",
+        "evaluation_rollback_whole_candidate_reference_parameter_removed",
+        "evaluation_rollback_whole_candidate_reference_member_removed",
+        "evaluation_rollback_candidate_force_storage_uses_direct_reference_access",
+        "evaluation_rollback_callsite_passes_candidate_force_storage",
+        "evaluation_rollback_candidate_declaration_precedes_guard",
+        "evaluation_rollback_candidate_force_storage_lifetime_order_preserved",
+        "evaluation_rollback_output_force_storage_type_alias_exact",
+        "evaluation_rollback_output_force_storage_type_derived_from_evaluation_member",
+        "evaluation_rollback_output_force_storage_is_nullable_pointer",
+        "evaluation_rollback_output_force_storage_pointer_bound_once",
+        "evaluation_rollback_whole_output_pointer_parameter_removed",
+        "evaluation_rollback_whole_output_pointer_member_removed",
+        "evaluation_rollback_output_force_storage_uses_direct_pointer_dereference",
+        "evaluation_rollback_callsite_passes_output_force_storage_address",
+        "evaluation_rollback_callsite_address_formation_guarded_by_nonnull_output",
+        "evaluation_rollback_activation_predicate_localized_at_callsite",
+        "evaluation_rollback_activation_uses_compute_forces_reuse_and_nonnull_output",
+        "evaluation_rollback_provider_force_source_null_output_short_circuits_address_formation",
+        "evaluation_rollback_output_force_storage_pointer_is_sole_activation_and_commit_sentinel",
+        "evaluation_rollback_commit_disarms_via_output_force_storage_pointer_only",
+        "evaluation_rollback_retained_guard_state_is_force_storage_only",
+        "evaluation_rollback_initial_swap_and_destructor_restore_preserved",
+        "evaluation_rollback_copy_deletion_preserved",
+        "five_semantic_route_rollback_activation_truth_table_preserved",
+        "dispatch_status_normalization_binding_preserved",
+    ):
+        if implementation.get(key) is not True:
+            fail("implementation evidence drift: %s" % key)
+    false_claims = (
+        "error_output_reference_binding_performance_improvement_claimed",
+        "error_output_reference_runtime_lifetime_enforcement_claimed",
+        "error_output_nullability_elision_claimed",
+        "error_output_object_layout_equivalence_claimed",
+        "evaluation_rollback_output_force_storage_binding_performance_improvement_claimed",
+        "evaluation_rollback_output_force_storage_pointer_performance_improvement_claimed",
+        "evaluation_rollback_output_force_storage_object_layout_equivalence_claimed",
+        "evaluation_rollback_output_force_storage_runtime_lifetime_enforcement_claimed",
+        "evaluation_rollback_output_pointer_narrowing_allocation_improvement_claimed",
+        "evaluation_rollback_force_storage_binding_performance_improvement_claimed",
+        "evaluation_rollback_force_storage_reference_performance_improvement_claimed",
+        "evaluation_rollback_force_storage_object_layout_equivalence_claimed",
+        "evaluation_rollback_force_storage_runtime_lifetime_enforcement_claimed",
+        "evaluation_rollback_candidate_reference_performance_improvement_claimed",
+        "evaluation_rollback_enabled_parameter_removal_performance_improvement_claimed",
+        "evaluation_rollback_object_layout_equivalence_claimed",
+        "evaluation_rollback_reference_runtime_lifetime_enforcement_claimed",
+        "reference_binding_performance_improvement_claimed",
+        "nullability_elision_performance_improvement_claimed",
+        "object_size_reduction_claimed",
+        "stack_storage_reduction_claimed",
+        "allocation_free_claimed",
+        "performance_claimed",
+        "acceleration_claimed",
+        "scientific_claimed",
+        "scientific_equivalence_claimed",
+        "molecular_execution_claimed",
+        "hip_execution_claimed",
+        "product_claimed",
+        "operational_readiness_claimed",
+    )
+    for key in false_claims:
+        if implementation.get(key) is not False:
+            fail("forbidden claim drift: %s" % key)
+    if any(profile["authority"].values()):
+        fail("authority boundary drift")
+    boundary = profile["operational_boundary"]
+    if len(boundary.get("blockers", [])) != 4:
+        fail("operational blocker count drift")
+    if boundary.get("unresolved_operational_decisions") != 32:
+        fail("unresolved operational decision count drift")
+    return profile, manifest
+
+
+def require_contracts(root: Path = ROOT) -> None:
+    require_predecessor()
+    delta = current_delta_paths()
+    if delta != EXPECTED_DELTA_PATHS:
+        fail(
+            "exact delta path drift: expected=%s actual=%s"
+            % (
+                [path.as_posix() for path in EXPECTED_DELTA_PATHS],
+                [path.as_posix() for path in delta],
+            )
+        )
+    require_workflow_contract(root)
+    require_predecessor_unit_freeze(root)
+    ast.parse((root / UNIT_RELATIVE_PATH).read_text())
+    ast.parse((root / VERIFIER_RELATIVE_PATH).read_text())
+    require_error_output_contract(root)
+    require_docs_contract(root)
+
+
+def verify(root: Path = ROOT) -> dict:
+    require_contracts(root)
+    profile, manifest = require_profile_and_manifest(root)
+    return {
+        "schema_id": profile["schema_id"],
+        "source_count": len(manifest["files"]),
+        "delta_path_count": len(EXPECTED_DELTA_PATHS),
+        "implementation_delta_path_count": len(IMPLEMENTATION_DELTA_PATHS),
+        "trigger_path_count": 252,
+        "predecessor_pull_request": PREDECESSOR["pull_request"],
+        "predecessor_merge_tree": PREDECESSOR["merge_tree"],
+    }
+
+
+def refresh(root: Path = ROOT) -> dict:
+    require_contracts(root)
+    manifest = build_source_manifest(root)
+    manifest_raw = canonical_bytes(manifest)
+    (root / SOURCE_MANIFEST_RELATIVE_PATH).write_bytes(manifest_raw)
+    profile = build_profile(manifest_raw, root)
+    (root / PROFILE_RELATIVE_PATH).write_bytes(canonical_bytes(profile))
+    return verify(root)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--refresh", action="store_true", help="refresh canonical profile and manifest"
+    )
+    args = parser.parse_args()
+    result = refresh(ROOT) if args.refresh else verify(ROOT)
+    json.dump(result, sys.stdout, sort_keys=True)
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
