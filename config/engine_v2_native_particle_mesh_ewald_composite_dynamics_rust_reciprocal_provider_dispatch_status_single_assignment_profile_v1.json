@@ -173,7 +173,7 @@
     "single_assignment_performance_improvement_claimed": false,
     "source_manifest_entry_count": 405,
     "source_manifest_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_single_assignment_profile_v1_sources.json",
-    "source_manifest_sha256": "b8c73f9cd3cbf086edde46dbd3c9fbe6c433d0d5f8970eb3124cabb539132c27",
+    "source_manifest_sha256": "58f21f9c120dbc5b6062eaec7478d34ca5f59ddea6d2aea64b07cf9e93392820",
     "stack_storage_reduction_claimed": false,
     "standalone_force_descriptor_preparation_branch_removed": true,
     "stateless_call_local_destroy_lifecycle_preserved": true,

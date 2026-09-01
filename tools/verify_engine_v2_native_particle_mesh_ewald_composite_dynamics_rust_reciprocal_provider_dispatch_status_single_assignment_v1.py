@@ -25,6 +25,12 @@ WORKFLOW_STEM = (
     "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
     "rust-reciprocal-provider-dispatch-status-single-assignment"
 )
+# Preserve the semantic name while avoiding the top-stack reserved
+# temporary-workflow filename fragment ``dispatch-``.
+WORKFLOW_FILENAME_STEM = (
+    "ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-"
+    "rust-reciprocal-provider-status-single-assignment"
+)
 PREDECESSOR_STEM = (
     "engine_v2_native_particle_mesh_ewald_composite_dynamics_"
     "rust_reciprocal_provider_force_descriptor_branch_localization"
@@ -36,7 +42,9 @@ PREDECESSOR_WORKFLOW_STEM = (
 
 PROFILE_RELATIVE_PATH = Path("config/%s_profile_v1.json" % STEM)
 SOURCE_MANIFEST_RELATIVE_PATH = Path("config/%s_profile_v1_sources.json" % STEM)
-WORKFLOW_RELATIVE_PATH = Path(".github/workflows/%s.yml" % WORKFLOW_STEM)
+WORKFLOW_RELATIVE_PATH = Path(
+    ".github/workflows/%s.yml" % WORKFLOW_FILENAME_STEM
+)
 DOC_RELATIVE_PATH = Path("docs/%s_v1.md" % STEM)
 UNIT_RELATIVE_PATH = Path("tests/unit/test_%s_v1.py" % STEM)
 VERIFIER_RELATIVE_PATH = Path("tools/verify_%s_v1.py" % STEM)
@@ -498,6 +506,15 @@ def expected_successor_workflow() -> str:
     expected = frozen_bytes(PREDECESSOR_WORKFLOW_RELATIVE_PATH).decode()
     expected = expected.replace(old_hyphen, new_hyphen)
     expected = expected.replace(old_underscore, new_underscore)
+    generated_workflow_path = (
+        ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-"
+        "dynamics-rust-reciprocal-provider-dispatch-status-single-assignment.yml"
+    )
+    if expected.count(generated_workflow_path) != 2:
+        fail("successor generated workflow path anchor drift")
+    expected = expected.replace(
+        generated_workflow_path, WORKFLOW_RELATIVE_PATH.as_posix()
+    )
     for predecessor_path, successor_path in zip(
         PREDECESSOR_EVIDENCE_PATHS, EVIDENCE_PATHS, strict=True
     ):
