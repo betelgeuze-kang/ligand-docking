@@ -1,4 +1,4 @@
-name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-evaluation-rollback-force-storage-binding
+name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding
 
 on:
   pull_request:
@@ -504,7 +504,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-${{ github.ref }}
+  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -526,7 +526,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact PR 482 evidence and reviewed head
+      - name: Materialize exact PR 482 target and reviewed head
         shell: bash
         run: |
           set -euo pipefail
@@ -535,24 +535,13 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/482/head
           test "$(git rev-parse FETCH_HEAD)" = "3f8e3f2acfdd3cbc3514feffa17e2e74e300598c"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "44e57663a0243d16b4805fe97c5655ee028f8c84"
-      - name: Verify exact frozen PR 482 evidence
-        shell: bash
+      - name: Verify bounded successor evidence
         run: |
-          set -euo pipefail
-          frozen=8decdf9ca7129bb5669d5217e611f52860ac779c
-          frozen_tree=44e57663a0243d16b4805fe97c5655ee028f8c84
-          current_sha="$(git rev-parse HEAD)"
-          restore() { git checkout --detach --quiet "$current_sha"; }
-          trap restore EXIT
-          git checkout --detach --quiet "$frozen"
-          test "$(git rev-parse HEAD^{tree})" = "$frozen_tree"
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_force_storage_binding_profile_v1.json >/dev/null
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_force_storage_binding_profile_v1_sources.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_force_storage_binding_v1
-          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_force_storage_binding_v1.py
-          restore
-          trap - EXIT
+          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_v1
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
@@ -567,25 +556,25 @@ jobs:
           rustup override set 1.93.0
       - name: Synthetic release and sanitizer regressions
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
           test -n "$engine_library"
           nm --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1'
           if nm -D --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1'; then
             echo "private all-scratch energy symbol unexpectedly exported" >&2
             exit 1
           fi
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
 
   rust-boundaries:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-cargo
     steps:
       - name: Check out Rust sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -624,6 +613,6 @@ jobs:
           rustup override set 1.93.0
       - name: Exact export regression
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-macos --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-force-storage-binding-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-evaluation-rollback-output-force-storage-binding-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
