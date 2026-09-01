@@ -378,35 +378,34 @@ static bg_status evaluate_impl(
         static_cast<std::uint32_t>(sizeof(provider_error));
     provider_error.abi_version =
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
-    std::int32_t raw_status;
-    if (compute_forces) {
-        bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
-        active_provider_force_scratch.x.resize(atom_count);
-        active_provider_force_scratch.y.resize(atom_count);
-        active_provider_force_scratch.z.resize(atom_count);
-        provider_forces.struct_size =
-            static_cast<std::uint32_t>(sizeof(provider_forces));
-        provider_forces.abi_version =
-            BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
-        provider_forces.capacity = atom_count;
-        provider_forces.x = active_provider_force_scratch.x.data();
-        provider_forces.y = active_provider_force_scratch.y.data();
-        provider_forces.z = active_provider_force_scratch.z.data();
-        raw_status = bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
-            &provider_system, &provider_model,
-            &active_provider_force_scratch.reciprocal_workspace,
-            &active_provider_force_scratch.neutrality_sort_scratch,
-            &active_provider_force_scratch.particle_assignment_scratch,
-            &provider_energy, &provider_forces, &provider_error);
-    } else {
-        raw_status =
-            bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+    const std::int32_t raw_status = [&]() -> std::int32_t {
+        if (compute_forces) {
+            bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
+            active_provider_force_scratch.x.resize(atom_count);
+            active_provider_force_scratch.y.resize(atom_count);
+            active_provider_force_scratch.z.resize(atom_count);
+            provider_forces.struct_size =
+                static_cast<std::uint32_t>(sizeof(provider_forces));
+            provider_forces.abi_version =
+                BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
+            provider_forces.capacity = atom_count;
+            provider_forces.x = active_provider_force_scratch.x.data();
+            provider_forces.y = active_provider_force_scratch.y.data();
+            provider_forces.z = active_provider_force_scratch.z.data();
+            return bg_rust_particle_mesh_reciprocal_evaluate_reusing_force_output_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
                 &provider_system, &provider_model,
                 &active_provider_force_scratch.reciprocal_workspace,
                 &active_provider_force_scratch.neutrality_sort_scratch,
                 &active_provider_force_scratch.particle_assignment_scratch,
-                &provider_energy, &provider_error);
-    }
+                &provider_energy, &provider_forces, &provider_error);
+        }
+        return bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1(
+            &provider_system, &provider_model,
+            &active_provider_force_scratch.reciprocal_workspace,
+            &active_provider_force_scratch.neutrality_sort_scratch,
+            &active_provider_force_scratch.particle_assignment_scratch,
+            &provider_energy, &provider_error);
+    }();
     const bg_status status = normalize_provider_status(raw_status);
     provider_error.detail[
         BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY - 1U] = '\0';
