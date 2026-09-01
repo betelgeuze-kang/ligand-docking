@@ -53,12 +53,10 @@ class EvaluationForceStorageRollback final {
   public:
     EvaluationForceStorageRollback(
         Evaluation *output,
-        Evaluation *candidate,
-        bool enabled) noexcept
-        : output_(enabled ? output : nullptr),
-          candidate_(enabled ? candidate : nullptr) {
+        Evaluation &candidate) noexcept
+        : output_(output), candidate_(candidate) {
         if (output_ != nullptr) {
-            candidate_->forces.swap(output_->forces);
+            candidate_.forces.swap(output_->forces);
         }
     }
 
@@ -69,18 +67,17 @@ class EvaluationForceStorageRollback final {
 
     ~EvaluationForceStorageRollback() noexcept {
         if (output_ != nullptr) {
-            candidate_->forces.swap(output_->forces);
+            candidate_.forces.swap(output_->forces);
         }
     }
 
     void commit() noexcept {
         output_ = nullptr;
-        candidate_ = nullptr;
     }
 
   private:
     Evaluation *output_;
-    Evaluation *candidate_;
+    Evaluation &candidate_;
 };
 
 }  // namespace
@@ -366,8 +363,8 @@ static bg_status evaluate_impl(
 
     Evaluation candidate;
     EvaluationForceStorageRollback evaluation_force_storage_rollback{
-        out_evaluation, &candidate,
-        compute_forces && reuse_force_storage && out_evaluation != nullptr};
+        compute_forces && reuse_force_storage ? out_evaluation : nullptr,
+        candidate};
     std::optional<ProviderForceScratch> local_provider_force_scratch;
     ProviderForceScratch &active_provider_force_scratch =
         reuse_force_storage ? *provider_force_scratch
