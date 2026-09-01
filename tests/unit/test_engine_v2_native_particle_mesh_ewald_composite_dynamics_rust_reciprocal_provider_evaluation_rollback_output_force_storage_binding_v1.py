@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import (
     verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_output_force_storage_binding_v1
     as verifier,
@@ -8,6 +10,18 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_ERROR_OUTPUT_REFERENCE_BINDING_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_error_output_reference_binding_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_ERROR_OUTPUT_REFERENCE_BINDING_EVIDENCE_PRESENT,
+    reason=(
+        "evaluation rollback output force-storage binding evidence is verified from its "
+        "exact frozen PR 483 object after error output reference binding evidence is present"
+    ),
+)
 
 
 def profile() -> dict:

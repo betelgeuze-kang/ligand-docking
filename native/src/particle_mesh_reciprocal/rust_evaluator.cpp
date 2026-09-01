@@ -291,7 +291,8 @@ static bg_status evaluate_impl(
             BG_STATUS_INVALID_ARGUMENT,
             "Rust particle-mesh reciprocal evaluation requires exactly one evaluation or provider-force-source result output and a non-null error output");
     }
-    *out_error = Error{};
+    Error &output_error = *out_error;
+    output_error = Error{};
     if (out_provider_force_source_result != nullptr &&
         (!compute_forces || !reuse_force_storage)) {
         return fail(
@@ -305,24 +306,24 @@ static bg_status evaluate_impl(
     }
     const std::size_t atom_count = system.position_x.size();
     if (atom_count == 0U) {
-        out_error->code =
+        output_error.code =
             BG_PARTICLE_MESH_RECIPROCAL_ERROR_EMPTY_SYSTEM;
-        out_error->detail = "at least one particle is required";
+        output_error.detail = "at least one particle is required";
         return BG_STATUS_INVALID_ARGUMENT;
     }
     if (atom_count > kMaxAtomCount) {
-        out_error->code =
+        output_error.code =
             BG_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY_EXCEEDED;
-        out_error->detail = "particle count exceeds 4096";
+        output_error.detail = "particle count exceeds 4096";
         return BG_STATUS_CAPACITY_OVERFLOW;
     }
     if (system.position_y.size() != atom_count ||
         system.position_z.size() != atom_count ||
         system.charge.size() != atom_count ||
         model.atom_count != atom_count) {
-        out_error->code =
+        output_error.code =
             BG_PARTICLE_MESH_RECIPROCAL_ERROR_CHARGE_COUNT_MISMATCH;
-        out_error->detail =
+        output_error.detail =
             "system position/charge count does not match the particle-mesh reciprocal model";
         return BG_STATUS_INVALID_ARGUMENT;
     }
@@ -417,10 +418,10 @@ static bg_status evaluate_impl(
         }
         if (provider_error.typed_code !=
             BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_NONE) {
-            out_error->code =
+            output_error.code =
                 static_cast<bg_particle_mesh_reciprocal_error_code>(
                     provider_error.typed_code);
-            out_error->detail = provider_error.detail;
+            output_error.detail = provider_error.detail;
             return status;
         }
         const char *detail = provider_error.detail[0] == '\0'
