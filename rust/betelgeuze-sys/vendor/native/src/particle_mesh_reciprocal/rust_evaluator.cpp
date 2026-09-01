@@ -378,7 +378,7 @@ static bg_status evaluate_impl(
         static_cast<std::uint32_t>(sizeof(provider_error));
     provider_error.abi_version =
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
-    const std::int32_t raw_status = [&]() -> std::int32_t {
+    const bg_status status = normalize_provider_status([&]() -> std::int32_t {
         if (compute_forces) {
             bg_rust_particle_mesh_reciprocal_force_output_v1 provider_forces{};
             active_provider_force_scratch.x.resize(atom_count);
@@ -405,8 +405,7 @@ static bg_status evaluate_impl(
             &active_provider_force_scratch.neutrality_sort_scratch,
             &active_provider_force_scratch.particle_assignment_scratch,
             &provider_energy, &provider_error);
-    }();
-    const bg_status status = normalize_provider_status(raw_status);
+    }());
     provider_error.detail[
         BG_RUST_PARTICLE_MESH_RECIPROCAL_ERROR_CAPACITY - 1U] = '\0';
     if (status != BG_STATUS_OK) {

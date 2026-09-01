@@ -1,27 +1,13 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_single_assignment_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_normalization_binding_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_DISPATCH_STATUS_NORMALIZATION_BINDING_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_dispatch_status_normalization_binding_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_DISPATCH_STATUS_NORMALIZATION_BINDING_EVIDENCE_PRESENT,
-    reason=(
-        "dispatch status single-assignment evidence is verified from its exact frozen "
-        "PR 479 object after status normalization binding evidence is present"
-    ),
-)
 
 
 def profile() -> dict:
@@ -30,18 +16,23 @@ def profile() -> dict:
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 405
+    assert result["source_count"] == 411
     assert result["delta_path_count"] == 10
     assert result["implementation_delta_path_count"] == 2
-    assert result["trigger_path_count"] == 222
-    assert result["predecessor_pull_request"] == 478
+    assert result["trigger_path_count"] == 228
+    assert result["predecessor_pull_request"] == 479
     assert result["predecessor_merge_tree"] == verifier.PREDECESSOR["merge_tree"]
 
 
-def test_profile_scopes_dispatch_status_single_assignment() -> None:
+def test_profile_scopes_dispatch_status_normalization_binding() -> None:
     implementation = profile()["implementation"]
     for key in (
-        "scope_is_only_native_dispatch_status_single_assignment",
+        "scope_is_only_native_dispatch_status_normalization_binding",
+        "provider_status_normalized_at_initialization_boundary",
+        "standalone_raw_dispatch_status_binding_removed",
+        "unchecked_provider_status_lifetime_confined_to_dispatch_expression",
+        "normalized_dispatch_status_is_const",
+        "dispatch_iife_directly_consumed_by_status_normalization",
         "dispatch_status_initialized_exactly_once",
         "dispatch_status_is_const",
         "dispatch_status_uses_explicit_return_type_iife",
@@ -55,20 +46,26 @@ def test_profile_scopes_dispatch_status_single_assignment() -> None:
         "post_dispatch_validation_and_commit_preserved",
     ):
         assert implementation[key] is True
-    assert "scope_is_only_native_force_descriptor_branch_localization" not in implementation
+    assert "scope_is_only_native_dispatch_status_single_assignment" not in implementation
 
 
-def test_exact_single_assignment_transform_evidence() -> None:
+def test_exact_normalization_binding_transform_evidence() -> None:
     validation = profile()["validation"]
     expected = {
         "exact_delta_path_count": 10,
         "implementation_delta_path_count": 2,
         "successor_evidence_path_count": 6,
         "predecessor_freeze_wiring_path_count": 2,
-        "source_manifest_entry_count_exact": 405,
-        "pull_request_trigger_path_count_exact": 222,
-        "push_trigger_path_count_exact": 222,
+        "source_manifest_entry_count_exact": 411,
+        "pull_request_trigger_path_count_exact": 228,
+        "push_trigger_path_count_exact": 228,
         "dispatch_status_const_declaration_count_exact": 1,
+        "standalone_raw_status_declaration_count_exact": 0,
+        "raw_status_identifier_count_exact": 0,
+        "normalized_status_const_declaration_count_exact": 1,
+        "normalize_provider_status_call_count_exact": 1,
+        "normalize_provider_status_iife_argument_count_exact": 1,
+        "unchecked_provider_status_post_dispatch_binding_count_exact": 0,
         "dispatch_status_uninitialized_declaration_count_exact": 0,
         "dispatch_status_branch_assignment_count_exact": 0,
         "dispatch_status_iife_count_exact": 1,
@@ -80,7 +77,7 @@ def test_exact_single_assignment_transform_evidence() -> None:
     for key, value in expected.items():
         assert validation[key] == value
     for key in (
-        "predecessor_adapter_exact_dispatch_status_single_assignment_transform",
+        "predecessor_adapter_exact_dispatch_status_normalization_binding_transform",
         "provider_error_common_scope_exact_predecessor_bytes",
         "force_descriptor_branch_localization_preserved_by_exact_dispatch_transform",
         "post_dispatch_validation_and_commit_exact_predecessor_bytes",
@@ -89,6 +86,7 @@ def test_exact_single_assignment_transform_evidence() -> None:
     ):
         assert validation[key] is True
     for stale_key in (
+        "predecessor_adapter_exact_dispatch_status_single_assignment_transform",
         "predecessor_adapter_exact_force_descriptor_branch_localization_transform",
         "relocated_force_descriptor_preparation_exact_predecessor_bytes",
         "adapter_dispatch_exact_after_branch_local_preparation_normalization",
@@ -135,6 +133,9 @@ def test_forbidden_claims_remain_false() -> None:
         "single_assignment_performance_improvement_claimed",
         "iife_performance_improvement_claimed",
         "const_status_performance_improvement_claimed",
+        "normalization_binding_performance_improvement_claimed",
+        "raw_status_lifetime_reduction_performance_improvement_claimed",
+        "direct_normalization_performance_improvement_claimed",
         "allocation_free_claimed",
         "performance_claimed",
         "acceleration_claimed",
@@ -148,16 +149,16 @@ def test_forbidden_claims_remain_false() -> None:
         assert implementation[key] is False
 
 
-def test_exact_pr478_predecessor_and_evidence_graph() -> None:
+def test_exact_pr479_predecessor_and_evidence_graph() -> None:
     data = profile()
     assert data["target_predecessor"] == verifier.PREDECESSOR
-    assert verifier.PREDECESSOR["pull_request"] == 478
-    assert verifier.PREDECESSOR["source_manifest_entry_count"] == 399
+    assert verifier.PREDECESSOR["pull_request"] == 479
+    assert verifier.PREDECESSOR["source_manifest_entry_count"] == 405
     validation = data["validation"]
     assert validation["predecessor_workflow_detaches_exact_merge_object"] is True
     assert validation["predecessor_unit_skips_only_when_successor_profile_exists"] is True
     manifest = json.loads((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())
-    assert len(manifest["files"]) == 405
+    assert len(manifest["files"]) == 411
     assert manifest["evidence_paths"] == sorted(
         path.as_posix() for path in verifier.EVIDENCE_PATHS
     )

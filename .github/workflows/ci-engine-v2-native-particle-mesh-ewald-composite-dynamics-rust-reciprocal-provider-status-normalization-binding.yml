@@ -1,4 +1,4 @@
-name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-dispatch-status-single-assignment
+name: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-dispatch-status-normalization-binding
 
 on:
   pull_request:
@@ -468,7 +468,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-dispatch-status-single-assignment-${{ github.ref }}
+  group: ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-dispatch-status-normalization-binding-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -490,7 +490,7 @@ jobs:
           persist-credentials: false
           clean: true
           fetch-depth: 0
-      - name: Materialize exact PR 479 evidence and reviewed head
+      - name: Materialize exact PR 479 target and reviewed head
         shell: bash
         run: |
           set -euo pipefail
@@ -499,24 +499,13 @@ jobs:
           git fetch --no-tags --depth=1 origin refs/pull/479/head
           test "$(git rev-parse FETCH_HEAD)" = "f62a5f68a59a94ffe0d2b20900e1f8c4d82b6eb8"
           test "$(git rev-parse FETCH_HEAD^{tree})" = "619ad7bf2e6b74b80e6e7594b5b3c91f5e72b514"
-      - name: Verify exact frozen PR 479 evidence
-        shell: bash
+      - name: Verify bounded successor evidence
         run: |
-          set -euo pipefail
-          frozen=0f723b265c6366c0037d83d9ed9e934817fd9626
-          frozen_tree=619ad7bf2e6b74b80e6e7594b5b3c91f5e72b514
-          current_sha="$(git rev-parse HEAD)"
-          restore() { git checkout --detach --quiet "$current_sha"; }
-          trap restore EXIT
-          git checkout --detach --quiet "$frozen"
-          test "$(git rev-parse HEAD^{tree})" = "$frozen_tree"
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_single_assignment_profile_v1.json >/dev/null
-          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_single_assignment_profile_v1_sources.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_normalization_binding_profile_v1.json >/dev/null
+          python3 -m json.tool config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_normalization_binding_profile_v1_sources.json >/dev/null
           python3 -m pip install pytest==8.3.5
-          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_single_assignment_v1
-          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_single_assignment_v1.py
-          restore
-          trap - EXIT
+          python3 -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_normalization_binding_v1
+          python3 -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_dispatch_status_normalization_binding_v1.py
 
   native-linux:
     runs-on: ubuntu-latest
@@ -531,25 +520,25 @@ jobs:
           rustup override set 1.93.0
       - name: Synthetic release and sanitizer regressions
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-release --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          engine_library="$(find build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-release -type f -name 'libbetelgeuze_engine.so.*' -print -quit)"
           test -n "$engine_library"
           nm --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1'
           if nm -D --defined-only "$engine_library" | awk '{print $NF}' | grep -Fx 'bg_rust_particle_mesh_reciprocal_evaluate_energy_with_workspace_and_neutrality_sort_scratch_and_particle_assignment_scratch_v1'; then
             echo "private all-scratch energy symbol unexpectedly exported" >&2
             exit 1
           fi
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
-          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-release -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics|export_allowlist)$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-sanitize -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF -DCMAKE_C_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer'
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-sanitize --target betelgeuze_engine_particle_mesh_reciprocal betelgeuze_engine_particle_mesh_ewald betelgeuze_engine_particle_mesh_ewald_composite betelgeuze_engine_particle_mesh_reciprocal_rust_adapter_transactionality betelgeuze_engine_particle_mesh_ewald_composite_dynamics --parallel 2
+          ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-sanitize -R '^betelgeuze_engine_(particle_mesh_reciprocal|particle_mesh_ewald|particle_mesh_ewald_composite|particle_mesh_reciprocal_rust_adapter_transactionality|particle_mesh_ewald_composite_dynamics)$' --output-on-failure
 
   rust-boundaries:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-cargo
     steps:
       - name: Check out Rust sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -588,6 +577,6 @@ jobs:
           rustup override set 1.93.0
       - name: Exact export regression
         run: |
-          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
-          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-macos --target betelgeuze_engine --parallel 2
-          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-single-assignment-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
+          cmake -S . -B build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-macos -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DBG_ENABLE_HIP=OFF -DBG_ENABLE_HIP_SAFE=OFF
+          cmake --build build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-macos --target betelgeuze_engine --parallel 2
+          ctest --test-dir build/particle-mesh-ewald-rust-reciprocal-provider-dispatch-status-normalization-binding-macos -R '^betelgeuze_engine_export_allowlist$' --output-on-failure
