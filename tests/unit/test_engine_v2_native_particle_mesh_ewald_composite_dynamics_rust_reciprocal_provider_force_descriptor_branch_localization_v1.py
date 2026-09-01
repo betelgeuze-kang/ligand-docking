@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import (
     verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_force_descriptor_branch_localization_v1
     as verifier,
@@ -8,6 +10,18 @@ from tools import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PME_RUST_RECIPROCAL_PROVIDER_DISPATCH_STATUS_SINGLE_ASSIGNMENT_EVIDENCE_PRESENT = (
+    ROOT
+    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
+    "rust_reciprocal_provider_dispatch_status_single_assignment_profile_v1.json"
+).is_file()
+pytestmark = pytest.mark.skipif(
+    PME_RUST_RECIPROCAL_PROVIDER_DISPATCH_STATUS_SINGLE_ASSIGNMENT_EVIDENCE_PRESENT,
+    reason=(
+        "force descriptor branch localization evidence is verified from its exact "
+        "frozen PR 478 object after dispatch status single assignment evidence is present"
+    ),
+)
 
 
 def profile() -> dict:
