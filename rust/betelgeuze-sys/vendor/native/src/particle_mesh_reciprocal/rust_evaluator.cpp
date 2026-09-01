@@ -9,7 +9,6 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace betelgeuze::native::particle_mesh_reciprocal::rust_cpu {
 namespace {
@@ -21,11 +20,6 @@ using EvaluationForceStorage = decltype(Evaluation::forces);
 static_assert(std::is_nothrow_move_assignable_v<Evaluation>);
 static_assert(std::is_nothrow_swappable_v<EvaluationForceStorage>);
 static_assert(std::is_nothrow_copy_assignable_v<std::array<double, 3>>);
-
-template <typename Value>
-const Value *data_or_null(const std::vector<Value> &values) noexcept {
-    return values.empty() ? nullptr : values.data();
-}
 
 bg_status normalize_provider_status(std::int32_t status) noexcept {
     switch (status) {
@@ -340,10 +334,10 @@ static bg_status evaluate_impl(
     provider_system.abi_version =
         BG_RUST_PARTICLE_MESH_RECIPROCAL_PROVIDER_ABI_VERSION;
     provider_system.atom_count = atom_count;
-    provider_system.position_x = data_or_null(system.position_x);
-    provider_system.position_y = data_or_null(system.position_y);
-    provider_system.position_z = data_or_null(system.position_z);
-    provider_system.charge = data_or_null(system.charge);
+    provider_system.position_x = system.position_x.data();
+    provider_system.position_y = system.position_y.data();
+    provider_system.position_z = system.position_z.data();
+    provider_system.charge = system.charge.data();
 
     bg_rust_particle_mesh_reciprocal_model_v1 provider_model{};
     provider_model.struct_size =

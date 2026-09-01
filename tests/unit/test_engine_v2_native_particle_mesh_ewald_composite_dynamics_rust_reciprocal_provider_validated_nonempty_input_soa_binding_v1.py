@@ -1,27 +1,13 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_error_output_reference_binding_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_VALIDATED_NONEMPTY_INPUT_SOA_BINDING_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_validated_nonempty_input_soa_binding_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_VALIDATED_NONEMPTY_INPUT_SOA_BINDING_EVIDENCE_PRESENT,
-    reason=(
-        "error-output reference binding evidence is verified from its exact frozen PR 484 "
-        "object after validated non-empty input SoA binding evidence is present"
-    ),
-)
 
 
 def profile() -> dict:
@@ -30,68 +16,76 @@ def profile() -> dict:
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 435
+    assert result["source_count"] == 441
     assert result["delta_path_count"] == 10
     assert result["implementation_delta_path_count"] == 2
-    assert result["trigger_path_count"] == 252
-    assert result["predecessor_pull_request"] == 483
+    assert result["trigger_path_count"] == 258
+    assert result["predecessor_pull_request"] == 484
     assert result["predecessor_merge_tree"] == verifier.PREDECESSOR["merge_tree"]
 
 
-def test_profile_scopes_error_output_reference_binding() -> None:
+def test_profile_scopes_validated_nonempty_input_soa_binding() -> None:
     implementation = profile()["implementation"]
     for key in (
-        "scope_is_only_native_error_output_reference_binding",
-        "error_output_public_pointer_signatures_preserved",
-        "error_output_null_validation_precedes_reference_binding",
-        "error_output_reference_is_non_null_by_construction",
-        "error_output_reference_bound_once",
-        "error_output_initialization_uses_bound_reference",
-        "error_output_member_writes_use_bound_reference",
-        "error_output_empty_system_mapping_preserved",
-        "error_output_capacity_mapping_preserved",
-        "error_output_count_mismatch_mapping_preserved",
-        "error_output_provider_typed_mapping_preserved",
-        "error_output_unknown_provider_mapping_preserved",
-        "error_output_wrappers_preserved",
+        "scope_is_only_native_validated_nonempty_input_soa_binding",
+        "input_soa_empty_system_validation_precedes_provider_descriptor",
+        "input_soa_count_validation_precedes_provider_descriptor",
+        "input_soa_four_channels_nonempty_at_descriptor_binding",
+        "input_soa_four_channels_equal_length_at_descriptor_binding",
+        "input_soa_position_x_direct_data_binding",
+        "input_soa_position_y_direct_data_binding",
+        "input_soa_position_z_direct_data_binding",
+        "input_soa_charge_direct_data_binding",
+        "input_soa_legacy_nullable_helper_removed",
+        "input_soa_vector_include_removed",
+        "input_soa_provider_descriptor_field_order_preserved",
+        "input_soa_caller_owned_addresses_preserved",
+        "input_soa_caller_owned_lifetime_spans_provider_dispatch",
+        "provider_system_input_pointers_non_null_by_validation",
+        "raw_provider_zero_count_abi_semantics_preserved",
+        "public_and_private_provider_abi_preserved",
+        "error_output_reference_binding_preserved",
         "five_semantic_route_dispatch_preserved",
         "rollback_scratch_validation_and_commit_preserved",
     ):
         assert implementation[key] is True
     assert (
-        "scope_is_only_native_evaluation_rollback_output_force_storage_binding"
+        "scope_is_only_native_error_output_reference_binding"
         not in implementation
     )
 
 
-def test_exact_error_output_reference_transform_evidence() -> None:
+def test_exact_validated_nonempty_input_soa_transform_evidence() -> None:
     validation = profile()["validation"]
     expected = {
         "exact_delta_path_count": 10,
         "implementation_delta_path_count": 2,
         "successor_evidence_path_count": 6,
         "predecessor_freeze_wiring_path_count": 2,
-        "source_manifest_entry_count_exact": 435,
-        "pull_request_trigger_path_count_exact": 252,
-        "push_trigger_path_count_exact": 252,
-        "evaluate_impl_out_error_pointer_parameter_count_exact": 1,
-        "public_error_output_pointer_signature_count_exact": 4,
-        "error_output_null_check_count_exact": 1,
-        "error_output_reference_binding_count_exact": 1,
-        "error_output_reference_initialization_count_exact": 1,
-        "legacy_error_output_initialization_count_exact": 0,
-        "legacy_error_output_member_access_count_exact": 0,
-        "bound_error_output_member_access_count_exact": 8,
-        "bound_error_output_code_write_count_exact": 4,
-        "bound_error_output_detail_write_count_exact": 4,
+        "source_manifest_entry_count_exact": 441,
+        "pull_request_trigger_path_count_exact": 258,
+        "push_trigger_path_count_exact": 258,
+        "legacy_vector_include_count_exact": 0,
+        "legacy_data_or_null_helper_count_exact": 0,
+        "legacy_data_or_null_call_count_exact": 0,
+        "direct_provider_input_data_binding_count_exact": 4,
+        "position_x_direct_data_binding_count_exact": 1,
+        "position_y_direct_data_binding_count_exact": 1,
+        "position_z_direct_data_binding_count_exact": 1,
+        "charge_direct_data_binding_count_exact": 1,
+        "empty_system_validation_count_exact": 1,
+        "input_count_validation_channel_count_exact": 4,
     }
     for key, value in expected.items():
         assert validation[key] == value
     for key in (
-        "predecessor_adapter_exact_error_output_reference_binding_transform",
-        "adapter_outside_error_output_binding_exact_predecessor_bytes",
-        "error_output_null_check_precedes_reference_binding",
-        "error_output_reference_binding_precedes_initialization",
+        "predecessor_adapter_exact_error_output_reference_binding_bytes",
+        "adapter_exact_validated_nonempty_input_soa_transform",
+        "adapter_outside_input_soa_binding_exact_predecessor_bytes",
+        "empty_system_validation_precedes_provider_descriptor",
+        "input_count_validation_precedes_provider_descriptor",
+        "direct_input_bindings_follow_provider_descriptor_metadata",
+        "direct_input_bindings_precede_provider_dispatch",
         "public_wrappers_exact_predecessor_bytes",
         "dispatch_rollback_scratch_validation_commit_exact_predecessor_bytes",
         "canonical_vendor_adapter_byte_identical",
@@ -135,6 +129,10 @@ def test_abi_and_operational_authority_remain_closed() -> None:
 def test_forbidden_claims_remain_false() -> None:
     implementation = profile()["implementation"]
     for key in (
+        "validated_nonempty_input_soa_binding_performance_improvement_claimed",
+        "validated_nonempty_input_soa_runtime_lifetime_enforcement_claimed",
+        "validated_nonempty_input_soa_raw_provider_nullability_changed_claimed",
+        "validated_nonempty_input_soa_object_layout_equivalence_claimed",
         "error_output_reference_binding_performance_improvement_claimed",
         "error_output_reference_runtime_lifetime_enforcement_claimed",
         "error_output_nullability_elision_claimed",
@@ -156,13 +154,13 @@ def test_forbidden_claims_remain_false() -> None:
         assert implementation[key] is False
 
 
-def test_exact_pr483_predecessor_and_evidence_graph() -> None:
+def test_exact_pr484_predecessor_and_evidence_graph() -> None:
     data = profile()
     assert data["target_predecessor"] == verifier.PREDECESSOR
-    assert verifier.PREDECESSOR["pull_request"] == 483
-    assert verifier.PREDECESSOR["source_manifest_entry_count"] == 429
+    assert verifier.PREDECESSOR["pull_request"] == 484
+    assert verifier.PREDECESSOR["source_manifest_entry_count"] == 435
     manifest = json.loads((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())
-    assert len(manifest["files"]) == 435
+    assert len(manifest["files"]) == 441
     assert manifest["evidence_paths"] == sorted(
         path.as_posix() for path in verifier.EVIDENCE_PATHS
     )
