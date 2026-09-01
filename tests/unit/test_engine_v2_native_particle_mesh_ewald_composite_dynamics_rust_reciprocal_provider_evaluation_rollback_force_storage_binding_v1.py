@@ -1,27 +1,13 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from tools import (
-    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_state_binding_v1
+    verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_evaluation_rollback_force_storage_binding_v1
     as verifier,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PME_RUST_RECIPROCAL_PROVIDER_EVALUATION_ROLLBACK_FORCE_STORAGE_BINDING_EVIDENCE_PRESENT = (
-    ROOT
-    / "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_"
-    "rust_reciprocal_provider_evaluation_rollback_force_storage_binding_profile_v1.json"
-).is_file()
-pytestmark = pytest.mark.skipif(
-    PME_RUST_RECIPROCAL_PROVIDER_EVALUATION_ROLLBACK_FORCE_STORAGE_BINDING_EVIDENCE_PRESENT,
-    reason=(
-        "evaluation rollback-state binding evidence is verified from its exact "
-        "frozen PR 481 object after rollback force-storage binding evidence is present"
-    ),
-)
 
 
 def profile() -> dict:
@@ -30,29 +16,29 @@ def profile() -> dict:
 
 def test_exact_profile_manifest_and_contracts() -> None:
     result = verifier.verify(ROOT)
-    assert result["source_count"] == 417
+    assert result["source_count"] == 423
     assert result["delta_path_count"] == 10
     assert result["implementation_delta_path_count"] == 2
-    assert result["trigger_path_count"] == 234
-    assert result["predecessor_pull_request"] == 480
+    assert result["trigger_path_count"] == 240
+    assert result["predecessor_pull_request"] == 481
     assert result["predecessor_merge_tree"] == verifier.PREDECESSOR["merge_tree"]
 
 
-def test_profile_scopes_evaluation_rollback_state_binding() -> None:
+def test_profile_scopes_evaluation_rollback_force_storage_binding() -> None:
     implementation = profile()["implementation"]
     for key in (
-        "scope_is_only_native_evaluation_rollback_state_binding",
-        "evaluation_rollback_candidate_is_non_null_reference",
-        "evaluation_rollback_candidate_reference_bound_once",
-        "evaluation_rollback_candidate_pointer_parameter_removed",
-        "evaluation_rollback_candidate_pointer_member_removed",
-        "evaluation_rollback_candidate_pointer_member_access_removed",
-        "evaluation_rollback_candidate_null_assignment_removed",
-        "evaluation_rollback_candidate_uses_reference_member_access",
+        "scope_is_only_native_evaluation_rollback_force_storage_binding",
+        "evaluation_rollback_candidate_force_storage_type_alias_exact",
+        "evaluation_rollback_candidate_force_storage_type_derived_from_evaluation_member",
+        "evaluation_rollback_candidate_force_storage_nothrow_swap_assertion_exact",
+        "evaluation_rollback_candidate_force_storage_is_non_null_reference",
+        "evaluation_rollback_candidate_force_storage_reference_bound_once",
+        "evaluation_rollback_whole_candidate_reference_parameter_removed",
+        "evaluation_rollback_whole_candidate_reference_member_removed",
+        "evaluation_rollback_candidate_force_storage_uses_direct_reference_access",
+        "evaluation_rollback_callsite_passes_candidate_force_storage",
         "evaluation_rollback_candidate_declaration_precedes_guard",
-        "evaluation_rollback_candidate_lifetime_order_preserved",
-        "evaluation_rollback_enabled_parameter_removed",
-        "evaluation_rollback_enabled_conditional_initializer_removed",
+        "evaluation_rollback_candidate_force_storage_lifetime_order_preserved",
         "evaluation_rollback_activation_predicate_localized_at_callsite",
         "evaluation_rollback_activation_uses_compute_forces_and_reuse_force_storage_only",
         "evaluation_rollback_output_pointer_is_sole_activation_and_commit_sentinel",
@@ -63,29 +49,40 @@ def test_profile_scopes_evaluation_rollback_state_binding() -> None:
         "dispatch_status_normalization_binding_preserved",
     ):
         assert implementation[key] is True
-    assert "scope_is_only_native_dispatch_status_normalization_binding" not in implementation
+    for stale_key in (
+        "scope_is_only_native_evaluation_rollback_state_binding",
+        "evaluation_rollback_candidate_is_non_null_reference",
+        "evaluation_rollback_candidate_reference_bound_once",
+        "evaluation_rollback_candidate_uses_reference_member_access",
+    ):
+        assert stale_key not in implementation
 
 
-def test_exact_rollback_state_binding_transform_evidence() -> None:
+def test_exact_rollback_force_storage_binding_transform_evidence() -> None:
     validation = profile()["validation"]
     expected = {
         "exact_delta_path_count": 10,
         "implementation_delta_path_count": 2,
         "successor_evidence_path_count": 6,
         "predecessor_freeze_wiring_path_count": 2,
-        "source_manifest_entry_count_exact": 417,
-        "pull_request_trigger_path_count_exact": 234,
-        "push_trigger_path_count_exact": 234,
+        "source_manifest_entry_count_exact": 423,
+        "pull_request_trigger_path_count_exact": 240,
+        "push_trigger_path_count_exact": 240,
         "rollback_class_count_exact": 1,
         "rollback_candidate_pointer_declaration_count_exact": 0,
-        "rollback_candidate_reference_declaration_count_exact": 2,
         "rollback_candidate_pointer_member_access_count_exact": 0,
-        "rollback_candidate_reference_member_access_count_exact": 2,
         "rollback_candidate_null_assignment_count_exact": 0,
         "rollback_candidate_conditional_initializer_count_exact": 0,
-        "rollback_candidate_reference_initializer_count_exact": 1,
         "rollback_candidate_address_callsite_count_exact": 0,
-        "rollback_candidate_reference_callsite_count_exact": 1,
+        "rollback_force_storage_alias_count_exact": 1,
+        "rollback_force_storage_alias_static_assert_count_exact": 1,
+        "rollback_legacy_force_storage_type_expression_count_exact": 0,
+        "rollback_whole_candidate_reference_declaration_count_exact": 0,
+        "rollback_force_storage_reference_declaration_count_exact": 2,
+        "rollback_force_storage_reference_initializer_count_exact": 1,
+        "rollback_force_storage_reference_member_access_count_exact": 2,
+        "rollback_whole_candidate_callsite_count_exact": 0,
+        "rollback_force_storage_callsite_count_exact": 1,
         "rollback_enabled_parameter_count_exact": 0,
         "rollback_output_enabled_initializer_count_exact": 0,
         "rollback_output_direct_initializer_count_exact": 1,
@@ -100,19 +97,27 @@ def test_exact_rollback_state_binding_transform_evidence() -> None:
     for key, value in expected.items():
         assert validation[key] == value
     for key in (
-        "predecessor_adapter_exact_evaluation_rollback_state_binding_transform",
-        "evaluation_rollback_state_binding_source_exact",
-        "adapter_outside_evaluation_rollback_state_regions_exact_predecessor_bytes",
+        "predecessor_adapter_exact_evaluation_rollback_force_storage_binding_transform",
+        "evaluation_rollback_force_storage_binding_source_exact",
+        "adapter_outside_evaluation_rollback_force_storage_regions_exact_predecessor_bytes",
+        "rollback_force_storage_type_binding_region_exact",
         "dispatch_status_normalization_region_exact_predecessor_bytes",
         "rollback_candidate_declaration_precedes_guard",
         "rollback_guard_precedes_optional_scratch_declaration",
         "rollback_activation_predicate_exact",
+        "post_dispatch_validation_and_commit_exact_predecessor_bytes",
+        "canonical_vendor_adapter_byte_identical",
         "native_adapter_test_exact_predecessor_bytes",
     ):
         assert validation[key] is True
     for stale_key in (
-        "predecessor_adapter_exact_dispatch_status_normalization_binding_transform",
-        "reusable_evaluation_force_storage_rollback_guard_exact_predecessor_bytes",
+        "predecessor_adapter_exact_evaluation_rollback_state_binding_transform",
+        "evaluation_rollback_state_binding_source_exact",
+        "adapter_outside_evaluation_rollback_state_regions_exact_predecessor_bytes",
+        "rollback_candidate_reference_declaration_count_exact",
+        "rollback_candidate_reference_member_access_count_exact",
+        "rollback_candidate_reference_initializer_count_exact",
+        "rollback_candidate_reference_callsite_count_exact",
     ):
         assert stale_key not in validation
 
@@ -150,7 +155,11 @@ def test_abi_and_operational_authority_remain_closed() -> None:
 def test_forbidden_claims_remain_false() -> None:
     implementation = profile()["implementation"]
     for key in (
-        "evaluation_rollback_state_binding_performance_improvement_claimed",
+        "evaluation_rollback_force_storage_binding_performance_improvement_claimed",
+        "evaluation_rollback_force_storage_reference_performance_improvement_claimed",
+        "evaluation_rollback_force_storage_object_layout_equivalence_claimed",
+        "evaluation_rollback_force_storage_runtime_lifetime_enforcement_claimed",
+        "evaluation_rollback_guard_is_force_storage_only_claimed",
         "evaluation_rollback_candidate_reference_performance_improvement_claimed",
         "evaluation_rollback_enabled_parameter_removal_performance_improvement_claimed",
         "evaluation_rollback_object_layout_equivalence_claimed",
@@ -172,16 +181,16 @@ def test_forbidden_claims_remain_false() -> None:
         assert implementation[key] is False
 
 
-def test_exact_pr480_predecessor_and_evidence_graph() -> None:
+def test_exact_pr481_predecessor_and_evidence_graph() -> None:
     data = profile()
     assert data["target_predecessor"] == verifier.PREDECESSOR
-    assert verifier.PREDECESSOR["pull_request"] == 480
-    assert verifier.PREDECESSOR["source_manifest_entry_count"] == 411
+    assert verifier.PREDECESSOR["pull_request"] == 481
+    assert verifier.PREDECESSOR["source_manifest_entry_count"] == 417
     validation = data["validation"]
     assert validation["predecessor_workflow_detaches_exact_merge_object"] is True
     assert validation["predecessor_unit_skips_only_when_successor_profile_exists"] is True
     manifest = json.loads((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())
-    assert len(manifest["files"]) == 417
+    assert len(manifest["files"]) == 423
     assert manifest["evidence_paths"] == sorted(
         path.as_posix() for path in verifier.EVIDENCE_PATHS
     )

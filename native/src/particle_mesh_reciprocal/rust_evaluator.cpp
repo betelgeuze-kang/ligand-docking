@@ -16,8 +16,10 @@ namespace {
 
 constexpr std::size_t kMaxAtomCount = 4'096U;
 
+using EvaluationForceStorage = decltype(Evaluation::forces);
+
 static_assert(std::is_nothrow_move_assignable_v<Evaluation>);
-static_assert(std::is_nothrow_swappable_v<decltype(Evaluation{}.forces)>);
+static_assert(std::is_nothrow_swappable_v<EvaluationForceStorage>);
 static_assert(std::is_nothrow_copy_assignable_v<std::array<double, 3>>);
 
 template <typename Value>
@@ -53,10 +55,10 @@ class EvaluationForceStorageRollback final {
   public:
     EvaluationForceStorageRollback(
         Evaluation *output,
-        Evaluation &candidate) noexcept
-        : output_(output), candidate_(candidate) {
+        EvaluationForceStorage &candidate_forces) noexcept
+        : output_(output), candidate_forces_(candidate_forces) {
         if (output_ != nullptr) {
-            candidate_.forces.swap(output_->forces);
+            candidate_forces_.swap(output_->forces);
         }
     }
 
@@ -67,7 +69,7 @@ class EvaluationForceStorageRollback final {
 
     ~EvaluationForceStorageRollback() noexcept {
         if (output_ != nullptr) {
-            candidate_.forces.swap(output_->forces);
+            candidate_forces_.swap(output_->forces);
         }
     }
 
@@ -77,7 +79,7 @@ class EvaluationForceStorageRollback final {
 
   private:
     Evaluation *output_;
-    Evaluation &candidate_;
+    EvaluationForceStorage &candidate_forces_;
 };
 
 }  // namespace
@@ -364,7 +366,7 @@ static bg_status evaluate_impl(
     Evaluation candidate;
     EvaluationForceStorageRollback evaluation_force_storage_rollback{
         compute_forces && reuse_force_storage ? out_evaluation : nullptr,
-        candidate};
+        candidate.forces};
     std::optional<ProviderForceScratch> local_provider_force_scratch;
     ProviderForceScratch &active_provider_force_scratch =
         reuse_force_storage ? *provider_force_scratch
