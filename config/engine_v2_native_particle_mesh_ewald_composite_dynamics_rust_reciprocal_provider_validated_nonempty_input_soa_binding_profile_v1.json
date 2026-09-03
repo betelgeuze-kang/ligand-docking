@@ -264,7 +264,7 @@
     "single_assignment_performance_improvement_claimed": false,
     "source_manifest_entry_count": 441,
     "source_manifest_path": "config/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_profile_v1_sources.json",
-    "source_manifest_sha256": "4d6d244dae4e05003d4535c1b53d9644a682528033f226eacd7e65990e7835db",
+    "source_manifest_sha256": "234675ec914af684f122f27c7d73169361b98163bdeb974f219a20d5d88f27c7",
     "stack_storage_reduction_claimed": false,
     "standalone_force_descriptor_preparation_branch_removed": true,
     "standalone_raw_dispatch_status_binding_removed": true,
