@@ -718,7 +718,7 @@
     },
     {
       "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.md",
-      "sha256": "d5eb2e48463864b516f55353fa59805f5804cf1bcebbe2713d028ca765d206c9"
+      "sha256": "2b3fddcc4c6a60bfff174fd565be9477bd80f048bfd413ac8b70e87182a9844b"
     },
     {
       "path": "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.md",
@@ -1566,7 +1566,7 @@
     },
     {
       "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py",
-      "sha256": "77db1f53f2cd74b1c708007ca1245f9d352d38f13741e12cf88551fa67f96c79"
+      "sha256": "1ea746908585f913504156f0dd6ae081d09200ff52ecb1f50f6de7ad04ab03a9"
     },
     {
       "path": "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
@@ -1758,7 +1758,7 @@
     },
     {
       "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py",
-      "sha256": "a22557ef115d4ee9928ecf12a684e2f3517246d722b6381ab07ac7ffb4906346"
+      "sha256": "230fd9f4b2d57f83ebad6173e14add7c159b9bb750e41e40b214bceb210852ca"
     },
     {
       "path": "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_short_parent_force_scratch_v1.py",
@@ -1773,6 +1773,17 @@
       "sha256": "66d67e2f87218966ec62884d5695913f2444cb08b22ebfc7ab9a22ce95565216"
     }
   ],
+  "live_evidence_paths": [
+    ".github/workflows/ci-engine-v2-native-particle-mesh-ewald-composite-dynamics-rust-reciprocal-provider-validated-nonempty-input-soa-binding.yml",
+    "docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.md",
+    "tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py",
+    "tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py"
+  ],
   "schema_id": "betelgeuze.engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_sources/1.0.0",
-  "scope": "particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_current_sources_tests_evidence_pr484_target"
+  "scope": "particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_frozen_pr485_source_snapshot_current_evidence",
+  "source_snapshot": {
+    "description": "post_pr485_delta_verifier_fix_source_snapshot",
+    "merge_commit": "234edea066fcba2b51fd4df8338b696d2febc66e",
+    "merge_tree": "ccd3792e60df668072e60ba454a4c9345616193a"
+  }
 }
