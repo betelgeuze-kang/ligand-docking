@@ -120,6 +120,20 @@ SUCCESSOR = {
     "merge_tree": "5f4cda9b4f3faa1b77fdae024505b4f02122299a",
 }
 
+SOURCE_SNAPSHOT = {
+    "merge_commit": "234edea066fcba2b51fd4df8338b696d2febc66e",
+    "merge_tree": "ccd3792e60df668072e60ba454a4c9345616193a",
+    "description": "post_pr485_delta_verifier_fix_source_snapshot",
+}
+LIVE_SOURCE_PATHS = frozenset(
+    (
+        WORKFLOW_RELATIVE_PATH,
+        DOC_RELATIVE_PATH,
+        UNIT_RELATIVE_PATH,
+        VERIFIER_RELATIVE_PATH,
+    )
+)
+
 PREDECESSOR_EVIDENCE_SHA256 = {
     PREDECESSOR_WORKFLOW_RELATIVE_PATH: (
         "462de6202eaee8ffa5d3c31954d097ce0403d251612fd093063a8b2fa6159d08"
@@ -220,6 +234,29 @@ def frozen_bytes(path: Path) -> bytes:
     return git("show", "%s:%s" % (PREDECESSOR["merge_commit"], path)).stdout
 
 
+def source_snapshot_bytes(path: Path) -> bytes:
+    return git("show", "%s:%s" % (SOURCE_SNAPSHOT["merge_commit"], path)).stdout
+
+
+def require_source_snapshot() -> None:
+    merge = SOURCE_SNAPSHOT["merge_commit"]
+    if git("cat-file", "-t", merge).stdout.strip() != b"commit":
+        fail("source snapshot merge is not a commit")
+    if git("rev-parse", "%s^{commit}" % merge).stdout.strip().decode() != merge:
+        fail("source snapshot merge identity drift")
+    tree = git("rev-parse", "%s^{tree}" % merge).stdout.strip().decode()
+    if tree != SOURCE_SNAPSHOT["merge_tree"]:
+        fail("source snapshot merge tree drift")
+    if git("merge-base", "--is-ancestor", merge, "HEAD", check=False).returncode != 0:
+        fail("HEAD does not descend from the frozen source snapshot")
+
+
+def source_manifest_bytes(path: Path, root: Path = ROOT) -> bytes:
+    if path in LIVE_SOURCE_PATHS:
+        return (root / path).read_bytes()
+    return source_snapshot_bytes(path)
+
+
 def require_predecessor() -> dict:
     merge = PREDECESSOR["merge_commit"]
     if git("cat-file", "-t", merge).stdout.strip() != b"commit":
@@ -288,6 +325,7 @@ def current_delta_paths() -> tuple[Path, ...]:
 
 def discover_source_paths(root: Path = ROOT) -> list[Path]:
     manifest = require_predecessor()
+    require_source_snapshot()
     paths = {Path(row["path"]) for row in manifest["files"]}
     paths.update(IMPLEMENTATION_DELTA_PATHS)
     paths.update(
@@ -301,9 +339,25 @@ def discover_source_paths(root: Path = ROOT) -> list[Path]:
         )
     )
     paths.difference_update((PROFILE_RELATIVE_PATH, SOURCE_MANIFEST_RELATIVE_PATH))
-    missing = [path.as_posix() for path in paths if not (root / path).is_file()]
+    missing = []
+    snapshot = SOURCE_SNAPSHOT["merge_commit"]
+    for path in paths:
+        if path in LIVE_SOURCE_PATHS:
+            present = (root / path).is_file()
+        else:
+            present = (
+                git(
+                    "cat-file",
+                    "-e",
+                    "%s:%s" % (snapshot, path),
+                    check=False,
+                ).returncode
+                == 0
+            )
+        if not present:
+            missing.append(path.as_posix())
     if missing:
-        fail("missing source paths: %s" % missing)
+        fail("missing source paths: %s" % sorted(missing))
     result = sorted(paths, key=lambda path: path.as_posix())
     if len(result) != 441:
         fail("derived source-manifest count drift: %d" % len(result))
@@ -312,15 +366,19 @@ def discover_source_paths(root: Path = ROOT) -> list[Path]:
 
 def build_source_manifest(root: Path = ROOT) -> dict:
     rows = [
-        {"path": path.as_posix(), "sha256": sha((root / path).read_bytes())}
+        {"path": path.as_posix(), "sha256": sha(source_manifest_bytes(path, root))}
         for path in discover_source_paths(root)
     ]
     return {
         "schema_id": SOURCE_SCHEMA_ID,
         "scope": (
             "particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_"
-            "validated_nonempty_input_soa_binding_current_sources_tests_"
-            "evidence_pr484_target"
+            "validated_nonempty_input_soa_binding_frozen_pr485_source_"
+            "snapshot_current_evidence"
+        ),
+        "source_snapshot": dict(SOURCE_SNAPSHOT),
+        "live_evidence_paths": sorted(
+            path.as_posix() for path in LIVE_SOURCE_PATHS
         ),
         "evidence_paths": sorted(path.as_posix() for path in EVIDENCE_PATHS),
         "files": rows,
@@ -365,6 +423,8 @@ def build_profile(manifest_raw: bytes, root: Path = ROOT) -> dict:
             "source_manifest_path": SOURCE_MANIFEST_RELATIVE_PATH.as_posix(),
             "source_manifest_sha256": sha(manifest_raw),
             "source_manifest_entry_count": len(manifest["files"]),
+            "source_manifest_non_evidence_paths_frozen_to_source_snapshot": True,
+            "source_manifest_live_evidence_paths_current_checkout": True,
         }
     )
     validation = profile["validation"]
@@ -380,6 +440,11 @@ def build_profile(manifest_raw: bytes, root: Path = ROOT) -> dict:
             "successor_evidence_path_count": 6,
             "predecessor_freeze_wiring_path_count": 2,
             "source_manifest_entry_count_exact": 441,
+            "source_manifest_frozen_path_count_exact": 437,
+            "source_manifest_live_evidence_path_count_exact": 4,
+            "source_snapshot_merge_commit": SOURCE_SNAPSHOT["merge_commit"],
+            "source_snapshot_merge_tree": SOURCE_SNAPSHOT["merge_tree"],
+            "source_manifest_descendant_stable": True,
             "pull_request_trigger_path_count_exact": 258,
             "push_trigger_path_count_exact": 258,
             "predecessor_adapter_exact_error_output_reference_binding_bytes": True,
@@ -741,6 +806,10 @@ def require_docs_contract(root: Path = ROOT) -> None:
         "258 unique\nsymmetric pull-request and push trigger paths",
         "four blockers",
         "32 unresolved operational decisions",
+        "frozen source snapshot",
+        "current workflow, documentation, unit, and verifier",
+        "unrelated descendant source changes",
+        SOURCE_SNAPSHOT["merge_commit"],
         "no\nperformance, allocation, object-size, stack-size, acceleration, scientific",
     )
     for token in required:
@@ -755,6 +824,11 @@ def require_profile_and_manifest(root: Path = ROOT) -> tuple[dict, dict]:
     profile = json.loads(profile_raw)
     if canonical_bytes(manifest) != manifest_raw or canonical_bytes(profile) != profile_raw:
         fail("successor evidence is not canonical JSON")
+    if manifest.get("source_snapshot") != SOURCE_SNAPSHOT:
+        fail("source manifest snapshot identity drift")
+    expected_live_paths = sorted(path.as_posix() for path in LIVE_SOURCE_PATHS)
+    if manifest.get("live_evidence_paths") != expected_live_paths:
+        fail("source manifest live-evidence path drift")
     if manifest != build_source_manifest(root):
         fail("source manifest drift; run verifier with --refresh")
     if profile != build_profile(manifest_raw, root):
@@ -781,6 +855,8 @@ def require_profile_and_manifest(root: Path = ROOT) -> tuple[dict, dict]:
         "error_output_reference_binding_preserved",
         "five_semantic_route_dispatch_preserved",
         "rollback_scratch_validation_and_commit_preserved",
+        "source_manifest_non_evidence_paths_frozen_to_source_snapshot",
+        "source_manifest_live_evidence_paths_current_checkout",
         "evaluation_rollback_candidate_force_storage_type_alias_exact",
         "evaluation_rollback_candidate_force_storage_type_derived_from_evaluation_member",
         "evaluation_rollback_candidate_force_storage_nothrow_swap_assertion_exact",
@@ -893,6 +969,9 @@ def verify(root: Path = ROOT) -> dict:
         "trigger_path_count": 258,
         "predecessor_pull_request": PREDECESSOR["pull_request"],
         "predecessor_merge_tree": PREDECESSOR["merge_tree"],
+        "source_snapshot_merge_commit": SOURCE_SNAPSHOT["merge_commit"],
+        "source_snapshot_merge_tree": SOURCE_SNAPSHOT["merge_tree"],
+        "live_evidence_path_count": len(LIVE_SOURCE_PATHS),
     }
 
 

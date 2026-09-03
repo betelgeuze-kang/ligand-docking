@@ -76,6 +76,20 @@ current checkout. Its unit skips locally only when this successor profile is
 present. Release, sanitizer, Rust-boundary, Linux-export, and macOS-export
 checks retain their predecessor scope.
 
+## Descendant-stable source manifest
+
+The 441-row manifest now distinguishes the frozen source snapshot from live
+successor evidence. Non-evidence source rows are read from the exact post-PR
+485 verifier-fix merge `234edea066fcba2b51fd4df8338b696d2febc66e`
+and tree `ccd3792e60df668072e60ba454a4c9345616193a`. The current workflow, documentation, unit, and verifier remain live checkout inputs and continue to
+be hashed from the current source tree.
+
+This prevents unrelated descendant source changes from contaminating the
+historical PR 485 source contract while retaining semantic checks against the
+current canonical and vendored adapters. The manifest is a frozen source
+snapshot with current evidence, not a claim that later descendants are byte
+identical to PR 485.
+
 ## Authority boundary
 
 This is private C++ descriptor-expression hardening only. It makes no
