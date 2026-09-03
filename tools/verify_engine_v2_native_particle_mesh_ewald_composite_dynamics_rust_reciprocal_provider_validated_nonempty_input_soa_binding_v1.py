@@ -113,6 +113,13 @@ PREDECESSOR = {
     "source_manifest_entry_count": 435,
 }
 
+SUCCESSOR = {
+    "pull_request": 485,
+    "reviewed_head": "1d8dbe087c281c3688fdc98a84c54c93689b806a",
+    "merge_commit": "cabe01debb2ab7653e323db410d1fdf4a1388ea2",
+    "merge_tree": "5f4cda9b4f3faa1b77fdae024505b4f02122299a",
+}
+
 PREDECESSOR_EVIDENCE_SHA256 = {
     PREDECESSOR_WORKFLOW_RELATIVE_PATH: (
         "462de6202eaee8ffa5d3c31954d097ce0403d251612fd093063a8b2fa6159d08"
@@ -257,15 +264,26 @@ def require_predecessor() -> dict:
 
 
 def current_delta_paths() -> tuple[Path, ...]:
+    """Return the exact historical PR #485 delta, independent of later HEAD work."""
+
+    merge = SUCCESSOR["merge_commit"]
+    if git("cat-file", "-t", merge).stdout.strip() != b"commit":
+        fail("PR 485 successor merge is not a commit")
+    if git("rev-parse", "%s^{commit}" % merge).stdout.strip().decode() != merge:
+        fail("PR 485 successor merge identity drift")
+    tree = git("rev-parse", "%s^{tree}" % merge).stdout.strip().decode()
+    if tree != SUCCESSOR["merge_tree"]:
+        fail("PR 485 successor merge tree drift")
+    if git("merge-base", "--is-ancestor", merge, "HEAD", check=False).returncode != 0:
+        fail("HEAD does not descend from exact PR 485 successor")
     tracked = git(
-        "diff", "--name-only", PREDECESSOR["merge_commit"], "--"
+        "diff",
+        "--name-only",
+        PREDECESSOR["merge_commit"],
+        merge,
+        "--",
     ).stdout.decode().splitlines()
-    untracked = git(
-        "ls-files", "--others", "--exclude-standard"
-    ).stdout.decode().splitlines()
-    return tuple(
-        sorted({Path(path) for path in tracked + untracked}, key=lambda p: p.as_posix())
-    )
+    return tuple(sorted({Path(path) for path in tracked}, key=lambda p: p.as_posix()))
 
 
 def discover_source_paths(root: Path = ROOT) -> list[Path]:
