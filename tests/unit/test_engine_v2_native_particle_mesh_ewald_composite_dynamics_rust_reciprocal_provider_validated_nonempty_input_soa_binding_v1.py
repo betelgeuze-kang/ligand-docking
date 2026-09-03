@@ -22,6 +22,9 @@ def test_exact_profile_manifest_and_contracts() -> None:
     assert result["trigger_path_count"] == 258
     assert result["predecessor_pull_request"] == 484
     assert result["predecessor_merge_tree"] == verifier.PREDECESSOR["merge_tree"]
+    assert result["source_snapshot_merge_commit"] == verifier.SOURCE_SNAPSHOT["merge_commit"]
+    assert result["source_snapshot_merge_tree"] == verifier.SOURCE_SNAPSHOT["merge_tree"]
+    assert result["live_evidence_path_count"] == 4
 
 
 def test_profile_scopes_validated_nonempty_input_soa_binding() -> None:
@@ -47,6 +50,8 @@ def test_profile_scopes_validated_nonempty_input_soa_binding() -> None:
         "error_output_reference_binding_preserved",
         "five_semantic_route_dispatch_preserved",
         "rollback_scratch_validation_and_commit_preserved",
+        "source_manifest_non_evidence_paths_frozen_to_source_snapshot",
+        "source_manifest_live_evidence_paths_current_checkout",
     ):
         assert implementation[key] is True
     assert (
@@ -161,9 +166,34 @@ def test_exact_pr484_predecessor_and_evidence_graph() -> None:
     assert verifier.PREDECESSOR["source_manifest_entry_count"] == 435
     manifest = json.loads((ROOT / verifier.SOURCE_MANIFEST_RELATIVE_PATH).read_bytes())
     assert len(manifest["files"]) == 441
+    assert manifest["source_snapshot"] == verifier.SOURCE_SNAPSHOT
+    assert manifest["live_evidence_paths"] == sorted(
+        path.as_posix() for path in verifier.LIVE_SOURCE_PATHS
+    )
     assert manifest["evidence_paths"] == sorted(
         path.as_posix() for path in verifier.EVIDENCE_PATHS
     )
     assert [row["path"] for row in manifest["files"]] == sorted(
         {row["path"] for row in manifest["files"]}
     )
+
+
+
+def test_source_manifest_freezes_non_evidence_inputs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    frozen_path = verifier.ADAPTER_RELATIVE_PATH
+    live_path = verifier.UNIT_RELATIVE_PATH
+    (tmp_path / frozen_path).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / frozen_path).write_bytes(b"unrelated descendant implementation")
+    (tmp_path / live_path).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / live_path).write_bytes(b"current live evidence")
+    monkeypatch.setattr(
+        verifier,
+        "source_snapshot_bytes",
+        lambda path: b"frozen historical bytes" if path == frozen_path else b"other",
+    )
+
+    assert verifier.source_manifest_bytes(frozen_path, tmp_path) == b"frozen historical bytes"
+    assert verifier.source_manifest_bytes(live_path, tmp_path) == b"current live evidence"
