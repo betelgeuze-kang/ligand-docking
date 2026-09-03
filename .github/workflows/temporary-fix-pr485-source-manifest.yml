@@ -65,6 +65,36 @@ jobs:
               '    if expected is not None and observed != expected:\n',
               1,
           )
+          old_required_anchor = (
+              '        "rollback_scratch_validation_and_commit_preserved",\n'
+              '    ):\n'
+              '        if implementation.get(key) is not True:'
+          )
+          new_required_anchor = (
+              '        "rollback_scratch_validation_and_commit_preserved",\n'
+              '        "source_manifest_non_evidence_paths_frozen_to_source_snapshot",\n'
+              '        "source_manifest_live_evidence_paths_current_checkout",\n'
+              '    ):\n'
+              '        if implementation.get(key) is not True:'
+          )
+          source = source.replace(
+              old_required_anchor,
+              (
+                  '        "rollback_scratch_validation_and_commit_preserved",\n'
+                  '        "evaluation_rollback_candidate_force_storage_type_alias_exact",'
+              ),
+              1,
+          )
+          source = source.replace(
+              new_required_anchor,
+              (
+                  '        "rollback_scratch_validation_and_commit_preserved",\n'
+                  '        "source_manifest_non_evidence_paths_frozen_to_source_snapshot",\n'
+                  '        "source_manifest_live_evidence_paths_current_checkout",\n'
+                  '        "evaluation_rollback_candidate_force_storage_type_alias_exact",'
+              ),
+              1,
+          )
           path.write_text(source, encoding='utf-8')
           PY
 
