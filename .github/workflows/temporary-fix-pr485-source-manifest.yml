@@ -147,7 +147,7 @@ jobs:
         run: |
           git fetch --no-tags origin codex/engine-v2-generated-state-bundle-v1
           git worktree add --detach "${RUNNER_TEMP}/pr486-descendant" HEAD
-          git -C "${RUNNER_TEMP}/pr486-descendant" merge --no-commit --no-ff FETCH_HEAD
+          git -C "${RUNNER_TEMP}/pr486-descendant" merge --no-commit --no-ff origin/codex/engine-v2-generated-state-bundle-v1
           (
             cd "${RUNNER_TEMP}/pr486-descendant"
             python -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1
