@@ -99,7 +99,24 @@ jobs:
           PY
 
       - name: Apply descendant-stable manifest fix
-        run: python .github/scripts/temporary_fix_pr485_source_manifest.py
+        run: |
+          python .github/scripts/temporary_fix_pr485_source_manifest.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path(
+              'docs/engine_v2_native_particle_mesh_ewald_composite_dynamics_'
+              'rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.md'
+          )
+          source = path.read_text(encoding='utf-8')
+          old = 'The current workflow,\ndocumentation, unit, and verifier remain live'
+          new = 'The current workflow, documentation, unit, and verifier remain live'
+          if source.count(old) != 1:
+              raise RuntimeError(
+                  f'documentation live-evidence anchor drift: found {source.count(old)}'
+              )
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
 
       - name: Refresh and verify canonical evidence
         run: |
@@ -131,10 +148,11 @@ jobs:
           git fetch --no-tags origin codex/engine-v2-generated-state-bundle-v1
           git worktree add --detach "${RUNNER_TEMP}/pr486-descendant" HEAD
           git -C "${RUNNER_TEMP}/pr486-descendant" merge --no-commit --no-ff FETCH_HEAD
-          python "${RUNNER_TEMP}/pr486-descendant/tools/verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py"
-          python -m pytest -q \
-            "${RUNNER_TEMP}/pr486-descendant/tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py" \
-            --rootdir="${RUNNER_TEMP}/pr486-descendant"
+          (
+            cd "${RUNNER_TEMP}/pr486-descendant"
+            python -m tools.verify_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1
+            python -m pytest -q tests/unit/test_engine_v2_native_particle_mesh_ewald_composite_dynamics_rust_reciprocal_provider_validated_nonempty_input_soa_binding_v1.py
+          )
 
       - name: Push validated fix
         run: git push origin HEAD:codex/fix-pr485-frozen-source-manifest-20260903
