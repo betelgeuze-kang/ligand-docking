@@ -180,7 +180,7 @@ class TestHelperFunctions:
 
     def test_validate_protein_valid(self):
         coords = np.zeros((20, 3), dtype=np.float32)
-        result = _validate_protein(coords, "AGSLV")
+        result = _validate_protein(coords, "AGSLV" * 4)
         assert result["valid"] is True
         assert not result["blocked"]
 
