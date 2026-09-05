@@ -4,16 +4,20 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/protein_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_tier_beta_vertical_slice.py"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
   push:
     branches: ["main"]
     paths:
       - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/protein_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_tier_beta_vertical_slice.py"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
   workflow_dispatch:
@@ -51,6 +55,7 @@ jobs:
             tests/__init__.py
             tests/fixtures/tier_beta
             tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_biodiscovery_protein_prep.py
             tests/unit/test_tier_beta_vertical_slice.py
             requirements-mobile.txt
           sparse-checkout-cone-mode: false
@@ -75,8 +80,10 @@ jobs:
           python -m compileall -q \
             api \
             betelgeuze_engine/biodiscovery/pose.py \
+            betelgeuze_engine/biodiscovery/protein_prep.py \
             betelgeuze_engine/biodiscovery/screening.py \
             tests/unit/test_biodiscovery_screening.py \
+            tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_tier_beta_vertical_slice.py
 
       - name: Run strict RMSD, conformer, clustering, and screening contracts
@@ -85,6 +92,7 @@ jobs:
           set +e
           python -m pytest --confcutdir=tests/unit -vv -x \
             tests/unit/test_biodiscovery_screening.py \
+            tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_tier_beta_vertical_slice.py::test_service_pdb_smiles_success_signed_manifest_and_claim_limits \
             > strict-pose-rmsd.log 2>&1
           status=$?
