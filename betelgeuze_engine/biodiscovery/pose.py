@@ -58,8 +58,31 @@ def place_pose_in_pocket(pose: np.ndarray, pocket_center: np.ndarray) -> np.ndar
     return shifted + np.asarray(pocket_center, dtype=np.float32).reshape(1, 3)
 
 
+def _real_coordinate_array(
+    value: np.ndarray, *, label: str, dtype: type = np.float64,
+) -> np.ndarray:
+    """Validate the original representation before any real floating-point cast.
+
+    Masks and non-real dtypes cannot be recovered after np.asarray/astype has
+    discarded them. Shape/atom-count checks remain with the calling boundary.
+    """
+    if np.ma.isMaskedArray(value):
+        raise ValueError(f"{label} must not contain masked coordinates")
+    try:
+        coords = np.asarray(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{label} must contain real numeric coordinates") from exc
+    if coords.dtype.kind not in "iuf":
+        raise ValueError(f"{label} must contain real numeric coordinates")
+    with np.errstate(over="ignore", invalid="ignore"):
+        coords = coords.astype(dtype, copy=False)
+    if not np.isfinite(coords).all():
+        raise ValueError(f"{label} contains non-finite coordinates")
+    return coords
+
+
 def _validated_pose_coordinates(value: np.ndarray, *, label: str) -> np.ndarray:
-    coords = np.asarray(value, dtype=np.float64)
+    coords = _real_coordinate_array(value, label=label)
     if coords.ndim != 2 or coords.shape[1] != 3:
         raise ValueError(f"{label} must have shape [N, 3]")
     if int(coords.shape[0]) <= 0:
@@ -185,7 +208,7 @@ def conformer_diversity_diagnostics(
     smiles: str = "",
     diversity_threshold_a: float = 0.5,
 ) -> dict[str, Any]:
-    conformers = np.asarray(poses, dtype=np.float64)
+    conformers = _real_coordinate_array(poses, label="conformer ensemble")
     if conformers.ndim != 3 or conformers.shape[-1] != 3:
         raise ValueError("conformer ensemble must have shape [C, N, 3]")
     if int(conformers.shape[0]) <= 0 or int(conformers.shape[1]) <= 0:
@@ -300,14 +323,30 @@ def cluster_poses_by_symmetry(
     *,
     threshold_a: float = 2.0,
 ) -> dict[str, Any]:
+    # Validate all inputs before writing diagnostic rows. A singleton cluster
+    # never enters the pairwise RMSD loop, so it needs its own admission check.
+    validated_coords: dict[int, np.ndarray] = {}
+    expected_shape = None
+    for row in pose_scores:
+        pose_index = int(row["pose_index"])
+        coords = _validated_pose_coordinates(
+            placed_pose_coords[pose_index], label=f"pose {pose_index}",
+        )
+        if expected_shape is not None and coords.shape != expected_shape:
+            raise ValueError("pose coordinate shapes must match exactly within a cluster input")
+        expected_shape = coords.shape
+        validated_coords[pose_index] = coords
+    if expected_shape is not None:
+        _strict_symmetry_mappings(symmetry_mappings, atom_count=int(expected_shape[0]))
+
     clusters: list[dict[str, Any]] = []
     for row in pose_scores:
         pose_index = int(row["pose_index"])
-        coords = placed_pose_coords[pose_index]
+        coords = validated_coords[pose_index]
         assigned_cluster = -1
         assigned_rmsd = float("inf")
         for cluster_idx, cluster in enumerate(clusters):
-            representative = placed_pose_coords[int(cluster["representative_pose_index"])]
+            representative = validated_coords[int(cluster["representative_pose_index"])]
             rmsd = symmetry_aware_pose_rmsd(coords, representative, symmetry_mappings)
             if rmsd <= float(threshold_a):
                 assigned_cluster = cluster_idx
@@ -886,7 +925,7 @@ def pose_search_candidates(
     translation_spacing_a: float = 1.5,
     clash_cutoff_a: float = 1.2,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    conformers = np.asarray(poses, dtype=np.float32)
+    conformers = _real_coordinate_array(poses, label="conformer ensemble", dtype=np.float32)
     diversity = conformer_diversity_diagnostics(conformers, smiles=ligand_smiles)
     rotations = so3_rotation_matrices(rotations_per_conformer, seed)
     translations = pocket_translation_grid(translation_spacing_a)
