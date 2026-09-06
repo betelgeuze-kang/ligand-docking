@@ -54,17 +54,50 @@ def _append_ca(
     seq.append(aa3_to_aa1(res_name))
 
 
+def _record_residue(
+    names: dict[tuple[str, str, str], str], key: tuple[str, str, str], res_name: str,
+) -> None:
+    """Track all ATOM residues, not just residues that happen to have a CA."""
+    if not key[1]:
+        raise ValueError("missing_protein_residue_identity")
+    previous = names.get(key)
+    if previous is not None and previous != res_name:
+        raise ValueError("conflicting_protein_residue_name")
+    names[key] = res_name
+
+
+def _validate_occupancy(text: str) -> None:
+    """Keep absent-field compatibility; do not promote zero/dummy sites to atoms.
+
+    This coarse path cannot model absent sites. Callers must deliberately prepare
+    zero-occupancy structures rather than having this reader drop their rows.
+    """
+    if not text.strip():
+        return
+    try:
+        occupancy = float(text)
+    except ValueError as exc:
+        raise ValueError("invalid_protein_occupancy") from exc
+    if not math.isfinite(occupancy) or not 0.0 <= occupancy <= 1.0:
+        raise ValueError("invalid_protein_occupancy")
+    if occupancy == 0.0:
+        raise ValueError("unsupported_zero_occupancy_atom")
+
+
 def parse_mmcif_text(text: str) -> tuple[np.ndarray, str] | None:
     """Read the existing row-per-line atom_site subset, not a general CIF parser.
 
     Multiple models/atom_site loops/data blocks and explicit alternate locations
     must be resolved by the caller. No model or conformer is silently selected.
+    Each residue with ATOM records must have one CA and a consistent name.
+    This checks observed rows only, not missing residues described by SEQRES.
     """
     lines = [line.strip() for line in str(text).splitlines()]
     coords_ca: list[list[float]] = []
     coords_all: list[list[float]] = []
     seq: list[str] = []
     seen_residues: set[tuple[str, str, str]] = set()
+    residue_names: dict[tuple[str, str, str], str] = {}
     models: set[int] = set()
     atom_loop_seen = False
     if sum(line.startswith("data_") for line in lines) > 1:
@@ -146,9 +179,10 @@ def parse_mmcif_text(text: str) -> tuple[np.ndarray, str] | None:
                 if element in UNSUPPORTED_METAL_ELEMENTS:
                     raise ValueError(f"unsupported_metal:{element}")
                 raise ValueError(f"unsupported_cofactor_or_bound_ligand:{res_name or element}")
+            _validate_occupancy(value(tokens, "occupancy"))
             xyz = _coordinates(value(tokens, "Cartn_x"), value(tokens, "Cartn_y"), value(tokens, "Cartn_z"))
             coords_all.append(xyz)
-            if record == "ATOM" and atom_name == "CA":
+            if record == "ATOM":
                 # Do not combine a label chain with an author residue number.
                 chain_id, res_num = value(tokens, "label_asym_id"), value(tokens, "label_seq_id")
                 if not chain_id or not res_num:
@@ -156,9 +190,13 @@ def parse_mmcif_text(text: str) -> tuple[np.ndarray, str] | None:
                 if not chain_id or not res_num:
                     raise ValueError("missing_protein_residue_identity")
                 key = (chain_id, res_num, value(tokens, "pdbx_PDB_ins_code"))
-                _append_ca(coords_ca, seq, seen_residues, key, res_name, xyz)
+                _record_residue(residue_names, key, res_name)
+                if atom_name == "CA":
+                    _append_ca(coords_ca, seq, seen_residues, key, res_name, xyz)
             i += 1
 
+    if residue_names.keys() != seen_residues:
+        raise ValueError("missing_protein_ca_residue")
     coords_use = coords_ca if coords_ca else coords_all
     if not coords_use:
         return None
@@ -170,6 +208,9 @@ def parse_pdb_text(text: str) -> tuple[np.ndarray, str]:
 
     This remains the coarse BioDiscovery path, not all-atom preparation.
     Multi-model structures and nonblank altLoc records are explicitly unsupported.
+    Every observed ATOM residue must have one CA and a consistent residue name;
+    zero-occupancy atoms require deliberate preparation. Unobserved SEQRES-only
+    residues are outside this restricted projection's completeness checks.
     """
     if not str(text).strip():
         raise ValueError("empty PDB/mmCIF input")
@@ -182,6 +223,7 @@ def parse_pdb_text(text: str) -> tuple[np.ndarray, str]:
     coords_all: list[list[float]] = []
     seq: list[str] = []
     seen_residues: set[tuple[str, str, str]] = set()
+    residue_names: dict[tuple[str, str, str], str] = {}
     model_seen = False
     in_model = False
     for line in text.splitlines():
@@ -216,17 +258,22 @@ def parse_pdb_text(text: str) -> tuple[np.ndarray, str]:
                 if element in UNSUPPORTED_METAL_ELEMENTS:
                     raise ValueError(f"unsupported_metal:{element}")
                 raise ValueError(f"unsupported_cofactor_or_bound_ligand:{res_name or element}")
+            _validate_occupancy(line[54:60])
             xyz = _coordinates(line[30:38], line[38:46], line[46:54])
             coords_all.append(xyz)
-            if record == "ATOM" and atom_name == "CA":
+            if record == "ATOM":
                 try:
                     res_num = str(int(line[22:26].strip()))
                 except ValueError as exc:
                     raise ValueError("invalid_protein_residue_number") from exc
                 key = (line[21:22], res_num, line[26:27].strip())
-                _append_ca(coords_ca, seq, seen_residues, key, res_name, xyz)
+                _record_residue(residue_names, key, res_name)
+                if atom_name == "CA":
+                    _append_ca(coords_ca, seq, seen_residues, key, res_name, xyz)
     if in_model:
         raise ValueError("invalid_pdb_model_records")
+    if residue_names.keys() != seen_residues:
+        raise ValueError("missing_protein_ca_residue")
     coords_use = coords_ca if coords_ca else coords_all
     if not coords_use:
         raise ValueError("no ATOM/HETATM CA records found in PDB/mmCIF input")
@@ -272,8 +319,13 @@ def resolve_protein_input(protein_input: str) -> tuple[np.ndarray, str]:
     if not protein_input.strip():
         raise ValueError("empty protein input")
     if os.path.isfile(protein_input.strip()):
-        with open(protein_input.strip(), "r", encoding="utf-8", errors="ignore") as f:
-            text = f.read()
+        try:
+            with open(protein_input.strip(), "r", encoding="utf-8-sig") as f:
+                text = f.read()
+        except UnicodeDecodeError as exc:
+            raise ValueError("invalid_protein_file_encoding") from exc
+        except OSError as exc:
+            raise ValueError("unreadable_protein_file") from exc
         if not text.strip():
             raise ValueError(f"empty protein file: {protein_input}")
         return parse_pdb_text(text)

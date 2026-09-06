@@ -270,3 +270,145 @@ def test_repository_mmcif_fixture_and_file_resolution_are_preserved():
     assert seq == "AGSLVFQWHT"
     assert prep.validate_protein(coords, seq)["valid"] is True
     np.testing.assert_allclose(coords[0], [1.458, 0, 0])
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+def test_residue_with_atoms_but_no_ca_cannot_disappear(format):
+    if format == "pdb":
+        text = "\n".join([
+            *(_atom(i, resid=i) for i in range(1, 11)),
+            _atom(11, resid=11, residue="GLY", atom="N", element="N"),
+        ])
+    else:
+        text = _cif([
+            *(_row(id=i, label_seq_id=i) for i in range(1, 11)),
+            _row(id=11, label_seq_id=11, label_comp_id="GLY", label_atom_id="N", type_symbol="N"),
+        ])
+    with pytest.raises(ValueError, match="missing_protein_ca_residue"):
+        prep.parse_pdb_text(text)
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+def test_no_ca_atoms_cannot_fall_back_to_an_all_atom_projection(format):
+    text = _atom(atom="N", element="N") if format == "pdb" else _cif([
+        _row(label_atom_id="N", type_symbol="N"),
+    ])
+    with pytest.raises(ValueError, match="missing_protein_ca_residue"):
+        prep.parse_pdb_text(text)
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+@pytest.mark.parametrize("ca_first", [True, False])
+def test_all_atoms_of_a_residue_must_agree_on_residue_name(format, ca_first):
+    if format == "pdb":
+        rows = [_atom(), _atom(2, residue="GLY", atom="N", element="N")]
+        text = "\n".join(rows if ca_first else list(reversed(rows)))
+    else:
+        rows = [_row(), _row(id=2, label_comp_id="GLY", label_atom_id="N", type_symbol="N")]
+        text = _cif(rows if ca_first else list(reversed(rows)))
+    with pytest.raises(ValueError, match="conflicting_protein_residue_name"):
+        prep.parse_pdb_text(text)
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+def test_complete_residue_projection_keeps_ca_order_and_coordinates(format):
+    if format == "pdb":
+        text = "\n".join([
+            _atom(1, resid=1, atom="N", element="N", residue="GLY"),
+            _atom(2, resid=2, x="5.000"),
+            _atom(3, resid=1, residue="GLY", x="8.000"),
+            _atom(4, resid=2, atom="O", element="O"),
+        ])
+    else:
+        text = _cif([
+            _row(id=1, label_seq_id=1, label_atom_id="N", type_symbol="N", label_comp_id="GLY"),
+            _row(id=2, label_seq_id=2, Cartn_x="5.000"),
+            _row(id=3, label_seq_id=1, label_comp_id="GLY", Cartn_x="8.000"),
+            _row(id=4, label_seq_id=2, label_atom_id="O", type_symbol="O"),
+        ])
+    coords, seq = prep.parse_pdb_text(text)
+    assert seq == "AG"
+    assert coords.dtype == np.float32
+    np.testing.assert_array_equal(coords, [[5.0, 2.0, 3.0], [8.0, 2.0, 3.0]])
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+def test_water_does_not_create_a_missing_protein_residue(format):
+    if format == "pdb":
+        text = _atom() + "\n" + _atom(2, resid=2, record="HETATM", residue="HOH", atom="O", element="O")
+    else:
+        text = _cif([_row(), _row(id=2, group_PDB="HETATM", label_seq_id=".",
+                                label_comp_id="HOH", label_atom_id="O", type_symbol="O")])
+    coords, seq = prep.parse_pdb_text(text)
+    assert coords.shape == (1, 3) and seq == "A"
+
+
+def _with_occupancy(format, occupancy):
+    if format == "pdb":
+        atom = _atom()
+        return atom[:54] + f"{occupancy:>6s}" + atom[60:]
+    return _cif([_row(occupancy=occupancy)], (*_COLUMNS, "occupancy"))
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+@pytest.mark.parametrize("occupancy,reason", [
+    ("0.00", "unsupported_zero_occupancy_atom"),
+    ("-0.00", "unsupported_zero_occupancy_atom"),
+    ("nan", "invalid_protein_occupancy"),
+    ("inf", "invalid_protein_occupancy"),
+    ("-0.10", "invalid_protein_occupancy"),
+    ("1.10", "invalid_protein_occupancy"),
+    ("bad", "invalid_protein_occupancy"),
+])
+def test_invalid_or_zero_occupancy_requires_explicit_preparation(format, occupancy, reason):
+    with pytest.raises(ValueError, match=reason):
+        prep.parse_pdb_text(_with_occupancy(format, occupancy))
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+@pytest.mark.parametrize("occupancy", ["0.25", "1.00"])
+def test_positive_occupancy_keeps_coordinates(format, occupancy):
+    coords, seq = prep.parse_pdb_text(_with_occupancy(format, occupancy))
+    np.testing.assert_array_equal(coords, [[1.0, 2.0, 3.0]])
+    assert seq == "A"
+
+
+def test_absent_occupancy_preserves_existing_restricted_input_support():
+    atom = _atom()
+    pdb_coords, pdb_seq = prep.parse_pdb_text(atom[:54] + " " * 6 + atom[60:])
+    cif_coords, cif_seq = prep.parse_pdb_text(_cif([_row()]))
+    np.testing.assert_array_equal(pdb_coords, cif_coords)
+    assert pdb_seq == cif_seq == "A"
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+def test_invalid_file_encoding_is_not_silently_repaired(tmp_path, format):
+    text = _atom() if format == "pdb" else _cif([_row()])
+    path = tmp_path / ("damaged." + format)
+    path.write_bytes(text.encode("utf-8").replace(b"ATOM", b"AT\xffOM", 1))
+    with pytest.raises(ValueError, match="invalid_protein_file_encoding"):
+        prep.resolve_protein_input(str(path))
+
+
+@pytest.mark.parametrize("format", ["pdb", "cif"])
+def test_utf8_bom_file_matches_unmarked_input(tmp_path, format):
+    text = _atom() if format == "pdb" else _cif([_row()])
+    path = tmp_path / ("bom." + format)
+    path.write_bytes(text.encode("utf-8-sig"))
+    coords, seq = prep.resolve_protein_input(str(path))
+    expected_coords, expected_seq = prep.parse_pdb_text(text)
+    np.testing.assert_array_equal(coords, expected_coords)
+    assert seq == expected_seq
+
+
+@pytest.mark.parametrize("error", [PermissionError, FileNotFoundError, OSError])
+def test_file_read_errors_remain_preparation_errors(tmp_path, monkeypatch, error):
+    path = tmp_path / "unreadable.pdb"
+    path.write_text(_atom(), encoding="utf-8")
+
+    def fail_read(*args, **kwargs):
+        raise error("simulated file read failure")
+
+    monkeypatch.setattr("builtins.open", fail_read)
+    with pytest.raises(ValueError, match="unreadable_protein_file"):
+        prep.resolve_protein_input(str(path))
