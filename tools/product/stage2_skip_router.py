@@ -64,11 +64,16 @@ def apply_stage2_skip_router(rows: list[dict[str, Any]], *, family: str = "") ->
     skip_count = 0
     for row in rows:
         updated = dict(row)
+        rank = row.get("prior_rank_proxy")
+        if rank is None or str(rank).strip() == "":
+            rank = row.get("rank_pct")
+        if rank is None or str(rank).strip() == "":
+            rank = 1.0
         route = route_stage2_candidate(
             family=str(row.get("family", row.get("target_family", family)) or family),
             affinity_hint=float(row.get("affinity_hint", row.get("ligand_affinity_hint", 0.0)) or 0.0),
             onsps_norm=float(row.get("onsps_norm", row.get("ligand_onsps_norm", 0.0)) or 0.0),
-            prior_rank_proxy=float(row.get("prior_rank_proxy", row.get("rank_pct", 1.0)) or 1.0),
+            prior_rank_proxy=float(rank),
             mw_norm=float(row.get("mw_norm", 0.0) or 0.0),
         )
         updated.update(route)
