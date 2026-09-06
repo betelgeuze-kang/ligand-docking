@@ -6,9 +6,13 @@ on:
       - "betelgeuze_engine/biodiscovery/pose.py"
       - "betelgeuze_engine/biodiscovery/protein_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
+      - "betelgeuze_engine/biodiscovery/scoring.py"
+      - "betelgeuze_engine/biodiscovery/stability_observations.py"
+      - "betelgeuze_engine/biodiscovery/manifest.py"
       - "tests/unit/test_biodiscovery_screening.py"
       - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_biodiscovery_pose_validity.py"
+      - "tests/unit/test_biodiscovery_stability_observations.py"
       - "tests/unit/test_tier_beta_vertical_slice.py"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
   push:
@@ -17,9 +21,13 @@ on:
       - "betelgeuze_engine/biodiscovery/pose.py"
       - "betelgeuze_engine/biodiscovery/protein_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
+      - "betelgeuze_engine/biodiscovery/scoring.py"
+      - "betelgeuze_engine/biodiscovery/stability_observations.py"
+      - "betelgeuze_engine/biodiscovery/manifest.py"
       - "tests/unit/test_biodiscovery_screening.py"
       - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_biodiscovery_pose_validity.py"
+      - "tests/unit/test_biodiscovery_stability_observations.py"
       - "tests/unit/test_tier_beta_vertical_slice.py"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
   workflow_dispatch:
@@ -58,6 +66,7 @@ jobs:
             tests/fixtures/tier_beta
             tests/unit/test_biodiscovery_screening.py
             tests/unit/test_biodiscovery_protein_prep.py
+            tests/unit/test_biodiscovery_stability_observations.py
             tests/unit/test_biodiscovery_pose_validity.py
             tests/unit/test_tier_beta_vertical_slice.py
             requirements-mobile.txt
@@ -85,9 +94,11 @@ jobs:
             betelgeuze_engine/biodiscovery/pose.py \
             betelgeuze_engine/biodiscovery/protein_prep.py \
             betelgeuze_engine/biodiscovery/screening.py \
+            betelgeuze_engine/biodiscovery/scoring.py \
             tests/unit/test_biodiscovery_screening.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
+            tests/unit/test_biodiscovery_stability_observations.py \
             tests/unit/test_tier_beta_vertical_slice.py
 
       - name: Run strict RMSD, conformer, clustering, and screening contracts
@@ -98,6 +109,7 @@ jobs:
             tests/unit/test_biodiscovery_screening.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
+            tests/unit/test_biodiscovery_stability_observations.py \
             tests/unit/test_tier_beta_vertical_slice.py::test_service_pdb_smiles_success_signed_manifest_and_claim_limits \
             > strict-pose-rmsd.log 2>&1
           status=$?
@@ -109,6 +121,18 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: strict-pose-rmsd-${{ github.run_id }}-${{ github.run_attempt }}
-          path: strict-pose-rmsd.log
+          path: |
+            strict-pose-rmsd.log
+            betelgeuze_engine
+            betelgeuze_product
+            api
+            core
+            tests/__init__.py
+            tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_biodiscovery_protein_prep.py
+            tests/unit/test_biodiscovery_pose_validity.py
+            tests/unit/test_biodiscovery_stability_observations.py
+            tests/unit/test_tier_beta_vertical_slice.py
+            tests/fixtures/tier_beta
           if-no-files-found: error
           retention-days: 7
