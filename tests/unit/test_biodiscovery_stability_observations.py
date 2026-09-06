@@ -95,7 +95,7 @@ def test_success_is_an_observed_proxy_with_explicit_limits(monkeypatch):
     _field(monkeypatch)
     drift, result = scoring.run_stability_simulation(_protein(), _ligand(), steps=3, temp_k=0.)
     assert result["status"] == "observed"
-    assert result["evidence_kind"] == "synthetic_dynamics_observation"
+    assert result["evidence_kind"] == "computed_proxy_dynamics"
     assert result["steps_run"] == result["steps_requested"] == 3
     assert result["scientific_claim_validated"] is False
     assert result["restart_reproducible"] is None
@@ -145,3 +145,60 @@ def test_no_initial_contacts_does_not_mean_perfect_retention():
 def test_invalid_protocol_is_rejected(params):
     with pytest.raises(ValueError):
         scoring.run_stability_simulation(_protein(), _ligand(), **params)
+
+
+def test_terminal_energy_is_evaluated_at_final_coordinates(monkeypatch):
+    calls = []
+
+    def evaluate(state, pairs, **kwargs):
+        calls.append(state.coords.detach().clone())
+        # Deliberate diagnostic double: inspect energy-coordinate binding only.
+        return SimpleNamespace(forces=torch.ones_like(state.coords) * .5,
+                               energy=state.coords.sum().reshape(1))
+
+    monkeypatch.setattr(scoring.ProductForceField, "from_registry", lambda *a, **k: SimpleNamespace(energy_forces=evaluate))
+    _, result = scoring.run_stability_simulation(_protein(), _ligand(), steps=3, temp_k=0.)
+    assert len(calls) == 4
+    assert result["final_energy"] == pytest.approx(float(calls[-1].sum()))
+    assert result["final_energy"] != result["initial_energy"]
+    assert result["energy_trace_length"] == 3
+
+
+def test_seed_replay_is_checked_separately_from_elapsed_time():
+    service = TierBetaScreening(device="cpu", pose_count=1, top_k=1, stability_steps=2, seed=7)
+    a = service.screen(protein_input=MINI_PDB, ligand_input=VALID_SMILES)
+    b = service.screen(protein_input=MINI_PDB, ligand_input=VALID_SMILES)
+    assert a.result_manifest["stability"]["status"] == "observed"
+    assert a.result_manifest["replay_hash"] == b.result_manifest["replay_hash"]
+    assert a.result_manifest["stability"] == b.result_manifest["stability"]
+    assert "elapsed_seconds" not in a.result_manifest["stability"]["diagnostics"]
+    assert a.diagnostics["execution_observations"]["stability_elapsed_seconds"] >= 0.
+    assert b.diagnostics["execution_observations"]["stability_elapsed_seconds"] >= 0.
+
+
+@pytest.mark.parametrize("offset", [50., -50.])
+def test_initial_clamp_box_violation_is_reported_without_repair(monkeypatch, offset):
+    calls = _field(monkeypatch)
+    drift, result = scoring.run_stability_simulation(_protein() + offset, _ligand(), steps=2)
+    assert drift is None and result["status"] == "failed"
+    assert result["steps_run"] == 0 and calls == []
+    assert result["error"] == "initial_coordinates_outside_proxy_clamp_box"
+
+
+@pytest.mark.parametrize("value", [np.zeros((0, 3)), np.zeros((2, 2)), np.full((2, 3), np.nan),
+                                  np.full((2, 3), 1j), np.full((2, 3), "0"),
+                                  np.ma.array(np.zeros((2, 3)), mask=True)])
+def test_endpoint_measurements_reject_invalid_ligand_representations(value):
+    with pytest.raises(ValueError):
+        scoring.measure_pose_retention(_protein(), value, _protein(), _ligand())
+
+
+def test_endpoint_measurements_require_equal_atom_counts():
+    with pytest.raises(ValueError, match="shapes must match"):
+        scoring.measure_pose_retention(_protein(), _ligand(), _protein(), _ligand()[:1])
+
+
+@pytest.mark.parametrize("cutoff", [0., -1., np.nan, np.inf])
+def test_contact_measurement_requires_finite_positive_cutoff(cutoff):
+    with pytest.raises(ValueError):
+        scoring.measure_pose_retention(_protein(), _ligand(), _protein(), _ligand(), contact_cutoff_a=cutoff)

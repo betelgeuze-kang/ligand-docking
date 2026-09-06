@@ -95,6 +95,8 @@ jobs:
             betelgeuze_engine/biodiscovery/protein_prep.py \
             betelgeuze_engine/biodiscovery/screening.py \
             betelgeuze_engine/biodiscovery/scoring.py \
+            betelgeuze_engine/biodiscovery/stability_observations.py \
+            betelgeuze_engine/biodiscovery/manifest.py \
             tests/unit/test_biodiscovery_screening.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
@@ -111,7 +113,8 @@ jobs:
             tests/unit/test_biodiscovery_pose_validity.py \
             tests/unit/test_biodiscovery_stability_observations.py \
             tests/unit/test_tier_beta_vertical_slice.py::test_service_pdb_smiles_success_signed_manifest_and_claim_limits \
-            > strict-pose-rmsd.log 2>&1
+            tests/unit/test_tier_beta_vertical_slice.py::test_stability_simulation_records_md_reproducibility_diagnostics \
+            --junitxml=strict-pose-rmsd-junit.xml > strict-pose-rmsd.log 2>&1
           status=$?
           cat strict-pose-rmsd.log
           exit "$status"
@@ -123,6 +126,7 @@ jobs:
           name: strict-pose-rmsd-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             strict-pose-rmsd.log
+            strict-pose-rmsd-junit.xml
             betelgeuze_engine
             betelgeuze_product
             api

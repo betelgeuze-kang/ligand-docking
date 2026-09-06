@@ -515,7 +515,8 @@ class TestHelperFunctions:
         )
         assert math.isfinite(drift)
         assert stability["steps_run"] == 1
-        assert stability["restart_reproducible"] is True
+        assert stability["restart_reproducible"] is None
+        assert stability["seeded_execution"] is True
 
     def test_screening_uses_canonical_manifest_signing_contract(self):
         assert _LOCAL_MANIFEST_KEY == biodiscovery_manifest.LOCAL_MANIFEST_KEY

@@ -163,8 +163,8 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert state_ensemble["scored_state_count"] >= 1
     refine_stage = next(stage for stage in result.stage_records if stage["stage_id"] == "top_k_refine")
     assert refine_stage["diagnostics"]["rmsd_clustering"]["status"] == "symmetry_aware_rmsd_clustered"
-    assert result.result_manifest["stability"]["diagnostics"]["pbc_enabled"] is True
-    assert result.result_manifest["stability"]["diagnostics"]["restart_reproducible"] is True
+    assert result.result_manifest["stability"]["diagnostics"]["pbc_enabled"] is False
+    assert result.result_manifest["stability"]["diagnostics"]["restart_reproducible"] is None
     assert result.failure_code == "none"
     assert result.typed_input["schema_version"] == result.schema_version
     assert result.typed_output["ok"] is True
@@ -797,7 +797,7 @@ def test_stability_simulation_records_md_reproducibility_diagnostics() -> None:
     assert stability["steps_run"] == 4
     assert "energy_drift" in stability
     assert stability["constraints"]["coordinate_clamp_box_a"] > 0
-    assert stability["pbc_enabled"] is True
+    assert stability["pbc_enabled"] is False
     assert stability["thermostat"]["type"] == "langevin_proxy"
-    assert stability["restart_reproducible"] is True
+    assert stability["restart_reproducible"] is None
     assert stability["restart_seed"] == 7
