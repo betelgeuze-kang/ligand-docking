@@ -737,16 +737,61 @@ def local_translation_minimize_pose(
 
 
 def chemistry_validity_summary(ligand_valid: dict[str, Any], pose_coords: np.ndarray) -> dict[str, Any]:
-    finite_coords = bool(np.isfinite(np.asarray(pose_coords, dtype=np.float64)).all())
+    """Summarize prepared-ligand validity and strict coordinate/count integrity.
+
+    This is not an independent stereochemical or physical pose validation.
+    Never coerce strings, booleans or complex coordinates into a valid pose.
+    Invalid atom-count metadata is reported as zero with an explicit blocker,
+    rather than guessed from the coordinates or truncated with int().
+    """
     blockers = list(ligand_valid.get("blockers") or [])
-    if not finite_coords:
-        blockers.append("nonfinite_pose_coordinates")
+    finite_coords = False
+    coords = None
+    coordinate_blocker = ""
+    if np.ma.isMaskedArray(pose_coords):
+        coordinate_blocker = "masked_pose_coordinates"
+    else:
+        try:
+            coords = np.asarray(pose_coords)
+        except (TypeError, ValueError, OverflowError):
+            coordinate_blocker = "invalid_pose_coordinates"
+        else:
+            if coords.ndim != 2 or coords.shape[1] != 3:
+                coordinate_blocker = "invalid_pose_coordinate_shape"
+            elif coords.shape[0] == 0:
+                coordinate_blocker = "empty_pose_coordinates"
+            elif coords.dtype.kind not in "iuf":
+                coordinate_blocker = "invalid_pose_coordinate_dtype"
+            else:
+                # Retain the existing float64 finite-coordinate interpretation,
+                # without lossy coercion of unsupported dtypes or overflow warnings.
+                with np.errstate(over="ignore", invalid="ignore"):
+                    finite_coords = bool(np.isfinite(coords.astype(np.float64)).all())
+                if not finite_coords:
+                    coordinate_blocker = "nonfinite_pose_coordinates"
+    if coordinate_blocker and coordinate_blocker not in blockers:
+        blockers.append(coordinate_blocker)
+
+    declared_count = ligand_valid.get("atom_count")
+    count_valid = (
+        isinstance(declared_count, (int, np.integer))
+        and not isinstance(declared_count, (bool, np.bool_))
+        and declared_count > 0
+    )
+    atom_count = int(declared_count) if count_valid else 0
+    if not count_valid:
+        if "invalid_ligand_atom_count" not in blockers:
+            blockers.append("invalid_ligand_atom_count")
+    elif coords is not None and coords.ndim == 2 and coords.shape[1] == 3:
+        if coords.shape[0] != atom_count and "pose_atom_count_mismatch" not in blockers:
+            blockers.append("pose_atom_count_mismatch")
+
     valid = bool(ligand_valid.get("valid") is True and finite_coords and not blockers)
     return {
         "status": "chemical_validity_pass" if valid else "blocked_chemical_validity",
         "valid": valid,
         "claim_blockers": blockers,
-        "atom_count": int(ligand_valid.get("atom_count") or 0),
+        "atom_count": atom_count,
         "bond_count": int(ligand_valid.get("bond_count") or 0),
         "formal_charge_sum": int(sum(int(v) for v in ligand_valid.get("formal_charges", []) or [])),
         "chirality_status": str(ligand_valid.get("chirality_status") or "not_assessed"),
