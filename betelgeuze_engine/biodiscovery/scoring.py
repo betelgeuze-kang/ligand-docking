@@ -99,19 +99,50 @@ def mm_gbsa_binding_score(
     protein_beads: np.ndarray,
     ligand_coords: np.ndarray,
     contact_cutoff_a: float = 8.0,
+    *,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
+    protein_charges: np.ndarray | None = None,
+    ligand_charges: np.ndarray | None = None,
 ) -> dict[str, Any]:
+    """Forward available atom typing without inventing receptor chemistry.
+
+    CA-derived receptor sites have no all-atom charges. Formal ligand charges
+    are not substituted for partial charges; electrostatics requires both
+    explicit charge arrays. Results remain uncalibrated interaction proxies.
+    """
     try:
+        protein = _observation_coordinates(protein_beads, "protein_beads")
+        ligand = _observation_coordinates(ligand_coords, "ligand_coords")
+        for label, elements, count in (("protein", protein_elements, len(protein)),
+                                       ("ligand", ligand_elements, len(ligand))):
+            if elements is not None and (len(elements) != count or any(not isinstance(e, str) or not e.strip() for e in elements)):
+                raise ValueError(f"{label}_element_coordinate_mismatch")
+        if (protein_charges is None) != (ligand_charges is None):
+            raise ValueError("both_partial_charge_arrays_required")
+        for label, charges, count in (("protein", protein_charges, len(protein)),
+                                      ("ligand", ligand_charges, len(ligand))):
+            if charges is not None:
+                array = np.asarray(charges)
+                if np.ma.isMaskedArray(charges) or array.shape != (count,) or array.dtype.kind not in "iuf" or not np.isfinite(array).all():
+                    raise ValueError(f"invalid_{label}_partial_charges")
         result = mm_gbsa_binding_energy(
-            protein_xyz=protein_beads.astype(np.float32),
-            ligand_xyz=ligand_coords.astype(np.float32),
+            protein_xyz=protein.astype(np.float32),
+            ligand_xyz=ligand.astype(np.float32),
             contact_cutoff_a=float(contact_cutoff_a),
+            protein_elements=protein_elements, ligand_elements=ligand_elements,
+            protein_charges=protein_charges, ligand_charges=ligand_charges,
         )
-        return dict(result)
-    except Exception:
-        return {
-            "binding_energy_kcal_mol": float("inf"),
-            "error": "mm_gbsa_failed",
-        }
+        return {**dict(result),
+                "chemistry_input_scope": "explicit_elements_and_partial_charges" if protein_charges is not None else "available_elements_without_partial_charges",
+                "partial_charges_supplied": protein_charges is not None,
+                "receptor_atom_typing_supplied": protein_elements is not None,
+                "ligand_atom_typing_supplied": ligand_elements is not None,
+                "charge_source": "caller_supplied_unvalidated" if protein_charges is not None else "unavailable_no_formal_charge_substitution"}
+    except Exception as exc:
+        return {"binding_energy_kcal_mol": float("inf"), "error": "mm_gbsa_failed",
+                "status": "blocked_chemistry_input_or_proxy_evaluation", "blocked_reason": str(exc),
+                "claim_safe": False, "is_free_energy": False}
 
 
 def run_stability_simulation(
@@ -189,7 +220,10 @@ def run_stability_simulation(
     try:
         protein = _observation_coordinates(protein_beads, "protein_beads")
         ligand = _observation_coordinates(ligand_coords, "ligand_coords")
-        coords = np.concatenate([protein, ligand], axis=0)
+        origin = protein.mean(axis=0)
+        diagnostic["coordinate_origin_a"] = [float(value) for value in origin]
+        diagnostic["coordinate_frame"] = "receptor_centroid_local_translation_only"
+        coords = np.concatenate([protein - origin, ligand - origin], axis=0)
         if (np.abs(coords) > DEFAULT_BOX_SIZE / 2.).any():
             raise ValueError("initial_coordinates_outside_proxy_clamp_box")
         coords_t = torch.tensor(coords, dtype=torch.float32, device=dev).unsqueeze(0)
