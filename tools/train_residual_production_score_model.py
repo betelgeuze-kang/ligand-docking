@@ -13,6 +13,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from tools.product.residual_evidence import declared_evaluation_only
+
 from tools.builder_json_utils import (
     build_score_model_train_fingerprint,
     fingerprint_digest,
@@ -27,7 +29,7 @@ DEFAULT_OUT_MD = "runs/residual_production_score_model_current.md"
 DEFAULT_FORCE_DERIVATION_JSON = "/dev/null"
 PRODUCTION_FORCE_DERIVATION_JSON = "runs/residual_force_derivation_validation_current.json"
 DEFAULT_TRAIN_FINGERPRINT_JSON = "runs/residual_production_score_model_train_fingerprint_current.json"
-TRAINER_CONTRACT_VERSION = "score_candidate_integrity_v2"
+TRAINER_CONTRACT_VERSION = "score_candidate_integrity_v3"
 LEARNED_OUTPUT_FIELDS = ["delta_score", "corrected_score"]
 POLICY_OUTPUT_FIELDS = ["abstention_reason", "stage2_route_decision"]
 PRODUCTION_ENERGY_FIELD = "delta_energy"
@@ -172,7 +174,9 @@ def _load_rows(path_like: str | Path) -> list[dict[str, Any]]:
     path = _resolve(path_like)
     with path.open("r", encoding="utf-8", newline="") as fh:
         reader = csv.DictReader(fh)
-        return [dict(row) for row in reader]
+        rows = [dict(row) for row in reader]
+    _require_development_rows(rows)
+    return rows
 
 
 def _family_vocab(rows: list[dict[str, Any]]) -> list[str]:
@@ -183,24 +187,54 @@ def _role_vocab(rows: list[dict[str, Any]]) -> list[str]:
     return sorted({str(row.get("role") or "unknown") for row in rows})
 
 
+def _require_development_rows(rows: list[dict[str, Any]]) -> None:
+    """Reject the whole job, not just filter a protected row into a new split.
+
+    This recognizes explicit declarations only; it cannot discover undeclared
+    holdouts or authenticate the upstream data producer.
+    """
+    for index, row in enumerate(rows):
+        if declared_evaluation_only(row):
+            raise ValueError(f"evaluation_only_training_input: row {index + 1}")
+
+
+def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[float, float]:
+    value = row.get(field)
+    missing = value is None or (isinstance(value, str) and not value.strip())
+    if missing:
+        if required:
+            raise ValueError(f"missing_required_training_feature:{field}")
+        return 0.0, 1.0
+    if isinstance(value, bool):
+        raise ValueError(f"invalid_training_feature:{field}")
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"invalid_training_feature:{field}") from exc
+    if not math.isfinite(number) or abs(number) > torch.finfo(torch.float32).max:
+        raise ValueError(f"invalid_training_feature:{field}")
+    return number, 0.0
+
+
 def _refine_feature_fields(rows: list[dict[str, Any]]) -> list[str]:
-    present: list[str] = []
-    for field in REFINE_TIER_FEATURE_FIELDS:
-        if any(str(row.get(field) or "").strip() not in {"", "nan", "none"} for row in rows):
-            present.append(field)
-    return present
+    # Schema is fit on training rows. Preserve real zero values and missingness.
+    return [field for field in REFINE_TIER_FEATURE_FIELDS if any(field in row for row in rows)]
 
 
 def _matrix(
     rows: list[dict[str, Any]],
     families: list[str],
     roles: list[str],
+    *,
+    refine_fields: list[str] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, list[str]]:
-    refine_fields = _refine_feature_fields(rows)
-    feature_names = ["raw_score", "mean_min_distance_A"]
+    _require_development_rows(rows)
+    refine_fields = _refine_feature_fields(rows) if refine_fields is None else refine_fields
+    feature_names = ["raw_score", "mean_min_distance_A", "mean_min_distance_A_missing"]
     feature_names.extend(f"family={item}" for item in families)
     # role describes labels/splits, not an inference-time molecular feature.
-    feature_names.extend(refine_fields)
+    for field in refine_fields:
+        feature_names.extend([field, f"{field}_missing"])
     xs: list[list[float]] = []
     y_cls: list[float] = []
     y_delta: list[float] = []
@@ -208,13 +242,14 @@ def _matrix(
     y_energy_mask: list[float] = []
     for row in rows:
         family = str(row.get("family") or "unknown")
-        values = [
-            _float(row.get("raw_score")),
-            _float(row.get("mean_min_distance_A")),
-        ]
+        raw_score, _ = _feature_value(row, "raw_score", required=True)
+        distance, distance_missing = _feature_value(row, "mean_min_distance_A", required=False)
+        if distance < 0.0:
+            raise ValueError("invalid_training_feature:mean_min_distance_A")
+        values = [raw_score, distance, distance_missing]
         values.extend(1.0 if family == item else 0.0 for item in families)
         for field in refine_fields:
-            values.append(_float(row.get(field)))
+            values.extend(_feature_value(row, field, required=False))
         xs.append(values)
         binder = _float(row.get("is_binder"), default=float("nan"))
         residual = _float(row.get("delta_score"), default=float("nan"))
@@ -271,6 +306,7 @@ def _split_indices(rows: list[dict[str, Any]], seed: int, train_ratio: float) ->
     This is not scaffold or target-held-out validation: different IDs may still
     describe the same chemistry. Such identity normalization belongs upstream.
     """
+    _require_development_rows(rows)
     if not math.isfinite(train_ratio) or not 0.0 < train_ratio < 1.0:
         raise ValueError("train_ratio must lie strictly between zero and one")
     grouped: dict[str, list[int]] = {}
@@ -315,11 +351,13 @@ def train_residual_production_score_model(
     train_idx, val_idx = _split_indices(rows, seed=seed, train_ratio=train_ratio)
     families = _family_vocab([rows[idx] for idx in train_idx])
     roles: list[str] = []
-    refine_fields = _refine_feature_fields(rows)
+    refine_fields = _refine_feature_fields([rows[idx] for idx in train_idx])
     refine_tier_label_rows = sum(
         1 for row in rows if str(row.get(REFINE_TIER_LABEL_FIELD) or "").strip() not in {"", "nan", "none"}
     )
-    x, y_cls, y_delta, y_energy, y_energy_mask, feature_names = _matrix(rows, families, roles)
+    x, y_cls, y_delta, y_energy, y_energy_mask, feature_names = _matrix(
+        rows, families, roles, refine_fields=refine_fields,
+    )
     if not all(torch.isfinite(t).all() for t in (x, y_cls, y_delta, y_energy)):
         raise ValueError("training features and labels must be finite and float32-representable")
     if not torch.all((y_cls == 0) | (y_cls == 1)):
@@ -422,6 +460,8 @@ def train_residual_production_score_model(
         "split_policy": "ligand_id_grouped_v1",
         "feature_stage": "post_refinement_rescoring",
         "role_features_used": False,
+        "evaluation_only_inputs_rejected": True,
+        "feature_missingness_policy": "required_raw_score_optional_value_and_indicator",
         "uncertainty_calibrated": False,
         "physical_energy_residual_validated": False,
         "delta_force_training_status": "not_implemented_no_force_loss_or_coordinate_gradient",
@@ -531,6 +571,9 @@ def build_train_fingerprint(
     )
     fingerprint["trainer_contract_version"] = TRAINER_CONTRACT_VERSION
     fingerprint["trainer_source_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    fingerprint["evaluation_policy_source_sha256"] = hashlib.sha256(
+        (Path(__file__).parent / "product" / "residual_evidence.py").read_bytes()
+    ).hexdigest()
     fingerprint["digest"] = fingerprint_digest(fingerprint)
     return fingerprint
 

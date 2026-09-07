@@ -261,3 +261,134 @@ def test_nonzero_router_semantics_remain_unchanged(rank):
     _, summary = apply_stage2_skip_router([dict(prior_rank_proxy=rank)], family="gpcr")
     expected = route_stage2_candidate(family="gpcr", prior_rank_proxy=rank)
     assert all(summary["routed_rows"][0][key] == value for key, value in expected.items())
+
+
+@pytest.mark.parametrize("field", ["role", "split", "dataset_split"])
+@pytest.mark.parametrize("value", ["holdout", "test", "blind", "validation", "Fresh-128", " val "])
+def test_direct_training_rejects_declared_evaluation_rows_before_model_creation(tmp_path, monkeypatch, field, value):
+    rows = _rows()
+    for row in rows:
+        row[field] = "fit"
+    rows[-1][field] = value
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("evaluation-only data reached model creation")
+
+    monkeypatch.setattr(mod, "ResidualScoreMLP", forbidden)
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        _train(tmp_path, rows)
+    assert not (tmp_path / "candidate.pt").exists()
+
+
+@pytest.mark.parametrize("value", [True, 1, "true", "1"])
+def test_direct_training_rejects_evaluation_only_boolean_declaration(tmp_path, value):
+    rows = _rows()
+    for row in rows:
+        row["evaluation_only"] = value
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        _train(tmp_path, rows)
+    assert not (tmp_path / "candidate.pt").exists()
+
+
+def test_split_and_matrix_cannot_bypass_evaluation_boundary():
+    rows = _rows(3)
+    rows[1]["role"] = "holdout"
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        mod._split_indices(rows, 42, .8)
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        mod._matrix(rows, [], [])
+
+
+@pytest.mark.parametrize("value", [None, "", "bad", "nan", "inf", float("nan"), True, 1e39])
+def test_required_score_is_not_repaired_to_zero(value):
+    rows = _rows(2)
+    rows[0]["raw_score"] = value
+    with pytest.raises(ValueError, match="training_feature:raw_score"):
+        mod._matrix(rows, [], [])
+
+
+def test_real_zero_and_missing_optional_distance_have_distinct_feature_vectors():
+    rows = _rows(2)
+    rows[0]["raw_score"] = rows[1]["raw_score"] = 0.
+    rows[0]["mean_min_distance_A"] = 0.
+    rows[1]["mean_min_distance_A"] = ""
+    matrix, *_, names = mod._matrix(rows, [], [])
+    idx = names.index("mean_min_distance_A_missing")
+    assert matrix[:, names.index("raw_score")].tolist() == [0., 0.]
+    assert matrix[:, names.index("mean_min_distance_A")].tolist() == [0., 0.]
+    assert matrix[:, idx].tolist() == [0., 1.]
+
+
+@pytest.mark.parametrize("field", ["mean_min_distance_A", "refine_tier_delta", "mm_gbsa_delta"])
+@pytest.mark.parametrize("value", ["bad", float("nan"), float("inf"), True, 1e39])
+def test_optional_feature_errors_are_not_missing_or_zero(field, value):
+    rows = _rows(2)
+    rows[0][field] = value
+    with pytest.raises(ValueError, match="invalid_training_feature"):
+        mod._matrix(rows, [], [])
+
+
+def test_refinement_missingness_and_zero_are_separate():
+    rows = _rows(2)
+    rows[0]["refine_tier_delta"] = 0.
+    rows[1]["refine_tier_delta"] = None
+    matrix, *_, names = mod._matrix(rows, [], [])
+    assert matrix[:, names.index("refine_tier_delta")].tolist() == [0., 0.]
+    assert matrix[:, names.index("refine_tier_delta_missing")].tolist() == [0., 1.]
+
+
+def test_matrix_can_use_fixed_training_feature_schema():
+    rows = _rows(2)
+    rows[1]["mm_gbsa_delta"] = 15.
+    _, *_, names = mod._matrix(rows, [], [], refine_fields=[])
+    assert "mm_gbsa_delta" not in names
+
+
+def test_new_candidate_records_feature_and_evaluation_policy(tmp_path):
+    summary, checkpoint = _train(tmp_path)
+    for payload in (summary, checkpoint):
+        assert payload["trainer_contract_version"] == "score_candidate_integrity_v3"
+        assert payload["evaluation_only_inputs_rejected"] is True
+        assert payload["feature_missingness_policy"] == "required_raw_score_optional_value_and_indicator"
+        assert "mean_min_distance_A_missing" in payload["feature_names"]
+
+
+@pytest.mark.parametrize("value", [None, "", "bad", "nan", "inf", float("nan"), float("inf"),
+                                   -1., 1.1, True, False, [], [0.], np.bool_(True)])
+def test_unusable_rank_does_not_skip_candidate(value):
+    row = dict(prior_rank_proxy=value)
+    selected, summary = apply_stage2_skip_router([row])
+    assert len(selected) == 1
+    assert summary["stage2_skip_count"] == 0
+    assert selected[0]["stage2_prior_rank_proxy"] is None
+    assert selected[0]["stage2_skip_reason"] == "unknown_rank_requires_full_trajectory"
+    direct = route_stage2_candidate(prior_rank_proxy=value)
+    assert direct["stage2_skip_applied"] is False
+
+
+def test_missing_rank_default_is_unknown_not_tail():
+    assert route_stage2_candidate()["stage2_skip_applied"] is False
+    assert len(apply_stage2_skip_router([{}])[0]) == 1
+
+
+@pytest.mark.parametrize("field", ["affinity_hint", "onsps_norm", "mw_norm", "skip_fraction_target"])
+@pytest.mark.parametrize("value", ["bad", float("inf"), float("nan"), True])
+def test_invalid_secondary_routing_inputs_never_skip(field, value):
+    kwargs = dict(prior_rank_proxy=1., **{field: value})
+    assert route_stage2_candidate(**kwargs)["stage2_skip_applied"] is False
+
+
+def test_invalid_primary_rank_does_not_fall_back_to_valid_tail_alias():
+    selected, _ = apply_stage2_skip_router([dict(prior_rank_proxy="bad", rank_pct=1.)])
+    assert len(selected) == 1
+    assert selected[0]["stage2_prior_rank_proxy"] is None
+
+
+def test_router_mixed_batch_preserves_accounting_and_input():
+    rows = [{"id": "top", "rank_pct": 0.}, {"id": "unknown"}, {"id": "tail", "rank_pct": 1.}]
+    before = [row.copy() for row in rows]
+    selected, summary = apply_stage2_skip_router(rows)
+    assert rows == before
+    assert [row["id"] for row in selected] == ["top", "unknown"]
+    assert [row["id"] for row in summary["skipped_rows"]] == ["tail"]
+    assert summary["row_count"] == summary["stage2_full_count"] + summary["stage2_skip_count"] == 3
