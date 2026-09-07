@@ -69,7 +69,7 @@ def test_train_residual_production_score_model_writes_checkpoint(tmp_path: Path)
     assert summary["production_checkpoint_ready"] is False
     assert summary["policy_output_adapter_ready"] is True
     assert summary["policy_output_fields"] == ["abstention_reason", "stage2_route_decision"]
-    assert summary["missing_production_output_fields"] == ["delta_energy", "delta_force"]
+    assert summary["missing_production_output_fields"] == ["delta_energy", "delta_force", "uncertainty"]
     assert summary["delta_energy_head_trained"] is False
     assert summary["delta_energy_label_rows"] == 0
 
@@ -93,13 +93,13 @@ def test_train_residual_production_score_model_trains_delta_energy_head_when_lab
     assert summary["delta_energy_head_trained"] is True
     assert summary["delta_energy_label_rows"] == 40
     assert "delta_energy" in summary["learned_output_fields"]
-    assert summary["missing_production_output_fields"] == ["delta_force"]
+    assert summary["missing_production_output_fields"] == ["delta_force", "uncertainty"]
     assert checkpoint_payload["delta_energy_head_trained"] is True
     assert "delta_energy" in checkpoint_payload["learned_output_fields"]
     assert "delta_energy" in checkpoint_payload["output_fields"]
 
 
-def test_train_residual_production_score_model_attaches_delta_force_head_from_derivation(tmp_path: Path) -> None:
+def test_train_residual_production_score_model_does_not_infer_force_training_from_derivation(tmp_path: Path) -> None:
     dataset = tmp_path / "dataset.csv"
     checkpoint = tmp_path / "model.pt"
     derivation_json = tmp_path / "derivation.json"
@@ -120,14 +120,14 @@ def test_train_residual_production_score_model_attaches_delta_force_head_from_de
     )
 
     checkpoint_payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
-    assert summary["delta_force_head_trained"] is True
+    assert summary["delta_force_head_trained"] is False
     assert summary["delta_force_head_supervised"] is False
-    assert summary["delta_force_head_derivation_stub"] is True
+    assert summary["delta_force_head_derivation_stub"] is False
     assert summary["delta_force_derivation_validation_ready"] is True
-    assert "delta_force" in summary["learned_output_fields"]
-    assert summary["missing_production_output_fields"] == []
-    assert summary["production_checkpoint_ready"] is True
-    assert "delta_force" in checkpoint_payload["output_fields"]
+    assert "delta_force" not in summary["learned_output_fields"]
+    assert summary["missing_production_output_fields"] == ["delta_force", "uncertainty"]
+    assert summary["production_checkpoint_ready"] is False
+    assert "delta_force" not in checkpoint_payload["output_fields"]
 
 
 def test_train_residual_production_score_model_skip_if_unchanged(tmp_path: Path) -> None:
@@ -141,7 +141,7 @@ def test_train_residual_production_score_model_skip_if_unchanged(tmp_path: Path)
         json.dumps({"summary": {"delta_force_derivation_validation_ready": True}}) + "\n",
         encoding="utf-8",
     )
-    mod.train_residual_production_score_model(
+    summary = mod.train_residual_production_score_model(
         input_csv=str(dataset),
         out_checkpoint=str(checkpoint),
         epochs=2,
@@ -161,17 +161,7 @@ def test_train_residual_production_score_model_skip_if_unchanged(tmp_path: Path)
             seed=42,
         ),
     )
-    out_json.write_text(
-        json.dumps(
-            {
-                "status": "residual_production_score_model_trained",
-                "production_checkpoint_ready": True,
-                "checkpoint": str(checkpoint),
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    out_json.write_text(json.dumps(summary) + "\n", encoding="utf-8")
     skipped = mod.try_skip_training(
         input_csv=str(dataset),
         out_checkpoint=str(checkpoint),
@@ -208,6 +198,8 @@ def test_train_residual_production_score_model_cli_writes_outputs(tmp_path: Path
             str(out_json),
             "--out-md",
             str(out_md),
+            "--train-fingerprint-json",
+            str(tmp_path / "fingerprint.json"),
             "--epochs",
             "2",
             "--hidden-dim",

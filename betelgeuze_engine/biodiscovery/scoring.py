@@ -158,7 +158,10 @@ def run_stability_simulation(
             "coordinate_clamp_box_a": float(DEFAULT_BOX_SIZE),
             "protein_ligand_constraints": "none_restricted_smoke",
         },
-        "pbc_enabled": False,
+        "pbc_enabled": True,
+        "pbc_scope": "neighbor_minimum_image_only",
+        "periodic_coordinate_wrapping": False,
+        "boundary_consistency_validated": False,
         "neighbor_box_a": float(DEFAULT_BOX_SIZE),
         "coordinate_boundary": "clamp_not_periodic_wrapping",
         "thermostat": {"type": "langevin_proxy", "temperature_k": float(temp_k), "gamma": 1.0},
@@ -196,13 +199,15 @@ def run_stability_simulation(
         state = EngineState(coords=coords_t, atom_types=atom_types)
         field = ProductForceField.from_registry(guarded_force_term_registry())
         generator = torch.Generator(device=dev).manual_seed(int(seed))
-        provider = CellListNeighborProvider(NeighborProviderConfig(cutoff=8.0, skin=2.0, max_neighbor_count=64))
+        neighbor_config = NeighborProviderConfig(cutoff=8.0, skin=2.0, max_neighbor_count=64)
         kbt = 0.0019872041 * float(temp_k) / 298.15
         noise_scale = math.sqrt(2.0 * kbt * float(dt))
 
         def evaluate() -> tuple[torch.Tensor, float]:
             state.coords = coords_t.requires_grad_(True)
-            pairs = provider.build(coords_t, box=DEFAULT_BOX_SIZE)
+            # A persistent provider enables its internal cache. Retain the
+            # original fresh-build behavior until cache parity is validated.
+            pairs = CellListNeighborProvider(neighbor_config).build(coords_t, box=DEFAULT_BOX_SIZE)
             pair_diag = dict(getattr(pairs, "diagnostics", {}) or {})
             if pair_diag.get("overflow") is True:
                 raise ValueError("neighbor_overflow")

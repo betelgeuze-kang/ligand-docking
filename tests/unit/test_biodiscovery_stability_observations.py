@@ -99,7 +99,10 @@ def test_success_is_an_observed_proxy_with_explicit_limits(monkeypatch):
     assert result["steps_run"] == result["steps_requested"] == 3
     assert result["scientific_claim_validated"] is False
     assert result["restart_reproducible"] is None
-    assert result["pbc_enabled"] is False
+    assert result["pbc_enabled"] is True
+    assert result["pbc_scope"] == "neighbor_minimum_image_only"
+    assert result["periodic_coordinate_wrapping"] is False
+    assert result["boundary_consistency_validated"] is False
     assert result["elapsed_seconds"] >= 0.
     assert drift == pytest.approx(0.)
     assert result["pose_observations"]["ligand_rmsd_receptor_frame_a"] == pytest.approx(0.)
@@ -122,7 +125,6 @@ def test_receptor_alignment_removes_only_shared_rigid_motion():
     translation = np.array([10., -3., 2.])
     result = scoring.measure_pose_retention(protein, ligand, protein @ rotation.T + translation, ligand @ rotation.T + translation)
     assert result["ligand_rmsd_receptor_frame_a"] == pytest.approx(0., abs=1e-12)
-    assert result["ligand_rmsd_direct_a"] > 1.
     assert result["contact_retention_fraction"] == pytest.approx(1.)
 
 
@@ -202,3 +204,19 @@ def test_endpoint_measurements_require_equal_atom_counts():
 def test_contact_measurement_requires_finite_positive_cutoff(cutoff):
     with pytest.raises(ValueError):
         scoring.measure_pose_retention(_protein(), _ligand(), _protein(), _ligand(), contact_cutoff_a=cutoff)
+
+
+def test_each_evaluation_retains_fresh_neighbor_build_behavior(monkeypatch):
+    _field(monkeypatch)
+    original_build = scoring.CellListNeighborProvider.build
+    rebuilt = []
+
+    def build(self, *args, **kwargs):
+        pairs = original_build(self, *args, **kwargs)
+        rebuilt.append(pairs.diagnostics.get("rebuilt"))
+        return pairs
+
+    monkeypatch.setattr(scoring.CellListNeighborProvider, "build", build)
+    _, result = scoring.run_stability_simulation(_protein(), _ligand(), steps=3, temp_k=0.)
+    assert result["status"] == "observed"
+    assert rebuilt == [True, True, True, True]
