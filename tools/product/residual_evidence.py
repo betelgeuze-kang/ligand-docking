@@ -18,7 +18,10 @@ IDENTITY_FIELDS = (
 )
 _SOURCE_KINDS = {"computed", "synthetic"}
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
-_RESERVED_SPLITS = {"holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128"}
+_RESERVED_SPLITS = {
+    "holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128",
+    "eval", "ood_eval", "id_eval", "near_ood_eval", "far_ood_eval",
+}
 
 
 def declared_evaluation_only(row: dict[str, Any]) -> bool:

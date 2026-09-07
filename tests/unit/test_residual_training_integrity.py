@@ -392,3 +392,43 @@ def test_router_mixed_batch_preserves_accounting_and_input():
     assert [row["id"] for row in selected] == ["top", "unknown"]
     assert [row["id"] for row in summary["skipped_rows"]] == ["tail"]
     assert summary["row_count"] == summary["stage2_full_count"] + summary["stage2_skip_count"] == 3
+
+
+@pytest.mark.parametrize("role", ["eval", "ood_eval", "id_eval", "near_ood_eval", "far_ood_eval"])
+@pytest.mark.parametrize("field", ["role", "split", "dataset_split"])
+def test_repository_evaluation_roles_are_rejected_at_direct_training_entry(tmp_path, role, field):
+    rows = _rows()
+    for row in rows:
+        row[field] = role
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        _train(tmp_path, rows)
+    assert not (tmp_path / "candidate.pt").exists()
+
+
+def test_csv_optional_column_populated_only_in_validation_is_not_a_feature(tmp_path):
+    rows = _rows(40)
+    train, val = mod._split_indices(rows, 42, .8)
+    for i, row in enumerate(rows):
+        row["mm_gbsa_delta"] = "" if i in train else 20.
+    summary, payload = _train(tmp_path, rows)
+    assert "mm_gbsa_delta" not in summary["feature_names"]
+    assert "mm_gbsa_delta_missing" not in summary["feature_names"]
+    assert "mm_gbsa_delta" not in payload["feature_names"]
+    assert "mm_gbsa_delta" not in summary["refine_tier_feature_fields"]
+    assert summary["best"]["delta_rmse"] >= 0.
+
+
+def test_all_missing_optional_columns_excluded_but_measured_zero_is_preserved():
+    rows = _rows(2)
+    for row in rows:
+        row["refine_tier_delta"] = ""
+        row["mm_gbsa_delta"] = None
+        row["refine_confidence"] = 0.
+    assert mod._refine_feature_fields(rows) == ["refine_confidence"]
+
+
+def test_constant_observed_features_use_unit_not_microscopic_scale(tmp_path):
+    rows = _rows()
+    summary, payload = _train(tmp_path, rows)
+    index = summary["feature_names"].index("mean_min_distance_A")
+    assert payload["x_std"][index].item() == 1.

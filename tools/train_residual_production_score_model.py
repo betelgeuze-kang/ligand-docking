@@ -217,8 +217,17 @@ def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[
 
 
 def _refine_feature_fields(rows: list[dict[str, Any]]) -> list[str]:
-    # Schema is fit on training rows. Preserve real zero values and missingness.
-    return [field for field in REFINE_TIER_FEATURE_FIELDS if any(field in row for row in rows)]
+    # DictReader gives every row every header: a key alone is not an observation.
+    # Only nonmissing, usable training values define optional feature columns.
+    selected: list[str] = []
+    for field in REFINE_TIER_FEATURE_FIELDS:
+        observed = False
+        for row in rows:
+            _, missing = _feature_value(row, field, required=False)
+            observed = observed or not bool(missing)
+        if observed:
+            selected.append(field)
+    return selected
 
 
 def _matrix(
@@ -387,7 +396,10 @@ def train_residual_production_score_model(
     delta_force_head_trained = False
 
     x_mean = x_train.mean(dim=0)
-    x_std = x_train.std(dim=0, unbiased=False).clamp_min(1e-6)
+    x_std = x_train.std(dim=0, unbiased=False)
+    # A constant observed column has no fitted variation; use unit scale rather
+    # than amplifying later deviations by one million.
+    x_std = torch.where(x_std >= 1e-6, x_std, torch.ones_like(x_std))
     x_train_n = (x_train - x_mean) / x_std
     x_val_n = (x_val - x_mean) / x_std
 
