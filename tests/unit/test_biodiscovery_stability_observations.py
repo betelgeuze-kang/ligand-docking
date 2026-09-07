@@ -125,6 +125,7 @@ def test_receptor_alignment_removes_only_shared_rigid_motion():
     translation = np.array([10., -3., 2.])
     result = scoring.measure_pose_retention(protein, ligand, protein @ rotation.T + translation, ligand @ rotation.T + translation)
     assert result["ligand_rmsd_receptor_frame_a"] == pytest.approx(0., abs=1e-12)
+    assert result["ligand_rmsd_direct_a"] > 1.
     assert result["contact_retention_fraction"] == pytest.approx(1.)
 
 
