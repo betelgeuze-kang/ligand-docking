@@ -9,6 +9,8 @@ from typing import Any
 import numpy as np
 import torch
 
+from betelgeuze_engine.biodiscovery.coarse_receptor import prepare_receptor_proxy
+
 from betelgeuze_engine.benchmark.docking_gold import (
     DockingGoldRow,
     evaluate_docking_gold_slice,
@@ -531,10 +533,11 @@ class TierBetaScreening:
 
         resolved_pocket = (
             list(pocket_residue_indices)
-            if pocket_residue_indices
+            if pocket_residue_indices is not None
             else _resolve_pocket_indices(protein_coords, ligand_center, self.pocket_cutoff_a)
         )
-        if any(int(idx) < 0 or int(idx) >= int(protein_coords.shape[0]) for idx in resolved_pocket):
+        if any(isinstance(idx, (bool, np.bool_)) or not isinstance(idx, (int, np.integer))
+               or idx < 0 or idx >= int(protein_coords.shape[0]) for idx in resolved_pocket) or len(set(resolved_pocket)) != len(resolved_pocket):
             return self._fail("invalid_pocket_residue_indices",
                               protein_seq, protein_coords.shape[0], ligand_smiles,
                               ligand_atom=ligand_atom,
@@ -555,8 +558,18 @@ class TierBetaScreening:
             )
         )
 
-        protein_beads = _virtual_protein_coords(protein_coords)
-        pocket_center = protein_coords[resolved_pocket].mean(axis=0)
+        try:
+            protein_beads, pocket_center, receptor_context = prepare_receptor_proxy(
+                protein_coords, resolved_pocket,
+                ligand_atom_count=max(int(bundle["atom_count"]) for bundle in state_pose_bundles),
+                buffer_a=self.pocket_cutoff_a,
+                explicit_pocket=pocket_residue_indices is not None,
+            )
+        except ValueError as exc:
+            return self._fail(str(exc), protein_seq, protein_coords.shape[0], ligand_smiles,
+                              ligand_atom=ligand_atom, pocket=resolved_pocket,
+                              typed_input=typed_input, stage_records=stage_records)
+        stage_records[-1].diagnostics["receptor_proxy"] = receptor_context
         pose_scores: list[dict[str, Any]] = []
         placed_pose_coords: dict[int, np.ndarray] = {}
         global_pose_index = 0
@@ -654,9 +667,16 @@ class TierBetaScreening:
                                       poses_gen=poses_generated,
                                       typed_input=typed_input,
                                       stage_records=stage_records)
-                mm_score = _mm_gbsa_binding_score(protein_beads, pose_coords,
-                                                  contact_cutoff_a=self.pocket_cutoff_a)
+                mm_score = _mm_gbsa_binding_score(
+                    protein_beads, pose_coords, contact_cutoff_a=self.pocket_cutoff_a,
+                    ligand_elements=state_ligand_valid.get("atom_elements"),
+                )
 
+                if mm_score.get("status") == "blocked_chemistry_input_or_proxy_evaluation":
+                    return self._fail(f"ligand_invalid: {mm_score.get('blocked_reason')}",
+                                      protein_seq, protein_coords.shape[0], ligand_smiles,
+                                      ligand_atom=ligand_atom, pocket=resolved_pocket,
+                                      typed_input=typed_input, stage_records=stage_records)
                 composite = float(diag.get("total_energy", ffield_score))
                 mm_energy = float(
                     mm_score.get(
@@ -670,6 +690,7 @@ class TierBetaScreening:
                 chemistry_validity = _chemistry_validity_summary(state_ligand_valid, pose_coords)
                 ranking_metric = {
                     "name": "restricted_local_composite_score_v1",
+                    "receptor_representation": receptor_context["schema_version"],
                     "value": float(composite),
                     "lower_is_better": True,
                     "components": ["guarded_forcefield_energy", "mm_gbsa_proxy_energy"],
@@ -925,6 +946,7 @@ class TierBetaScreening:
             claim_metadata=manifest["claim_metadata"],
             pose_scores=top_k_poses,
             diagnostics={
+                "receptor_proxy": receptor_context,
                 "execution_observations": {
                     "stability_elapsed_seconds": stability_elapsed,
                     "timing_scope": "stability_invocation_including_endpoint_analysis",

@@ -501,7 +501,7 @@ class TestHelperFunctions:
     def test_screening_uses_canonical_scoring_helpers(self):
         assert _single_pose_score is biodiscovery_scoring.single_pose_score
         assert _run_stability_simulation is biodiscovery_scoring.run_stability_simulation
-        protein_ca = np.array([[float(i), 0.0, 0.0] for i in range(10)], dtype=np.float32)
+        protein_ca = np.array([[2.0 * i, 0.3 * (i % 3), 0.2 * (i % 2)] for i in range(10)], dtype=np.float32)
         protein_beads = biodiscovery_pose.virtual_protein_coords(protein_ca)
         ligand = np.array([[4.0, 0.2, 0.0], [4.5, 0.2, 0.0]], dtype=np.float32)
         score, diagnostics = biodiscovery_scoring.single_pose_score(protein_beads, ligand, device="cpu")
