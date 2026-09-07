@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import time
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
@@ -16,6 +17,7 @@ from betelgeuze_engine.physics.mm_gbsa import mm_gbsa_binding_energy
 from betelgeuze_engine.physics.neighbor import (
     CellListNeighborProvider,
     NeighborProviderConfig,
+    neighbor_source_indices,
 )
 
 from betelgeuze_engine.biodiscovery.stability_observations import (
@@ -43,7 +45,17 @@ def single_pose_score(
     protein_beads: np.ndarray,
     ligand_coords: np.ndarray,
     device: torch.device | str = "cpu",
+    *,
+    field: ProductForceField | None = None,
 ) -> tuple[float, dict[str, Any]]:
+    """Uncalibrated cross-component LJ proxy, never complex internal energy.
+
+    The CA proxy supplies neither physical charges nor directional hydrogen-bond
+    geometry. Those terms and ligand strain are absent, not measured zeroes.
+    Static docking is nonperiodic; optional proxy dynamics has its own boundary.
+    """
+    protein_beads = _observation_coordinates(protein_beads, "protein_beads")
+    ligand_coords = _observation_coordinates(ligand_coords, "ligand_coords")
     coords = np.concatenate([protein_beads, ligand_coords], axis=0)
     coords_t = torch.tensor(coords, dtype=torch.float32, device=device).unsqueeze(0)
     atom_types = build_atom_types(protein_beads.shape[0], ligand_coords.shape[0], device=device)
@@ -59,7 +71,7 @@ def single_pose_score(
         max_neighbor_count=64,
     )
     neighbor_provider = CellListNeighborProvider(neighbor_cfg)
-    pairs = neighbor_provider.build(coords_t, box=DEFAULT_BOX_SIZE)
+    pairs = neighbor_provider.build(coords_t)
     pair_diagnostics = dict(getattr(pairs, "diagnostics", {}) or {})
     if pair_diagnostics.get("overflow") is True:
         return float("inf"), {
@@ -72,8 +84,12 @@ def single_pose_score(
             "neighbor_diagnostics": pair_diagnostics,
         }
 
-    registry = guarded_force_term_registry()
-    field = ProductForceField.from_registry(registry)
+    receptor_count = int(protein_beads.shape[0])
+    cross_mask = (neighbor_source_indices(pairs) < receptor_count) != (pairs.idx < receptor_count)
+    pairs = replace(pairs, mask=pairs.mask & cross_mask,
+                    candidate_mask=(pairs.candidate_mask & cross_mask
+                                    if pairs.candidate_mask is not None else pairs.mask & cross_mask))
+    field = field or make_static_pose_field()
     try:
         ef = field.energy_forces(state, pairs, product_neighbor_required=True)
     except Exception as exc:
@@ -89,13 +105,26 @@ def single_pose_score(
 
     diagnostics = {
         "total_energy": total_e,
+        "cross_component_energy": total_e,
+        "energy_scope": "receptor_ligand_cross_component_only",
+        "internal_energies_included": False,
+        "pbc_enabled": False,
         "terms": terms,
-        "claim_safe": bool(claim.get("claim_safe", False)),
+        "claim_safe": False,
+        "term_claim_metadata": claim,
+        "not_evaluated": {name: {"status": "not_evaluated", "value": None} for name in
+                          ("receptor_partial_charge_electrostatics", "directional_hbond",
+                           "physical_topology", "ligand_strain", "hydrophobic_chemistry")},
         "neighbor_pairs": int(ef.diagnostics.get("neighbor_pair_count", 0)),
         "neighbor_diagnostics": pair_diagnostics,
     }
 
     return total_e, diagnostics
+
+
+def make_static_pose_field() -> ProductForceField:
+    """Reusable parameter object for the sole available static pair proxy."""
+    return ProductForceField.from_registry(guarded_force_term_registry(), names=["legacy_lj"])
 
 
 def mm_gbsa_binding_score(

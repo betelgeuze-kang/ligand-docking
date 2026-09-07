@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import hashlib
 import shlex
 
 import numpy as np
@@ -315,13 +316,19 @@ def validate_protein(protein_coords: np.ndarray, sequence: str) -> dict[str, obj
     return {"valid": True, "blocked": False, "fidelity": "sequence_mapped", "residue_count": n_res}
 
 
-def resolve_protein_input(protein_input: str) -> tuple[np.ndarray, str]:
+def resolve_protein_input(
+    protein_input: str, *, snapshot: dict | None = None,
+) -> tuple[np.ndarray, str]:
     if not protein_input.strip():
         raise ValueError("empty protein input")
     if os.path.isfile(protein_input.strip()):
         try:
-            with open(protein_input.strip(), "r", encoding="utf-8-sig") as f:
-                text = f.read()
+            with open(protein_input.strip(), "rb") as f:
+                source_bytes = f.read()
+            if snapshot is not None:
+                snapshot.update(sha256=hashlib.sha256(source_bytes).hexdigest(),
+                                byte_count=len(source_bytes), source_kind="path")
+            text = source_bytes.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise ValueError("invalid_protein_file_encoding") from exc
         except OSError as exc:
@@ -335,5 +342,9 @@ def resolve_protein_input(protein_input: str) -> tuple[np.ndarray, str]:
         or "SEQRES" in protein_input
         or looks_like_mmcif_text(protein_input)
     ):
+        if snapshot is not None:
+            source_bytes = protein_input.encode("utf-8")
+            snapshot.update(sha256=hashlib.sha256(source_bytes).hexdigest(),
+                            byte_count=len(source_bytes), source_kind="inline_text")
         return parse_pdb_text(protein_input)
     raise ValueError("protein input must be a PDB/mmCIF file path or PDB/mmCIF text with atom records")

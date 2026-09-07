@@ -6,16 +6,27 @@ on:
       - "betelgeuze_engine/biodiscovery/pose.py"
       - "betelgeuze_engine/biodiscovery/coarse_receptor.py"
       - "betelgeuze_engine/biodiscovery/protein_prep.py"
+      - "betelgeuze_engine/biodiscovery/ligand_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "betelgeuze_engine/biodiscovery/scoring.py"
       - "betelgeuze_engine/biodiscovery/stability_observations.py"
       - "betelgeuze_engine/biodiscovery/manifest.py"
+      - "betelgeuze_engine/physics/neighbor.py"
+      - "betelgeuze_product/tier_beta_vertical_slice.py"
+      - "betelgeuze_engine/product/runners/tier_beta_service_adapter.py"
       - "tests/unit/test_biodiscovery_screening.py"
       - "tests/unit/test_deep_review_geometry.py"
       - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_biodiscovery_pose_validity.py"
       - "tests/unit/test_biodiscovery_stability_observations.py"
       - "tests/unit/test_tier_beta_vertical_slice.py"
+      - "tests/unit/test_biodiscovery_ligand_input_integrity.py"
+      - "tests/unit/test_biodiscovery_manifest_integrity.py"
+      - "tests/unit/test_neighbor_cache_geometry.py"
+      - "tests/unit/test_biodiscovery_runtime_integrity.py"
+      - "tests/unit/test_api_h4_security_hardening.py"
+      - "pytest.ini"
+      - "requirements-mobile.txt"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
   push:
     branches: ["main"]
@@ -23,16 +34,27 @@ on:
       - "betelgeuze_engine/biodiscovery/pose.py"
       - "betelgeuze_engine/biodiscovery/coarse_receptor.py"
       - "betelgeuze_engine/biodiscovery/protein_prep.py"
+      - "betelgeuze_engine/biodiscovery/ligand_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "betelgeuze_engine/biodiscovery/scoring.py"
       - "betelgeuze_engine/biodiscovery/stability_observations.py"
       - "betelgeuze_engine/biodiscovery/manifest.py"
+      - "betelgeuze_engine/physics/neighbor.py"
+      - "betelgeuze_product/tier_beta_vertical_slice.py"
+      - "betelgeuze_engine/product/runners/tier_beta_service_adapter.py"
       - "tests/unit/test_biodiscovery_screening.py"
       - "tests/unit/test_deep_review_geometry.py"
       - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_biodiscovery_pose_validity.py"
       - "tests/unit/test_biodiscovery_stability_observations.py"
       - "tests/unit/test_tier_beta_vertical_slice.py"
+      - "tests/unit/test_biodiscovery_ligand_input_integrity.py"
+      - "tests/unit/test_biodiscovery_manifest_integrity.py"
+      - "tests/unit/test_neighbor_cache_geometry.py"
+      - "tests/unit/test_biodiscovery_runtime_integrity.py"
+      - "tests/unit/test_api_h4_security_hardening.py"
+      - "pytest.ini"
+      - "requirements-mobile.txt"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
   workflow_dispatch:
 
@@ -51,6 +73,7 @@ jobs:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       PRODUCT_API_AUTH_REQUIRED: "0"
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: "disabled"
       CUDA_VISIBLE_DEVICES: ""
       HIP_VISIBLE_DEVICES: ""
       ROCR_VISIBLE_DEVICES: ""
@@ -65,8 +88,11 @@ jobs:
             api
             betelgeuze_engine
             betelgeuze_product
+            betelgeuze_ai_md/__init__.py
+            betelgeuze_ai_md/contracts
             core
             tests/__init__.py
+            tests/unit/__init__.py
             tests/fixtures/tier_beta
             tests/unit/test_biodiscovery_screening.py
             tests/unit/test_deep_review_geometry.py
@@ -74,7 +100,14 @@ jobs:
             tests/unit/test_biodiscovery_stability_observations.py
             tests/unit/test_biodiscovery_pose_validity.py
             tests/unit/test_tier_beta_vertical_slice.py
+            tests/unit/test_biodiscovery_ligand_input_integrity.py
+            tests/unit/test_biodiscovery_manifest_integrity.py
+            tests/unit/test_neighbor_cache_geometry.py
+            tests/unit/test_biodiscovery_runtime_integrity.py
+            tests/unit/test_api_h4_security_hardening.py
+            pytest.ini
             requirements-mobile.txt
+            .github/workflows/ci-strict-pose-rmsd.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -99,29 +132,44 @@ jobs:
             betelgeuze_engine/biodiscovery/pose.py \
             betelgeuze_engine/biodiscovery/coarse_receptor.py \
             betelgeuze_engine/biodiscovery/protein_prep.py \
+            betelgeuze_engine/biodiscovery/ligand_prep.py \
             betelgeuze_engine/biodiscovery/screening.py \
             betelgeuze_engine/biodiscovery/scoring.py \
             betelgeuze_engine/biodiscovery/stability_observations.py \
             betelgeuze_engine/biodiscovery/manifest.py \
+            betelgeuze_engine/physics/neighbor.py \
+            betelgeuze_product/tier_beta_vertical_slice.py \
+            betelgeuze_engine/product/runners/tier_beta_service_adapter.py \
             tests/unit/test_biodiscovery_screening.py \
             tests/unit/test_deep_review_geometry.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
             tests/unit/test_biodiscovery_stability_observations.py \
-            tests/unit/test_tier_beta_vertical_slice.py
+            tests/unit/test_tier_beta_vertical_slice.py \
+            tests/unit/test_biodiscovery_ligand_input_integrity.py \
+            tests/unit/test_biodiscovery_manifest_integrity.py \
+            tests/unit/test_neighbor_cache_geometry.py \
+            tests/unit/test_biodiscovery_runtime_integrity.py \
+            tests/unit/test_api_h4_security_hardening.py
 
-      - name: Run strict RMSD, conformer, clustering, and screening contracts
+      - name: Run strict geometry, runtime, input, and persisted-integrity contracts
         shell: bash
         run: |
           set +e
-          python -m pytest --confcutdir=tests/unit -vv -x \
+          python -m pytest --confcutdir=tests/unit -vv -x -W error \
             tests/unit/test_biodiscovery_screening.py \
             tests/unit/test_deep_review_geometry.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
             tests/unit/test_biodiscovery_stability_observations.py \
+            tests/unit/test_biodiscovery_ligand_input_integrity.py \
+            tests/unit/test_biodiscovery_manifest_integrity.py \
+            tests/unit/test_neighbor_cache_geometry.py \
+            tests/unit/test_biodiscovery_runtime_integrity.py \
             tests/unit/test_tier_beta_vertical_slice.py::test_service_pdb_smiles_success_signed_manifest_and_claim_limits \
             tests/unit/test_tier_beta_vertical_slice.py::test_stability_simulation_records_md_reproducibility_diagnostics \
+            tests/unit/test_api_h4_security_hardening.py::test_tier_beta_artifacts_replace_links_without_touching_victims \
+            tests/unit/test_api_h4_security_hardening.py::test_tier_beta_artifacts_replace_fifos_without_blocking \
             --junitxml=strict-pose-rmsd-junit.xml > strict-pose-rmsd.log 2>&1
           status=$?
           cat strict-pose-rmsd.log
@@ -137,15 +185,26 @@ jobs:
             strict-pose-rmsd-junit.xml
             betelgeuze_engine
             betelgeuze_product
+            betelgeuze_ai_md/__init__.py
+            betelgeuze_ai_md/contracts
             api
             core
             tests/__init__.py
+            tests/unit/__init__.py
             tests/unit/test_biodiscovery_screening.py
             tests/unit/test_deep_review_geometry.py
             tests/unit/test_biodiscovery_protein_prep.py
             tests/unit/test_biodiscovery_pose_validity.py
             tests/unit/test_biodiscovery_stability_observations.py
             tests/unit/test_tier_beta_vertical_slice.py
+            tests/unit/test_biodiscovery_ligand_input_integrity.py
+            tests/unit/test_biodiscovery_manifest_integrity.py
+            tests/unit/test_neighbor_cache_geometry.py
+            tests/unit/test_biodiscovery_runtime_integrity.py
+            tests/unit/test_api_h4_security_hardening.py
             tests/fixtures/tier_beta
+            pytest.ini
+            requirements-mobile.txt
+            .github/workflows/ci-strict-pose-rmsd.yml
           if-no-files-found: error
           retention-days: 7

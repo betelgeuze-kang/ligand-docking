@@ -15,10 +15,18 @@ class NeighborPairs:
     source: str = "provided"
     diagnostics: dict[str, Any] = field(default_factory=dict)
     candidate_mask: torch.Tensor | None = None
+    storage: str = "provided"
 
     @property
     def is_dense(self) -> bool:
-        return bool(self.idx.ndim == 3 and self.idx.shape[1] == self.idx.shape[2])
+        # A compact [B, N, K] list can have N == K (for example, N == 64).
+        # Tensor shape therefore cannot establish dense/reference provenance.
+        return bool(
+            self.storage == "dense_reference"
+            or self.source == "full_neighbor_pairs"
+            or self.diagnostics.get("reference_only") is True
+            or self.diagnostics.get("nxn_allocation_observed") is True
+        )
 
     def pair_count(self) -> int:
         return int(self.mask.sum().detach().cpu().item())
@@ -121,6 +129,22 @@ def _minimum_image(delta: torch.Tensor, box: torch.Tensor | None) -> torch.Tenso
     )
 
 
+def _neighbor_cache_signature(
+    coords: torch.Tensor,
+    config: NeighborProviderConfig,
+    box: torch.Tensor | float | None,
+) -> tuple[Any, ...]:
+    """Snapshot every non-coordinate input that changes candidate membership.
+
+    Copy the normalized box values rather than retaining a caller's mutable
+    tensor. Disabled PBC remains distinct from an explicit or configured box.
+    """
+
+    box_value = _box_tensor(box if box is not None else config.box_size, coords=coords)
+    box_values = None if box_value is None else tuple(box_value.detach().cpu().tolist())
+    return (config, tuple(coords.shape), coords.device, coords.dtype, box_values)
+
+
 def full_neighbor_pairs(coords: torch.Tensor, *, cutoff: float | None = None) -> NeighborPairs:
     if coords.ndim != 3 or coords.shape[-1] != 3:
         raise ValueError("coords must have shape [B, N, 3]")
@@ -138,6 +162,7 @@ def full_neighbor_pairs(coords: torch.Tensor, *, cutoff: float | None = None) ->
         mask=mask,
         delta=diff,
         source="full_neighbor_pairs",
+        storage="dense_reference",
         diagnostics={
             "status": "reference_full_pairs_ready",
             "source": "full_neighbor_pairs",
@@ -198,6 +223,7 @@ def refresh_neighbor_geometry(
         source=pairs.source,
         diagnostics=diagnostics,
         candidate_mask=candidate_mask,
+        storage=pairs.storage,
     )
 
 
@@ -216,19 +242,27 @@ class CellListNeighborProvider:
         self._cached_pairs: NeighborPairs | None = None
         self._cached_coords: torch.Tensor | None = None
         self._cached_step: int | None = None
+        self._cached_signature: tuple[Any, ...] | None = None
 
-    def needs_rebuild(self, coords: torch.Tensor, *, step: int | None = None) -> bool:
+    def needs_rebuild(
+        self,
+        coords: torch.Tensor,
+        *,
+        step: int | None = None,
+        box: torch.Tensor | float | None = None,
+    ) -> bool:
         if self._cached_pairs is None or self._cached_coords is None:
             return True
+        if _neighbor_cache_signature(coords, self.config, box) != self._cached_signature:
+            return True
         if step is not None and self._cached_step is not None:
-            if int(step) - int(self._cached_step) >= int(self.config.rebuild_stride):
+            elapsed = int(step) - int(self._cached_step)
+            if elapsed < 0 or elapsed >= int(self.config.rebuild_stride):
                 return True
         if float(self.config.skin) <= 0.0:
             return True
-        if coords.shape != self._cached_coords.shape:
-            return True
-        displacement = (coords.detach() - self._cached_coords.to(device=coords.device, dtype=coords.dtype)).norm(dim=-1)
-        return bool(displacement.amax().item() > (0.5 * float(self.config.skin)))
+        displacement = (coords.detach() - self._cached_coords).norm(dim=-1)
+        return bool(displacement.numel() and displacement.amax().item() > (0.5 * float(self.config.skin)))
 
     def build(
         self,
@@ -239,7 +273,7 @@ class CellListNeighborProvider:
     ) -> NeighborPairs:
         if coords.ndim != 3 or coords.shape[-1] != 3:
             raise ValueError("coords must have shape [B, N, 3]")
-        if not self.needs_rebuild(coords, step=step):
+        if not self.needs_rebuild(coords, step=step, box=box):
             assert self._cached_pairs is not None
             refreshed = refresh_neighbor_geometry(coords, self._cached_pairs)
             diagnostics = dict(refreshed.diagnostics)
@@ -253,11 +287,13 @@ class CellListNeighborProvider:
                 source=refreshed.source,
                 diagnostics=diagnostics,
                 candidate_mask=refreshed.candidate_mask,
+                storage=refreshed.storage,
             )
         pairs = self._build(coords, box=box)
         self._cached_pairs = pairs
         self._cached_coords = coords.detach().clone()
         self._cached_step = int(step) if step is not None else None
+        self._cached_signature = _neighbor_cache_signature(coords, self.config, box)
         return pairs
 
     def _build(self, coords: torch.Tensor, *, box: torch.Tensor | float | None = None) -> NeighborPairs:
@@ -379,6 +415,7 @@ class CellListNeighborProvider:
             source=self.source,
             diagnostics=diagnostics,
             candidate_mask=candidate_mask,
+            storage="compact",
         )
 
 
@@ -470,6 +507,7 @@ def neighbor_pairs_from_rust_hip_tensors(
         source="rust_hip_cell_list",
         diagnostics=diagnostics,
         candidate_mask=candidate_mask,
+        storage="compact",
     )
 
 
@@ -484,19 +522,27 @@ class RustHipNeighborProvider:
         self._cached_pairs: NeighborPairs | None = None
         self._cached_coords: torch.Tensor | None = None
         self._cached_step: int | None = None
+        self._cached_signature: tuple[Any, ...] | None = None
 
-    def needs_rebuild(self, coords: torch.Tensor, *, step: int | None = None) -> bool:
+    def needs_rebuild(
+        self,
+        coords: torch.Tensor,
+        *,
+        step: int | None = None,
+        box: torch.Tensor | float | None = None,
+    ) -> bool:
         if self._cached_pairs is None or self._cached_coords is None:
             return True
+        if _neighbor_cache_signature(coords, self.config, box) != self._cached_signature:
+            return True
         if step is not None and self._cached_step is not None:
-            if int(step) - int(self._cached_step) >= int(self.config.rebuild_stride):
+            elapsed = int(step) - int(self._cached_step)
+            if elapsed < 0 or elapsed >= int(self.config.rebuild_stride):
                 return True
         if float(self.config.skin) <= 0.0:
             return True
-        if coords.shape != self._cached_coords.shape:
-            return True
-        displacement = (coords.detach() - self._cached_coords.to(device=coords.device, dtype=coords.dtype)).norm(dim=-1)
-        return bool(displacement.amax().item() > (0.5 * float(self.config.skin)))
+        displacement = (coords.detach() - self._cached_coords).norm(dim=-1)
+        return bool(displacement.numel() and displacement.amax().item() > (0.5 * float(self.config.skin)))
 
     def _blocked_pairs(self, coords: torch.Tensor, *, status: str, reason: str) -> NeighborPairs:
         batch = int(coords.shape[0]) if coords.ndim == 3 else 1
@@ -532,6 +578,7 @@ class RustHipNeighborProvider:
             delta=torch.zeros((batch, atom_count, width, 3), dtype=dtype, device=device),
             source=self.source,
             diagnostics=diagnostics,
+            storage="compact",
         )
 
     def _backend_or_none(self) -> Any | None:
@@ -553,7 +600,7 @@ class RustHipNeighborProvider:
     ) -> NeighborPairs:
         if coords.ndim != 3 or coords.shape[-1] != 3:
             raise ValueError("coords must have shape [B, N, 3]")
-        if not self.needs_rebuild(coords, step=step):
+        if not self.needs_rebuild(coords, step=step, box=box):
             assert self._cached_pairs is not None
             refreshed = refresh_neighbor_geometry(coords, self._cached_pairs)
             diagnostics = dict(refreshed.diagnostics)
@@ -567,6 +614,7 @@ class RustHipNeighborProvider:
                 source=refreshed.source,
                 diagnostics=diagnostics,
                 candidate_mask=refreshed.candidate_mask,
+                storage=refreshed.storage,
             )
         if not coords.is_cuda:
             pairs = self._blocked_pairs(
@@ -577,6 +625,7 @@ class RustHipNeighborProvider:
             self._cached_pairs = pairs
             self._cached_coords = coords.detach().clone()
             self._cached_step = int(step) if step is not None else None
+            self._cached_signature = _neighbor_cache_signature(coords, self.config, box)
             return pairs
         box_value = _box_tensor(box if box is not None else self.config.box_size, coords=coords)
         if box_value is None:
@@ -615,4 +664,5 @@ class RustHipNeighborProvider:
         self._cached_pairs = pairs
         self._cached_coords = coords.detach().clone()
         self._cached_step = int(step) if step is not None else None
+        self._cached_signature = _neighbor_cache_signature(coords, self.config, box)
         return pairs

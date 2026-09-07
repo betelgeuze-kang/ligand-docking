@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from betelgeuze_engine.biodiscovery import TierBetaScreening, TierBetaScreeningResult
+from betelgeuze_product.tier_beta_vertical_slice import build_tier_beta_request_from_api
 
 RUNNER_ADAPTER_SCHEMA_VERSION = "tier_beta_runner_adapter_v1"
 
@@ -25,34 +26,21 @@ class TierBetaRunnerRequest:
         return asdict(self)
 
 
-def _int_param(params: dict[str, Any], key: str, default: int, *, minimum: int = 0) -> int:
-    try:
-        value = int(params.get(key, default))
-    except (TypeError, ValueError):
-        value = int(default)
-    return int(max(minimum, value))
-
-
 def parse_tier_beta_runner_payload(payload: dict[str, Any]) -> TierBetaRunnerRequest:
     params = payload.get("runner_profile_params")
     if not isinstance(params, dict):
         params = payload
-    pocket = params.get("pocket_residue_indices")
-    pocket_residue_indices = (
-        [int(value) for value in pocket]
-        if isinstance(pocket, list) and all(str(value).strip() for value in pocket)
-        else None
-    )
+    request = build_tier_beta_request_from_api({"runner_profile_params": params})
     metadata = params.get("metadata") if isinstance(params.get("metadata"), dict) else {}
     return TierBetaRunnerRequest(
-        protein_input=str(params.get("protein_input") or params.get("pdb_content") or ""),
-        ligand_input=str(params.get("ligand_input") or params.get("smiles") or ""),
-        pocket_residue_indices=pocket_residue_indices,
+        protein_input=request["protein_input"],
+        ligand_input=request["ligand_input"],
+        pocket_residue_indices=request["pocket_residue_indices"],
         device=str(params.get("device") or "cpu"),
-        pose_count=_int_param(params, "pose_count", 8, minimum=1),
-        top_k=_int_param(params, "top_k", 3, minimum=1),
-        stability_steps=_int_param(params, "stability_steps", 0, minimum=0),
-        seed=_int_param(params, "seed", 42, minimum=0),
+        pose_count=request["pose_count"],
+        top_k=request["top_k"],
+        stability_steps=request["stability_steps"],
+        seed=request["seed"],
         metadata=dict(metadata),
     )
 
