@@ -9,6 +9,12 @@ on:
       - 'tools/product/stage2_skip_router.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
+      - 'tools/product/build_residual_production_supervised_dataset.py'
+      - 'tools/product/residual_evidence.py'
+      - 'tools/builder_table_utils.py'
+      - 'tools/product/builder_table_utils.py'
+      - 'tests/unit/test_build_residual_production_supervised_dataset.py'
+      - 'tests/unit/test_residual_evidence_pairs.py'
       - '.github/workflows/ci-ai-evidence.yml'
   push:
     branches: [main]
@@ -19,6 +25,12 @@ on:
       - 'tools/product/stage2_skip_router.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
+      - 'tools/product/build_residual_production_supervised_dataset.py'
+      - 'tools/product/residual_evidence.py'
+      - 'tools/builder_table_utils.py'
+      - 'tools/product/builder_table_utils.py'
+      - 'tests/unit/test_build_residual_production_supervised_dataset.py'
+      - 'tests/unit/test_residual_evidence_pairs.py'
       - '.github/workflows/ci-ai-evidence.yml'
   workflow_dispatch:
 
@@ -64,6 +76,8 @@ jobs:
           python -m pytest --confcutdir=tests/unit -W error -vv \
             tests/unit/test_train_residual_production_score_model.py \
             tests/unit/test_residual_training_integrity.py \
+            tests/unit/test_build_residual_production_supervised_dataset.py \
+            tests/unit/test_residual_evidence_pairs.py \
             --junitxml=ai-evidence-junit.xml 2>&1 | tee ai-evidence.log
       - name: Preserve exact test evidence
         if: always()
@@ -73,6 +87,12 @@ jobs:
           path: |
             ai-evidence.log
             ai-evidence-junit.xml
+            tools/product/build_residual_production_supervised_dataset.py
+            tools/product/residual_evidence.py
+            tools/builder_table_utils.py
+            tools/product/builder_table_utils.py
+            tests/unit/test_build_residual_production_supervised_dataset.py
+            tests/unit/test_residual_evidence_pairs.py
             tools/train_residual_production_score_model.py
             tools/product/stage2_skip_router.py
             tests/unit/test_train_residual_production_score_model.py

@@ -41,7 +41,7 @@ def test_supervised_dataset_materializes_broad_labeled_rows(tmp_path: Path) -> N
     )
 
     summary = payload["summary"]
-    assert summary["status"] == "residual_production_supervised_dataset_ready"
+    assert summary["status"] == "residual_score_candidate_dataset_ready"
     assert summary["rows_emitted"] == 30
     assert summary["binder_rows"] == 15
     assert summary["negative_rows"] == 15
@@ -50,7 +50,7 @@ def test_supervised_dataset_materializes_broad_labeled_rows(tmp_path: Path) -> N
     assert "delta_energy" in summary["missing_production_output_labels"]
 
 
-def test_supervised_dataset_joins_stage3_delta_energy_proxy_labels(tmp_path: Path) -> None:
+def test_supervised_dataset_keeps_stage3_proxy_out_of_residual_labels(tmp_path: Path) -> None:
     _write_stage5(tmp_path / "a_stage5_ranking_rows.csv", "ADRB2_GPCR_BLIND", 10)
     _write_stage3_energy_proxy(tmp_path / "a_stage3_scores.csv", "ADRB2_GPCR_BLIND", 10)
 
@@ -63,13 +63,16 @@ def test_supervised_dataset_joins_stage3_delta_energy_proxy_labels(tmp_path: Pat
     )
 
     summary = payload["summary"]
-    assert summary["production_supervised_dataset_ready"] is True
-    assert summary["delta_energy_label_rows"] == 10
-    assert summary["delta_energy_label_source"] == "stage3_energy_proxy"
-    assert "delta_energy" in summary["label_fields"]
-    assert "delta_energy" not in summary["missing_production_output_labels"]
-    assert payload["rows"][0]["delta_energy"] == -8.5
-    assert payload["rows"][0]["delta_energy_label_source"] == "stage3_energy_proxy:binding_energy_mmpbsa_kcal_mol_proxy"
+    assert summary["production_supervised_dataset_ready"] is False
+    assert summary["score_candidate_dataset_ready"] is True
+    assert summary["delta_energy_label_rows"] == 0
+    assert summary["delta_energy_label_source"] == ""
+    assert "delta_energy" not in summary["label_fields"]
+    assert "delta_energy" in summary["missing_production_output_labels"]
+    assert payload["rows"][0]["delta_energy"] == ""
+    assert payload["rows"][0]["stage3_energy_proxy_value"] == -8.5
+    assert payload["rows"][0]["delta_energy_label_source"] == ""
+    assert payload["rows"][0]["refine_tier_label"] == ""
     assert payload["sources"][0]["stage3_energy_proxy_status"] == "used"
 
 
