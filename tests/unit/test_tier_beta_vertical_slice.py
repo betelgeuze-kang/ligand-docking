@@ -25,6 +25,12 @@ from tests.unit.test_biodiscovery_screening import MINI_PDB, VALID_SMILES
 
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "tier_beta"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# Distinct residues exercise unknown-topology validation, not duplicate-CA parsing.
+UNKNOWN_RESIDUE_PDB = "".join(
+    f"ATOM  {i:5d}  CA  UNK A{i:4d}    "
+    f"{float(i):8.3f}{0.0:8.3f}{0.0:8.3f}  1.00  0.00           C\n"
+    for i in range(1, 11)
+)
 
 
 def test_canonical_tier_beta_paths_do_not_use_subprocess_or_csv_handoff() -> None:
@@ -109,7 +115,7 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert "pose_rmsd_to_top5_centroid_a" in result.pose_scores[0]
     assert result.pose_scores[0]["clash_count"] >= 0
     assert result.pose_scores[0]["chemistry_validity"]["status"] == "chemical_validity_pass"
-    assert result.pose_scores[0]["ranking_metric"]["name"] == "restricted_local_composite_score_v1"
+    assert result.pose_scores[0]["ranking_metric"]["name"] == "restricted_local_composite_score_v2_ca_geometry_context"
     ligand_state = result.pose_scores[0]["ligand_state"]
     assert ligand_state["state_id"].startswith("ligand_state_")
     assert ligand_state["scoring_status"] == "pose_conformers_generated"
@@ -175,6 +181,7 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
         "topology_validation.ligand",
         "pose_ensemble",
         "pocket_resolution",
+        "protein_calculation_context",
         "scoring_ranking",
         "top_k_refine",
         "stability_simulation",
@@ -263,7 +270,7 @@ def test_service_pdb_sdf_success_preserves_molblock_topology_provenance() -> Non
     [
         (MINI_PDB, "XxYyZz", "ligand_invalid"),
         (MINI_PDB, "CC(O)C(=O)O", "unassigned_ligand_chirality"),
-        ("ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10, VALID_SMILES, "placeholder_topology"),
+        (UNKNOWN_RESIDUE_PDB, VALID_SMILES, "placeholder_topology"),
         (
             MINI_PDB + "HETATM   99 ZN    ZN A  99       0.000   0.000   0.000  1.00  0.00          ZN\n",
             VALID_SMILES,
@@ -472,7 +479,7 @@ def test_api_placeholder_topology_fails_closed_without_retry_or_result(tmp_path,
     monkeypatch.setattr(settings, "api_inline_worker_enabled", True)
     api_main.job_store = None
     api_main._job_store_path = None
-    placeholder = "ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10
+    placeholder = UNKNOWN_RESIDUE_PDB
 
     client = TestClient(api_main.app)
     response = client.post(
@@ -583,7 +590,7 @@ def test_product_tier_beta_router_placeholder_topology_fails_closed(tmp_path, mo
     monkeypatch.setattr(settings, "api_inline_worker_enabled", True)
     api_main.job_store = None
     api_main._job_store_path = None
-    placeholder = "ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10
+    placeholder = UNKNOWN_RESIDUE_PDB
 
     client = TestClient(api_main.app)
     response = client.post(

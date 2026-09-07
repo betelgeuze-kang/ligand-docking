@@ -26,6 +26,9 @@ from betelgeuze_engine.chemistry.ligand_states import (
     enumerate_ligand_states_from_smiles as _enumerate_ligand_states_from_smiles,
 )
 from betelgeuze_engine.physics.dense_guard import ensure_small_dense_diagnostic
+from betelgeuze_engine.biodiscovery.local_geometry import (
+    PROXY_REPRESENTATION, normalized_residue_indices, pocket_context,
+)
 from betelgeuze_engine.biodiscovery.ligand_prep import (
     ResolvedLigandInput,
     ligand_topology_payload as _ligand_topology_payload,
@@ -184,7 +187,7 @@ def _benchmark_metric_summary_from_pose_scores(pose_scores: list[dict[str, Any]]
         )
     payload = evaluate_docking_gold_slice(rows, pose_success_rmsd_a=2.0, top_k=5).to_dict()
     payload["status"] = "blocked_reference_pose_missing"
-    payload["score_metric"] = "restricted_local_composite_score_v1"
+    payload["score_metric"] = "restricted_local_composite_score_v2_ca_geometry_context"
     payload["scored_pose_count"] = int(len(pose_scores))
     payload["blockers"] = sorted(
         {
@@ -529,12 +532,13 @@ class TierBetaScreening:
             )
         )
 
-        resolved_pocket = (
-            list(pocket_residue_indices)
-            if pocket_residue_indices
-            else _resolve_pocket_indices(protein_coords, ligand_center, self.pocket_cutoff_a)
-        )
-        if any(int(idx) < 0 or int(idx) >= int(protein_coords.shape[0]) for idx in resolved_pocket):
+        try:
+            resolved_pocket = normalized_residue_indices(
+                list(pocket_residue_indices) if pocket_residue_indices is not None
+                else _resolve_pocket_indices(protein_coords, ligand_center, self.pocket_cutoff_a),
+                int(protein_coords.shape[0]),
+            )
+        except (TypeError, ValueError):
             return self._fail("invalid_pocket_residue_indices",
                               protein_seq, protein_coords.shape[0], ligand_smiles,
                               ligand_atom=ligand_atom,
@@ -555,7 +559,24 @@ class TierBetaScreening:
             )
         )
 
-        protein_beads = _virtual_protein_coords(protein_coords)
+        try:
+            context_indices, context_diagnostics = pocket_context(
+                protein_coords, resolved_pocket, [bundle["poses"] for bundle in state_pose_bundles],
+                cutoff_a=self.pocket_cutoff_a,
+            )
+            # Check the largest state before expanding beads or starting search.
+            diagnostic_count = 4 * len(context_indices) + max(bundle["atom_count"] for bundle in state_pose_bundles)
+            ensure_small_dense_diagnostic(np.empty((diagnostic_count, 3)), context="tier_beta_local_context")
+            protein_beads = _virtual_protein_coords(protein_coords, residue_indices=context_indices)
+        except ValueError as exc:
+            return self._fail(f"dense_diagnostic_blocked: {exc}",
+                              protein_seq, protein_coords.shape[0], ligand_smiles,
+                              ligand_atom=ligand_atom, pocket=resolved_pocket, poses_gen=poses_generated,
+                              typed_input=typed_input, stage_records=stage_records)
+        stage_records.append(StageRecord(
+            stage_id="protein_calculation_context", schema_version=_SCHEMA_VERSION,
+            status="pass", diagnostics=context_diagnostics,
+        ))
         pocket_center = protein_coords[resolved_pocket].mean(axis=0)
         pose_scores: list[dict[str, Any]] = []
         placed_pose_coords: dict[int, np.ndarray] = {}
@@ -580,6 +601,12 @@ class TierBetaScreening:
             state_smiles = str(bundle["smiles"])
             state_ligand_valid = dict(bundle["ligand_valid"])
             state_atom = int(bundle["atom_count"])
+            # Match the graph transformation in generate_conformers; SDF source
+            # atom order can differ from regenerated canonical-SMILES pose order.
+            pose_mol = Chem.RemoveHs(Chem.AddHs(Chem.MolFromSmiles(state_smiles))) if Chem is not None else None
+            pose_elements = [atom.GetSymbol() for atom in pose_mol.GetAtoms()] if pose_mol is not None else None
+            if pose_elements is None or len(pose_elements) != state_atom:
+                return self._fail("ligand_pose_atom_mapping_unavailable", typed_input=typed_input, stage_records=stage_records)
             anchor_mapping = _chemical_anchor_mapping(state_smiles, state_ligand_valid)
             search_candidates, state_search_diagnostics = _pose_search_candidates(
                 bundle["poses"],
@@ -655,7 +682,17 @@ class TierBetaScreening:
                                       typed_input=typed_input,
                                       stage_records=stage_records)
                 mm_score = _mm_gbsa_binding_score(protein_beads, pose_coords,
-                                                  contact_cutoff_a=self.pocket_cutoff_a)
+                                                  contact_cutoff_a=self.pocket_cutoff_a,
+                                                  ligand_elements=pose_elements)
+                mm_score["ligand_atom_order_source"] = "rdkit_removehs_addhs_state_smiles"
+                mm_score["protein_representation"] = PROXY_REPRESENTATION
+                if mm_score.get("error"):
+                    return self._fail(
+                        f"mm_gbsa_failed: {mm_score.get('detail', mm_score['error'])}",
+                        protein_seq, protein_coords.shape[0], ligand_smiles,
+                        ligand_atom=ligand_atom, pocket=resolved_pocket, poses_gen=poses_generated,
+                        typed_input=typed_input, stage_records=stage_records,
+                    )
 
                 composite = float(diag.get("total_energy", ffield_score))
                 mm_energy = float(
@@ -669,7 +706,7 @@ class TierBetaScreening:
                 clashes = _clash_count(protein_beads, pose_coords)
                 chemistry_validity = _chemistry_validity_summary(state_ligand_valid, pose_coords)
                 ranking_metric = {
-                    "name": "restricted_local_composite_score_v1",
+                    "name": "restricted_local_composite_score_v2_ca_geometry_context",
                     "value": float(composite),
                     "lower_is_better": True,
                     "components": ["guarded_forcefield_energy", "mm_gbsa_proxy_energy"],

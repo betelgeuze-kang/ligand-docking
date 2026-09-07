@@ -1030,17 +1030,11 @@ def pose_search_candidates(
     return retained, diagnostics
 
 
-def virtual_protein_coords(protein_ca: np.ndarray) -> np.ndarray:
-    n_res = protein_ca.shape[0]
-    beads = np.zeros((n_res * _CG_BEAD_PER_RESIDUE, 3), dtype=np.float32)
-    for i in range(n_res):
-        ca = protein_ca[i].astype(np.float64)
-        base = i * _CG_BEAD_PER_RESIDUE
-        beads[base + 0] = ca + np.array([0.0, 0.0, 0.0], dtype=np.float64)
-        beads[base + 1] = ca + np.array([1.2, 0.0, 0.0], dtype=np.float64)
-        beads[base + 2] = ca + np.array([-0.8, 0.9, 0.0], dtype=np.float64)
-        beads[base + 3] = ca + np.array([-0.8, -0.9, 0.0], dtype=np.float64)
-    return beads.astype(np.float32)
+def virtual_protein_coords(protein_ca: np.ndarray, *, residue_indices: list[int] | None = None) -> np.ndarray:
+    """Compatibility entry point for the geometry-derived, untyped v2 proxy."""
+    from betelgeuze_engine.biodiscovery.local_geometry import virtual_protein_coords as build_proxy
+
+    return build_proxy(protein_ca, residue_indices=residue_indices)
 
 
 def resolve_pocket_indices(protein_ca: np.ndarray, ligand_center: np.ndarray | None, cutoff_a: float) -> list[int]:

@@ -99,19 +99,68 @@ def mm_gbsa_binding_score(
     protein_beads: np.ndarray,
     ligand_coords: np.ndarray,
     contact_cutoff_a: float = 8.0,
+    *,
+    protein_elements: list[str] | None = None,
+    ligand_elements: list[str] | None = None,
+    protein_charges: np.ndarray | None = None,
+    ligand_charges: np.ndarray | None = None,
 ) -> dict[str, Any]:
+    """Forward declared matching chemistry, never invent charges for CG beads.
+
+    Protein typing may be absent for the C-alpha proxy. Ligand typing is still
+    useful and recorded separately. Formal charges are not partial charges;
+    this wrapper accepts only explicit caller-supplied paired charge arrays.
+    The underlying interaction proxy remains uncalibrated and non-free-energy.
+    """
     try:
-        result = mm_gbsa_binding_energy(
-            protein_xyz=protein_beads.astype(np.float32),
-            ligand_xyz=ligand_coords.astype(np.float32),
+        from betelgeuze_engine.physics.dense_guard import ensure_small_dense_diagnostic
+
+        protein = _observation_coordinates(protein_beads, "protein_beads")
+        ligand = _observation_coordinates(ligand_coords, "ligand_coords")
+        if any((np.abs(coords) > np.finfo(np.float32).max).any() for coords in (protein, ligand)):
+            raise ValueError("mm_gbsa_coordinates_out_of_range")
+        ensure_small_dense_diagnostic(np.concatenate([protein, ligand]), context="tier_beta_mm_gbsa_diagnostic")
+        if not math.isfinite(contact_cutoff_a) or contact_cutoff_a <= 0.0:
+            raise ValueError("invalid_mm_gbsa_cutoff")
+        supported = {"H", "C", "N", "O", "S", "P", "F", "CL", "BR", "I"}
+        for label, elements, count in (("protein", protein_elements, len(protein)), ("ligand", ligand_elements, len(ligand))):
+            if elements is not None:
+                if (not isinstance(elements, (list, tuple)) or len(elements) != count
+                        or any(not isinstance(e, str) or e.upper() not in supported for e in elements)):
+                    raise ValueError(f"invalid_{label}_element_mapping")
+        if (protein_charges is None) != (ligand_charges is None):
+            raise ValueError("both_partial_charge_arrays_required")
+        charge_arrays = []
+        for label, values, count in (("protein", protein_charges, len(protein)), ("ligand", ligand_charges, len(ligand))):
+            if values is None:
+                charge_arrays.append(None)
+                continue
+            array = np.asarray(values)
+            if (np.ma.isMaskedArray(values) or array.dtype.kind not in "iuf" or array.shape != (count,)
+                    or not np.isfinite(array).all()):
+                raise ValueError(f"invalid_{label}_partial_charges")
+            with np.errstate(over="ignore", invalid="ignore"):
+                converted = array.astype(np.float64)
+            if not np.isfinite(converted).all():
+                raise ValueError(f"invalid_{label}_partial_charges")
+            charge_arrays.append(converted)
+        result = dict(mm_gbsa_binding_energy(
+            protein_xyz=protein.astype(np.float32), ligand_xyz=ligand.astype(np.float32),
             contact_cutoff_a=float(contact_cutoff_a),
-        )
-        return dict(result)
-    except Exception:
-        return {
-            "binding_energy_kcal_mol": float("inf"),
-            "error": "mm_gbsa_failed",
+            protein_elements=protein_elements, ligand_elements=ligand_elements,
+            protein_charges=charge_arrays[0], ligand_charges=charge_arrays[1],
+        ))
+        result["chemistry_input_scope"] = {
+            "protein_elements_supplied": protein_elements is not None,
+            "ligand_elements_supplied": ligand_elements is not None,
+            "partial_charges_supplied": protein_charges is not None,
+            "partial_charge_source": "caller_supplied_not_authenticated" if protein_charges is not None else "not_provided",
+            "physical_parameterization_validated": False,
         }
+        return result
+    except Exception as exc:
+        return {"binding_energy_kcal_mol": float("inf"), "error": "mm_gbsa_failed",
+                "blocked_reason": "invalid_mm_gbsa_inputs_or_evaluation", "detail": str(exc)}
 
 
 def run_stability_simulation(
@@ -190,6 +239,13 @@ def run_stability_simulation(
         protein = _observation_coordinates(protein_beads, "protein_beads")
         ligand = _observation_coordinates(ligand_coords, "ligand_coords")
         coords = np.concatenate([protein, ligand], axis=0)
+        # One shared translation retains all relative coordinates. Never center
+        # protein and ligand separately or infer periodic wrapping from a clamp.
+        origin = coords.min(axis=0) / 2.0 + coords.max(axis=0) / 2.0
+        coords = coords - origin
+        diagnostic["input_origin_a"] = origin.tolist()
+        diagnostic["coordinate_frame"] = "joint_centered_input_axes"
+        diagnostic["coordinate_preparation"] = "shared_box_center_translation_v1"
         if (np.abs(coords) > DEFAULT_BOX_SIZE / 2.).any():
             raise ValueError("initial_coordinates_outside_proxy_clamp_box")
         coords_t = torch.tensor(coords, dtype=torch.float32, device=dev).unsqueeze(0)

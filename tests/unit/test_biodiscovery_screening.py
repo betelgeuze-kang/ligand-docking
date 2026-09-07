@@ -41,7 +41,7 @@ ATOM      9  O   GLY A   2       6.070   1.579   0.000  1.00  0.00           O
 ATOM     10  N   SER A   3       6.162   3.833   0.000  1.00  0.00           N
 ATOM     11  CA  SER A   3       7.615   3.822   0.000  1.00  0.00           C
 ATOM     12  C   SER A   3       8.214   5.220   0.000  1.00  0.00           C
-ATOM     13  O   SER A   3       7.466   6.203   0.000  1.00  0.00           O
+ATOM     13  O   SER A   3       7.466   6.203   0.000  1.00 0.00            O
 ATOM     14  CB  SER A   3       8.131   3.059  -1.213  1.00  0.00           C
 ATOM     15  OG  SER A   3       7.730   1.699  -1.162  1.00  0.00           O
 ATOM     16  N   LEU A   4       9.535   5.259   0.000  1.00  0.00           N
@@ -214,10 +214,10 @@ class TestHelperFunctions:
 
     def test_screening_uses_canonical_pose_domain_helpers(self):
         assert _resolve_pocket_indices is biodiscovery_pose.resolve_pocket_indices
-        protein_ca = np.array([[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]], dtype=np.float32)
+        protein_ca = np.array([[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [0.0, 4.0, 0.0]], dtype=np.float32)
         ligand = np.array([[0.2, 0.0, 0.0], [10.0, 0.0, 0.0]], dtype=np.float32)
         protein_beads = biodiscovery_pose.virtual_protein_coords(protein_ca)
-        assert protein_beads.shape == (8, 3)
+        assert protein_beads.shape == (12, 3)
         assert biodiscovery_pose.clash_count(protein_beads, ligand) >= 1
         assert biodiscovery_pose.pose_rmsd(ligand, ligand) == 0.0
 
@@ -501,7 +501,7 @@ class TestHelperFunctions:
     def test_screening_uses_canonical_scoring_helpers(self):
         assert _single_pose_score is biodiscovery_scoring.single_pose_score
         assert _run_stability_simulation is biodiscovery_scoring.run_stability_simulation
-        protein_ca = np.array([[float(i), 0.0, 0.0] for i in range(10)], dtype=np.float32)
+        protein_ca = np.array([[3.8 * i, 0.3 * math.sin(i), 0.5 * math.cos(i)] for i in range(10)], dtype=np.float32)
         protein_beads = biodiscovery_pose.virtual_protein_coords(protein_ca)
         ligand = np.array([[4.0, 0.2, 0.0], [4.5, 0.2, 0.0]], dtype=np.float32)
         score, diagnostics = biodiscovery_scoring.single_pose_score(protein_beads, ligand, device="cpu")

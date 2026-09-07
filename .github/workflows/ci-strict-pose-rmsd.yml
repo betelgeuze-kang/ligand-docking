@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/local_geometry.py"
       - "betelgeuze_engine/biodiscovery/protein_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "betelgeuze_engine/biodiscovery/scoring.py"
       - "betelgeuze_engine/biodiscovery/stability_observations.py"
       - "betelgeuze_engine/biodiscovery/manifest.py"
       - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_biodiscovery_local_context.py"
       - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_biodiscovery_pose_validity.py"
       - "tests/unit/test_biodiscovery_stability_observations.py"
@@ -19,12 +21,14 @@ on:
     branches: ["main"]
     paths:
       - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/local_geometry.py"
       - "betelgeuze_engine/biodiscovery/protein_prep.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "betelgeuze_engine/biodiscovery/scoring.py"
       - "betelgeuze_engine/biodiscovery/stability_observations.py"
       - "betelgeuze_engine/biodiscovery/manifest.py"
       - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_biodiscovery_local_context.py"
       - "tests/unit/test_biodiscovery_protein_prep.py"
       - "tests/unit/test_biodiscovery_pose_validity.py"
       - "tests/unit/test_biodiscovery_stability_observations.py"
@@ -65,6 +69,7 @@ jobs:
             tests/__init__.py
             tests/fixtures/tier_beta
             tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_biodiscovery_local_context.py
             tests/unit/test_biodiscovery_protein_prep.py
             tests/unit/test_biodiscovery_stability_observations.py
             tests/unit/test_biodiscovery_pose_validity.py
@@ -92,12 +97,14 @@ jobs:
           python -m compileall -q \
             api \
             betelgeuze_engine/biodiscovery/pose.py \
+            betelgeuze_engine/biodiscovery/local_geometry.py \
             betelgeuze_engine/biodiscovery/protein_prep.py \
             betelgeuze_engine/biodiscovery/screening.py \
             betelgeuze_engine/biodiscovery/scoring.py \
             betelgeuze_engine/biodiscovery/stability_observations.py \
             betelgeuze_engine/biodiscovery/manifest.py \
             tests/unit/test_biodiscovery_screening.py \
+            tests/unit/test_biodiscovery_local_context.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
             tests/unit/test_biodiscovery_stability_observations.py \
@@ -109,11 +116,13 @@ jobs:
           set +e
           python -m pytest --confcutdir=tests/unit -vv -x \
             tests/unit/test_biodiscovery_screening.py \
+            tests/unit/test_biodiscovery_local_context.py \
             tests/unit/test_biodiscovery_protein_prep.py \
             tests/unit/test_biodiscovery_pose_validity.py \
             tests/unit/test_biodiscovery_stability_observations.py \
             tests/unit/test_tier_beta_vertical_slice.py::test_service_pdb_smiles_success_signed_manifest_and_claim_limits \
             tests/unit/test_tier_beta_vertical_slice.py::test_stability_simulation_records_md_reproducibility_diagnostics \
+            tests/unit/test_tier_beta_vertical_slice.py::test_service_negative_paths_fail_closed \
             --junitxml=strict-pose-rmsd-junit.xml > strict-pose-rmsd.log 2>&1
           status=$?
           cat strict-pose-rmsd.log
@@ -133,6 +142,7 @@ jobs:
             core
             tests/__init__.py
             tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_biodiscovery_local_context.py
             tests/unit/test_biodiscovery_protein_prep.py
             tests/unit/test_biodiscovery_pose_validity.py
             tests/unit/test_biodiscovery_stability_observations.py
