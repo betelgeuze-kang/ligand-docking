@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import multiprocessing
 import os
@@ -59,12 +60,27 @@ from betelgeuze_product.tier_beta_vertical_slice import (
 )
 
 
+@pytest.fixture
+def tier_beta_manifest_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
+    path = Path(__file__).resolve().parents[2] / "betelgeuze_engine/biodiscovery/manifest.py"
+    spec = importlib.util.spec_from_file_location("_tier_beta_security_manifest", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setitem(sys.modules, "betelgeuze_engine.biodiscovery.manifest", module)
+
+
+def _signed_tier_beta_stub_manifest() -> dict[str, Any]:
+    from betelgeuze_engine.biodiscovery.manifest import sign_screening_manifest
+
+    return sign_screening_manifest({"claim_metadata": {"claim_safe": False}, "stage_records": []})
+
+
 @dataclass
 class _TierBetaResultStub:
     ok: bool = True
     claim_metadata: dict[str, Any] = field(default_factory=dict)
     result_manifest: dict[str, Any] = field(
-        default_factory=lambda: {"signature": "test-signature"}
+        default_factory=_signed_tier_beta_stub_manifest
     )
     blocked_reason: str = ""
 
@@ -893,6 +909,7 @@ def test_tier_beta_artifacts_replace_links_without_touching_victims(
     execution_mode: str,
     artifact_name: str,
     link_kind: str,
+    tier_beta_manifest_helpers: None,
 ) -> None:
     monkeypatch.setitem(
         sys.modules,
@@ -963,6 +980,7 @@ def test_tier_beta_artifacts_replace_fifos_without_blocking(
     monkeypatch: pytest.MonkeyPatch,
     execution_mode: str,
     artifact_name: str,
+    tier_beta_manifest_helpers: None,
 ) -> None:
     if not hasattr(os, "mkfifo"):
         pytest.skip("FIFOs unavailable")

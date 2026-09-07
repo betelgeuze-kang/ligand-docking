@@ -109,7 +109,7 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     assert "pose_rmsd_to_top5_centroid_a" in result.pose_scores[0]
     assert result.pose_scores[0]["clash_count"] >= 0
     assert result.pose_scores[0]["chemistry_validity"]["status"] == "chemical_validity_pass"
-    assert result.pose_scores[0]["ranking_metric"]["name"] == "restricted_local_composite_score_v1"
+    assert result.pose_scores[0]["ranking_metric"]["name"] == "restricted_cross_component_composite_v2"
     ligand_state = result.pose_scores[0]["ligand_state"]
     assert ligand_state["state_id"].startswith("ligand_state_")
     assert ligand_state["scoring_status"] == "pose_conformers_generated"
@@ -171,10 +171,12 @@ def test_service_pdb_smiles_success_signed_manifest_and_claim_limits() -> None:
     stage_ids = [stage["stage_id"] for stage in result.stage_records]
     assert stage_ids == [
         "protein_preparation",
+        "ligand_preparation",
         "topology_validation.protein",
         "topology_validation.ligand",
         "pose_ensemble",
         "pocket_resolution",
+        "candidate_evaluation",
         "scoring_ranking",
         "top_k_refine",
         "stability_simulation",
@@ -248,11 +250,15 @@ def test_service_pdb_sdf_success_preserves_molblock_topology_provenance() -> Non
         "acceptor",
     }
     assert row_topology["bonds"] == [
-        {"begin_atom_idx": 0, "end_atom_idx": 1, "bond_type": "SINGLE", "is_aromatic": False},
-        {"begin_atom_idx": 1, "end_atom_idx": 2, "bond_type": "SINGLE", "is_aromatic": False},
+        {"begin_atom_idx": 0, "end_atom_idx": 1, "bond_type": "SINGLE", "is_aromatic": False,
+         "stereo": "STEREONONE", "stereo_atom_indices": []},
+        {"begin_atom_idx": 1, "end_atom_idx": 2, "bond_type": "SINGLE", "is_aromatic": False,
+         "stereo": "STEREONONE", "stereo_atom_indices": []},
     ]
-    assert row_topology["protonation_source"] == "sdf_path_molblock_atoms_no_enumeration"
-    assert row_topology["tautomer_source"] == "sdf_path_molblock_connectivity_no_enumeration"
+    assert row_topology["protonation_source"] == "rdkit_formal_charge_input_plus_restricted_ph_range_heuristic"
+    source_topology = row_topology["input_provenance"]["source_topology"]
+    assert source_topology["protonation_source"] == "sdf_path_molblock_atoms_no_enumeration"
+    assert source_topology["tautomer_source"] == "sdf_path_molblock_connectivity_no_enumeration"
     assert result.claim_metadata["ligand_topology"] == row_topology
     assert result.result_manifest["claim_metadata"]["ligand_topology"] == row_topology
     assert _verify_local_manifest_signature(result.result_manifest)
@@ -263,7 +269,7 @@ def test_service_pdb_sdf_success_preserves_molblock_topology_provenance() -> Non
     [
         (MINI_PDB, "XxYyZz", "ligand_invalid"),
         (MINI_PDB, "CC(O)C(=O)O", "unassigned_ligand_chirality"),
-        ("ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10, VALID_SMILES, "placeholder_topology"),
+        ("ATOM      1  CA  UNK A   1       1.0     0.0     0.0  1.00  0.00           C\n" * 10, VALID_SMILES, "duplicate_protein_ca_residue"),
         (
             MINI_PDB + "HETATM   99 ZN    ZN A  99       0.000   0.000   0.000  1.00  0.00          ZN\n",
             VALID_SMILES,
@@ -284,7 +290,8 @@ def test_service_negative_paths_fail_closed(protein_input: str, ligand_input: st
 
     assert result.ok is False
     assert expected in result.blocked_reason
-    assert result.manifest_hash == ""
+    assert result.manifest_hash == result.result_manifest["content_hash"]
+    assert _verify_local_manifest_signature(result.result_manifest)
     assert result.failure_code != "none"
     assert result.stage_records[-1]["status"] == "blocked"
     assert result.typed_output["failure_code"] == result.failure_code
@@ -307,7 +314,8 @@ $$$$
     assert result.ok is False
     assert "invalid_sdf_ligand" in result.blocked_reason
     assert result.failure_code == "ligand_parse_failed"
-    assert result.manifest_hash == ""
+    assert result.manifest_hash == result.result_manifest["content_hash"]
+    assert _verify_local_manifest_signature(result.result_manifest)
 
 
 def test_placeholder_protein_parse_raises_for_metal() -> None:
@@ -346,7 +354,8 @@ HETATM 2 C C1 ATP A 2 1.000 0.000 0.000 1
     assert result.ok is False
     assert result.failure_code == "unsupported_cofactor_or_bound_ligand"
     assert "unsupported_cofactor_or_bound_ligand" in result.blocked_reason
-    assert result.manifest_hash == ""
+    assert result.manifest_hash == result.result_manifest["content_hash"]
+    assert _verify_local_manifest_signature(result.result_manifest)
 
 
 def test_dense_and_reference_neighbor_bypass_regression() -> None:
@@ -366,7 +375,7 @@ def test_dense_and_reference_neighbor_bypass_regression() -> None:
         )
 
 
-def test_service_neighbor_overflow_fails_closed_before_signed_result(monkeypatch) -> None:
+def test_service_neighbor_overflow_retains_signed_failure(monkeypatch) -> None:
     import betelgeuze_engine.biodiscovery.screening as screening
 
     def _overflow_score(*_args, **_kwargs) -> tuple[float, dict]:
@@ -388,8 +397,9 @@ def test_service_neighbor_overflow_fails_closed_before_signed_result(monkeypatch
     assert result.ok is False
     assert result.failure_code == "neighbor_overflow"
     assert "neighbor_overflow" in result.blocked_reason
-    assert result.manifest_hash == ""
-    assert result.result_manifest == {}
+    assert result.manifest_hash == result.result_manifest["content_hash"]
+    assert _verify_local_manifest_signature(result.result_manifest)
+    assert result.result_manifest["status"] == "failed"
     assert result.stage_records[-1]["status"] == "blocked"
 
 
@@ -411,8 +421,9 @@ def test_service_unsigned_result_manifest_fails_closed(monkeypatch) -> None:
     assert result.ok is False
     assert result.failure_code == "unsigned_result_manifest"
     assert "unsigned_result_manifest" in result.blocked_reason
-    assert result.manifest_hash == ""
-    assert result.result_manifest == {}
+    assert result.manifest_hash == result.result_manifest["content_hash"]
+    assert _verify_local_manifest_signature(result.result_manifest)
+    assert result.result_manifest["status"] == "failed"
     assert result.stage_records[-1]["status"] == "blocked"
 
 
@@ -766,7 +777,7 @@ def test_tier_beta_runner_adapter_uses_versioned_typed_request() -> None:
                 "pocket_residue_indices": ["1", 2],
                 "pose_count": "4",
                 "top_k": "2",
-                "stability_steps": "",
+                "stability_steps": "0",
                 "seed": "9",
                 "metadata": {"source": "unit"},
             }

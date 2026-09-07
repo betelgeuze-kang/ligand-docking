@@ -3,11 +3,14 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import time
-from typing import Any
+from dataclasses import asdict, is_dataclass
+from numbers import Integral, Real
+from typing import TYPE_CHECKING, Any
 
-from betelgeuze_engine.biodiscovery.contracts import CLAIM_SCOPE, SCHEMA_VERSION, StageRecord, TierBetaScreeningInput
-from betelgeuze_engine.biodiscovery.ligand_prep import ligand_topology_payload
+if TYPE_CHECKING:
+    from betelgeuze_engine.biodiscovery.contracts import StageRecord, TierBetaScreeningInput
 
 LOCAL_MANIFEST_KEY = "local-tier-beta-vertical-slice-signing-key"
 CLAIM_BOUNDARY = (
@@ -23,6 +26,100 @@ BLOCKED_CLAIMS = [
     "broad_platform",
     "alphafold_parity",
 ]
+_HASH_FIELDS = frozenset({"replay_hash", "content_hash", "signature"})
+_LOCAL_INTEGRITY_SCOPE = "local_integrity_only_not_external_authority"
+
+
+def normalize_manifest_json(value: Any) -> Any:
+    """Build the finite JSON representation that will actually be published."""
+    if is_dataclass(value) and not isinstance(value, type):
+        return normalize_manifest_json(asdict(value))
+    if value is None or isinstance(value, (str, bool)):
+        return value
+    if isinstance(value, Integral):
+        return int(value)
+    if isinstance(value, Real):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    if isinstance(value, dict):
+        if any(not isinstance(key, str) for key in value):
+            raise TypeError("manifest_object_keys_must_be_strings")
+        return {key: normalize_manifest_json(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [normalize_manifest_json(item) for item in value]
+    raise TypeError(f"unsupported_manifest_value:{type(value).__name__}")
+
+
+def _canonical_bytes(payload: Any) -> bytes:
+    return json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False,
+    ).encode("utf-8")
+
+
+def _without_operational_timings(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _without_operational_timings(item)
+            for key, item in value.items()
+            if key != "execution_observations"
+            and key != "elapsed_seconds"
+            and not key.endswith("_elapsed_seconds")
+        }
+    if isinstance(value, list):
+        return [_without_operational_timings(item) for item in value]
+    return value
+
+
+def _replay_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return _without_operational_timings({
+        key: value for key, value in payload.items()
+        if key not in _HASH_FIELDS and key != "timestamp_utc"
+    })
+
+
+def sign_screening_manifest(payload: dict[str, Any]) -> dict[str, Any]:
+    """Sign a finite snapshot; the published local key grants no external authority."""
+    if not isinstance(payload, dict):
+        raise TypeError("manifest_must_be_an_object")
+    signed = normalize_manifest_json({
+        key: value for key, value in payload.items() if key not in _HASH_FIELDS
+    })
+    signed.update({
+        "manifest_integrity_version": 2,
+        "signature_algorithm": "hmac-sha256",
+        "signature_key_id": "local-tier-beta",
+        "signature_scope": _LOCAL_INTEGRITY_SCOPE,
+    })
+    signed["replay_hash"] = hashlib.sha256(_canonical_bytes(_replay_payload(signed))).hexdigest()
+    signed["content_hash"] = hashlib.sha256(_canonical_bytes(signed)).hexdigest()
+    signed["signature"] = hmac.new(
+        LOCAL_MANIFEST_KEY.encode("utf-8"), _canonical_bytes(signed), hashlib.sha256,
+    ).hexdigest()
+    return signed
+
+
+def verify_screening_manifest(manifest: Any) -> bool:
+    """Verify replay, content and local HMAC integrity, including after JSON reload."""
+    if not isinstance(manifest, dict):
+        return False
+    try:
+        # Reject a nonfinite received artifact instead of silently repairing it.
+        _canonical_bytes(manifest)
+        if (
+            manifest.get("manifest_integrity_version") != 2
+            or manifest.get("signature_algorithm") != "hmac-sha256"
+            or manifest.get("signature_key_id") != "local-tier-beta"
+            or manifest.get("signature_scope") != _LOCAL_INTEGRITY_SCOPE
+        ):
+            return False
+        expected = sign_screening_manifest(manifest)
+        return all(
+            isinstance(manifest.get(key), str)
+            and hmac.compare_digest(manifest[key], expected[key])
+            for key in _HASH_FIELDS
+        )
+    except (TypeError, ValueError, OverflowError):
+        return False
 
 
 def build_screening_manifest(
@@ -51,6 +148,9 @@ def build_screening_manifest(
     seed: int,
     benchmark_metric_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    from betelgeuze_engine.biodiscovery.contracts import CLAIM_SCOPE, SCHEMA_VERSION
+    from betelgeuze_engine.biodiscovery.ligand_prep import ligand_topology_payload
+
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "claim_scope": CLAIM_SCOPE,
@@ -124,32 +224,4 @@ def build_screening_manifest(
         "claim_boundary": CLAIM_BOUNDARY,
     }
     payload["claim_metadata"] = claim_metadata
-    replay_payload = {
-        key: value
-        for key, value in payload.items()
-        if key not in {"timestamp_utc", "content_hash", "signature"}
-    }
-    payload["replay_hash"] = hashlib.sha256(
-        json.dumps(replay_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    ).hexdigest()
-
-    content_hash = hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    ).hexdigest()
-    payload["content_hash"] = content_hash
-    payload["signature_algorithm"] = "hmac-sha256"
-    payload["signature_key_id"] = "local-tier-beta"
-    signature_payload = dict(payload)
-    signature = hmac.new(
-        LOCAL_MANIFEST_KEY.encode("utf-8"),
-        json.dumps(
-            signature_payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-        ).encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
-    payload["signature"] = signature
-
-    return payload
+    return sign_screening_manifest(payload)

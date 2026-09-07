@@ -3,6 +3,9 @@ from __future__ import annotations
 import math
 import os
 import re
+import hashlib
+import json
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -42,6 +45,8 @@ from betelgeuze_engine.biodiscovery.manifest import (
     CLAIM_BOUNDARY as _CLAIM_BOUNDARY,
     LOCAL_MANIFEST_KEY as _LOCAL_MANIFEST_KEY,
     build_screening_manifest,
+    sign_screening_manifest,
+    verify_screening_manifest,
 )
 from betelgeuze_engine.biodiscovery.protein_prep import (
     AA3_TO_AA1 as _AA3_TO_AA1,
@@ -53,6 +58,7 @@ from betelgeuze_engine.biodiscovery.protein_prep import (
     validate_protein as _validate_protein,
 )
 from betelgeuze_engine.biodiscovery.pose import (
+    _real_coordinate_array,
     best_symmetry_mapped_pose as _best_symmetry_mapped_pose,
     chemical_anchor_mapping as _chemical_anchor_mapping,
     chemistry_validity_summary as _chemistry_validity_summary,
@@ -75,6 +81,7 @@ from betelgeuze_engine.biodiscovery.scoring import (
     mm_gbsa_binding_score as _mm_gbsa_binding_score,
     run_stability_simulation as _run_stability_simulation,
     single_pose_score as _single_pose_score,
+    make_static_pose_field,
 )
 
 _COMPAT_LIGAND_PREP_HELPERS = (
@@ -96,6 +103,11 @@ _COMPAT_SCORING_HELPERS = (
 )
 _COMPAT_MANIFEST_HELPERS = (
     _LOCAL_MANIFEST_KEY,
+)
+_COMPAT_POSE_HELPERS = (
+    _resolve_pocket_indices,
+    _symmetry_aware_pose_rmsd,
+    _virtual_protein_coords,
 )
 
 try:
@@ -128,7 +140,7 @@ class TierBetaScreeningResult:
     poses_generated: int
     poses_scored: int
     top_k: int
-    best_score: float
+    best_score: float | None
     best_rank: int
     stability_steps_run: int
     stability_drift_A: float | None
@@ -186,7 +198,7 @@ def _benchmark_metric_summary_from_pose_scores(pose_scores: list[dict[str, Any]]
         )
     payload = evaluate_docking_gold_slice(rows, pose_success_rmsd_a=2.0, top_k=5).to_dict()
     payload["status"] = "blocked_reference_pose_missing"
-    payload["score_metric"] = "restricted_local_composite_score_v1"
+    payload["score_metric"] = "restricted_cross_component_composite_v2"
     payload["scored_pose_count"] = int(len(pose_scores))
     payload["blockers"] = sorted(
         {
@@ -314,10 +326,21 @@ class TierBetaScreening:
         seed: int = _DEFAULT_SEED,
     ):
         self.device = torch.device(device)
+        for name, value, minimum in (("pose_count", pose_count, 1), ("top_k", top_k, 1),
+                                     ("stability_steps", stability_steps, 0), ("seed", seed, 0)):
+            if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)) or value < minimum:
+                raise ValueError(f"{name} must be an integer >= {minimum}")
+        if seed > 2**31 - 1:
+            raise ValueError("seed must fit the nonnegative signed 32-bit conformer seed domain")
+        for name, value, allow_zero in (("pocket_cutoff_a", pocket_cutoff_a, False),
+                                         ("stability_dt", stability_dt, False),
+                                         ("stability_temp_k", stability_temp_k, True)):
+            if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, float, np.integer, np.floating)) or not math.isfinite(value) or value < 0 or (value == 0 and not allow_zero):
+                raise ValueError(f"invalid {name}")
         self.pocket_cutoff_a = float(pocket_cutoff_a)
-        self.pose_count = int(max(1, int(pose_count)))
-        self.top_k = int(max(1, int(top_k)))
-        self.stability_steps = int(max(0, int(stability_steps)))
+        self.pose_count = int(pose_count)
+        self.top_k = int(top_k)
+        self.stability_steps = int(stability_steps)
         self.stability_dt = float(stability_dt)
         self.stability_temp_k = float(stability_temp_k)
         self.seed = int(seed)
@@ -340,29 +363,108 @@ class TierBetaScreening:
         ligand_input: str,
         pocket_residue_indices: list[int] | None = None,
     ) -> TierBetaScreeningResult:
+        return self._screen_observed(protein_input=protein_input, ligand_input=ligand_input,
+                                     pocket_residue_indices=pocket_residue_indices)
+
+    def _screen_observed(self, *, protein_input: str, ligand_input: str,
+                         pocket_residue_indices: list[int] | None,
+                         prepared_protein: tuple | None = None,
+                         receptor_cache: dict | None = None,
+                         shared_preparation_elapsed_seconds: float | None = None) -> TierBetaScreeningResult:
+        started = time.perf_counter()
+        timings = {stage: 0.0 for stage in ("preparation", "conformer", "search", "scoring")}
+        records: list[StageRecord] = []
+        try:
+            result = self._screen(protein_input=protein_input, ligand_input=ligand_input,
+                                  pocket_residue_indices=pocket_residue_indices,
+                                  stage_records=records, timings=timings,
+                                  prepared_protein=prepared_protein, receptor_cache=receptor_cache)
+        except Exception as exc:
+            result = self._fail(f"screening_evaluation_failed:{type(exc).__name__}:{exc}",
+                                stage_records=records,
+                                typed_input=self._typed_input(str(protein_input or ""), str(ligand_input or "")))
+        observations = {"elapsed_seconds": {**timings, "total": time.perf_counter() - started},
+                        "evidence_kind": "wall_clock_observation_not_performance_qualification",
+                        "timing_scope": "per_ligand_invocation_excludes_shared_batch_preparation",
+                        "shared_preparation_elapsed_seconds": shared_preparation_elapsed_seconds}
+        result.diagnostics.setdefault("execution_observations", {}).update(observations)
+        result.result_manifest = sign_screening_manifest({**result.result_manifest,
+                                                         "execution_observations": observations})
+        result.manifest_hash = result.result_manifest["content_hash"]
+        result.typed_output["manifest_hash"] = result.manifest_hash
+        return result
+
+    def screen_many(self, *, protein_input: str, ligand_inputs: list[str],
+                    pocket_residue_indices: list[int] | None = None) -> list[TierBetaScreeningResult]:
+        """Sequential local diagnostics sharing one consumed receptor snapshot.
+
+        No concurrent service state or cross-run file cache is retained. Each
+        result still reserves its own ligand sites against the diagnostic cap.
+        """
+        if not isinstance(ligand_inputs, list) or not all(isinstance(item, str) for item in ligand_inputs):
+            raise ValueError("ligand_inputs must be a list of input strings")
+        if not ligand_inputs:
+            return []
+        snapshot: dict[str, Any] = {}
+        preparation_started = time.perf_counter()
+        try:
+            coords, seq = _resolve_protein_input(str(protein_input), snapshot=snapshot)
+        except ValueError as exc:
+            return [self._fail(f"protein_parse_failed:{exc}",
+                               typed_input=self._typed_input(str(protein_input), item),
+                               stage_records=[StageRecord("protein_preparation", _SCHEMA_VERSION, "blocked",
+                                                          diagnostics={"protein_input_snapshot": snapshot or None})])
+                    for item in ligand_inputs]
+        cache: dict = {}
+        shared_preparation_elapsed = time.perf_counter() - preparation_started
+        return [self._screen_observed(protein_input=protein_input, ligand_input=item,
+                                      pocket_residue_indices=pocket_residue_indices,
+                                      prepared_protein=(coords, seq, snapshot), receptor_cache=cache,
+                                      shared_preparation_elapsed_seconds=shared_preparation_elapsed)
+                for item in ligand_inputs]
+
+    def _screen(self, *, protein_input: str, ligand_input: str,
+                pocket_residue_indices: list[int] | None, stage_records: list[StageRecord],
+                timings: dict[str, float], prepared_protein: tuple | None,
+                receptor_cache: dict | None) -> TierBetaScreeningResult:
+        preparation_started = time.perf_counter()
         typed_input = self._typed_input(str(protein_input or ""), str(ligand_input or ""))
-        stage_records: list[StageRecord] = []
+        if pocket_residue_indices is not None and not isinstance(pocket_residue_indices, list):
+            return self._fail("invalid_pocket_residue_indices", typed_input=typed_input)
         if not protein_input or not str(protein_input).strip():
             return self._fail("empty_protein_input", typed_input=typed_input)
 
+        protein_snapshot: dict[str, Any] = {}
         try:
-            protein_coords, protein_seq = _resolve_protein_input(str(protein_input))
+            if prepared_protein is None:
+                protein_coords, protein_seq = _resolve_protein_input(str(protein_input), snapshot=protein_snapshot)
+            else:
+                protein_coords, protein_seq, protein_snapshot = prepared_protein
         except ValueError as e:
-            return self._fail(f"protein_parse_failed: {e}", typed_input=typed_input)
+            return self._fail(f"protein_parse_failed: {e}", typed_input=typed_input,
+                              stage_records=[StageRecord("protein_preparation", _SCHEMA_VERSION, "blocked",
+                                                         diagnostics={"protein_input_snapshot": protein_snapshot or None})])
         stage_records.append(
             StageRecord(
                 stage_id="protein_preparation",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={"residue_count": int(protein_coords.shape[0])},
+                diagnostics={"residue_count": int(protein_coords.shape[0]),
+                             "protein_input_snapshot": protein_snapshot or None},
             )
         )
 
+        ligand_snapshot: dict[str, Any] = {}
         try:
-            resolved_ligand = _resolve_ligand_input(str(ligand_input))
+            resolved_ligand = _resolve_ligand_input(str(ligand_input), input_snapshot=ligand_snapshot)
             ligand_smiles = resolved_ligand.smiles
         except ValueError as e:
-            return self._fail(f"ligand_parse_failed: {e}", typed_input=typed_input)
+            stage_records.append(StageRecord("ligand_preparation", _SCHEMA_VERSION, "blocked",
+                                             diagnostics={"ligand_input_snapshot": ligand_snapshot or None}))
+            return self._fail(f"ligand_parse_failed: {e}", typed_input=typed_input, stage_records=stage_records)
+        stage_records.append(StageRecord(
+            "ligand_preparation", _SCHEMA_VERSION, "pass",
+            diagnostics={"ligand_input_snapshot": ligand_snapshot or None}))
 
         protein_valid = _validate_protein(protein_coords, protein_seq)
         if protein_valid["blocked"]:
@@ -402,6 +504,7 @@ class TierBetaScreening:
                               stage_records=stage_records)
 
         ligand_atom = int(ligand_valid["atom_count"])
+        timings["preparation"] += time.perf_counter() - preparation_started
         ligand_states = _enumerate_ligand_states_from_smiles(
             ligand_smiles,
             max_states=min(4, max(1, self.pose_count)),
@@ -417,7 +520,7 @@ class TierBetaScreening:
                 state_payload["scoring_status"] = "not_scored_invalid_ligand_state"
                 state_records.append(state_payload)
                 continue
-            state_ligand_valid = ligand_valid if int(state.rank) == 0 else _validate_ligand(state_smiles)
+            state_ligand_valid = _validate_ligand(state_smiles, resolved_input=resolved_ligand)
             state_payload["topology_validation"] = {
                 "valid": bool(state_ligand_valid.get("valid", False)),
                 "claim_safe": bool(state_ligand_valid.get("claim_safe", False)),
@@ -446,8 +549,17 @@ class TierBetaScreening:
                 state_payload["scoring_status"] = "not_scored_empty_ligand_topology"
                 state_records.append(state_payload)
                 continue
-            state_seed = int(self.seed + int(state.rank) * 1009)
-            state_poses = _generate_conformers(state_smiles, self.pose_count, state_seed)
+            state_seed = int((self.seed + int(state.rank) * 1009) % (2**31))
+            try:
+                conformer_started = time.perf_counter()
+                state_poses = _generate_conformers(state_smiles, self.pose_count, state_seed)
+            except Exception as exc:
+                state_payload["scoring_status"] = "not_scored_conformer_generation_failed"
+                state_payload["error"] = str(exc)
+                state_records.append(state_payload)
+                continue
+            finally:
+                timings["conformer"] += time.perf_counter() - conformer_started
             if state_poses is None or int(state_poses.shape[0]) <= 0:
                 state_payload["scoring_status"] = "not_scored_conformer_generation_failed"
                 state_payload["seed"] = state_seed
@@ -504,12 +616,6 @@ class TierBetaScreening:
                 else "ligand_state_projection_scored_for_diagnostics_only"
             )
 
-        if not state_pose_bundles:
-            return self._fail("ligand_state_ensemble_no_scored_states",
-                              protein_seq, protein_coords.shape[0], ligand_smiles,
-                              ligand_atom=ligand_atom,
-                              typed_input=typed_input,
-                              stage_records=stage_records)
         stage_records.append(
             StageRecord(
                 stage_id="pose_ensemble",
@@ -531,10 +637,16 @@ class TierBetaScreening:
             )
         )
 
+        if not state_pose_bundles:
+            return self._fail("ligand_state_ensemble_no_scored_states",
+                              protein_seq, protein_coords.shape[0], ligand_smiles,
+                              ligand_atom=ligand_atom, typed_input=typed_input,
+                              stage_records=stage_records)
+
         resolved_pocket = (
             list(pocket_residue_indices)
             if pocket_residue_indices is not None
-            else _resolve_pocket_indices(protein_coords, ligand_center, self.pocket_cutoff_a)
+            else list(range(len(protein_coords)))
         )
         if any(isinstance(idx, (bool, np.bool_)) or not isinstance(idx, (int, np.integer))
                or idx < 0 or idx >= int(protein_coords.shape[0]) for idx in resolved_pocket) or len(set(resolved_pocket)) != len(resolved_pocket):
@@ -554,23 +666,41 @@ class TierBetaScreening:
                 stage_id="pocket_resolution",
                 schema_version=_SCHEMA_VERSION,
                 status="pass",
-                diagnostics={"pocket_residue_indices": [int(idx) for idx in resolved_pocket]},
+                diagnostics={"pocket_residue_indices": [int(idx) for idx in resolved_pocket],
+                             "selection_mode": "explicit_pocket" if pocket_residue_indices is not None
+                             else "unlocalized_whole_small_receptor_diagnostic",
+                             "pocket_discovery_performed": False},
             )
         )
 
         try:
-            protein_beads, pocket_center, receptor_context = prepare_receptor_proxy(
-                protein_coords, resolved_pocket,
-                ligand_atom_count=max(int(bundle["atom_count"]) for bundle in state_pose_bundles),
-                buffer_a=self.pocket_cutoff_a,
-                explicit_pocket=pocket_residue_indices is not None,
-            )
+            preparation_started = time.perf_counter()
+            maximum_atoms = max(int(bundle["atom_count"]) for bundle in state_pose_bundles)
+            cache_key = (tuple(resolved_pocket), pocket_residue_indices is not None)
+            cached = receptor_cache.get(cache_key) if receptor_cache is not None else None
+            if cached is None:
+                protein_beads, pocket_center, receptor_context = prepare_receptor_proxy(
+                    protein_coords, resolved_pocket, ligand_atom_count=maximum_atoms,
+                    buffer_a=self.pocket_cutoff_a, explicit_pocket=pocket_residue_indices is not None)
+                static_field = make_static_pose_field()
+                if receptor_cache is not None:
+                    receptor_cache[cache_key] = (protein_beads, pocket_center, receptor_context, static_field)
+            else:
+                protein_beads, pocket_center, receptor_context, static_field = cached
+                if len(protein_beads) + maximum_atoms > receptor_context["dense_diagnostic_cap"]:
+                    raise ValueError("dense_diagnostic_blocked:cached_receptor_ligand_domain_exceeds_cap")
+                receptor_context = {**receptor_context, "reserved_ligand_atom_count": maximum_atoms}
         except ValueError as exc:
             return self._fail(str(exc), protein_seq, protein_coords.shape[0], ligand_smiles,
                               ligand_atom=ligand_atom, pocket=resolved_pocket,
                               typed_input=typed_input, stage_records=stage_records)
+        finally:
+            timings["preparation"] += time.perf_counter() - preparation_started
         stage_records[-1].diagnostics["receptor_proxy"] = receptor_context
         pose_scores: list[dict[str, Any]] = []
+        candidate_records: list[dict[str, Any]] = []
+        stage_records.append(StageRecord("candidate_evaluation", _SCHEMA_VERSION, "diagnostic",
+                                         diagnostics={"candidates": candidate_records}))
         placed_pose_coords: dict[int, np.ndarray] = {}
         global_pose_index = 0
         search_diagnostics: dict[str, Any] = {
@@ -594,14 +724,20 @@ class TierBetaScreening:
             state_ligand_valid = dict(bundle["ligand_valid"])
             state_atom = int(bundle["atom_count"])
             anchor_mapping = _chemical_anchor_mapping(state_smiles, state_ligand_valid)
-            search_candidates, state_search_diagnostics = _pose_search_candidates(
-                bundle["poses"],
-                pocket_center,
-                protein_beads,
-                seed=int(bundle["seed"]),
-                max_candidates=self.pose_count,
-                ligand_smiles=state_smiles,
-            )
+            try:
+                search_started = time.perf_counter()
+                search_candidates, state_search_diagnostics = _pose_search_candidates(
+                    bundle["poses"], pocket_center, protein_beads, seed=int(bundle["seed"]),
+                    max_candidates=self.pose_count, ligand_smiles=state_smiles,
+                )
+            except Exception as exc:
+                stage_records.append(StageRecord(
+                    "pose_search", _SCHEMA_VERSION, "blocked", message=str(exc),
+                    diagnostics={"state_id": state_payload["state_id"],
+                                 "status": "search_evaluation_failed", "candidates": "not_generated"}))
+                continue
+            finally:
+                timings["search"] += time.perf_counter() - search_started
             state_search_diagnostics["chemical_anchor_mapping_status"] = str(anchor_mapping["status"])
             state_search_diagnostics["chemical_anchor_mapping"] = anchor_mapping
             state_payload["pose_search"] = dict(state_search_diagnostics)
@@ -629,8 +765,15 @@ class TierBetaScreening:
             for candidate in search_candidates:
                 pose_index = int(global_pose_index)
                 global_pose_index += 1
-                pose_coords = np.asarray(candidate["coords"], dtype=np.float32)
-                if pose_coords.shape[0] != state_atom:
+                candidate_record = {"pose_index": pose_index, "state_id": state_payload["state_id"],
+                                    "status": "unattempted", "reason": None}
+                candidate_records.append(candidate_record)
+                try:
+                    pose_coords = _real_coordinate_array(candidate["coords"], label="candidate_coords", dtype=np.float32)
+                    if pose_coords.shape != (state_atom, 3) or not np.isfinite(pose_coords).all():
+                        raise ValueError("coordinate_topology_mismatch_or_nonfinite")
+                except (KeyError, TypeError, ValueError, OverflowError) as exc:
+                    candidate_record.update(status="input_rejected", reason=str(exc))
                     continue
                 placed_pose_coords[pose_index] = pose_coords
                 try:
@@ -642,131 +785,123 @@ class TierBetaScreening:
                         context="tier_beta_screening_pose_diagnostic",
                     )
                 except ValueError as exc:
-                    return self._fail(f"dense_diagnostic_blocked: {exc}",
-                                      protein_seq, protein_coords.shape[0], ligand_smiles,
-                                      ligand_atom=ligand_atom,
-                                      pocket=resolved_pocket,
-                                      poses_gen=poses_generated,
-                                      typed_input=typed_input,
-                                      stage_records=stage_records)
-                ffield_score, diag = _single_pose_score(protein_beads, pose_coords, device=self.device)
-                scoring_status = str(diag.get("status") or "")
-                if scoring_status == "blocked_neighbor_overflow":
-                    return self._fail("neighbor_overflow",
-                                      protein_seq, protein_coords.shape[0], ligand_smiles,
-                                      ligand_atom=ligand_atom,
-                                      pocket=resolved_pocket,
-                                      poses_gen=poses_generated,
-                                      typed_input=typed_input,
-                                      stage_records=stage_records)
-                if scoring_status == "blocked_dense_or_reference_neighbor":
-                    return self._fail("reference_nxn_blocked",
-                                      protein_seq, protein_coords.shape[0], ligand_smiles,
-                                      ligand_atom=ligand_atom,
-                                      pocket=resolved_pocket,
-                                      poses_gen=poses_generated,
-                                      typed_input=typed_input,
-                                      stage_records=stage_records)
-                mm_score = _mm_gbsa_binding_score(
-                    protein_beads, pose_coords, contact_cutoff_a=self.pocket_cutoff_a,
-                    ligand_elements=state_ligand_valid.get("atom_elements"),
-                )
-
-                if mm_score.get("status") == "blocked_chemistry_input_or_proxy_evaluation":
-                    return self._fail(f"ligand_invalid: {mm_score.get('blocked_reason')}",
-                                      protein_seq, protein_coords.shape[0], ligand_smiles,
-                                      ligand_atom=ligand_atom, pocket=resolved_pocket,
-                                      typed_input=typed_input, stage_records=stage_records)
-                composite = float(diag.get("total_energy", ffield_score))
-                mm_energy = float(
-                    mm_score.get(
-                        "deltaG_mm_gbsa_kcal_mol",
-                        mm_score.get("binding_energy_kcal_mol", float("inf")),
-                    )
-                )
-                if math.isfinite(mm_energy):
-                    composite = 0.5 * composite + 0.5 * mm_energy
-                clashes = _clash_count(protein_beads, pose_coords)
-                chemistry_validity = _chemistry_validity_summary(state_ligand_valid, pose_coords)
-                ranking_metric = {
-                    "name": "restricted_local_composite_score_v1",
-                    "receptor_representation": receptor_context["schema_version"],
-                    "value": float(composite),
-                    "lower_is_better": True,
-                    "components": ["guarded_forcefield_energy", "mm_gbsa_proxy_energy"],
-                }
-                abstention_reasons = [
-                    reason
-                    for reason in [
-                        str(diag.get("status") or ""),
-                        str(mm_score.get("blocked_reason") or ""),
-                        "pose_clash_detected" if clashes > 0 else "",
-                        "chemistry_validity_blocked" if not chemistry_validity["valid"] else "",
-                        "restricted_tier_beta_unvalidated",
+                    candidate_record.update(status="input_rejected", reason=f"dense_diagnostic_blocked: {exc}")
+                    continue
+                try:
+                    scoring_started = time.perf_counter()
+                    candidate_record.update(status="evaluation_failed", reason="evaluation_not_completed")
+                    ffield_score, diag = _single_pose_score(
+                        protein_beads, pose_coords, device=self.device, field=static_field)
+                    scoring_status = str(diag.get("status") or "")
+                    if scoring_status.startswith("blocked"):
+                        reason = {"blocked_dense_or_reference_neighbor": "reference_nxn_blocked",
+                                  "blocked_neighbor_overflow": "neighbor_overflow"}.get(scoring_status, scoring_status)
+                        raise ValueError(reason)
+                    mm_score = _mm_gbsa_binding_score(
+                        protein_beads, pose_coords, contact_cutoff_a=self.pocket_cutoff_a,
+                        ligand_elements=state_ligand_valid.get("atom_elements"))
+                    if mm_score.get("status") == "blocked_chemistry_input_or_proxy_evaluation":
+                        raise ValueError(f"ligand_invalid: {mm_score.get('blocked_reason')}")
+                    cross_energy = float(diag.get("cross_component_energy", ffield_score))
+                    mm_energy = float(mm_score.get("interaction_score_proxy", float("nan")))
+                    if not math.isfinite(cross_energy) or not math.isfinite(mm_energy):
+                        raise ValueError("nonfinite_score_component")
+                    composite = 0.5 * cross_energy + 0.5 * mm_energy
+                    if not math.isfinite(composite):
+                        raise ValueError("nonfinite_composite_score")
+                except Exception as exc:
+                    candidate_record.update(status="evaluation_failed", reason=str(exc))
+                    continue
+                finally:
+                    timings["scoring"] += time.perf_counter() - scoring_started
+                try:
+                    clashes = _clash_count(protein_beads, pose_coords)
+                    chemistry_validity = _chemistry_validity_summary(state_ligand_valid, pose_coords)
+                    ranking_metric = {
+                        "name": "restricted_cross_component_composite_v2",
+                        "receptor_representation": receptor_context["schema_version"],
+                        "value": float(composite),
+                        "lower_is_better": True,
+                        "components": ["cross_component_lj_proxy", "mm_gbsa_interaction_proxy"],
+                        "internal_energies_included": False,
+                        "ligand_strain": {"status": "not_evaluated", "value": None},
+                    }
+                    abstention_reasons = [
+                        reason
+                        for reason in [
+                            str(diag.get("status") or ""),
+                            str(mm_score.get("blocked_reason") or ""),
+                            "pose_clash_detected" if clashes > 0 else "",
+                            "chemistry_validity_blocked" if not chemistry_validity["valid"] else "",
+                            "restricted_tier_beta_unvalidated",
+                        ]
+                        if reason
                     ]
-                    if reason
-                ]
 
-                pose_scores.append({
-                    "pose_index": pose_index,
-                    "pose_rank": 0,
-                    "ligand_state": state_payload,
-                    "field_energy": float(diag.get("total_energy", float("inf"))),
-                    "mm_gbsa_energy": mm_energy,
-                    "composite_score": float(composite),
-                    "score_components": {
-                        "guarded_forcefield_energy": float(diag.get("total_energy", float("inf"))),
-                        "mm_gbsa_proxy_energy": mm_energy,
-                    },
-                    "pose_search": {
-                        "schema_version": "tier_beta_pose_search_v1",
-                        "search_strategy": state_search_diagnostics["search_strategy"],
-                        "conformer_diversity": dict(state_search_diagnostics["conformer_diversity"]),
-                        "conformer_count": int(state_search_diagnostics["conformer_count"]),
-                        "rotatable_bond_count": int(state_search_diagnostics["rotatable_bond_count"]),
-                        "retained_conformer_count": int(state_search_diagnostics["retained_conformer_count"]),
-                        "retained_conformer_indices": list(state_search_diagnostics["retained_conformer_indices"]),
-                        "retained_conformer_fraction": float(state_search_diagnostics["retained_conformer_fraction"]),
-                        "conformer_index": int(candidate["conformer_index"]),
-                        "rotation_index": int(candidate["rotation_index"]),
-                        "translation_index": int(candidate["translation_index"]),
-                        "translation_vector_a": list(candidate["translation_vector_a"]),
-                        "coarse_score": float(candidate["coarse_score"]),
-                        "coarse_score_before_local": float(candidate["coarse_score_before_local"]),
-                        "coarse_score_components": dict(candidate["coarse_score_components"]),
-                        "coarse_score_beam_status": state_search_diagnostics["coarse_score_beam_status"],
-                        "clash_prefilter_status": state_search_diagnostics["clash_prefilter_status"],
-                        "raw_candidate_count": int(state_search_diagnostics["raw_candidate_count"]),
-                        "coarse_beam_candidate_count": int(state_search_diagnostics["coarse_beam_candidate_count"]),
-                        "retained_candidate_count": int(state_search_diagnostics["retained_candidate_count"]),
-                        "rotations_per_conformer": int(state_search_diagnostics["rotations_per_conformer"]),
-                        "translation_grid_point_count": int(state_search_diagnostics["translation_grid_point_count"]),
-                        "local_minimization_status": state_search_diagnostics["local_minimization_status"],
-                        "local_minimization_method": state_search_diagnostics["local_minimization_method"],
-                        "local_minimization_degrees_of_freedom": list(
-                            state_search_diagnostics["local_minimization_degrees_of_freedom"]
-                        ),
-                        "local_minimization": dict(candidate["local_minimization"]),
-                        "symmetry_rmsd_clustering_status": state_search_diagnostics["symmetry_rmsd_clustering_status"],
-                        "chemical_anchor_mapping_status": state_search_diagnostics["chemical_anchor_mapping_status"],
-                        "chemical_anchor_mapping": anchor_mapping,
-                    },
-                    "uncertainty": 1.0,
-                    "abstention": True,
-                    "abstention_reasons": abstention_reasons,
-                    "pose_rmsd_to_top1_a": 0.0,
-                    "pose_rmsd_to_top5_centroid_a": 0.0,
-                    "clash_count": clashes,
-                    "chemistry_validity": chemistry_validity,
-                    "ranking_metric": ranking_metric,
-                    "topology_fidelity": protein_valid.get("fidelity", ""),
-                    "ligand_topology": _ligand_topology_payload(state_ligand_valid),
-                    "neighbor_diagnostics": diag.get("neighbor_diagnostics", {}),
-                    "claim_boundary": _CLAIM_BOUNDARY,
-                    "field_diagnostics": diag,
-                    "mm_gbsa_diagnostics": mm_score,
-                })
-                state_payload["poses_scored"] = int(state_payload["poses_scored"]) + 1
+                    pose_scores.append({
+                        "pose_index": pose_index,
+                        "pose_rank": 0,
+                        "ligand_state": state_payload,
+                        "field_energy": cross_energy,
+                        "mm_gbsa_energy": mm_energy,
+                        "composite_score": float(composite),
+                        "score_components": {
+                            "cross_component_lj_proxy": cross_energy,
+                            "mm_gbsa_interaction_proxy": mm_energy,
+                        },
+                        "pose_search": {
+                            "schema_version": "tier_beta_pose_search_v1",
+                            "search_strategy": state_search_diagnostics["search_strategy"],
+                            "conformer_diversity": dict(state_search_diagnostics["conformer_diversity"]),
+                            "conformer_count": int(state_search_diagnostics["conformer_count"]),
+                            "rotatable_bond_count": int(state_search_diagnostics["rotatable_bond_count"]),
+                            "retained_conformer_count": int(state_search_diagnostics["retained_conformer_count"]),
+                            "retained_conformer_indices": list(state_search_diagnostics["retained_conformer_indices"]),
+                            "retained_conformer_fraction": float(state_search_diagnostics["retained_conformer_fraction"]),
+                            "conformer_index": int(candidate["conformer_index"]),
+                            "rotation_index": int(candidate["rotation_index"]),
+                            "translation_index": int(candidate["translation_index"]),
+                            "translation_vector_a": list(candidate["translation_vector_a"]),
+                            "coarse_score": float(candidate["coarse_score"]),
+                            "coarse_score_before_local": float(candidate["coarse_score_before_local"]),
+                            "coarse_score_components": dict(candidate["coarse_score_components"]),
+                            "coarse_score_beam_status": state_search_diagnostics["coarse_score_beam_status"],
+                            "clash_prefilter_status": state_search_diagnostics["clash_prefilter_status"],
+                            "raw_candidate_count": int(state_search_diagnostics["raw_candidate_count"]),
+                            "coarse_beam_candidate_count": int(state_search_diagnostics["coarse_beam_candidate_count"]),
+                            "retained_candidate_count": int(state_search_diagnostics["retained_candidate_count"]),
+                            "rotations_per_conformer": int(state_search_diagnostics["rotations_per_conformer"]),
+                            "translation_grid_point_count": int(state_search_diagnostics["translation_grid_point_count"]),
+                            "local_minimization_status": state_search_diagnostics["local_minimization_status"],
+                            "local_minimization_method": state_search_diagnostics["local_minimization_method"],
+                            "local_minimization_degrees_of_freedom": list(
+                                state_search_diagnostics["local_minimization_degrees_of_freedom"]
+                            ),
+                            "local_minimization": dict(candidate["local_minimization"]),
+                            "symmetry_rmsd_clustering_status": state_search_diagnostics["symmetry_rmsd_clustering_status"],
+                            "chemical_anchor_mapping_status": state_search_diagnostics["chemical_anchor_mapping_status"],
+                            "chemical_anchor_mapping": anchor_mapping,
+                        },
+                        "uncertainty": 1.0,
+                        "abstention": True,
+                        "abstention_reasons": abstention_reasons,
+                        "pose_rmsd_to_top1_a": 0.0,
+                        "pose_rmsd_to_top5_centroid_a": 0.0,
+                        "clash_count": clashes,
+                        "chemistry_validity": chemistry_validity,
+                        "ranking_metric": ranking_metric,
+                        "topology_fidelity": protein_valid.get("fidelity", ""),
+                        "ligand_topology": _ligand_topology_payload(state_ligand_valid),
+                        "neighbor_diagnostics": diag.get("neighbor_diagnostics", {}),
+                        "claim_boundary": _CLAIM_BOUNDARY,
+                        "field_diagnostics": diag,
+                        "mm_gbsa_diagnostics": mm_score,
+                    })
+                    candidate_record.update(status="scored_successfully", reason=None, score=float(composite))
+                    state_payload["poses_scored"] = int(state_payload["poses_scored"]) + 1
+                except Exception as exc:
+                    candidate_record.update(status="evaluation_failed", reason=str(exc))
+                    continue
             search_diagnostics["states"].append(state_payload)
             for record in state_records:
                 if record.get("state_id") == state_payload.get("state_id"):
@@ -774,22 +909,24 @@ class TierBetaScreening:
                     record["pose_search"] = state_payload["pose_search"]
                     break
 
-        if not pose_scores:
-            return self._fail("no_poses_scored",
-                              protein_seq, protein_coords.shape[0], ligand_smiles,
-                              ligand_atom=ligand_atom,
-                              pocket=resolved_pocket,
-                              poses_gen=poses_generated,
-                              typed_input=typed_input,
-                              stage_records=stage_records)
         stage_records.append(
             StageRecord(
                 stage_id="scoring_ranking",
                 schema_version=_SCHEMA_VERSION,
-                status="pass",
-                diagnostics={"poses_scored": int(len(pose_scores)), "pose_search": search_diagnostics},
+                status="pass" if pose_scores else "blocked",
+                diagnostics={"poses_scored": int(len(pose_scores)), "pose_search": search_diagnostics,
+                             "candidates": candidate_records,
+                             "candidate_accounting_scope": "retained_search_candidates",
+                             "candidate_accounting": {status: sum(row["status"] == status for row in candidate_records)
+                                for status in ("scored_successfully", "input_rejected", "evaluation_failed", "unattempted")}},
             )
         )
+        if not pose_scores:
+            reasons = sorted({str(row["reason"]) for row in candidate_records if row["reason"]})
+            return self._fail("no_poses_scored:" + ";".join(reasons),
+                              protein_seq, protein_coords.shape[0], ligand_smiles,
+                              ligand_atom=ligand_atom, pocket=resolved_pocket, poses_gen=poses_generated,
+                              typed_input=typed_input, stage_records=stage_records)
 
         pose_scores.sort(key=lambda x: float(x["composite_score"]))
         for rank, row in enumerate(pose_scores, start=1):
@@ -815,6 +952,14 @@ class TierBetaScreening:
             row["pose_search"]["cross_state_rmsd_computed"] = False
 
         top_k_poses = pose_scores[:self.top_k]
+        for row in top_k_poses:
+            coordinates = placed_pose_coords[int(row["pose_index"])].tolist()
+            coordinate_payload = {"coords_a": coordinates, "coordinate_frame": "receptor_frame_no_alignment",
+                                  "coordinate_smiles": row["ligand_state"]["smiles"],
+                                  "ligand_topology": row["ligand_topology"]}
+            row["scored_pose"] = {**coordinate_payload, "sha256": hashlib.sha256(
+                json.dumps(coordinate_payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+            ).hexdigest()}
         stage_records.append(
             StageRecord(
                 stage_id="top_k_refine",
@@ -880,7 +1025,7 @@ class TierBetaScreening:
             stage_records=stage_records,
             typed_input=typed_input,
         )
-        if not isinstance(manifest, dict) or not manifest.get("signature") or not manifest.get("content_hash"):
+        if not verify_screening_manifest(manifest):
             return self._fail("unsigned_result_manifest",
                               protein_seq, protein_coords.shape[0], ligand_smiles,
                               ligand_atom=ligand_atom,
@@ -1005,6 +1150,23 @@ class TierBetaScreening:
         )
         records = [*(stage_records or []), failed_stage]
         typed_input_payload = typed_input.to_dict() if typed_input is not None else {}
+        manifest = sign_screening_manifest({
+            "schema_version": _SCHEMA_VERSION,
+            "claim_scope": _CLAIM_SCOPE,
+            "status": "failed",
+            "failure_code": failure_code,
+            "blocked_reason": str(reason),
+            "protein": {"residue_count": int(protein_residues)},
+            "ligand": {"smiles": ligand_smiles, "atom_count": int(ligand_atom)},
+            "poses": {"generated": int(poses_gen), "scored": 0},
+            "ranking": {"best_score": None, "best_rank": None, "top_k": self.top_k},
+            "pose_scores": [],
+            "stage_records": [record.to_dict() for record in records],
+            "typed_input": typed_input_payload,
+            "claim_metadata": {"claim_safe": False, "blocked_reason": str(reason),
+                               "blocked_claims": list(_BLOCKED_CLAIMS)},
+            "claim_boundary": _CLAIM_BOUNDARY,
+        })
         typed_output = TierBetaScreeningOutput(
             ok=False,
             failure_code=failure_code,
@@ -1014,7 +1176,7 @@ class TierBetaScreening:
             poses_generated=int(poses_gen),
             poses_scored=0,
             top_k=int(self.top_k),
-            manifest_hash="",
+            manifest_hash=manifest["content_hash"],
         )
         return TierBetaScreeningResult(
             ok=False,
@@ -1031,13 +1193,14 @@ class TierBetaScreening:
             poses_generated=poses_gen,
             poses_scored=0,
             top_k=self.top_k,
-            best_score=float("inf"),
+            best_score=None,
             best_rank=-1,
             stability_steps_run=0,
-            stability_drift_A=float("inf"),
+            stability_drift_A=None,
             stability_ok=False,
-            manifest_hash="",
-            claim_metadata={"claim_safe": False, "blocked_reason": reason},
+            manifest_hash=manifest["content_hash"],
+            claim_metadata=manifest["claim_metadata"],
+            result_manifest=manifest,
             failure_code=failure_code,
             stage_records=[stage.to_dict() for stage in records],
             typed_input=typed_input_payload,
