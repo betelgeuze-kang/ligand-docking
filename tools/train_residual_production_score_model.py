@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from numbers import Real
 from typing import Any
 
 import torch
@@ -205,7 +206,7 @@ def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[
         if required:
             raise ValueError(f"missing_required_training_feature:{field}")
         return 0.0, 1.0
-    if isinstance(value, bool):
+    if isinstance(value, bool) or not isinstance(value, (Real, str)):
         raise ValueError(f"invalid_training_feature:{field}")
     try:
         number = float(value)
@@ -605,6 +606,8 @@ def try_skip_training(
     train_ratio: float,
     seed: int,
 ) -> dict[str, Any] | None:
+    # Cache reuse is also a training entry point: never endorse protected input.
+    _load_rows(input_csv)
     fingerprint = build_train_fingerprint(
         input_csv=input_csv,
         force_derivation_json=force_derivation_json,
