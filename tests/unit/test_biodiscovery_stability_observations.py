@@ -179,8 +179,9 @@ def test_seed_replay_is_checked_separately_from_elapsed_time():
     assert b.diagnostics["execution_observations"]["stability_elapsed_seconds"] >= 0.
 
 
-@pytest.mark.parametrize("offset", [50., -50.])
+@pytest.mark.parametrize("offset", [100., -100.])
 def test_initial_clamp_box_violation_is_reported_without_repair(monkeypatch, offset):
+    # Actual complex extent exceeds 80 A; a common translation cannot fit it.
     calls = _field(monkeypatch)
     drift, result = scoring.run_stability_simulation(_protein() + offset, _ligand(), steps=2)
     assert drift is None and result["status"] == "failed"

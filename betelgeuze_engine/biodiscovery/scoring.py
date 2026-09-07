@@ -27,6 +27,9 @@ DEFAULT_STABILITY_STEPS = 100
 DEFAULT_STABILITY_DT = 0.001
 DEFAULT_STABILITY_TEMP_K = 300.0
 DEFAULT_BOX_SIZE = 80.0
+# Exact symbols parameterized by the current VdW and surface-area primitives.
+# Do not use their permissive first-letter/default normalization on explicit input.
+MM_GBSA_SUPPORTED_ELEMENTS = frozenset({"H", "C", "N", "O", "S", "P", "F", "CL", "BR", "I"})
 
 
 def build_atom_types(bead_count: int, ligand_count: int, device: torch.device | str = "cpu") -> torch.Tensor:
@@ -114,10 +117,22 @@ def mm_gbsa_binding_score(
     try:
         protein = _observation_coordinates(protein_beads, "protein_beads")
         ligand = _observation_coordinates(ligand_coords, "ligand_coords")
+        normalized_elements: dict[str, list[str] | None] = {}
         for label, elements, count in (("protein", protein_elements, len(protein)),
                                        ("ligand", ligand_elements, len(ligand))):
-            if elements is not None and (len(elements) != count or any(not isinstance(e, str) or not e.strip() for e in elements)):
+            if elements is None:
+                normalized_elements[label] = None
+                continue
+            if isinstance(elements, (str, bytes)) or np.ma.isMaskedArray(elements) or len(elements) != count:
                 raise ValueError(f"{label}_element_coordinate_mismatch")
+            normalized: list[str] = []
+            for element in elements:
+                if not isinstance(element, str) or element.strip().upper() not in MM_GBSA_SUPPORTED_ELEMENTS:
+                    raise ValueError(f"unsupported_{label}_element:{element}")
+                normalized.append(element.strip().upper())
+            normalized_elements[label] = normalized
+        if isinstance(contact_cutoff_a, (bool, np.bool_)) or not math.isfinite(contact_cutoff_a) or contact_cutoff_a <= 0.:
+            raise ValueError("contact_cutoff_a must be finite and positive")
         if (protein_charges is None) != (ligand_charges is None):
             raise ValueError("both_partial_charge_arrays_required")
         for label, charges, count in (("protein", protein_charges, len(protein)),
@@ -126,13 +141,22 @@ def mm_gbsa_binding_score(
                 array = np.asarray(charges)
                 if np.ma.isMaskedArray(charges) or array.shape != (count,) or array.dtype.kind not in "iuf" or not np.isfinite(array).all():
                     raise ValueError(f"invalid_{label}_partial_charges")
-        result = mm_gbsa_binding_energy(
-            protein_xyz=protein.astype(np.float32),
-            ligand_xyz=ligand.astype(np.float32),
-            contact_cutoff_a=float(contact_cutoff_a),
-            protein_elements=protein_elements, ligand_elements=ligand_elements,
-            protein_charges=protein_charges, ligand_charges=ligand_charges,
-        )
+        with np.errstate(over="raise", invalid="raise", divide="raise"):
+            result = mm_gbsa_binding_energy(
+                protein_xyz=protein.astype(np.float32),
+                ligand_xyz=ligand.astype(np.float32),
+                contact_cutoff_a=float(contact_cutoff_a),
+                protein_elements=normalized_elements["protein"], ligand_elements=normalized_elements["ligand"],
+                protein_charges=protein_charges, ligand_charges=ligand_charges,
+            )
+        # Finite inputs can still overflow intermediate operations or cancellation.
+        for key in ("interaction_score_proxy", "deltaG_mm_gbsa_kcal_mol", "e_vdw", "e_gb", "e_sa", "e_solvation"):
+            value = result.get(key)
+            if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, float, np.integer, np.floating)) or not math.isfinite(value):
+                raise ValueError(f"nonfinite_or_missing_mm_gbsa_result:{key}")
+        for key, value in result.items():
+            if isinstance(value, (float, np.floating)) and not math.isfinite(value):
+                raise ValueError(f"nonfinite_mm_gbsa_result:{key}")
         return {**dict(result),
                 "chemistry_input_scope": "explicit_elements_and_partial_charges" if protein_charges is not None else "available_elements_without_partial_charges",
                 "partial_charges_supplied": protein_charges is not None,
@@ -220,10 +244,13 @@ def run_stability_simulation(
     try:
         protein = _observation_coordinates(protein_beads, "protein_beads")
         ligand = _observation_coordinates(ligand_coords, "ligand_coords")
-        origin = protein.mean(axis=0)
+        combined = np.concatenate([protein, ligand], axis=0)
+        # Midpoint of the combined bounds fits any translatable complex whose
+        # extent fits the box; a skewed receptor centroid does not guarantee this.
+        origin = combined.min(axis=0) / 2. + combined.max(axis=0) / 2.
         diagnostic["coordinate_origin_a"] = [float(value) for value in origin]
-        diagnostic["coordinate_frame"] = "receptor_centroid_local_translation_only"
-        coords = np.concatenate([protein - origin, ligand - origin], axis=0)
+        diagnostic["coordinate_frame"] = "complex_bounds_midpoint_translation_only"
+        coords = combined - origin
         if (np.abs(coords) > DEFAULT_BOX_SIZE / 2.).any():
             raise ValueError("initial_coordinates_outside_proxy_clamp_box")
         coords_t = torch.tensor(coords, dtype=torch.float32, device=dev).unsqueeze(0)

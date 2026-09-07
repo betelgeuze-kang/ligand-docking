@@ -45,9 +45,16 @@ recorded; a larger buffer can legitimately exceed the supported cap.
 ## Chemistry propagation
 
 Prepared ligand elements for each chemical state are passed to the existing
-MM-GBSA proxy wrapper. Its optional element arrays must match coordinates, and
-partial charge arrays must be supplied together, with finite real values and
+MM-GBSA proxy wrapper. Optional element arrays must match coordinates. Explicit
+symbols must be in its parameterized set: H, C, N, O, S, P, F, Cl, Br and I.
+Case and surrounding whitespace are normalized; unsupported words/symbols are
+rejected instead of first-letter or default substitution. Missing receptor
+elements remain an explicitly reported proxy fallback.
+
+Partial charge arrays must be supplied together, with finite real values and
 matching atom counts. Malformed supplied chemistry blocks the proxy result.
+Overflow/invalid/divide errors during evaluation and nonfinite returned energy
+components are blocked; finite input alone is not evidence of a valid score.
 
 The CA-derived receptor sites still lack physical all-atom typing and charges.
 The product path does not invent charges, substitute formal ligand charges for
@@ -58,12 +65,14 @@ fallback and unavailable chemistry remain explicit diagnostics.
 
 ## Stability coordinates
 
-Both receptor and ligand are shifted by the receptor centroid before entering
-the existing finite proxy box. The original origin and translation-only frame
-are recorded. Uniform translations no longer fail merely because a file is far
-from coordinate zero. Actual relative displacement or spatial extent outside the
-box remains invalid. Force clipping, minimum-image neighbors, coordinate clamp
-and unvalidated time/boundary semantics are unchanged. This is not validated MD.
+Both receptor and ligand are shifted by the midpoint of their combined
+coordinate bounds before entering the existing finite proxy box. The original
+origin and translation-only frame are recorded. This fits skewed complexes whose
+extent fits the box, rather than assuming a receptor centroid is its box center.
+Uniform translations no longer fail merely because a file is far from zero.
+An actual complex extent exceeding the box still fails before force evaluation.
+Force clipping, minimum-image neighbors, coordinate clamps and unvalidated
+time/boundary semantics are unchanged. This is not validated MD.
 
 ## Tests and compatibility
 
@@ -72,6 +81,9 @@ synthetic receptor when asserting an available receptor-aligned drift. A line
 cannot define full rigid alignment without the artificial transverse sites
 provided by the old world-axis proxy. No assertion was weakened; new collinear
 covariance and unavailable/invalid-frame tests cover that boundary separately.
+The excessive-extent fixture now uses 100-A relative offsets rather than a
+50-A offset that can fit the 80-A box after a common translation. All original
+failure assertions remain, with separate positive tests for fitting complexes.
 
 No execution authority, scientific-claim flag, protected evaluation dataset,
 production checkpoint, native ABI or score-model weights are changed. Success

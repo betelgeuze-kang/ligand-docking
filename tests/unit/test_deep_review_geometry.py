@@ -146,5 +146,67 @@ def test_uniform_translation_no_longer_causes_fixed_box_failure(monkeypatch,shif
     assert da['status']==db['status']=='observed'
     assert a==pytest.approx(b,abs=1e-6)
     assert db['coordinate_clamped_component_count']==0
-    assert db['coordinate_frame']=='receptor_centroid_local_translation_only'
+    assert db['coordinate_frame']=='complex_bounds_midpoint_translation_only'
     assert db['scientific_claim_validated'] is False
+
+
+@pytest.mark.parametrize("side", ["protein", "ligand"])
+@pytest.mark.parametrize("symbol", ["Xx", "Carbon", "Chlorine", "BRONZE", "Na", "Fe", ""])
+def test_review_unsupported_elements_never_claim_typed_scoring(side, symbol):
+    out = scoring.mm_gbsa_binding_score(np.zeros((2,3)), np.ones((2,3)),
+                                       **{f"{side}_elements": [symbol, "C"]})
+    assert out["status"] == "blocked_chemistry_input_or_proxy_evaluation"
+    assert "unsupported_" in out["blocked_reason"]
+    assert out["claim_safe"] is False
+
+
+def test_review_supported_symbols_match_parameter_tables_and_normalize_case():
+    from core.refine_physics import _VDW_PARAMS, _VDW_RADII_A
+    assert scoring.MM_GBSA_SUPPORTED_ELEMENTS == (set(_VDW_PARAMS) - {"DEFAULT"}) & set(_VDW_RADII_A)
+    p = np.array([[0.,0.,0.],[4.,0.,0.]])
+    l = np.array([[1.,3.,0.],[3.,3.,0.]])
+    expected = scoring.mm_gbsa_binding_score(p,l,protein_elements=["CL","N"],ligand_elements=["BR","C"])
+    actual = scoring.mm_gbsa_binding_score(p,l,protein_elements=[" cl ","n"],ligand_elements=["Br","c"])
+    assert actual == expected
+    assert actual["element_fallback_used"] is False
+
+
+@pytest.mark.parametrize("charge", [1e155, 1e200, 1e308])
+def test_review_finite_charges_cannot_overflow_to_a_normal_score(charge):
+    out = scoring.mm_gbsa_binding_score(np.zeros((2,3)), np.ones((2,3)),
+            protein_charges=np.array([charge,-charge]),ligand_charges=np.array([-charge,charge]))
+    assert out["status"] == "blocked_chemistry_input_or_proxy_evaluation"
+    assert out["binding_energy_kcal_mol"] == float("inf")
+    assert out["claim_safe"] is False
+
+
+@pytest.mark.parametrize("field", ["interaction_score_proxy","e_gb","e_sa","e_solvation"])
+@pytest.mark.parametrize("value", [float("nan"),float("inf")])
+def test_review_nonfinite_returned_components_are_blocked(monkeypatch,field,value):
+    base = scoring.mm_gbsa_binding_score(np.zeros((2,3)),np.ones((2,3)))
+    base[field] = value
+    monkeypatch.setattr(scoring,"mm_gbsa_binding_energy",lambda *a,**k:base)
+    result = scoring.mm_gbsa_binding_score(np.zeros((2,3)),np.ones((2,3)))
+    assert result["status"] == "blocked_chemistry_input_or_proxy_evaluation"
+    assert "nonfinite" in result["blocked_reason"]
+
+
+@pytest.mark.parametrize("shift", [0.,50.,-75.])
+def test_review_skewed_but_fitting_complex_is_not_rejected(monkeypatch,shift):
+    def zero(state,pairs,**kwargs):
+        return SimpleNamespace(energy=torch.zeros(1),forces=torch.zeros_like(state.coords))
+    monkeypatch.setattr(scoring.ProductForceField,"from_registry",lambda *a,**k:SimpleNamespace(energy_forces=zero))
+    p = np.array([[-30.,float(i%3),float(i//3)] for i in range(9)] + [[30.,2.,2.]])
+    l = np.array([[-29.,1.,1.],[-28.,1.,1.]])
+    _, result = scoring.run_stability_simulation(p+[shift,0,0],l+[shift,0,0],steps=1,temp_k=0.)
+    assert result["status"] == "observed", result.get("error")
+    assert result["coordinate_origin_a"][0] == pytest.approx(shift)
+    assert result["coordinate_clamped_component_count"] == 0
+
+
+def test_review_untranslatably_wide_complex_stays_blocked():
+    p = receptor(); p[0,0]=-50.;p[1,0]=50.
+    _, result = scoring.run_stability_simulation(p,np.ones((2,3)),steps=1,temp_k=0.)
+    assert result["status"] == "failed"
+    assert result["steps_run"] == 0
+    assert result["error"] == "initial_coordinates_outside_proxy_clamp_box"
