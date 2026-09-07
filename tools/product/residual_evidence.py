@@ -24,6 +24,40 @@ _RESERVED_SPLITS = {
 }
 
 
+_POLICY_COLUMNS = {"role", "split", "dataset_split", "evaluation_only"}
+
+
+def validated_csv_fieldnames(fieldnames: list[str] | None) -> list[str]:
+    """Reject lossy CSV schemas before DictReader overwrites duplicate columns.
+
+    Trim header whitespace; normalize known policy names case-insensitively.
+    Other feature/label names remain case-sensitive. This checks declared
+    columns, not the trustworthiness of their values or upstream sources.
+    """
+    if not fieldnames:
+        raise ValueError("missing_csv_header")
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in fieldnames:
+        if not isinstance(raw, str) or not raw.strip():
+            raise ValueError("empty_csv_column_name")
+        name = raw.strip()
+        if name.casefold() in _POLICY_COLUMNS:
+            name = name.casefold()
+        if name in seen:
+            raise ValueError(f"duplicate_csv_column:{name}")
+        seen.add(name)
+        normalized.append(name)
+    return normalized
+
+
+def require_complete_csv_row(row: dict[str, Any]) -> None:
+    # CSV blanks are empty strings. None signals too few columns, while a
+    # None key holds surplus values that would otherwise be silently ignored.
+    if None in row or any(value is None for value in row.values()):
+        raise ValueError("csv_row_width_mismatch")
+
+
 def declared_evaluation_only(row: dict[str, Any]) -> bool:
     """Honor explicit training exclusion; cannot detect undeclared holdouts."""
     if str(row.get("evaluation_only", "")).strip().lower() in {"true", "1"}:

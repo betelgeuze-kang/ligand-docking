@@ -14,7 +14,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from tools.product.residual_evidence import declared_evaluation_only
+from tools.product.residual_evidence import (
+    declared_evaluation_only, require_complete_csv_row, validated_csv_fieldnames,
+)
 
 from tools.builder_json_utils import (
     build_score_model_train_fingerprint,
@@ -174,8 +176,12 @@ def _snapshot_state_dict(model: nn.Module) -> dict[str, torch.Tensor]:
 def _load_rows(path_like: str | Path) -> list[dict[str, Any]]:
     path = _resolve(path_like)
     with path.open("r", encoding="utf-8", newline="") as fh:
-        reader = csv.DictReader(fh)
-        rows = [dict(row) for row in reader]
+        reader = csv.DictReader(fh, strict=True)
+        reader.fieldnames = validated_csv_fieldnames(reader.fieldnames)
+        rows: list[dict[str, Any]] = []
+        for row in reader:
+            require_complete_csv_row(row)
+            rows.append(dict(row))
     _require_development_rows(rows)
     return rows
 
@@ -398,15 +404,25 @@ def train_residual_production_score_model(
 
     x_mean = x_train.mean(dim=0)
     x_std = x_train.std(dim=0, unbiased=False)
-    # A constant observed column has no fitted variation; use unit scale rather
-    # than amplifying later deviations by one million.
-    x_std = torch.where(x_std >= 1e-6, x_std, torch.ones_like(x_std))
+    if not torch.isfinite(x_mean).all() or not torch.isfinite(x_std).all():
+        raise ValueError("nonfinite_training_normalization")
+    # An unseen feature variation (including a constant missingness indicator)
+    # must not activate random weights in validation or later inference.
+    active_features = x_std >= 1e-6
+    x_std = torch.where(active_features, x_std, torch.ones_like(x_std))
     x_train_n = (x_train - x_mean) / x_std
     x_val_n = (x_val - x_mean) / x_std
+    x_train_n[:, ~active_features] = 0.0
+    x_val_n[:, ~active_features] = 0.0
 
     device = torch.device("cuda" if torch.cuda.is_available() and device_name.lower() != "cpu" else "cpu")
     torch.manual_seed(seed)
     model = ResidualScoreMLP(in_dim=x.shape[1], hidden_dim=hidden_dim).to(device)
+    with torch.no_grad():
+        # Training inputs in these columns are identically zero, so their
+        # zero weights remain zero under Adam, including weight_decay=0.
+        # Persisting zero weights also neutralizes plain checkpoint inference.
+        model.trunk[0].weight[:, ~active_features.to(device)] = 0.0
     model.force_head.requires_grad_(False)  # preserve checkpoint shape, never advertise it as trained
     ds = TensorDataset(x_train_n, y_cls_train, y_delta_train, y_energy_train, y_energy_mask_train)
     dl = DataLoader(ds, batch_size=max(1, batch_size), shuffle=True, generator=torch.Generator().manual_seed(seed))
@@ -475,6 +491,9 @@ def train_residual_production_score_model(
         "role_features_used": False,
         "evaluation_only_inputs_rejected": True,
         "feature_missingness_policy": "required_raw_score_optional_value_and_indicator",
+        "neutralized_feature_names": [name for name, active in zip(feature_names, active_features.tolist()) if not active],
+        "constant_feature_policy": "zero_normalized_inputs_and_first_layer_weights",
+        "csv_schema_policy": "unique_normalized_headers_and_complete_rows",
         "uncertainty_calibrated": False,
         "physical_energy_residual_validated": False,
         "delta_force_training_status": "not_implemented_no_force_loss_or_coordinate_gradient",
