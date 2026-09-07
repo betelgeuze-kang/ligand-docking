@@ -4,11 +4,15 @@ from __future__ import annotations
 import argparse
 import csv
 import glob
+import io
 import json
+import math
+import hashlib
 from pathlib import Path
 from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
+from tools.product.residual_evidence import IDENTITY_FIELDS, declared_evaluation_only, paired_energy_fields
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_STAGE5_GLOB = "runs/*stage5_ranking_rows.csv"
@@ -58,18 +62,17 @@ def _float(value: Any) -> float | None:
     try:
         if value is None or str(value).strip() == "":
             return None
-        return float(value)
+        number = float(value)
+        return number if math.isfinite(number) else None
     except (TypeError, ValueError):
         return None
 
 
 def _int(value: Any) -> int | None:
-    try:
-        if value is None or str(value).strip() == "":
-            return None
-        return int(float(value))
-    except (TypeError, ValueError):
+    number = _float(value)
+    if isinstance(value, bool) or number is None or not number.is_integer():
         return None
+    return int(number)
 
 
 def _rel(path: Path) -> str:
@@ -96,6 +99,8 @@ def _stage3_path_from_stage5(path: Path) -> Path:
 
 def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tuple[float, str]], dict[str, Any]]:
     proxies: dict[tuple[str, str], tuple[float, str]] = {}
+    seen: set[tuple[str, str]] = set()
+    ambiguous: set[tuple[str, str]] = set()
     if not stage3_path.exists():
         return proxies, {
             "stage3_csv": _rel(stage3_path),
@@ -121,14 +126,20 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
                 ligand_id = str(raw.get("ligand_id") or "").strip()
                 if not target or not ligand_id:
                     continue
+                key = (target, ligand_id)
+                if key in seen:
+                    ambiguous.add(key)
+                    proxies.pop(key, None)
+                    continue
+                seen.add(key)
                 for col in energy_cols:
                     value = _float(raw.get(col))
                     if value is None:
                         continue
                     proxies[(target, ligand_id)] = (value, col)
                     break
-    except OSError as exc:
-        return proxies, {
+    except (OSError, UnicodeError, csv.Error) as exc:
+        return {}, {
             "stage3_csv": _rel(stage3_path),
             "stage3_energy_proxy_status": f"read_error:{exc}",
             "stage3_energy_proxy_rows": 0,
@@ -138,6 +149,7 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
     return proxies, {
         "stage3_csv": _rel(stage3_path),
         "stage3_energy_proxy_status": "used" if proxies else "no_energy_proxy_rows",
+        "stage3_ambiguous_join_keys": len(ambiguous),
         "stage3_energy_proxy_rows": len(proxies),
         "stage3_energy_proxy_column": ",".join(used_cols),
     }
@@ -165,9 +177,14 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
     scanned = 0
     skipped = 0
     energy_joined = 0
+    pair_rejected = 0
+    stopped_at_limit = False
+    rejections: list[dict[str, Any]] = []
     energy_proxy_map, energy_source = _load_energy_proxy_map(_stage3_path_from_stage5(path))
     try:
-        with path.open("r", encoding="utf-8", newline="") as fh:
+        source_bytes = path.read_bytes()
+        source_digest = hashlib.sha256(source_bytes).hexdigest()
+        with io.StringIO(source_bytes.decode("utf-8"), newline="") as fh:
             reader = csv.DictReader(fh)
             fieldnames = list(reader.fieldnames or [])
             score_col = _score_col(fieldnames)
@@ -182,9 +199,14 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     "score_col": score_col,
                 }
             for raw in reader:
-                scanned += 1
                 if len(rows) >= max_rows_per_source:
+                    stopped_at_limit = True
                     break
+                scanned += 1
+                if declared_evaluation_only(raw):
+                    skipped += 1
+                    rejections.append({"source_line": reader.line_num, "reason": "evaluation_only_row"})
+                    continue
                 target = str(raw.get("target") or "").strip()
                 ligand_id = str(raw.get("ligand_id") or "").strip()
                 is_binder = _int(raw.get("is_binder"))
@@ -192,9 +214,14 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                 score = _float(raw.get(score_col))
                 if not target or not ligand_id or is_binder not in {0, 1} or reference is None or score is None:
                     skipped += 1
+                    rejections.append({"source_line": reader.line_num, "reason": "invalid_identity_or_label"})
                     continue
                 mean_min_distance = _float(raw.get("mean_min_distance_A"))
                 delta_score = reference - score
+                if not math.isfinite(delta_score):
+                    skipped += 1
+                    rejections.append({"source_line": reader.line_num, "reason": "nonfinite_score_proxy_difference"})
+                    continue
                 row = {
                     "target": target,
                     "family": _family_from_target(target),
@@ -209,25 +236,32 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     "mean_min_distance_A": mean_min_distance if mean_min_distance is not None else "",
                     "source_csv": _rel(path),
                     "label_source": "local_stage5_ranking_rows",
+                    "label_evidence_kind": "unverified_local_label",
+                    "score_residual_semantics": "legacy_reference_minus_composite_proxy_not_physical_energy",
+                    "source_line": reader.line_num,
+                    "source_sha256": source_digest,
+                    "pose_id": str(raw.get("pose_id") or ""),
+                    **{key: str(raw.get(key) or "") for key in IDENTITY_FIELDS},
                 }
+                # A target/ligand join does not identify a pose. Keep a loose
+                # proxy association as diagnostics only, never a residual label.
                 energy_proxy = energy_proxy_map.get((target, ligand_id))
-                if energy_proxy is not None:
-                    row["delta_energy"] = energy_proxy[0]
-                    row["delta_energy_label_source"] = f"stage3_energy_proxy:{energy_proxy[1]}"
+                row.update(
+                    stage3_energy_proxy_value=energy_proxy[0] if energy_proxy else "",
+                    stage3_energy_proxy_column=energy_proxy[1] if energy_proxy else "",
+                    stage3_proxy_association="target_ligand_only_not_pose_verified" if energy_proxy else "unavailable",
+                    refine_tier_label="", refine_tier_label_source="",
+                )
+                row.update(paired_energy_fields(raw))
+                if row["energy_pair_status"] == "declared_identity_matched":
                     energy_joined += 1
-                    if energy_proxy[1] in {"deltaG_mm_gbsa_kcal_mol", "binding_energy_explicit_water_recheck_kcal_mol_proxy"}:
-                        row["refine_tier_label"] = energy_proxy[0]
-                        row["refine_tier_label_source"] = energy_proxy[1]
-                else:
-                    row["delta_energy"] = ""
-                    row["delta_energy_label_source"] = ""
-                    row["refine_tier_label"] = ""
-                    row["refine_tier_label_source"] = ""
+                elif row["energy_pair_status"] == "rejected":
+                    pair_rejected += 1
                 for col in REFINE_FEATURE_COLUMNS:
                     val = _float(raw.get(col))
                     row[col] = val if val is not None else ""
                 rows.append(row)
-    except OSError as exc:
+    except (OSError, UnicodeError, csv.Error) as exc:
         return [], {
             "source_csv": _rel(path),
             "scanned_rows": scanned,
@@ -239,12 +273,16 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
         }
     return rows, {
         "source_csv": _rel(path),
+        "source_sha256": source_digest,
         "scanned_rows": scanned,
         "emitted_rows": len(rows),
         "skipped_rows": skipped,
         "status": "used" if rows else "no_usable_rows",
         "score_col": rows[0]["score_col"] if rows else "",
         "delta_energy_label_rows": energy_joined,
+        "energy_pair_rejected_rows": pair_rejected,
+        "rejections": rejections,
+        "stopped_at_row_limit": stopped_at_limit,
         **energy_source,
     }
 
@@ -257,6 +295,10 @@ def build_residual_production_supervised_dataset(
     min_rows: int = 1000,
     min_targets: int = 3,
 ) -> dict[str, Any]:
+    for name, value in (("max_sources", max_sources), ("max_rows_per_source", max_rows_per_source),
+                        ("min_rows", min_rows), ("min_targets", min_targets)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"{name} must be a positive integer")
     paths = [Path(path) for path in sorted(glob.glob(str(_resolve(stage5_glob))))]
     rows: list[dict[str, Any]] = []
     source_rows: list[dict[str, Any]] = []
@@ -286,19 +328,23 @@ def build_residual_production_supervised_dataset(
         missing_production_output_labels = [field for field in missing_production_output_labels if field != "delta_energy"]
     summary = {
         "packet_type": "residual_production_supervised_dataset",
-        "status": "residual_production_supervised_dataset_ready" if ready else "blocked_residual_production_supervised_dataset",
-        "production_supervised_dataset_ready": ready,
+        "status": "residual_score_candidate_dataset_ready" if ready else "blocked_residual_score_candidate_dataset",
+        "score_candidate_dataset_ready": ready,
+        "production_supervised_dataset_ready": False,
+        "physical_energy_residual_validated": False,
+        "evidence_validation_scope": "declared_identity_and_value_checks_not_source_authentication",
         "rows_emitted": len(rows),
         "binder_rows": binder_count,
         "negative_rows": negative_count,
         "unknown_label_rows": 0,
         "targets": len(target_counts),
         "families": sorted({str(row["family"]) for row in rows}),
-        "feature_dim": 4,
+        "feature_dim": 3,
         "label_fields": label_fields,
         "delta_energy_label_rows": delta_energy_label_count,
-        "delta_energy_label_source": "stage3_energy_proxy" if delta_energy_label_count else "",
-        "feature_fields": ["raw_score", "mean_min_distance_A", "family", "role"],
+        "delta_energy_label_source": "declared_matched_potential_energy_pair" if delta_energy_label_count else "",
+        "energy_pair_rejected_rows": sum(int(source.get("energy_pair_rejected_rows", 0)) for source in source_rows),
+        "feature_fields": ["raw_score", "mean_min_distance_A", "family"],
         "missing_production_output_labels": missing_production_output_labels,
         "stage5_source_count": len(paths),
         "used_source_count": sum(1 for row in source_rows if row.get("status") == "used"),
@@ -312,9 +358,9 @@ def build_residual_production_supervised_dataset(
         "external_state_mutated": False,
         "claim_boundary": CLAIM_BOUNDARY,
         "next_required_step": (
-            "Use this broad supervised dataset as input to a production residual training/evaluation run."
+            "Use only for diagnostic score-candidate training; validate measured-label provenance and task units before production use."
             if ready
-            else "Collect more labeled stage5 ranking rows across targets before production residual training."
+            else "Collect documented development-only labels; do not use protected evaluation data for training."
         ),
     }
     return {"summary": summary, "rows": rows, "sources": source_rows}
@@ -355,7 +401,9 @@ def _write_markdown(path_like: str | Path, payload: dict[str, Any], csv_path: st
             "## Label Boundary",
             "",
             "- Score residual labels are present: `delta_score`, `corrected_score`.",
-            f"- Delta-energy proxy labels joined: `{s['delta_energy_label_rows']}`.",
+            f"- Declared-identity-matched potential-energy residuals: `{s['delta_energy_label_rows']}`.",
+            "- Legacy reference-minus-composite score labels are diagnostic proxies, not physical energy differences.",
+            "- Source authenticity and scientific usefulness are not validated by matching declared hashes.",
             f"- Production output labels still missing here: `{','.join(s['missing_production_output_labels'])}`.",
             "",
             "## Claim Boundary",
