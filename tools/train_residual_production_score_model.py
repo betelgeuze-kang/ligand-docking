@@ -305,8 +305,11 @@ class ResidualScoreMLP(nn.Module):
         self.delta_head = nn.Linear(hidden_dim, 1)
         self.energy_head = nn.Linear(hidden_dim, 1)
         self.force_head = nn.Linear(hidden_dim, 1)
+        self.register_buffer("forbidden_missing_features", torch.zeros(in_dim, dtype=torch.bool))
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        if bool((x[..., self.forbidden_missing_features] != 0).any().item()):
+            raise ValueError("unseen_training_missingness")
         h = self.trunk(x)
         return (
             self.cls_head(h).squeeze(-1),
@@ -412,12 +415,23 @@ def train_residual_production_score_model(
     x_std = torch.where(active_features, x_std, torch.ones_like(x_std))
     x_train_n = (x_train - x_mean) / x_std
     x_val_n = (x_val - x_mean) / x_std
+    # A varying value observed in every training row has no learned missing
+    # response. Reject newly missing values instead of imputing an arbitrary 0.
+    forbidden_missing = torch.zeros(x.shape[1], dtype=torch.bool)
+    for index, name in enumerate(feature_names):
+        if name.endswith("_missing") and name[:-8] in feature_names:
+            value_index = feature_names.index(name[:-8])
+            if active_features[value_index] and bool((x_train[:, index] == 0).all().item()):
+                forbidden_missing[index] = True
+    if bool((x_val[:, forbidden_missing] != 0).any().item()):
+        raise ValueError("unseen_training_missingness")
     x_train_n[:, ~active_features] = 0.0
     x_val_n[:, ~active_features] = 0.0
 
     device = torch.device("cuda" if torch.cuda.is_available() and device_name.lower() != "cpu" else "cpu")
     torch.manual_seed(seed)
     model = ResidualScoreMLP(in_dim=x.shape[1], hidden_dim=hidden_dim).to(device)
+    model.forbidden_missing_features.copy_(forbidden_missing.to(device))
     with torch.no_grad():
         # Training inputs in these columns are identically zero, so their
         # zero weights remain zero under Adam, including weight_decay=0.
@@ -493,6 +507,8 @@ def train_residual_production_score_model(
         "feature_missingness_policy": "required_raw_score_optional_value_and_indicator",
         "neutralized_feature_names": [name for name, active in zip(feature_names, active_features.tolist()) if not active],
         "constant_feature_policy": "zero_normalized_inputs_and_first_layer_weights",
+        "unseen_missingness_policy": "reject_for_varying_fully_observed_training_features",
+        "forbidden_missing_feature_names": [name for name, flag in zip(feature_names, forbidden_missing.tolist()) if flag],
         "csv_schema_policy": "unique_normalized_headers_and_complete_rows",
         "uncertainty_calibrated": False,
         "physical_energy_residual_validated": False,

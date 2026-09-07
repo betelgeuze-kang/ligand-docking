@@ -38,10 +38,14 @@ def validated_csv_fieldnames(fieldnames: list[str] | None) -> list[str]:
         raise ValueError("missing_csv_header")
     normalized: list[str] = []
     seen: set[str] = set()
-    for raw in fieldnames:
+    for index, raw in enumerate(fieldnames):
         if not isinstance(raw, str) or not raw.strip():
             raise ValueError("empty_csv_column_name")
         name = raw.strip()
+        if index == 0:
+            name = name.removeprefix("\ufeff")
+        if not name or "\ufeff" in name:
+            raise ValueError("invalid_bom_csv_column")
         if name.casefold() in _POLICY_COLUMNS:
             name = name.casefold()
         if name in seen:

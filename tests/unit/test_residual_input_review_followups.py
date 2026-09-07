@@ -108,6 +108,7 @@ def test_unseen_optional_variation_has_zero_checkpoint_contribution(tmp_path, fi
     assert payload["constant_feature_policy"] == "zero_normalized_inputs_and_first_layer_weights"
 
 
+
 def test_observed_missingness_variation_is_not_neutralized(tmp_path):
     rows = _rows()
     for i, row in enumerate(rows):
@@ -118,6 +119,7 @@ def test_observed_missingness_variation_is_not_neutralized(tmp_path):
     assert name not in summary["neutralized_feature_names"]
     column = payload["feature_names"].index(name)
     assert torch.count_nonzero(payload["state_dict"]["trunk.0.weight"][:, column]) > 0
+
 
 
 def test_unseen_missingness_does_not_change_validation_or_epoch_selection(tmp_path):
@@ -132,6 +134,7 @@ def test_unseen_missingness_does_not_change_validation_or_epoch_selection(tmp_pa
     alternate, second = _train(tmp_path / "unseen", rows, weight_decay=0., epochs=3)
     assert baseline["best"] == alternate["best"]
     assert all(torch.equal(v, second["state_dict"][k]) for k, v in first["state_dict"].items())
+
 
 
 def _duplicate_csv(path, key, *, alias=None, stage5=False):
@@ -156,6 +159,7 @@ def test_duplicate_policy_csv_headers_cannot_erase_exclusion(tmp_path, key, alia
     _duplicate_csv(path, key, alias=alias)
     with pytest.raises(ValueError, match="duplicate_csv_column"):
         mod._load_rows(path)
+
 
 
 def test_duplicate_headers_are_rejected_before_model_creation(tmp_path, monkeypatch):
@@ -198,6 +202,7 @@ def test_ambiguous_or_empty_headers_are_rejected_even_without_data(tmp_path, hea
         mod._load_rows(path)
 
 
+
 def test_single_policy_header_alias_is_normalized_not_ignored(tmp_path):
     path = tmp_path / "capitalized.csv"
     with path.open("w", newline="", encoding="utf-8") as fh:
@@ -206,9 +211,72 @@ def test_single_policy_header_alias_is_normalized_not_ignored(tmp_path):
         mod._load_rows(path)
 
 
+
 def test_duplicate_stage3_proxy_columns_are_not_last_value_wins(tmp_path):
     path = tmp_path / "stage3.csv"
     path.write_text("target,ligand_id,binding_energy_proxy,binding_energy_proxy\nsynthetic,lig1,-3,-4\n", encoding="utf-8")
     values, status = builder._load_energy_proxy_map(path)
     assert values == {}
     assert "duplicate_csv_column" in status["stage3_energy_proxy_status"]
+
+
+@pytest.mark.parametrize("field", ["role", "split", "dataset_split", "evaluation_only"])
+def test_review_bom_cannot_hide_evaluation_declaration(tmp_path, field):
+    path = tmp_path / "bom.csv"
+    value = "true" if field == "evaluation_only" else "holdout"
+    path.write_text(f"{field},ligand_id\n{value},lig1\n", encoding="utf-8-sig")
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        mod._load_rows(path)
+
+
+def test_review_bom_duplicate_is_checked_after_normalization(tmp_path):
+    path = tmp_path / "bom.csv"
+    path.write_text("role, Role \nholdout,fit\n", encoding="utf-8-sig")
+    with pytest.raises(ValueError, match="duplicate_csv_column"):
+        mod._load_rows(path)
+
+
+@pytest.mark.parametrize("field", ["mean_min_distance_A", "refine_tier_delta"])
+def test_review_varying_fully_observed_feature_rejects_unseen_missingness(tmp_path, field):
+    rows = _rows()
+    for i, row in enumerate(rows):
+        row[field] = float(i + 1)
+    _, val = mod._split_indices(rows, 42, .8)
+    rows[val[0]][field] = ""
+    with pytest.raises(ValueError, match="unseen_training_missingness"):
+        _train(tmp_path, rows)
+    assert not (tmp_path / "candidate.pt").exists()
+
+
+def test_review_reloaded_model_also_rejects_unseen_missingness(tmp_path):
+    rows = _rows()
+    for i, row in enumerate(rows):
+        row["mean_min_distance_A"] = float(i + 1)
+    _, payload = _train(tmp_path, rows)
+    model = mod.ResidualScoreMLP(len(payload["feature_names"]), 8)
+    model.load_state_dict(payload["state_dict"])
+    x = torch.zeros((1, len(payload["feature_names"])))
+    model(x)
+    x[:, payload["feature_names"].index("mean_min_distance_A_missing")] = 1.
+    with pytest.raises(ValueError, match="unseen_training_missingness"):
+        model(x)
+
+
+def test_review_empty_current_materialization_never_trains_old_dataset(tmp_path, monkeypatch):
+    from tools.product import run_refine_tier_residual_training_chain as chain
+    dataset, enriched, checkpoint = (tmp_path / name for name in ("old.csv", "old_enriched.csv", "old.pt"))
+    for path in (dataset, enriched, checkpoint):
+        path.write_text("previous valid output", encoding="utf-8")
+    source = tmp_path / "filtered_stage5_ranking_rows.csv"
+    source.write_text("target,ligand_id,is_binder,reference_binding_kcal_mol,binding_score_composite_v7,role\nt,l,1,-2,-1,holdout\n")
+    def forbidden(*args, **kwargs):
+        pytest.fail("stale dataset reached training or enrichment")
+    monkeypatch.setattr(chain, "train_residual_production_score_model", forbidden)
+    monkeypatch.setattr(chain, "enrich_refine_tier_labels", forbidden)
+    result = chain.run_refine_tier_residual_training_chain(stage5_glob=str(source), stage3_glob=str(tmp_path/'missing*.csv'),
+        dataset_csv=str(dataset), enriched_csv=str(enriched), out_checkpoint=str(checkpoint),
+        out_summary_json=str(tmp_path/'summary.json'), min_rows=1, min_targets=1)
+    assert result["dataset_rows"] == 0
+    assert result["training"]["training_executed"] is False
+    assert dataset.read_text() == enriched.read_text() == ""
+    assert checkpoint.read_text() == "previous valid output"
