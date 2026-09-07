@@ -89,6 +89,7 @@ _COMPAT_PROTEIN_PREP_HELPERS = (
     _parse_pdb_text,
 )
 _COMPAT_SCORING_HELPERS = (
+    _DEFAULT_BOX_SIZE,
     _build_atom_types,
 )
 _COMPAT_MANIFEST_HELPERS = (
@@ -128,8 +129,8 @@ class TierBetaScreeningResult:
     best_score: float
     best_rank: int
     stability_steps_run: int
-    stability_drift_A: float
-    stability_ok: bool
+    stability_drift_A: float | None
+    stability_ok: bool | None
     manifest_hash: str
     claim_metadata: dict[str, Any]
     pose_scores: list[dict[str, Any]] = field(default_factory=list)
@@ -810,51 +811,28 @@ class TierBetaScreening:
         best_pose_coords = placed_pose_coords[best_pose_idx]
         benchmark_metric_summary = _benchmark_metric_summary_from_pose_scores(pose_scores)
 
-        stability_drift = 0.0
-        stability_ok = True
-        stability_run = 0
-        stab_diag: dict[str, Any] = {
-            "stable": True,
-            "drift_A": 0.0,
-            "steps_run": 0,
-            "energy_drift": 0.0,
-            "constraints": {
-                "coordinate_clamp_box_a": float(_DEFAULT_BOX_SIZE),
-                "protein_ligand_constraints": "none_stability_not_requested",
-            },
-            "pbc_enabled": True,
-            "pbc_box_a": float(_DEFAULT_BOX_SIZE),
-            "thermostat": {
-                "type": "not_run",
-                "temperature_k": float(self.stability_temp_k),
-            },
-            "restart_reproducible": True,
-            "restart_seed": int(self.seed),
-        }
-        if self.stability_steps > 0:
-            drift, stab_diag = _run_stability_simulation(
-                protein_beads, best_pose_coords,
-                device=self.device,
-                steps=self.stability_steps,
-                dt=self.stability_dt,
-                temp_k=self.stability_temp_k,
-                seed=self.seed,
-            )
-            stability_drift = drift
-            stability_ok = bool(stab_diag.get("stable", False))
-            stability_run = self.stability_steps
+        stability_drift, stab_diag = _run_stability_simulation(
+            protein_beads, best_pose_coords,
+            device=self.device,
+            steps=self.stability_steps,
+            dt=self.stability_dt,
+            temp_k=self.stability_temp_k,
+            seed=self.seed,
+        )
+        # Wall time is operational evidence, not a deterministic replay input.
+        stability_elapsed = stab_diag.pop("elapsed_seconds", None)
+        stability_ok = stab_diag.get("stable")
+        stability_run = int(stab_diag.get("steps_run", 0))
+        stability_not_run = stab_diag.get("status") == "not_run"
+        stability_pass = stability_ok is True
         stage_records.append(
             StageRecord(
                 stage_id="stability_simulation",
                 schema_version=_SCHEMA_VERSION,
-                status="pass" if stability_ok else "blocked",
-                failure_code=FailureCode.NONE.value if stability_ok else FailureCode.STABILITY_FAILED.value,
-                diagnostics={
-                    "steps_run": int(stability_run),
-                    "drift_A": float(stability_drift),
-                    "optional": True,
-                    **stab_diag,
-                },
+                status="not_run" if stability_not_run else "pass" if stability_pass else "blocked",
+                failure_code=(FailureCode.NONE.value if stability_not_run or stability_pass
+                              else FailureCode.STABILITY_FAILED.value),
+                diagnostics={"optional": True, **stab_diag},
             )
         )
 
@@ -893,7 +871,7 @@ class TierBetaScreening:
         computation_complete = bool(
             ligand_valid["claim_safe"]
             and protein_valid["valid"]
-            and stability_ok
+            and (self.stability_steps == 0 or stability_ok is True)
             and pose_scores
             and math.isfinite(best_score)
             and manifest.get("signature")
@@ -903,7 +881,7 @@ class TierBetaScreening:
             parts = []
             if not ligand_valid["claim_safe"]:
                 parts.append(f"ligand_not_claim_safe:{';'.join(ligand_valid['blockers'])}")
-            if not stability_ok:
+            if self.stability_steps > 0 and stability_ok is not True:
                 parts.append("stability_failed")
             if not pose_scores:
                 parts.append("no_poses_scored")
@@ -947,6 +925,11 @@ class TierBetaScreening:
             claim_metadata=manifest["claim_metadata"],
             pose_scores=top_k_poses,
             diagnostics={
+                "execution_observations": {
+                    "stability_elapsed_seconds": stability_elapsed,
+                    "timing_scope": "stability_invocation_including_endpoint_analysis",
+                    "evidence_kind": "wall_clock_observation",
+                },
                 "config": {
                     "pocket_cutoff_a": self.pocket_cutoff_a,
                     "pose_count": self.pose_count,
@@ -1054,8 +1037,8 @@ class TierBetaScreening:
         best_score: float,
         best_rank: int,
         stability_steps: int,
-        stability_drift: float,
-        stability_ok: bool,
+        stability_drift: float | None,
+        stability_ok: bool | None,
         stability_diagnostics: dict[str, Any],
         pose_scores: list[dict[str, Any]],
         protein_valid: dict[str, Any],

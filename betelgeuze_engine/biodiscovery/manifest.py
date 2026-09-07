@@ -39,8 +39,8 @@ def build_screening_manifest(
     best_score: float,
     best_rank: int,
     stability_steps: int,
-    stability_drift: float,
-    stability_ok: bool,
+    stability_drift: float | None,
+    stability_ok: bool | None,
     stability_diagnostics: dict[str, Any],
     pose_scores: list[dict[str, Any]],
     protein_valid: dict[str, Any],
@@ -79,8 +79,9 @@ def build_screening_manifest(
         },
         "stability": {
             "steps_run": stability_steps,
-            "drift_A": float(stability_drift),
-            "ok": bool(stability_ok),
+            "status": stability_diagnostics.get("status", "unknown"),
+            "drift_A": float(stability_drift) if stability_drift is not None else None,
+            "ok": stability_ok,
             "diagnostics": stability_diagnostics,
         },
         "precision": {
@@ -100,7 +101,9 @@ def build_screening_manifest(
         parts.append("ligand_invalid")
     if not bool(ligand_valid.get("claim_safe", False)):
         parts.append("ligand_not_claim_safe")
-    if not stability_ok:
+    if stability_diagnostics.get("status") == "not_run":
+        parts.append("stability_not_measured")
+    elif stability_ok is not True:
         parts.append("stability_failed")
     if poses_scored <= 0:
         parts.append("no_poses_scored")
