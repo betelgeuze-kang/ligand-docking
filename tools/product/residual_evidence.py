@@ -18,7 +18,48 @@ IDENTITY_FIELDS = (
 )
 _SOURCE_KINDS = {"computed", "synthetic"}
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
-_RESERVED_SPLITS = {"holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128"}
+_RESERVED_SPLITS = {
+    "holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128",
+    "eval", "ood_eval", "id_eval", "near_ood_eval", "far_ood_eval",
+}
+
+
+_POLICY_COLUMNS = {"role", "split", "dataset_split", "evaluation_only"}
+
+
+def validated_csv_fieldnames(fieldnames: list[str] | None) -> list[str]:
+    """Reject lossy CSV schemas before DictReader overwrites duplicate columns.
+
+    Trim header whitespace; normalize known policy names case-insensitively.
+    Other feature/label names remain case-sensitive. This checks declared
+    columns, not the trustworthiness of their values or upstream sources.
+    """
+    if not fieldnames:
+        raise ValueError("missing_csv_header")
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(fieldnames):
+        if not isinstance(raw, str) or not raw.strip():
+            raise ValueError("empty_csv_column_name")
+        name = raw.strip()
+        if index == 0:
+            name = name.removeprefix("\ufeff").strip()
+        if not name or "\ufeff" in name:
+            raise ValueError("invalid_bom_csv_column")
+        if name.casefold() in _POLICY_COLUMNS:
+            name = name.casefold()
+        if name in seen:
+            raise ValueError(f"duplicate_csv_column:{name}")
+        seen.add(name)
+        normalized.append(name)
+    return normalized
+
+
+def require_complete_csv_row(row: dict[str, Any]) -> None:
+    # CSV blanks are empty strings. None signals too few columns, while a
+    # None key holds surplus values that would otherwise be silently ignored.
+    if None in row or any(value is None for value in row.values()):
+        raise ValueError("csv_row_width_mismatch")
 
 
 def declared_evaluation_only(row: dict[str, Any]) -> bool:

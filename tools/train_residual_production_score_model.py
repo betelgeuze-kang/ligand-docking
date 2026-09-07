@@ -7,11 +7,16 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from numbers import Real
 from typing import Any
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
+
+from tools.product.residual_evidence import (
+    declared_evaluation_only, require_complete_csv_row, validated_csv_fieldnames,
+)
 
 from tools.builder_json_utils import (
     build_score_model_train_fingerprint,
@@ -27,7 +32,7 @@ DEFAULT_OUT_MD = "runs/residual_production_score_model_current.md"
 DEFAULT_FORCE_DERIVATION_JSON = "/dev/null"
 PRODUCTION_FORCE_DERIVATION_JSON = "runs/residual_force_derivation_validation_current.json"
 DEFAULT_TRAIN_FINGERPRINT_JSON = "runs/residual_production_score_model_train_fingerprint_current.json"
-TRAINER_CONTRACT_VERSION = "score_candidate_integrity_v2"
+TRAINER_CONTRACT_VERSION = "score_candidate_integrity_v3"
 LEARNED_OUTPUT_FIELDS = ["delta_score", "corrected_score"]
 POLICY_OUTPUT_FIELDS = ["abstention_reason", "stage2_route_decision"]
 PRODUCTION_ENERGY_FIELD = "delta_energy"
@@ -171,8 +176,14 @@ def _snapshot_state_dict(model: nn.Module) -> dict[str, torch.Tensor]:
 def _load_rows(path_like: str | Path) -> list[dict[str, Any]]:
     path = _resolve(path_like)
     with path.open("r", encoding="utf-8", newline="") as fh:
-        reader = csv.DictReader(fh)
-        return [dict(row) for row in reader]
+        reader = csv.DictReader(fh, strict=True)
+        reader.fieldnames = validated_csv_fieldnames(reader.fieldnames)
+        rows: list[dict[str, Any]] = []
+        for row in reader:
+            require_complete_csv_row(row)
+            rows.append(dict(row))
+    _require_development_rows(rows)
+    return rows
 
 
 def _family_vocab(rows: list[dict[str, Any]]) -> list[str]:
@@ -183,24 +194,63 @@ def _role_vocab(rows: list[dict[str, Any]]) -> list[str]:
     return sorted({str(row.get("role") or "unknown") for row in rows})
 
 
+def _require_development_rows(rows: list[dict[str, Any]]) -> None:
+    """Reject the whole job, not just filter a protected row into a new split.
+
+    This recognizes explicit declarations only; it cannot discover undeclared
+    holdouts or authenticate the upstream data producer.
+    """
+    for index, row in enumerate(rows):
+        if declared_evaluation_only(row):
+            raise ValueError(f"evaluation_only_training_input: row {index + 1}")
+
+
+def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[float, float]:
+    value = row.get(field)
+    missing = value is None or (isinstance(value, str) and not value.strip())
+    if missing:
+        if required:
+            raise ValueError(f"missing_required_training_feature:{field}")
+        return 0.0, 1.0
+    if isinstance(value, bool) or not isinstance(value, (Real, str)):
+        raise ValueError(f"invalid_training_feature:{field}")
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"invalid_training_feature:{field}") from exc
+    if not math.isfinite(number) or abs(number) > torch.finfo(torch.float32).max:
+        raise ValueError(f"invalid_training_feature:{field}")
+    return number, 0.0
+
+
 def _refine_feature_fields(rows: list[dict[str, Any]]) -> list[str]:
-    present: list[str] = []
+    # DictReader gives every row every header: a key alone is not an observation.
+    # Only nonmissing, usable training values define optional feature columns.
+    selected: list[str] = []
     for field in REFINE_TIER_FEATURE_FIELDS:
-        if any(str(row.get(field) or "").strip() not in {"", "nan", "none"} for row in rows):
-            present.append(field)
-    return present
+        observed = False
+        for row in rows:
+            _, missing = _feature_value(row, field, required=False)
+            observed = observed or not bool(missing)
+        if observed:
+            selected.append(field)
+    return selected
 
 
 def _matrix(
     rows: list[dict[str, Any]],
     families: list[str],
     roles: list[str],
+    *,
+    refine_fields: list[str] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, list[str]]:
-    refine_fields = _refine_feature_fields(rows)
-    feature_names = ["raw_score", "mean_min_distance_A"]
+    _require_development_rows(rows)
+    refine_fields = _refine_feature_fields(rows) if refine_fields is None else refine_fields
+    feature_names = ["raw_score", "mean_min_distance_A", "mean_min_distance_A_missing"]
     feature_names.extend(f"family={item}" for item in families)
     # role describes labels/splits, not an inference-time molecular feature.
-    feature_names.extend(refine_fields)
+    for field in refine_fields:
+        feature_names.extend([field, f"{field}_missing"])
     xs: list[list[float]] = []
     y_cls: list[float] = []
     y_delta: list[float] = []
@@ -208,13 +258,14 @@ def _matrix(
     y_energy_mask: list[float] = []
     for row in rows:
         family = str(row.get("family") or "unknown")
-        values = [
-            _float(row.get("raw_score")),
-            _float(row.get("mean_min_distance_A")),
-        ]
+        raw_score, _ = _feature_value(row, "raw_score", required=True)
+        distance, distance_missing = _feature_value(row, "mean_min_distance_A", required=False)
+        if distance < 0.0:
+            raise ValueError("invalid_training_feature:mean_min_distance_A")
+        values = [raw_score, distance, distance_missing]
         values.extend(1.0 if family == item else 0.0 for item in families)
         for field in refine_fields:
-            values.append(_float(row.get(field)))
+            values.extend(_feature_value(row, field, required=False))
         xs.append(values)
         binder = _float(row.get("is_binder"), default=float("nan"))
         residual = _float(row.get("delta_score"), default=float("nan"))
@@ -254,8 +305,11 @@ class ResidualScoreMLP(nn.Module):
         self.delta_head = nn.Linear(hidden_dim, 1)
         self.energy_head = nn.Linear(hidden_dim, 1)
         self.force_head = nn.Linear(hidden_dim, 1)
+        self.register_buffer("forbidden_missing_features", torch.zeros(in_dim, dtype=torch.bool))
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        if bool((x[..., self.forbidden_missing_features] != 0).any().item()):
+            raise ValueError("unseen_training_missingness")
         h = self.trunk(x)
         return (
             self.cls_head(h).squeeze(-1),
@@ -271,6 +325,7 @@ def _split_indices(rows: list[dict[str, Any]], seed: int, train_ratio: float) ->
     This is not scaffold or target-held-out validation: different IDs may still
     describe the same chemistry. Such identity normalization belongs upstream.
     """
+    _require_development_rows(rows)
     if not math.isfinite(train_ratio) or not 0.0 < train_ratio < 1.0:
         raise ValueError("train_ratio must lie strictly between zero and one")
     grouped: dict[str, list[int]] = {}
@@ -315,11 +370,13 @@ def train_residual_production_score_model(
     train_idx, val_idx = _split_indices(rows, seed=seed, train_ratio=train_ratio)
     families = _family_vocab([rows[idx] for idx in train_idx])
     roles: list[str] = []
-    refine_fields = _refine_feature_fields(rows)
+    refine_fields = _refine_feature_fields([rows[idx] for idx in train_idx])
     refine_tier_label_rows = sum(
         1 for row in rows if str(row.get(REFINE_TIER_LABEL_FIELD) or "").strip() not in {"", "nan", "none"}
     )
-    x, y_cls, y_delta, y_energy, y_energy_mask, feature_names = _matrix(rows, families, roles)
+    x, y_cls, y_delta, y_energy, y_energy_mask, feature_names = _matrix(
+        rows, families, roles, refine_fields=refine_fields,
+    )
     if not all(torch.isfinite(t).all() for t in (x, y_cls, y_delta, y_energy)):
         raise ValueError("training features and labels must be finite and float32-representable")
     if not torch.all((y_cls == 0) | (y_cls == 1)):
@@ -349,13 +406,37 @@ def train_residual_production_score_model(
     delta_force_head_trained = False
 
     x_mean = x_train.mean(dim=0)
-    x_std = x_train.std(dim=0, unbiased=False).clamp_min(1e-6)
+    x_std = x_train.std(dim=0, unbiased=False)
+    if not torch.isfinite(x_mean).all() or not torch.isfinite(x_std).all():
+        raise ValueError("nonfinite_training_normalization")
+    # An unseen feature variation (including a constant missingness indicator)
+    # must not activate random weights in validation or later inference.
+    active_features = x_std >= 1e-6
+    x_std = torch.where(active_features, x_std, torch.ones_like(x_std))
     x_train_n = (x_train - x_mean) / x_std
     x_val_n = (x_val - x_mean) / x_std
+    # A varying value observed in every training row has no learned missing
+    # response. Reject newly missing values instead of imputing an arbitrary 0.
+    forbidden_missing = torch.zeros(x.shape[1], dtype=torch.bool)
+    for index, name in enumerate(feature_names):
+        if name.endswith("_missing") and name[:-8] in feature_names:
+            value_index = feature_names.index(name[:-8])
+            if active_features[value_index] and bool((x_train[:, index] == 0).all().item()):
+                forbidden_missing[index] = True
+    if bool((x_val[:, forbidden_missing] != 0).any().item()):
+        raise ValueError("unseen_training_missingness")
+    x_train_n[:, ~active_features] = 0.0
+    x_val_n[:, ~active_features] = 0.0
 
     device = torch.device("cuda" if torch.cuda.is_available() and device_name.lower() != "cpu" else "cpu")
     torch.manual_seed(seed)
     model = ResidualScoreMLP(in_dim=x.shape[1], hidden_dim=hidden_dim).to(device)
+    model.forbidden_missing_features.copy_(forbidden_missing.to(device))
+    with torch.no_grad():
+        # Training inputs in these columns are identically zero, so their
+        # zero weights remain zero under Adam, including weight_decay=0.
+        # Persisting zero weights also neutralizes plain checkpoint inference.
+        model.trunk[0].weight[:, ~active_features.to(device)] = 0.0
     model.force_head.requires_grad_(False)  # preserve checkpoint shape, never advertise it as trained
     ds = TensorDataset(x_train_n, y_cls_train, y_delta_train, y_energy_train, y_energy_mask_train)
     dl = DataLoader(ds, batch_size=max(1, batch_size), shuffle=True, generator=torch.Generator().manual_seed(seed))
@@ -422,6 +503,13 @@ def train_residual_production_score_model(
         "split_policy": "ligand_id_grouped_v1",
         "feature_stage": "post_refinement_rescoring",
         "role_features_used": False,
+        "evaluation_only_inputs_rejected": True,
+        "feature_missingness_policy": "required_raw_score_optional_value_and_indicator",
+        "neutralized_feature_names": [name for name, active in zip(feature_names, active_features.tolist()) if not active],
+        "constant_feature_policy": "zero_normalized_inputs_and_first_layer_weights",
+        "unseen_missingness_policy": "reject_for_varying_fully_observed_training_features",
+        "forbidden_missing_feature_names": [name for name, flag in zip(feature_names, forbidden_missing.tolist()) if flag],
+        "csv_schema_policy": "unique_normalized_headers_and_complete_rows",
         "uncertainty_calibrated": False,
         "physical_energy_residual_validated": False,
         "delta_force_training_status": "not_implemented_no_force_loss_or_coordinate_gradient",
@@ -531,6 +619,9 @@ def build_train_fingerprint(
     )
     fingerprint["trainer_contract_version"] = TRAINER_CONTRACT_VERSION
     fingerprint["trainer_source_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    fingerprint["evaluation_policy_source_sha256"] = hashlib.sha256(
+        (Path(__file__).parent / "product" / "residual_evidence.py").read_bytes()
+    ).hexdigest()
     fingerprint["digest"] = fingerprint_digest(fingerprint)
     return fingerprint
 
@@ -550,6 +641,8 @@ def try_skip_training(
     train_ratio: float,
     seed: int,
 ) -> dict[str, Any] | None:
+    # Cache reuse is also a training entry point: never endorse protected input.
+    _load_rows(input_csv)
     fingerprint = build_train_fingerprint(
         input_csv=input_csv,
         force_derivation_json=force_derivation_json,

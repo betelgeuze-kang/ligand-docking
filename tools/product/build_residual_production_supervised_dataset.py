@@ -12,7 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
-from tools.product.residual_evidence import IDENTITY_FIELDS, declared_evaluation_only, paired_energy_fields
+from tools.product.residual_evidence import (
+    IDENTITY_FIELDS, declared_evaluation_only, paired_energy_fields,
+    require_complete_csv_row, validated_csv_fieldnames,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_STAGE5_GLOB = "runs/*stage5_ranking_rows.csv"
@@ -110,8 +113,9 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
         }
     try:
         with stage3_path.open("r", encoding="utf-8", newline="") as fh:
-            reader = csv.DictReader(fh)
-            fieldnames = list(reader.fieldnames or [])
+            reader = csv.DictReader(fh, strict=True)
+            reader.fieldnames = validated_csv_fieldnames(reader.fieldnames)
+            fieldnames = list(reader.fieldnames)
             fields = set(fieldnames)
             if "target" not in fields or "ligand_id" not in fields:
                 return proxies, {
@@ -122,6 +126,7 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
                 }
             energy_cols = [col for col in ENERGY_PROXY_COLUMNS if col in fields]
             for raw in reader:
+                require_complete_csv_row(raw)
                 target = str(raw.get("target") or "").strip()
                 ligand_id = str(raw.get("ligand_id") or "").strip()
                 if not target or not ligand_id:
@@ -138,7 +143,7 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
                         continue
                     proxies[(target, ligand_id)] = (value, col)
                     break
-    except (OSError, UnicodeError, csv.Error) as exc:
+    except (OSError, UnicodeError, csv.Error, ValueError) as exc:
         return {}, {
             "stage3_csv": _rel(stage3_path),
             "stage3_energy_proxy_status": f"read_error:{exc}",
@@ -185,8 +190,9 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
         source_bytes = path.read_bytes()
         source_digest = hashlib.sha256(source_bytes).hexdigest()
         with io.StringIO(source_bytes.decode("utf-8"), newline="") as fh:
-            reader = csv.DictReader(fh)
-            fieldnames = list(reader.fieldnames or [])
+            reader = csv.DictReader(fh, strict=True)
+            reader.fieldnames = validated_csv_fieldnames(reader.fieldnames)
+            fieldnames = list(reader.fieldnames)
             score_col = _score_col(fieldnames)
             required = {"target", "ligand_id", "is_binder", "reference_binding_kcal_mol"}
             if not required.issubset(set(fieldnames)) or not score_col:
@@ -203,6 +209,7 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     stopped_at_limit = True
                     break
                 scanned += 1
+                require_complete_csv_row(raw)
                 if declared_evaluation_only(raw):
                     skipped += 1
                     rejections.append({"source_line": reader.line_num, "reason": "evaluation_only_row"})
@@ -261,7 +268,7 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     val = _float(raw.get(col))
                     row[col] = val if val is not None else ""
                 rows.append(row)
-    except (OSError, UnicodeError, csv.Error) as exc:
+    except (OSError, UnicodeError, csv.Error, ValueError) as exc:
         return [], {
             "source_csv": _rel(path),
             "scanned_rows": scanned,

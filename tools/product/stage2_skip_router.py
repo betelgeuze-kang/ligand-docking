@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+from numbers import Real
 from typing import Any
 
 FAMILY_SKIP_FRACTION_TARGET = {
@@ -21,25 +23,52 @@ def _normalize_family(family: str) -> str:
     return fam or "default"
 
 
+def _finite_number(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (Real, str)):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def route_stage2_candidate(
     *,
     family: str = "",
     affinity_hint: float = 0.0,
     onsps_norm: float = 0.0,
-    prior_rank_proxy: float = 1.0,
+    prior_rank_proxy: float | None = None,
     mw_norm: float = 0.0,
     skip_fraction_target: float | None = None,
 ) -> dict[str, Any]:
-    """Return stage2 routing decision for one queue row."""
+    """Skip only from finite, explicit routing evidence, never an unknown rank."""
     fam = _normalize_family(family)
-    target_skip = float(
+    target_skip = _finite_number(
         skip_fraction_target
         if skip_fraction_target is not None
         else FAMILY_SKIP_FRACTION_TARGET.get(fam, FAMILY_SKIP_FRACTION_TARGET["default"])
     )
-    rank_pct = float(max(0.0, min(1.0, prior_rank_proxy)))
-    weak_prior = float(affinity_hint) <= 0.05 and rank_pct > 0.25
-    low_polar = float(onsps_norm) <= 0.02 and float(mw_norm) <= 0.10
+    rank_pct = _finite_number(prior_rank_proxy)
+    if rank_pct is not None and not 0.0 <= rank_pct <= 1.0:
+        rank_pct = None
+    affinity, polar, mass = (_finite_number(value) for value in (affinity_hint, onsps_norm, mw_norm))
+    usable = (rank_pct is not None and affinity is not None and polar is not None
+              and mass is not None and target_skip is not None and 0.0 <= target_skip <= 1.0)
+    if not usable:
+        return {
+            "stage2_route_decision": "full_stage2_trajectory",
+            "stage2_skip_applied": False,
+            "stage2_skip_reason": (
+                "unknown_rank_requires_full_trajectory" if rank_pct is None
+                else "invalid_routing_evidence_requires_full_trajectory"
+            ),
+            "stage2_skip_fraction_target": target_skip,
+            "stage2_prior_rank_proxy": rank_pct,
+            "stage2_route_input_status": "insufficient_or_invalid",
+        }
+    weak_prior = affinity <= 0.05 and rank_pct > 0.25
+    low_polar = polar <= 0.02 and mass <= 0.10
     clearly_tail = rank_pct > max(0.20, 1.0 - target_skip)
     skip = bool(weak_prior or (low_polar and clearly_tail))
     decision = "skip_stage2_inline_score" if skip else "full_stage2_trajectory"
@@ -55,26 +84,25 @@ def route_stage2_candidate(
         ),
         "stage2_skip_fraction_target": float(target_skip),
         "stage2_prior_rank_proxy": float(rank_pct),
+        "stage2_route_input_status": "valid",
     }
 
 
 def apply_stage2_skip_router(rows: list[dict[str, Any]], *, family: str = "") -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Annotate rows with routing decisions and return trajectory-eligible subset."""
+    """Annotate rows without mutating input; unknown evidence retains a candidate."""
     routed: list[dict[str, Any]] = []
     skip_count = 0
     for row in rows:
         updated = dict(row)
         rank = row.get("prior_rank_proxy")
-        if rank is None or str(rank).strip() == "":
+        if rank is None or (isinstance(rank, str) and not rank.strip()):
             rank = row.get("rank_pct")
-        if rank is None or str(rank).strip() == "":
-            rank = 1.0
         route = route_stage2_candidate(
             family=str(row.get("family", row.get("target_family", family)) or family),
-            affinity_hint=float(row.get("affinity_hint", row.get("ligand_affinity_hint", 0.0)) or 0.0),
-            onsps_norm=float(row.get("onsps_norm", row.get("ligand_onsps_norm", 0.0)) or 0.0),
-            prior_rank_proxy=float(rank),
-            mw_norm=float(row.get("mw_norm", 0.0) or 0.0),
+            affinity_hint=row.get("affinity_hint", row.get("ligand_affinity_hint", 0.0)),
+            onsps_norm=row.get("onsps_norm", row.get("ligand_onsps_norm", 0.0)),
+            prior_rank_proxy=rank,
+            mw_norm=row.get("mw_norm", 0.0),
         )
         updated.update(route)
         routed.append(updated)
