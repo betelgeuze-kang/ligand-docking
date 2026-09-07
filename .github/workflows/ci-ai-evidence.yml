@@ -9,6 +9,7 @@ on:
       - 'tools/product/stage2_skip_router.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
+      - 'tests/unit/test_deep_review_training_boundaries.py'
       - 'tools/product/build_residual_production_supervised_dataset.py'
       - 'tools/product/residual_evidence.py'
       - 'tools/builder_table_utils.py'
@@ -25,6 +26,7 @@ on:
       - 'tools/product/stage2_skip_router.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
+      - 'tests/unit/test_deep_review_training_boundaries.py'
       - 'tools/product/build_residual_production_supervised_dataset.py'
       - 'tools/product/residual_evidence.py'
       - 'tools/builder_table_utils.py'
@@ -76,6 +78,7 @@ jobs:
           python -m pytest --confcutdir=tests/unit -W error -vv \
             tests/unit/test_train_residual_production_score_model.py \
             tests/unit/test_residual_training_integrity.py \
+            tests/unit/test_deep_review_training_boundaries.py \
             tests/unit/test_build_residual_production_supervised_dataset.py \
             tests/unit/test_residual_evidence_pairs.py \
             --junitxml=ai-evidence-junit.xml 2>&1 | tee ai-evidence.log
@@ -97,5 +100,6 @@ jobs:
             tools/product/stage2_skip_router.py
             tests/unit/test_train_residual_production_score_model.py
             tests/unit/test_residual_training_integrity.py
+            tests/unit/test_deep_review_training_boundaries.py
           if-no-files-found: error
           retention-days: 7
