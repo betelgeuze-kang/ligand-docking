@@ -1,7 +1,7 @@
 # Versioned public IC50 selector shadow
 
 The canonical HTVS runner can optionally write predictions from the pinned public
-BACE1 or CDK2/cyclin A2 selector before stage1 ligand mapping. The option defaults to disabled.
+BACE1, CDK2/cyclin A2, or native ChEMBL catalogue-annotation selector before stage1 ligand mapping. The option defaults to disabled.
 It neither selects candidates nor changes mapping commands, ranking, stage2 skip
 routing, scores, or the downstream candidate denominator.
 
@@ -120,3 +120,69 @@ additive `checkpoint_schema_version`, `evidence_kind=ai_prediction`, and
 matches the successfully loaded model at both sidecar and model levels, and is
 null when no model was loaded. All ranking, customer, and calibration capabilities
 remain false. Existing scores and candidate ordering are not replaced.
+
+
+## Native ChEMBL annotation compatibility migration
+
+The existing loader and HTVS hook also accept the frozen native checkpoint
+`5733e7ba2d21f643034ec111648b94244c5114dfd875391d874eb983e949dca6`, schema
+`public_chembl_cheap_selector_ridge_v1`. Its training implementation is bound in
+PR #511 head `55717590c8ee9795cfc2ac37984c1f4daa0f8681`. Its six producer hashes,
+metadata identity context, split plan, intake scope, and pre-fit protocol are
+required unchanged. It uses the same Morgan radius2/1024-bit chiral float64
+predictor and RDKit `2026.03.6`; the runtime imports no ChEMBL intake or trainer.
+
+This version's CSV requires `smiles`, `target_annotation_sha256`, `endpoint`, and
+`endpoint_subtype`. The exact accepted declaration is:
+
+- annotation: `0ab0f219820e5b0e7b27c07731f35db19b1130863660c46b9e099435b958294f`
+- endpoint: `IC50`
+- subtype: `enzyme_inhibition_IC50`
+
+The annotation denotes ChEMBL's catalogue target `CHEMBL3038469` under mixed
+reported kinase assay conditions. It does not verify a physical receptor state,
+construct, cyclin isoform, ATP concentration, or assayed microstate. The native
+version never substitutes `target_state_sha256` for this annotation. Legacy
+models still require their original state field. No checkpoint fields are renamed
+or removed to make a native model resemble a legacy model.
+
+The native intake predeclared 5–70 heavy atoms, one fragment, H/C/N/O/F/P/S/Cl/Br/I,
+no isotopes or radicals, and no formal-charge cap. The consumer preserves that
+scope; it retains the legacy models' separate absolute charge limit of two.
+Neither bound is a calibrated OOD criterion. No neutralization, salt stripping,
+stereo completion, physical preparation, or geometry generation occurs.
+
+For each supported row the sidecar records the AI prediction and the frozen
+`mean_baseline_negative_log10_molar_IC50`. The latter is the fitted training mean,
+marked `mean_baseline_evidence_kind=heuristic`, not a new measurement or an
+uncertainty estimate. Unsupported rows retain null AI and baseline predictions.
+All original CSV cells, roles, indices, duplicate IDs, and supplied provenance
+columns remain visible. Native annotation and endpoint subtype have separate
+explicit declaration fields. When no model loads, target and chemical scope
+remain null. The additive sidecar schema stays `public_assay_selector_shadow_v1`.
+
+The metadata-only plan reserved 144 candidates: 101 fit, 22 calibration, and 21
+development-test rows. Only 53 exact fit observations entered the single frozen
+fit; censored and missing fit observations remained in the ledger. Evaluation
+admitted 38 exact observations among 43 requested rows. On 18 exact development
+rows, model MAE was 1.290238 versus the mean baseline's 1.177240; selecting four
+recovered three positives versus the tied mean baseline's expected 3.111111.
+Twenty exact calibration rows were all positive and do not establish
+classification discrimination or calibrated uncertainty. No refit, seed search,
+alpha search, split changes, or threshold tuning followed these outcomes.
+
+Compatibility registration exposes the frozen negative result for inspection.
+It keeps default execution disabled, ranking/customer/scientific capabilities
+false, and uncertainty null. It supplies no physical-energy residual, force
+correction, activity probability, or claim of greater active-candidate recovery.
+Existing docking, score, and skip-routing behavior remains unchanged.
+
+Fresh synthetic migration controls cover both old models and this native schema.
+A separate local consumer observation reuses the 144 predictions frozen before
+evaluation-label acquisition, without reading those labels or invoking training.
+Three fresh CPU processes, individual/batch sizes 1/32/144, and seven warm repeats
+per size/mode record numerical parity, raw wall/CPU time, and process peak RSS.
+The real HTVS entrypoint writes the sidecar before an intentionally intercepted
+mapping child; molecular docking and end-to-end candidate selection are not
+executed by that observation. These checks establish runtime compatibility and
+inference cost, not improved predictive quality or whole-engine acceleration.
