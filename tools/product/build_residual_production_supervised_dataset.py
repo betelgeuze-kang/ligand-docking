@@ -13,7 +13,8 @@ from typing import Any
 
 from tools.builder_table_utils import write_csv_rows
 from tools.product.residual_evidence import (
-    IDENTITY_FIELDS, declared_evaluation_only, paired_energy_fields,
+    IDENTITY_FIELDS, POLICY_FIELDS, PROVENANCE_FIELD, declared_evaluation_only, paired_energy_fields,
+    first_numeric_observation, merge_source_provenance, training_source_rejection, source_provenance_json,
     require_complete_csv_row, validated_csv_fieldnames,
 )
 
@@ -100,10 +101,11 @@ def _stage3_path_from_stage5(path: Path) -> Path:
     return path
 
 
-def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tuple[float, str]], dict[str, Any]]:
-    proxies: dict[tuple[str, str], tuple[float, str]] = {}
+def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tuple[float, str, dict[str, Any]]], dict[str, Any]]:
+    proxies: dict[tuple[str, str], tuple[float, str, dict[str, Any]]] = {}
     seen: set[tuple[str, str]] = set()
     ambiguous: set[tuple[str, str]] = set()
+    invalid_observations = 0
     if not stage3_path.exists():
         return proxies, {
             "stage3_csv": _rel(stage3_path),
@@ -112,7 +114,9 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
             "stage3_energy_proxy_column": "",
         }
     try:
-        with stage3_path.open("r", encoding="utf-8", newline="") as fh:
+        raw_bytes = stage3_path.read_bytes()
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        with io.StringIO(raw_bytes.decode("utf-8"), newline="") as fh:
             reader = csv.DictReader(fh, strict=True)
             reader.fieldnames = validated_csv_fieldnames(reader.fieldnames)
             fieldnames = list(reader.fieldnames)
@@ -137,12 +141,13 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
                     proxies.pop(key, None)
                     continue
                 seen.add(key)
-                for col in energy_cols:
-                    value = _float(raw.get(col))
-                    if value is None:
-                        continue
-                    proxies[(target, ligand_id)] = (value, col)
-                    break
+                value, col, observation_status = first_numeric_observation(raw, energy_cols)
+                if observation_status != "observed":
+                    invalid_observations += int(observation_status == "invalid")
+                    continue
+                provenance = source_provenance_json(raw, source_csv=_rel(stage3_path),
+                                                    source_sha256=digest, source_line=reader.line_num)
+                proxies[(target, ligand_id)] = (value, col, {PROVENANCE_FIELD: provenance})
     except (OSError, UnicodeError, csv.Error, ValueError) as exc:
         return {}, {
             "stage3_csv": _rel(stage3_path),
@@ -150,11 +155,12 @@ def _load_energy_proxy_map(stage3_path: Path) -> tuple[dict[tuple[str, str], tup
             "stage3_energy_proxy_rows": 0,
             "stage3_energy_proxy_column": "",
         }
-    used_cols = sorted({col for _, col in proxies.values()})
+    used_cols = sorted({col for _, col, _ in proxies.values()})
     return proxies, {
         "stage3_csv": _rel(stage3_path),
         "stage3_energy_proxy_status": "used" if proxies else "no_energy_proxy_rows",
         "stage3_ambiguous_join_keys": len(ambiguous),
+        "stage3_invalid_observation_rows": invalid_observations,
         "stage3_energy_proxy_rows": len(proxies),
         "stage3_energy_proxy_column": ",".join(used_cols),
     }
@@ -210,9 +216,10 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     break
                 scanned += 1
                 require_complete_csv_row(raw)
-                if declared_evaluation_only(raw):
+                input_rejection = training_source_rejection(raw)
+                if input_rejection:
                     skipped += 1
-                    rejections.append({"source_line": reader.line_num, "reason": "evaluation_only_row"})
+                    rejections.append({"source_line": reader.line_num, "reason": input_rejection})
                     continue
                 target = str(raw.get("target") or "").strip()
                 ligand_id = str(raw.get("ligand_id") or "").strip()
@@ -222,6 +229,15 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                 if not target or not ligand_id or is_binder not in {0, 1} or reference is None or score is None:
                     skipped += 1
                     rejections.append({"source_line": reader.line_num, "reason": "invalid_identity_or_label"})
+                    continue
+                energy_proxy = energy_proxy_map.get((target, ligand_id))
+                reason = ""
+                if energy_proxy and declared_evaluation_only(energy_proxy[2]):
+                    reason = "stage3_evaluation_only_source"
+                if reason:
+                    skipped += 1
+                    rejections.append({"source_line": reader.line_num, "reason": reason,
+                                       "stage3_source_provenance_json": energy_proxy[2][PROVENANCE_FIELD] if energy_proxy else ""})
                     continue
                 mean_min_distance = _float(raw.get("mean_min_distance_A"))
                 delta_score = reference - score
@@ -234,7 +250,9 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     "family": _family_from_target(target),
                     "ligand_id": ligand_id,
                     "is_binder": is_binder,
-                    "role": str(raw.get("role") or "unknown").strip() or "unknown",
+                    **{key: raw.get(key, "") for key in POLICY_FIELDS},
+                    PROVENANCE_FIELD: source_provenance_json(raw, source_csv=_rel(path),
+                                                            source_sha256=source_digest, source_line=reader.line_num),
                     "reference_binding_kcal_mol": reference,
                     "raw_score": score,
                     "score_col": score_col,
@@ -243,7 +261,7 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     "mean_min_distance_A": mean_min_distance if mean_min_distance is not None else "",
                     "source_csv": _rel(path),
                     "label_source": "local_stage5_ranking_rows",
-                    "label_evidence_kind": "unverified_local_label",
+                    "label_evidence_kind": str(raw.get("label_evidence_kind") or "unverified_local_label"),
                     "score_residual_semantics": "legacy_reference_minus_composite_proxy_not_physical_energy",
                     "source_line": reader.line_num,
                     "source_sha256": source_digest,
@@ -257,8 +275,11 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     stage3_energy_proxy_value=energy_proxy[0] if energy_proxy else "",
                     stage3_energy_proxy_column=energy_proxy[1] if energy_proxy else "",
                     stage3_proxy_association="target_ligand_only_not_pose_verified" if energy_proxy else "unavailable",
+                    stage3_source_provenance_json=energy_proxy[2][PROVENANCE_FIELD] if energy_proxy else "",
                     refine_tier_label="", refine_tier_label_source="",
                 )
+                if energy_proxy:
+                    row[PROVENANCE_FIELD] = merge_source_provenance(row, energy_proxy[2])
                 row.update(paired_energy_fields(raw))
                 if row["energy_pair_status"] == "declared_identity_matched":
                     energy_joined += 1

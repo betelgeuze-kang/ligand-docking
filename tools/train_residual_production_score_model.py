@@ -15,7 +15,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from tools.product.residual_evidence import (
-    declared_evaluation_only, require_complete_csv_row, validated_csv_fieldnames,
+    training_source_rejection, require_complete_csv_row, validated_csv_fieldnames,
 )
 
 from tools.builder_json_utils import (
@@ -201,8 +201,11 @@ def _require_development_rows(rows: list[dict[str, Any]]) -> None:
     holdouts or authenticate the upstream data producer.
     """
     for index, row in enumerate(rows):
-        if declared_evaluation_only(row):
-            raise ValueError(f"evaluation_only_training_input: row {index + 1}")
+        reason = training_source_rejection(row)
+        if reason:
+            if reason == "evaluation_only_row":
+                reason = "evaluation_only_training_input"
+            raise ValueError(f"{reason}: row {index + 1}")
 
 
 def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[float, float]:
