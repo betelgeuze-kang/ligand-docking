@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -434,3 +435,269 @@ def test_sdf_metadata_cannot_declare_a_second_record(request_doc):
     _change(request_doc["ligand_sdf"], lambda value: value.replace("> <source_identity>", "> <source_identity> (2)"))
     with pytest.raises(parser.PreparedGromacsInputError, match="data header"):
         parser.load_prepared_gromacs_components(request_doc)
+
+
+# Captured from the exact parent synthetic reader, with only temporary source paths
+# normalized to filenames for the evidence hash. No physical result is involved.
+_LEGACY_HASHES = {'v1': {'ligand_sha256': '25ceffb61e2f4f6a2d082857e9854bc97459e02200ada0dc18bdde14b915bf41', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'cd93021607d9c80f6ea5038a45033d980ecd6c4d047b5cb46c89753585051a54', 'receptor_sha256': '3daf09cf7efbc6b5a04e1c46381036f74e5b6c64d4ede9b372d51e02031deb0d', 'rparams_sha256': '97cc50485e59db0920a655d164be9ccb7adb5e658099463519d31fb0e05ee77c'}, 'v2_A': {'ligand_sha256': '130568cdef74933d4068dc514bac38905e23b498d41726575a12ccb3b900e17b', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'af5fec38ac62465fa0bbd3f3478885058cf5d69745d0e1d197b48be2841257d4', 'receptor_sha256': '68b64152a9230407e7d99e7614599031ef453e06d77cd02ca6101205efa6b5a5', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}, 'v2_blank': {'ligand_sha256': '80c5980514a399d228551adb8afba3d8c7ae203b838c86bc1078175d73dc51fb', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'b78ef03e115fa76377b96ba7d887688f44e42001924393f1afcb87a8fd3f8160', 'receptor_sha256': 'b2cc41481417b18f7b3d4f64c85e6b17e8ef96deae3d5a5a000d95fb4508307a', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}}
+
+
+def _json_hash(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+
+@pytest.mark.parametrize("version", ["v1", "v2_blank", "v2_A"])
+def test_legacy_reader_canonical_and_evidence_hashes_unchanged(request_doc, version):
+    request = request_doc if version == "v1" else _ordered_bonded_molecules(request_doc, "" if version == "v2_blank" else "A")
+    receptor, ligand, rparams, lparams, evidence = parser.load_prepared_gromacs_components(request)
+    normalized = copy.deepcopy(evidence)
+    for source in normalized["sources"].values():
+        source["path"] = Path(source["path"]).name
+    actual = {
+        "receptor_sha256": parser.canonical_system_sha256(receptor),
+        "ligand_sha256": parser.canonical_system_sha256(ligand),
+        "rparams_sha256": _json_hash(rparams),
+        "lparams_sha256": _json_hash(lparams),
+        "normalized_provenance_sha256": _json_hash(normalized),
+    }
+    assert actual == _LEGACY_HASHES[version]
+    assert "protein_residue_identifier_policy" not in evidence
+    assert all("insertion_code" not in atom.metadata["prepared_gromacs_source"]
+               and "residue_number_token" not in atom.metadata["prepared_gromacs_source"] for atom in receptor.atoms)
+
+
+def _insertion_request(request_doc, chain_id="", suffix="A"):
+    request = _ordered_bonded_molecules(request_doc, chain_id)
+    second = request["protein_chains"][0]["molecule_itps"][1]
+    _change(second, lambda text: text.replace("1 N 2 SYN N", f"1 N 1{suffix} NME N")
+            .replace("2 H 2 SYN H2", f"2 H 1{suffix} NME H11"))
+
+    def project(text):
+        lines = []
+        for line in text.splitlines(keepends=True):
+            if line.startswith("ATOM  ") and int(line[6:11]) in (4, 5):
+                name = "N" if int(line[6:11]) == 4 else "1H1"
+                line = line[:12] + f"{name:>4s}" + line[16:17] + "NME" + line[20:22] + f"{1:4d}" + suffix + line[27:]
+            lines.append(line)
+        return "".join(lines)
+
+    _change(request["protein_pdb"], project)
+    request["schema_version"] = "prepared_gromacs_components_v3"
+    return request
+
+
+@pytest.mark.parametrize("schema", ["prepared_gromacs_components_v1", "prepared_gromacs_components_v2"])
+def test_legacy_schemas_still_reject_noninteger_residue_tokens(request_doc, schema):
+    request = _insertion_request(request_doc, "A")
+    request["schema_version"] = schema
+    if schema.endswith("v1"):
+        # One topology still carries the insertion token, without any v2 request key.
+        first, second = request["protein_chains"][0]["molecule_itps"]
+        _change(first, lambda text: Path(second["path"]).read_text())
+        request["protein_chains"] = [{"chain_id": "A", "molecule_itp": first}]
+    with pytest.raises(parser.PreparedGromacsInputError, match="integer required"):
+        parser.load_prepared_gromacs_components(request)
+
+
+@pytest.mark.parametrize("chain_id", ["", "A"])
+@pytest.mark.parametrize("suffix", ["A", "z"])
+def test_v3_distinct_insertion_residue_preserves_all_source_state(request_doc, chain_id, suffix):
+    request = _insertion_request(request_doc, chain_id, suffix)
+    before = copy.deepcopy(request)
+    raw_sources = {ref["path"]: Path(ref["path"]).read_bytes() for ref in request["protein_chains"][0]["molecule_itps"]}
+    pdb_before = Path(request["protein_pdb"]["path"]).read_bytes()
+    receptor, ligand, rparams, _, evidence = parser.load_prepared_gromacs_components(request)
+    assert request == before and Path(request["protein_pdb"]["path"]).read_bytes() == pdb_before
+    assert all(Path(path).read_bytes() == raw for path, raw in raw_sources.items())
+    assert [(r.sequence_number, r.insertion_code, r.name) for r in receptor.residues] == [(1, "", "SYN"), (1, suffix, "NME")]
+    assert [atom.name for atom in receptor.atoms] == ["1H1", "C", "O", "N", "1H1"]
+    assert receptor.coordinates.tolist() == [[[0., 0., 0.], [1., 0., 0.], [2., 0., 0.], [4., 0., 0.], [5., 0., 0.]]]
+    assert [row["charge_e"] for row in rparams] == [0., .25, -.25, -0., .125]
+    assert rparams[0]["sigma_angstrom"] == rparams[0]["epsilon_kcal_per_mol"] == 0.
+    origins = [atom.metadata["prepared_gromacs_source"] for atom in receptor.atoms]
+    assert [x["residue_number_token"] for x in origins] == ["1"] * 3 + ["1" + suffix] * 2
+    assert [x["insertion_code"] for x in origins] == [""] * 3 + [suffix] * 2
+    assert [x["source_atom_index"] for x in origins] == [1, 2, 3, 1, 2]
+    assert [x["chain_molecule_index"] for x in origins] == [0, 0, 0, 1, 1]
+    assert all(x["source_molecule_label"] in evidence["original_topologies"] for x in origins)
+    assert evidence["receptor_source_bond_adjacency"] == [[0, 1], [1, 2], [3, 4]]
+    assert ligand.atom_count == 3 and receptor.cell is ligand.cell is None
+    assert evidence["protein_residue_identifier_policy"]["noninteger_tokens_claimed_standard_gromacs"] is False
+    assert evidence["protein_residue_identifier_policy"]["residue_renumbering_performed"] is False
+    assert evidence["source_hashes_postflight_verified"] and not evidence["coordinates_generated"]
+    assert not any(evidence["claim_policy"].values())
+
+
+def test_v3_blank_element_projection_requires_and_preserves_insertion_identity(request_doc):
+    request = _insertion_request(request_doc)
+    request["pdb_element_policy"] = "pdb_blank_element_from_matching_topology_atomic_number"
+    _change(request["protein_pdb"], lambda text: "".join(line[:76] + "  " + line[78:] if line.startswith("ATOM  ") else line for line in text.splitlines(keepends=True)))
+    receptor, _, _, _, evidence = parser.load_prepared_gromacs_components(request)
+    assert receptor.residues[1].insertion_code == "A"
+    assert len(evidence["pdb_element_projection"]["transfers"]) == 5
+    assert evidence["pdb_element_projection"]["coordinate_bytes_unchanged"]
+    assert all(row["molecule_source"] in evidence["original_topologies"] for row in evidence["pdb_element_projection"]["transfers"])
+
+
+@pytest.mark.parametrize("policy", ["reject_missing", "pdb_blank_element_from_matching_topology_atomic_number"])
+@pytest.mark.parametrize("change", ["drop_itp", "drop_pdb", "wrong_suffix", "wrong_case", "wrong_number", "wrong_residue"])
+def test_v3_insertion_tuple_mismatch_rejects_in_both_binding_paths(request_doc, policy, change):
+    request = _insertion_request(request_doc)
+    request["pdb_element_policy"] = policy
+    second = request["protein_chains"][0]["molecule_itps"][1]
+    replacement = {"drop_itp": "1", "wrong_suffix": "1B", "wrong_case": "1a", "wrong_number": "2A"}
+    if change in replacement:
+        _change(second, lambda text: text.replace(" 1A NME ", " " + replacement[change] + " NME "))
+    elif change == "wrong_residue":
+        _change(second, lambda text: text.replace(" NME ", " CAP "))
+    else:
+        _change(request["protein_pdb"], lambda text: "".join(line[:26] + " " + line[27:] if line.startswith("ATOM  ") and int(line[6:11]) in (4, 5) else line for line in text.splitlines(keepends=True)))
+    with pytest.raises(parser.PreparedGromacsInputError, match="residue identity"):
+        parser.load_prepared_gromacs_components(request)
+
+
+@pytest.mark.parametrize("token", ["0A", "-1A", "+1A", "1AA", "1.0A", "1_A", "A1", "1é", "1:"])
+def test_v3_protein_residue_token_grammar_is_narrow(request_doc, token):
+    request = _insertion_request(request_doc)
+    _change(request["protein_chains"][0]["molecule_itps"][1], lambda text: text.replace(" 1A NME ", " " + token + " NME "))
+    with pytest.raises(parser.PreparedGromacsInputError, match="protein residue token"):
+        parser.load_prepared_gromacs_components(request)
+
+
+@pytest.mark.parametrize("field", ["ligand_itp", "ligand_gro", "protein_atom_index", "protein_charge_group", "protein_bond_index"])
+def test_v3_insertion_support_does_not_relax_other_integer_fields(request_doc, field):
+    request = _insertion_request(request_doc)
+    if field == "ligand_itp":
+        _change(request[field], lambda text: text.replace("CL 1 MOL", "CL 1A MOL"))
+    elif field == "ligand_gro":
+        _change(request[field], lambda text: "".join("   1A" + line[5:] if len(line) > 20 and line[:5].strip() == "1" else line for line in text.splitlines(keepends=True)))
+    else:
+        second = request["protein_chains"][0]["molecule_itps"][1]
+        old, new = {"protein_atom_index": ("1 N 1A", "1A N 1A"), "protein_charge_group": ("NME N 1 ", "NME N 1A "), "protein_bond_index": ("1 2 1", "1A 2 1")}[field]
+        _change(second, lambda text: text.replace(old, new))
+    with pytest.raises(parser.PreparedGromacsInputError, match="integer required"):
+        parser.load_prepared_gromacs_components(request)
+
+
+def test_v3_same_tuple_cannot_have_conflicting_residue_names(request_doc):
+    request = _insertion_request(request_doc)
+    _change(request["protein_chains"][0]["molecule_itps"][1], lambda text: text.replace("1A NME H11", "1A CAP H11"))
+    with pytest.raises(parser.PreparedGromacsInputError, match="inconsistent residue name"):
+        parser.load_prepared_gromacs_components(request)
+
+
+def test_v3_same_tuple_cannot_repeat_an_atom_name(request_doc):
+    request = _insertion_request(request_doc)
+    _change(request["protein_chains"][0]["molecule_itps"][1], lambda text: text.replace("1A NME H11", "1A NME N"))
+    with pytest.raises(parser.PreparedGromacsInputError, match="duplicate atom name"):
+        parser.load_prepared_gromacs_components(request)
+
+
+def test_v3_same_residue_tuple_cannot_be_split_between_molecule_sources(request_doc):
+    request = _ordered_molecule_request(request_doc)
+    request["schema_version"] = "prepared_gromacs_components_v3"
+    _change(request["protein_chains"][0]["molecule_itps"][1], lambda text: text.replace("1 N 2 SYN", "1 N 1 SYN"))
+    with pytest.raises(parser.PreparedGromacsInputError, match="residue identity.*multiple molecule"):
+        parser.load_prepared_gromacs_components(request)
+
+
+@pytest.mark.parametrize("name", ["IC50[uM]", "assay Ki[nM]"])
+def test_sdf_unit_extension_v3_preserves_inert_original_metadata(request_doc, name):
+    request = _insertion_request(request_doc)
+    header = f">  <{name}>  (1) "
+    _change(request["ligand_sdf"], lambda text: text.replace("> <source_identity>", header))
+    before = copy.deepcopy(request)
+    raw = Path(request["ligand_sdf"]["path"]).read_bytes()
+    mol_block = raw[:raw.index(b"M  END\n") + len(b"M  END\n")]
+    _, ligand, _, _, evidence = parser.load_prepared_gromacs_components(request)
+    projection = evidence["sdf_data_field_projection"]
+    assert ligand.atom_count == 3 and request == before
+    assert Path(request["ligand_sdf"]["path"]).read_bytes() == raw
+    assert projection["source_data_tail"].encode() == raw[len(mol_block):]
+    assert projection["data_fields"] == {name: ["synthetic-001"]}
+    assert projection["original_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert projection["mol_block_sha256"] == hashlib.sha256(mol_block).hexdigest()
+    assert projection["mol_block_bytes_unchanged"] is True
+    assert projection["data_fields_interpreted_as_chemistry"] is False
+    assert not any(evidence["claim_policy"].values())
+
+
+def test_sdf_unit_extension_label_strings_do_not_change_kernel_inputs(request_doc):
+    request = _insertion_request(request_doc)
+    original = Path(request["ligand_sdf"]["path"]).read_bytes()
+    mol_block = original[:original.index(b"M  END\n") + len(b"M  END\n")]
+    outputs, raw_inputs = [], []
+    for value in ("-1", "0", "error-1"):
+        tail = f">  <IC50[uM]>  (1) \n{value}\n\n$$$$\n"
+        _change(request["ligand_sdf"], lambda _, tail=tail: mol_block.decode() + tail)
+        raw = Path(request["ligand_sdf"]["path"]).read_bytes()
+        outputs.append(parser.load_prepared_gromacs_components(request))
+        raw_inputs.append(raw)
+        assert Path(request["ligand_sdf"]["path"]).read_bytes() == raw
+        projection = outputs[-1][-1]["sdf_data_field_projection"]
+        assert projection["data_fields"] == {"IC50[uM]": [value]}
+        assert projection["source_data_tail"] == tail
+        assert parser._sdf_projection(raw, bracketed_unit_headers=True)[0] == mol_block
+    first_receptor, first_ligand, rparams, lparams, _ = outputs[0]
+    for receptor, ligand, actual_rparams, actual_lparams, evidence in outputs[1:]:
+        assert torch.equal(receptor.coordinates, first_receptor.coordinates)
+        assert torch.equal(ligand.coordinates, first_ligand.coordinates)
+        assert receptor.atoms == first_receptor.atoms and ligand.atoms == first_ligand.atoms
+        assert receptor.bonds == first_receptor.bonds and ligand.bonds == first_ligand.bonds
+        assert receptor.residues == first_receptor.residues and ligand.residues == first_ligand.residues
+        assert actual_rparams == rparams and actual_lparams == lparams
+        assert evidence["sdf_data_field_projection"]["mol_block_sha256"] == hashlib.sha256(mol_block).hexdigest()
+    assert len({item[-1]["sdf_data_field_projection"]["original_sha256"] for item in outputs}) == 3
+    assert len({item[-1]["sdf_data_field_projection"]["source_data_tail"] for item in outputs}) == 3
+    assert [item[-1]["sources"]["ligand_sdf"]["sha256"] for item in outputs] == [hashlib.sha256(raw).hexdigest() for raw in raw_inputs]
+    # Canonical hashes include changed source provenance; they are not falsely held fixed.
+    assert len({item[-1]["ligand_system_sha256"] for item in outputs}) == 3
+
+
+@pytest.mark.parametrize("schema", ["prepared_gromacs_components_v1", "prepared_gromacs_components_v2"])
+def test_sdf_unit_extension_is_not_enabled_for_legacy_schemas(request_doc, schema):
+    request = request_doc if schema.endswith("v1") else _ordered_molecule_request(request_doc)
+    _change(request["ligand_sdf"], lambda text: text.replace("source_identity", "IC50[uM]"))
+    with pytest.raises(parser.PreparedGromacsInputError, match="data header"):
+        parser.load_prepared_gromacs_components(request)
+
+
+def test_sdf_unit_extension_requires_explicit_projection_opt_in():
+    raw = _sdf().replace("source_identity", "IC50[uM]").encode()
+    with pytest.raises(parser.PreparedGromacsInputError, match="data header"):
+        parser._sdf_projection(raw)
+
+
+@pytest.mark.parametrize("name", [
+    "IC50[]", "IC50[uM", "IC50uM]", "IC50[[uM]]", "IC50[uM][nM]",
+    "[uM]", "IC50[u M]", "IC50[u\tM]", "IC50[u\x00M]", "IC50[u\x7fM]",
+    "IC50[μM]", "IC50[1M]", "IC50[uM]suffix", " IC50[uM]", "IC50 [uM]",
+])
+def test_sdf_unit_extension_malformed_or_non_ascii_unit_rejects(request_doc, name):
+    request = _ordered_molecule_request(request_doc)
+    request["schema_version"] = "prepared_gromacs_components_v3"
+    _change(request["ligand_sdf"], lambda text: text.replace("source_identity", name))
+    with pytest.raises(parser.PreparedGromacsInputError, match="data header"):
+        parser.load_prepared_gromacs_components(request)
+
+
+@pytest.mark.parametrize("tail,match", [
+    ("> <IC50[uM]>\nfirst\n\n> <IC50[uM]>\nsecond\n\n$$$$\n", "duplicate ligand SDF data field"),
+    ("> <IC50[uM]>\nfirst\n\nunbound\n$$$$\n", "unbound ligand SDF metadata"),
+    ("> <IC50[uM]>\nfirst\n\n$$$$\n> <other>\nsecond\n", "content after record terminator"),
+    ("> <IC50[uM]> (2)\nfirst\n\n$$$$\n", "data header"),
+])
+def test_sdf_unit_extension_keeps_data_tail_guards(request_doc, tail, match):
+    request = _ordered_molecule_request(request_doc)
+    request["schema_version"] = "prepared_gromacs_components_v3"
+    _change(request["ligand_sdf"], lambda text: text[:text.index("M  END\n") + len("M  END\n")] + tail)
+    with pytest.raises(parser.PreparedGromacsInputError, match=match):
+        parser.load_prepared_gromacs_components(request)
+
+
+def test_sdf_unit_extension_keeps_multirecord_guard(request_doc):
+    request = _ordered_molecule_request(request_doc)
+    request["schema_version"] = "prepared_gromacs_components_v3"
+    _change(request["ligand_sdf"], lambda text: text.replace("source_identity", "IC50[uM]") + text)
+    with pytest.raises(parser.PreparedGromacsInputError, match="one mol block"):
+        parser.load_prepared_gromacs_components(request)

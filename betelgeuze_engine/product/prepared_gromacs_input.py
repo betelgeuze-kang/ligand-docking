@@ -24,6 +24,7 @@ from betelgeuze_engine_v2.molecular.validation import require_valid_all_atom_sys
 
 SCHEMA_VERSION = "prepared_gromacs_components_v1"
 MOLECULE_LIST_SCHEMA_VERSION = "prepared_gromacs_components_v2"
+INSERTION_CODE_SCHEMA_VERSION = "prepared_gromacs_components_v3"
 _MAX_BYTES = 16 * 1024 * 1024
 _MOLECULE_SECTIONS = {"moleculetype", "atoms", "bonds", "pairs", "angles", "dihedrals"}
 _DECLARATIONS = {"coordinate_frame_id", "prepared_state_id", "parameter_source_id", "charge_source_id"}
@@ -159,7 +160,17 @@ def _atomtypes(top: dict, label: str) -> dict:
     return types
 
 
-def _molecule(top: dict, label: str) -> tuple[list[dict], set[tuple[int, int]]]:
+def _protein_residue_identifier(token: str, label: str) -> tuple[int, str]:
+    """Read a published source token; this does not assert GROMACS validity."""
+    match = re.fullmatch(r"([0-9]+)([A-Za-z]?)", token)
+    _require(match is not None, f"{label}: protein residue token requires positive integer and optional single ASCII letter")
+    number, insertion_code = match.groups()
+    value = int(number)
+    _require(value > 0, f"{label}: protein residue token requires positive integer")
+    return value, insertion_code
+
+
+def _molecule(top: dict, label: str, *, protein_insertion_codes: bool = False) -> tuple[list[dict], set[tuple[int, int]]]:
     sections = top["sections"]
     molecule_rows = sections.get("moleculetype", [])
     _require(len(molecule_rows) == 1 and len(molecule_rows[0]["tokens"]) == 2, f"{label}: exactly one moleculetype required")
@@ -173,17 +184,25 @@ def _molecule(top: dict, label: str) -> tuple[list[dict], set[tuple[int, int]]]:
         index, atomtype, resnr, residue, name, group, charge, mass = tokens
         index_value = _integer(index, label)
         _require(index_value == len(atoms) + 1, f"{label}: atom indices must be sequential, unique and one based")
-        resnr_value = _integer(resnr, label)
+        if protein_insertion_codes:
+            resnr_value, insertion_code = _protein_residue_identifier(resnr, label)
+            residue_key = (resnr_value, insertion_code)
+        else:
+            resnr_value = _integer(resnr, label)
+            residue_key = resnr_value
         _integer(group, label)
         charge_value, mass_value = _number(charge, label), _number(mass, label)
         _require(mass_value > 0, f"{label}: atom mass must be positive")
-        _require(resnr_value not in residue_names or residue_names[resnr_value] == residue, f"{label}: inconsistent residue name")
-        _require((resnr_value, name) not in seen_names, f"{label}: duplicate atom name within residue")
-        residue_names[resnr_value] = residue
-        seen_names.add((resnr_value, name))
-        atoms.append({"source_atom_index": index_value, "atomtype": atomtype, "residue_number": resnr_value,
-                      "residue_name": residue, "atom_name": name, "charge_e": charge_value,
-                      "mass_da": mass_value, "source_row": row})
+        _require(residue_key not in residue_names or residue_names[residue_key] == residue, f"{label}: inconsistent residue name")
+        _require((residue_key, name) not in seen_names, f"{label}: duplicate atom name within residue")
+        residue_names[residue_key] = residue
+        seen_names.add((residue_key, name))
+        atom = {"source_atom_index": index_value, "atomtype": atomtype, "residue_number": resnr_value,
+                "residue_name": residue, "atom_name": name, "charge_e": charge_value,
+                "mass_da": mass_value, "source_row": row}
+        if protein_insertion_codes:
+            atom.update(residue_number_token=resnr, insertion_code=insertion_code)
+        atoms.append(atom)
     _require(bool(atoms), f"{label}: missing atoms")
     adjacency = set()
     for section, arity in (("bonds", 2), ("pairs", 2), ("angles", 3), ("dihedrals", 4)):
@@ -222,7 +241,7 @@ def _gro(raw: bytes, label: str) -> tuple[list[dict], list[float]]:
     return atoms, box
 
 
-def _sdf_projection(raw: bytes) -> tuple[bytes, dict]:
+def _sdf_projection(raw: bytes, *, bracketed_unit_headers: bool = False) -> tuple[bytes, dict]:
     """Separate inert SD data fields without changing the original mol block."""
     lines = raw.decode("utf-8").splitlines(keepends=True)
     ends = [index for index, line in enumerate(lines) if line.strip() == "M  END"]
@@ -242,6 +261,11 @@ def _sdf_projection(raw: bytes) -> tuple[bytes, dict]:
             current = None
         elif value.startswith(">"):
             match = re.fullmatch(r">\s*<([A-Za-z0-9_. -]+)>\s*(?:\(1\)\s*)?", value)
+            if match is None and bracketed_unit_headers:
+                # v3 preserves the suffix as an inert field-name token, not a unit conversion.
+                match = re.fullmatch(r">\s*<(([A-Za-z0-9_. -]+)\[[A-Za-z][A-Za-z0-9]*\])>\s*(?:\(1\)\s*)?", value)
+                if match is not None:
+                    _require(match.group(2) == match.group(2).strip(), "unsupported ligand SDF data header name")
             _require(match is not None, "unsupported ligand SDF data header")
             name = match.group(1)
             _require(bool(name.strip()) and name == name.strip(), "unsupported ligand SDF data header name")
@@ -284,7 +308,7 @@ def _pdb_projection(raw: bytes, chains: list[dict], molecules: dict, types: dict
                 if naming == "pdb_leading_digit_to_gromacs_suffix" and name[:1].isdigit() and element == "H":
                     expected_name = name[1:] + name[0]
                 _require(source["atom_name"] == expected_name, f"{label}: PDB projection atom name/order mismatch")
-                _require(not line[26:27].strip() and source["residue_name"] == line[17:20].strip()
+                _require(source.get("insertion_code", "") == line[26:27].strip() and source["residue_name"] == line[17:20].strip()
                          and source["residue_number"] == _integer(line[22:26].strip(), label), f"{label}: PDB projection residue identity mismatch")
                 annotation = line[76:78].strip()
                 if annotation:
@@ -359,12 +383,20 @@ def _protein_molecules(request: dict, sources: dict, tops: dict) -> tuple[list[s
         declared_ids.append(chain_id)
         label = "protein_chain_" + chain_id
         atoms, adjacency = [], set()
+        residue_sources = {}
         for molecule_index, ref in enumerate(refs):
             source_label = label if request["schema_version"] == SCHEMA_VERSION else f"{label}_molecule_{molecule_index}"
             tops[source_label] = _topology(_read_source(ref, source_label, sources), source_label, role="molecule")
-            rows, pairs = _molecule(tops[source_label], source_label)
+            insertion_profile = request["schema_version"] == INSERTION_CODE_SCHEMA_VERSION
+            rows, pairs = _molecule(tops[source_label], source_label, protein_insertion_codes=insertion_profile)
+            if insertion_profile:
+                for row in rows:
+                    identity = (row["residue_number"], row["insertion_code"])
+                    _require(identity not in residue_sources or residue_sources[identity] == source_label,
+                             f"{label}: residue identity occurs in multiple molecule sources")
+                    residue_sources[identity] = source_label
             offset = len(atoms)
-            if request["schema_version"] == MOLECULE_LIST_SCHEMA_VERSION:
+            if request["schema_version"] in (MOLECULE_LIST_SCHEMA_VERSION, INSERTION_CODE_SCHEMA_VERSION):
                 rows = [{**row, "source_molecule_label": source_label,
                          "chain_molecule_index": molecule_index} for row in rows]
             atoms.extend(rows)
@@ -384,7 +416,7 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
                     "ligand_sdf", "ligand_gro", "ligand_itp", "ligand_atomtypes", "ligand_defaults",
                     "ligand_atomtype_name_mapping", "ligand_residue_name_mapping", "naming_convention",
                     "pdb_element_policy", "source_declarations", "source_relationship"}, "request")
-    _require(request["schema_version"] in (SCHEMA_VERSION, MOLECULE_LIST_SCHEMA_VERSION), "unsupported prepared GROMACS schema")
+    _require(request["schema_version"] in (SCHEMA_VERSION, MOLECULE_LIST_SCHEMA_VERSION, INSERTION_CODE_SCHEMA_VERSION), "unsupported prepared GROMACS schema")
     _keys(request["source_declarations"], _DECLARATIONS, "source_declarations")
     for key, value in request["source_declarations"].items():
         _text(value, key)
@@ -431,7 +463,8 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
                         operations=receptor.provenance.operations + ("explicit_pdb_element_source_projection",),
                         parent_sha256=receptor.provenance.parent_sha256 + (pdb_projection["original_sha256"],),
                         metadata={**receptor.provenance.metadata, "pdb_element_projection": pdb_projection}))
-    sdf_block, sdf_projection = _sdf_projection(raw["ligand_sdf"])
+    sdf_block, sdf_projection = _sdf_projection(raw["ligand_sdf"],
+        bracketed_unit_headers=request["schema_version"] == INSERTION_CODE_SCHEMA_VERSION)
     ligand = parse_sdf_v2000(sdf_block, source_id=request["ligand_sdf"]["source_id"], dtype=torch.float64, device="cpu")
     ligand = replace(ligand, provenance=replace(ligand.provenance,
                      operations=ligand.provenance.operations + ("unchanged_sdf_mol_block_projection",),
@@ -449,7 +482,7 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
         for index, source in zip(atom_indices, atom_rows):
             atom = receptor.atoms[index]
             residue = receptor.residues[atom.residue_index]
-            _require(not residue.insertion_code and source["residue_number"] == residue.sequence_number and source["residue_name"] == residue.name, f"{label}: residue identity mismatch")
+            _require(source.get("insertion_code", "") == residue.insertion_code and source["residue_number"] == residue.sequence_number and source["residue_name"] == residue.name, f"{label}: residue identity mismatch")
             expected_name = atom.name
             if request["naming_convention"] == "pdb_leading_digit_to_gromacs_suffix" and atom.name[0].isdigit() and atom.element == "H":
                 expected_name = atom.name[1:] + atom.name[0]
@@ -519,7 +552,15 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
         "claim_policy": {"scientifically_validated": False, "validated_for_composition": False,
                          "production_claim_allowed": False, "product_qualified": False},
     }
+    if request["schema_version"] == INSERTION_CODE_SCHEMA_VERSION:
+        provenance["protein_residue_identifier_policy"] = {
+            "profile": "positive_integer_optional_single_ascii_letter",
+            "matching": "exact_sequence_number_insertion_code_residue_name",
+            "noninteger_tokens_claimed_standard_gromacs": False,
+            "residue_renumbering_performed": False,
+            "raw_tokens_and_suffix_case_preserved": True,
+        }
     return receptor, ligand, rparams, lparams, provenance
 
 
-__all__ = ["PreparedGromacsInputError", "SCHEMA_VERSION", "MOLECULE_LIST_SCHEMA_VERSION", "load_prepared_gromacs_components"]
+__all__ = ["PreparedGromacsInputError", "SCHEMA_VERSION", "MOLECULE_LIST_SCHEMA_VERSION", "INSERTION_CODE_SCHEMA_VERSION", "load_prepared_gromacs_components"]
