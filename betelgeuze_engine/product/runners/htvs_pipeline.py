@@ -2266,6 +2266,17 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             if tok not in stage1_roles:
                 stage1_roles.append(tok)
     stage1_roles_csv = ",".join(stage1_roles)
+    public_assay_shadow = None
+    if bool(getattr(args, "public_assay_shadow_enabled", False)):
+        from betelgeuze_engine.product.public_assay_selector_shadow import run_pre_docking_shadow
+
+        public_assay_shadow = run_pre_docking_shadow(
+            ligand_csv=str(args.ligand_csv or ""), ligand_sdf=str(args.ligand_sdf or ""),
+            docking_request_json=docking_request_json, resume_stage3_only=resume_stage3_only,
+            checkpoint=str(getattr(args, "public_assay_shadow_checkpoint", "") or ""),
+            checkpoint_sha256=str(getattr(args, "public_assay_shadow_checkpoint_sha256", "") or ""),
+            output_json=f"{out_prefix}_public_assay_selector_shadow.json",
+        )
     reuse_stage1 = bool(args.reuse_stage1_if_exists)
     if use_docking_request_queue and (not resume_stage3_only):
         mat_dir = f"{out_prefix}_docking_materialized"
@@ -2297,6 +2308,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                         "skipped": True,
                         "reused": False,
                         "stderr_tail": f"resume-stage3-only requested but missing queue: {queue_csv}",
+                        **({"public_assay_selector_shadow": public_assay_shadow}
+                           if public_assay_shadow is not None else {}),
                     },
                 },
                 "artifacts": {"summary_json": f"{out_prefix}_summary.json"},
@@ -2399,6 +2412,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         ]
         stage1_cmd.append("--require-native-path" if bool(args.require_native_path) else "--no-require-native-path")
         rec1 = _run_cmd(stage1_cmd)
+    if public_assay_shadow is not None:
+        rec1["public_assay_selector_shadow"] = public_assay_shadow
     if not rec1["ok"]:
         payload = {
             "pass": False,
@@ -4983,6 +4998,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ranking-missing-score-policy", type=str, default="worst", choices=["worst", "drop"])
     p.add_argument("--ranking-missing-score-worst-margin", type=float, default=1000.0)
     p.add_argument("--ranking-missing-score-worst-value", type=float, default=None)
+    p.add_argument("--public-assay-shadow-enabled", action=argparse.BooleanOptionalAction, default=False,
+                   help="Write optional original-CSV BACE1 IC50 diagnostics before stage1; no ranking changes.")
+    p.add_argument("--public-assay-shadow-checkpoint", type=str, default="")
+    p.add_argument("--public-assay-shadow-checkpoint-sha256", type=str, default="")
     p.add_argument("--docking-request-json", type=str, default="")
     p.add_argument("--pipeline-preset-json", type=str, default="")
     p.add_argument("--engine-refinement-config", type=str, default="")
