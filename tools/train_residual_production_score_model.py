@@ -7,12 +7,16 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from numbers import Real
 from typing import Any
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
+
+from betelgeuze_engine.product.residual_score_contract import (
+    ResidualScoreMLP, encode_features, feature_value as _feature_value,
+    shadow_contract, source_sha256 as shared_contract_source_sha256,
+)
 
 from tools.product.residual_evidence import (
     training_source_rejection, require_complete_csv_row, validated_csv_fieldnames,
@@ -208,24 +212,6 @@ def _require_development_rows(rows: list[dict[str, Any]]) -> None:
             raise ValueError(f"{reason}: row {index + 1}")
 
 
-def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[float, float]:
-    value = row.get(field)
-    missing = value is None or (isinstance(value, str) and not value.strip())
-    if missing:
-        if required:
-            raise ValueError(f"missing_required_training_feature:{field}")
-        return 0.0, 1.0
-    if isinstance(value, bool) or not isinstance(value, (Real, str)):
-        raise ValueError(f"invalid_training_feature:{field}")
-    try:
-        number = float(value)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise ValueError(f"invalid_training_feature:{field}") from exc
-    if not math.isfinite(number) or abs(number) > torch.finfo(torch.float32).max:
-        raise ValueError(f"invalid_training_feature:{field}")
-    return number, 0.0
-
-
 def _refine_feature_fields(rows: list[dict[str, Any]]) -> list[str]:
     # DictReader gives every row every header: a key alone is not an observation.
     # Only nonmissing, usable training values define optional feature columns.
@@ -249,27 +235,12 @@ def _matrix(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, list[str]]:
     _require_development_rows(rows)
     refine_fields = _refine_feature_fields(rows) if refine_fields is None else refine_fields
-    feature_names = ["raw_score", "mean_min_distance_A", "mean_min_distance_A_missing"]
-    feature_names.extend(f"family={item}" for item in families)
-    # role describes labels/splits, not an inference-time molecular feature.
-    for field in refine_fields:
-        feature_names.extend([field, f"{field}_missing"])
-    xs: list[list[float]] = []
+    x, feature_names = encode_features(rows, families, refine_fields)
     y_cls: list[float] = []
     y_delta: list[float] = []
     y_energy: list[float] = []
     y_energy_mask: list[float] = []
     for row in rows:
-        family = str(row.get("family") or "unknown")
-        raw_score, _ = _feature_value(row, "raw_score", required=True)
-        distance, distance_missing = _feature_value(row, "mean_min_distance_A", required=False)
-        if distance < 0.0:
-            raise ValueError("invalid_training_feature:mean_min_distance_A")
-        values = [raw_score, distance, distance_missing]
-        values.extend(1.0 if family == item else 0.0 for item in families)
-        for field in refine_fields:
-            values.extend(_feature_value(row, field, required=False))
-        xs.append(values)
         binder = _float(row.get("is_binder"), default=float("nan"))
         residual = _float(row.get("delta_score"), default=float("nan"))
         if binder not in (0.0, 1.0) or not math.isfinite(residual):
@@ -286,40 +257,13 @@ def _matrix(
             y_energy.append(energy)
             y_energy_mask.append(1.0)
     return (
-        torch.tensor(xs, dtype=torch.float32),
+        x,
         torch.tensor(y_cls, dtype=torch.float32),
         torch.tensor(y_delta, dtype=torch.float32),
         torch.tensor(y_energy, dtype=torch.float32),
         torch.tensor(y_energy_mask, dtype=torch.float32),
         feature_names,
     )
-
-
-class ResidualScoreMLP(nn.Module):
-    def __init__(self, in_dim: int, hidden_dim: int):
-        super().__init__()
-        self.trunk = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-        self.cls_head = nn.Linear(hidden_dim, 1)
-        self.delta_head = nn.Linear(hidden_dim, 1)
-        self.energy_head = nn.Linear(hidden_dim, 1)
-        self.force_head = nn.Linear(hidden_dim, 1)
-        self.register_buffer("forbidden_missing_features", torch.zeros(in_dim, dtype=torch.bool))
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        if bool((x[..., self.forbidden_missing_features] != 0).any().item()):
-            raise ValueError("unseen_training_missingness")
-        h = self.trunk(x)
-        return (
-            self.cls_head(h).squeeze(-1),
-            self.delta_head(h).squeeze(-1),
-            self.energy_head(h).squeeze(-1),
-            self.force_head(h).squeeze(-1),
-        )
 
 
 def _split_indices(rows: list[dict[str, Any]], seed: int, train_ratio: float) -> tuple[list[int], list[int]]:
@@ -388,6 +332,8 @@ def train_residual_production_score_model(
     families = _family_vocab([rows[idx] for idx in train_idx])
     roles: list[str] = []
     refine_fields = _refine_feature_fields([rows[idx] for idx in train_idx])
+    serving_contract = shadow_contract(rows=rows, families=families,
+                                       refine_fields=refine_fields, hidden_dim=hidden_dim)
     refine_tier_label_rows = sum(
         1 for row in rows if str(row.get(REFINE_TIER_LABEL_FIELD) or "").strip() not in {"", "nan", "none"}
     )
@@ -523,6 +469,7 @@ def train_residual_production_score_model(
         "trainer_contract_version": TRAINER_CONTRACT_VERSION,
         "train_fingerprint": train_fingerprint,
         "train_fingerprint_digest": train_fingerprint["digest"],
+        "shadow_inference_contract": serving_contract,
         "split_policy": "ligand_id_grouped_v1",
         "feature_stage": "post_refinement_rescoring",
         "role_features_used": False,
@@ -641,6 +588,7 @@ def build_train_fingerprint(
         root=ROOT,
     )
     fingerprint["trainer_contract_version"] = TRAINER_CONTRACT_VERSION
+    fingerprint["shared_contract_source_sha256"] = shared_contract_source_sha256()
     fingerprint["trainer_source_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     fingerprint["evaluation_policy_source_sha256"] = hashlib.sha256(
         (Path(__file__).parent / "product" / "residual_evidence.py").read_bytes()
