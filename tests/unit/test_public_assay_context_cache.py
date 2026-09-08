@@ -125,3 +125,37 @@ def test_same_size_replacement_of_excluded_bridge_is_rejected_before_observation
                     target_state="a" * 64, endpoint="IC50", output_dir=tmp_path / "trained")
     assert accesses == []
     assert not (tmp_path / "trained").exists()
+
+
+@pytest.mark.parametrize('reserved', ['calibration', 'development_test'])
+def test_chembl_assay_metadata_bridge_blocks_before_actual_trainer_observation(reserved):
+    values = rows()
+    for row in values[:5]:
+        row['source_provenance']['row']['ChEMBL Assay ID'] = 'CHEMBL90001'
+    bridge = components.node_from_raw(
+        {'ChEMBL Assay ID': 'CHEMBL90001', 'ChEMBL Document ID': 'CHEMBL90002',
+         'Article DOI': '10.synthetic/assay-metadata-other-document', 'role': reserved},
+        None, node_id='external:synthetic-assay-document-bridge',
+        record_id='chembl:assay_metadata:CHEMBL90001', ligand_id='')
+    context = [components.normalized_node(row) for row in values] + [bridge]
+    accesses = []
+    for row in values[:5]:
+        row['observations'] = ForbiddenObservations(accesses, row['record_id'])
+    accepted, ledger = trainer.cohort(values, 'a'*64, 'IC50', identity_context=context)
+    assert len(accepted) == 55 and len(ledger) == 60
+    assert {row['record_id'] for row in values[:5]}.isdisjoint(row['record_id'] for row in accepted)
+    assert {item['reason'] for item in ledger[:5]} == {'reserved_identity_component'}
+    assert accesses == []
+
+
+def test_disconnected_chembl_assay_metadata_preserves_actual_trainer_positive_control():
+    values = rows()
+    values[0]['source_provenance']['row']['ChEMBL Assay ID'] = 'CHEMBL90001'
+    other = components.node_from_raw(
+        {'ChEMBL Assay ID': 'CHEMBL90003', 'role': 'calibration'}, None,
+        node_id='external:synthetic-unrelated-assay',
+        record_id='chembl:assay_metadata:CHEMBL90003', ligand_id='')
+    context = [components.normalized_node(row) for row in values] + [other]
+    accepted, ledger = trainer.cohort(values, 'a'*64, 'IC50', identity_context=context)
+    assert len(accepted) == len(ledger) == 60
+    assert {item['status'] for item in ledger} == {'selected'}

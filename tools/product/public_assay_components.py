@@ -2,6 +2,9 @@
 
 Coverage is the explicitly supplied metadata universe, not an assertion about
 every molecule or protected dataset. Rejected rows remain graph vertices.
+Optional ChEMBL document and parent molecule source IDs add existing key kinds;
+they do not imply chemical-state equivalence or change existing node schemas.
+An explicit ChEMBL assay ID uses a v2 node with a distinct source_assay key.
 """
 from __future__ import annotations
 
@@ -17,6 +20,7 @@ from tools.product.residual_evidence import (
 )
 
 SCHEMA = "public_assay_identity_context_v1"
+SCHEMA_V2 = "public_assay_identity_context_v2"
 POLICY = "all_supplied_metadata_components_before_target_endpoint_selection_v1"
 RESERVED = {"calibration", "development_test", "calibration_dev"}
 NONRESERVED = {"", "fit", "train", "training", "development_pool", "development_source", "unassigned"}
@@ -43,6 +47,19 @@ def loads(text):
     return json.loads(text, object_pairs_hook=strict_object, parse_constant=nonfinite)
 
 
+def _optional_chembl_id(raw, field, error):
+    value = raw.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(error)
+    if value == "":
+        return None
+    if re.fullmatch(r"CHEMBL[0-9]+", value) is None:
+        raise ValueError(error)
+    return value
+
+
 def document_keys(raw):
     doi = raw.get("Article DOI", "") or ""
     pmid = raw.get("PMID", "") or ""
@@ -53,7 +70,9 @@ def document_keys(raw):
         if doi.startswith(prefix):
             doi = doi[len(prefix):].strip()
             break
-    return (["doi:"+doi] if doi else []) + (["pmid:"+pmid.strip()] if pmid.strip() else [])
+    document = _optional_chembl_id(raw, "ChEMBL Document ID", "invalid_chembl_document_id")
+    return ((["doi:"+doi] if doi else []) + (["pmid:"+pmid.strip()] if pmid.strip() else [])
+            + (["chembl:document:"+document] if document is not None else []))
 
 
 def policy_declarations(row):
@@ -101,10 +120,16 @@ def reservation_status(declarations):
 def node_from_raw(raw, identity, *, node_id, record_id, ligand_id, origin=None,
                   extra_declarations=(), protected=False):
     tokens = [("document", key) for key in document_keys(raw)]
+    assay = _optional_chembl_id(raw, "ChEMBL Assay ID", "invalid_chembl_assay_id")
+    if assay is not None:
+        tokens.append(("source_assay", "chembl:assay:"+assay))
     if record_id and not record_id.endswith(":"):
         tokens.append(("record", record_id))
     if ligand_id:
         tokens.append(("source_ligand", ligand_id))
+    parent = _optional_chembl_id(raw, "ChEMBL Parent Molecule ID", "invalid_chembl_parent_molecule_id")
+    if parent is not None:
+        tokens.append(("source_ligand", "chembl:molecule:"+parent))
     if identity is not None:
         for field, kind in (("canonical_isomeric_smiles_sha256", "canonical"),
                             ("connectivity_smiles_sha256", "connectivity"),
@@ -116,7 +141,8 @@ def node_from_raw(raw, identity, *, node_id, record_id, ligand_id, origin=None,
             tokens.append(("inchikey_connectivity", key[:14]))
     declarations = policy_declarations(raw) + list(extra_declarations)
     reservation_status(declarations)
-    return {"schema_version": SCHEMA, "node_id": node_id, "record_id": record_id,
+    return {"schema_version": SCHEMA_V2 if assay is not None else SCHEMA,
+            "node_id": node_id, "record_id": record_id,
             "keys": sorted({(kind, digest(value)) for kind, value in tokens if value}),
             "policy_declarations": declarations, "protected": bool(protected),
             "chemical_identity_available": identity is not None,
@@ -170,6 +196,8 @@ def validate_node(node):
     for key in ("schema_version", "node_id", "record_id"):
         if not isinstance(node[key], str) or not node[key] or len(node[key]) > 256:
             raise ValueError("invalid_identity_context_string")
+    if node["schema_version"] not in (SCHEMA, SCHEMA_V2):
+        raise ValueError("unsupported_identity_context_schema")
     for key in ("protected", "chemical_identity_available", "document_identity_available"):
         if type(node[key]) is not bool:
             raise ValueError("invalid_identity_context_boolean")
@@ -181,12 +209,16 @@ def validate_node(node):
     for marker in markers:
         validate_origin(marker, joined=True)
     kinds = {"document", "record", "source_ligand", "canonical", "connectivity", "scaffold", "inchikey_connectivity"}
+    if node["schema_version"] == SCHEMA_V2:
+        kinds.add("source_assay")
     if not isinstance(node["keys"], list):
         raise ValueError("invalid_identity_context_keys")
     for key in node["keys"]:
         if (not isinstance(key, (list, tuple)) or len(key) != 2 or
                 key[0] not in kinds or not is_sha(key[1])):
             raise ValueError("invalid_identity_context_key")
+    if node["schema_version"] == SCHEMA_V2 and not any(key[0] == "source_assay" for key in node["keys"]):
+        raise ValueError("missing_assay_identity_context_key")
 
 
 def node_reservation_status(node):
@@ -240,7 +272,7 @@ def component_index(nodes):
     seen, ids = {}, set()
     for i, node in enumerate(nodes):
         validate_node(node)
-        if node.get("schema_version") != SCHEMA:
+        if node.get("schema_version") not in (SCHEMA, SCHEMA_V2):
             raise ValueError("unsupported_identity_context_schema")
         nid = node.get("node_id")
         if not isinstance(nid, str) or not nid or nid in ids:

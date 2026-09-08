@@ -256,3 +256,52 @@ chemical validity, following the endpoint distinction in
 [PoseBusters](https://arxiv.org/abs/2308.05777) and its
 [versioned data record](https://zenodo.org/records/8278563); those benchmark
 structures have not been run or used to train this model.
+
+
+## ChEMBL metadata identity extension
+
+The common component helper accepts optional raw source fields `ChEMBL Document
+ID`, `ChEMBL Parent Molecule ID`, and `ChEMBL Assay ID`. IDs must be strings
+matching `CHEMBL[0-9]+`; absent, null and empty values remain missing, while
+malformed values fail explicitly. Real DOI and PMID identities coexist with the
+ChEMBL local document identity. Parent molecule links constrain reservation and
+splitting; they do not replace a salt, stereoisomer, protonation state or original
+source molecule.
+
+Rows without an assay ID retain the original v1 node representation. An explicit
+assay ID emits `public_assay_identity_context_v2` and a distinct `source_assay`
+key. The helper accepts mixed v1/v2 metadata contexts, rejects an assay key in a
+v1 node, requires an assay key in v2, and rejects unknown versions. Normalized
+source projection regenerates every optional key before accepting a cache.
+Deleting an assay key, including downgrading the cached node to v1, cannot hide
+it from the normalized coverage check.
+
+A ChEMBL assay may have activity rows associated with several documents. The
+assay-level document may also differ from every activity-level document. Keep
+both sources: every activity remains a vertex carrying its own document and
+assay IDs, and a separate metadata-only assay vertex connects the assay ID to
+its own document and source DOI/PMID. Do not choose the last document or remove
+unsupported endpoints, other targets or invalid structures before constructing
+the graph. This describes the metadata projection contract; the existing
+BindingDB normalizer does not become a ChEMBL concentration importer merely
+because the common helper supports these identities.
+
+The exact previous helper's 141 intake, selector, structure-link and cache
+regressions passed locally. Fresh actual-trainer synthetic controls exposed two
+reserved-observation accesses in the old helper; the candidate prevented them
+and preserved the disconnected positive control. The combined local suite has
+184 passing tests with no failures, errors or skips. These are software
+contracts, not experimental validation or evidence of improved active recovery.
+
+### Cache and checkpoint compatibility
+
+The selector intake and checkpoint loader bind the SHA256 of this helper.
+Changing the helper therefore invalidates old intake/cache/checkpoint use in the
+new consumer even though the selector's numeric checkpoint format is unchanged.
+Keep previous measured artifacts with their frozen original consumer. Regenerate
+the metadata context and source-bound intake before any new fit; do not overwrite
+an old checkpoint hash to make it load or retrain on previously used evaluation
+outcomes. New cross-source connections can reveal dependence between previous
+roles. Preserve those original roles and historical scores and report the newly
+observed connections separately. Scientific, training, customer-runtime and
+commercial approvals remain separate and are not granted by this extension.
