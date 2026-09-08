@@ -14,7 +14,6 @@ import math
 from pathlib import Path
 import resource
 import time
-from urllib.parse import unquote
 
 import numpy as np
 from rdkit import Chem, rdBase
@@ -30,8 +29,9 @@ from tools.product.public_assay_dataset import (
     require_sha,
 )
 from tools.product.residual_evidence import declared_evaluation_only
+from tools.product import public_assay_components as components
 
-MODEL_SCHEMA = "public_assay_cheap_selector_ridge_v1"
+MODEL_SCHEMA = "public_assay_cheap_selector_ridge_v2"
 FEATURES = {
     "kind": "Morgan_bit_vector",
     "radius": 2,
@@ -57,66 +57,30 @@ def features(smiles: list[str]) -> np.ndarray:
 
 
 def document_keys(row: dict) -> list[str]:
-    raw = row["source_provenance"]["row"]
-    doi = unquote(raw.get("Article DOI", "").strip()).lower()
-    for prefix in (
-        "https://doi.org/",
-        "http://doi.org/",
-        "https://dx.doi.org/",
-        "http://dx.doi.org/",
-        "doi:",
-    ):
-        if doi.startswith(prefix):
-            doi = doi[len(prefix) :].strip()
-            break
-    pmid = raw.get("PMID", "").strip()
-    keys = (["doi:" + doi] if doi else []) + (["pmid:" + pmid] if pmid else [])
+    keys = components.document_keys(row["source_provenance"]["row"])
     if not keys:
         raise ValueError("missing_document_identity")
     return keys
 
 
 def split_components(
-    rows: list[dict], seed: int
+    rows: list[dict], seed: int, *, identity_context: list[dict] | None = None
 ) -> tuple[dict[str, list[int]], list[str]]:
     """No label access. Connected components prevent transitive split leakage."""
-    parent = list(range(len(rows)))
-
-    def find(i):
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    seen = {}
-    for i, row in enumerate(rows):
-        identity = row["chemical_identity"]
-        keys = [("document", key) for key in document_keys(row)] + [
-            ("scaffold", identity["scaffold_group"]),
-            ("ligand", identity["connectivity_smiles_sha256"]),
-        ]
-        if row.get("ligand_id"):
-            keys.append(("source_ligand_id", row["ligand_id"]))
-        for inchikey in (
-            identity.get("rdkit_inchikey", ""),
-            row["source_provenance"]["row"].get("Ligand InChI Key", ""),
-        ):
-            if inchikey:
-                keys.append(("inchikey_connectivity", inchikey[:14]))
-        for key in keys:
-            if key in seen:
-                parent[find(i)] = find(seen[key])
-            else:
-                seen[key] = i
+    context = identity_context if identity_context is not None else [components.normalized_node(row) for row in rows]
+    graph = components.require_normalized_coverage(rows, context)
     groups = defaultdict(list)
-    for i in range(len(rows)):
-        groups[find(i)].append(i)
+    for i, row in enumerate(rows):
+        document_keys(row)
+        node = graph[components.normalized_node(row)["node_id"]]
+        if node["blocked"]:
+            raise ValueError("reserved_identity_component_in_split")
+        groups[node["component_id"]].append(i)
     if len(groups) < 3:
         raise ValueError("insufficient_independent_document_scaffold_components")
     items = []
     group_ids = [""] * len(rows)
-    for indices in groups.values():
-        key = digest(json_text(sorted(rows[i]["record_id"] for i in indices)))
+    for key, indices in groups.items():
         for i in indices:
             group_ids[i] = key
         items.append((key, indices))
@@ -134,17 +98,16 @@ def split_components(
 
 
 def cohort(
-    rows: list[dict], target_state: str, endpoint: str
+    rows: list[dict], target_state: str, endpoint: str, *, identity_context: list[dict] | None = None
 ) -> tuple[list[dict], list[dict]]:
     if endpoint not in {"Ki", "Kd", "IC50"}:
         raise ValueError("unsupported_training_endpoint")
+    context = identity_context if identity_context is not None else [components.normalized_node(row) for row in rows]
+    graph = components.require_normalized_coverage(rows, context)
     accepted, ledger = [], []
     for row in rows:
         if row["target_state_sha256"] != target_state:
             continue
-        observations = [
-            value for value in row["observations"] if value["endpoint"] == endpoint
-        ]
         reason = ""
         if (
             row.get("schema_version") != SCHEMA
@@ -155,12 +118,16 @@ def cohort(
             row["source_provenance"]["row"]
         ):
             reason = "evaluation_only_source"
+        elif graph[components.normalized_node(row)["node_id"]]["blocked"]:
+            reason = "reserved_identity_component"
         elif not row["eligible_for_split_assignment"] or row["admission_issues"]:
             reason = "intake_admission_failed"
-        elif len(observations) != 1 or observations[0]["status"] != "exact":
-            reason = "endpoint_not_exact_observation"
-        elif not math.isfinite(observations[0]["negative_log10_molar"]):
-            reason = "nonfinite_training_label"
+        if not reason:
+            observations = [value for value in row["observations"] if value["endpoint"] == endpoint]
+            if len(observations) != 1 or observations[0]["status"] != "exact":
+                reason = "endpoint_not_exact_observation"
+            elif not math.isfinite(observations[0]["negative_log10_molar"]):
+                reason = "nonfinite_training_label"
         ledger.append(
             {
                 "record_id": row["record_id"],
@@ -258,6 +225,11 @@ def predict_checkpoint(
         raise ValueError("selector_endpoint_or_quantity_mismatch")
     if payload.get("source_sha256") != file_sha(Path(__file__)):
         raise ValueError("selector_implementation_changed_regenerate")
+    if (payload.get("identity_component_policy") != components.POLICY or
+            payload.get("identity_component_implementation_sha256") != file_sha(Path(components.__file__))):
+        raise ValueError("selector_component_policy_changed_regenerate")
+    if not components.is_sha(payload.get("identity_context_sha256")):
+        raise ValueError("selector_identity_context_hash_missing")
     coefficients = np.asarray(payload["coefficients"], dtype=np.float64)
     intercept = float(payload["intercept"])
     if (
@@ -284,6 +256,15 @@ def run(
     summary_raw = (input_dir / "summary.json").read_bytes()
     require_sha(digest(summary_raw), summary_sha256)
     intake = json.loads(summary_raw)
+    if (intake.get("identity_component_policy") != components.POLICY or
+            not intake.get("identity_context_sha256")):
+        raise ValueError("identity_context_required_regenerate")
+    if intake.get("identity_component_implementation_sha256") != file_sha(Path(components.__file__)):
+        raise ValueError("identity_component_implementation_changed_regenerate")
+    context_raw = (input_dir / "identity-context.jsonl").read_bytes()
+    require_sha(digest(context_raw), intake["identity_context_sha256"])
+    context = [components.loads(line) for line in context_raw.decode().splitlines()]
+    components.require_source_coverage(context, intake)
     raw = (input_dir / "records.jsonl").read_bytes()
     require_sha(digest(raw), intake["records_sha256"])
     if intake["implementation_sha256"] != file_sha(
@@ -291,7 +272,6 @@ def run(
     ):
         raise ValueError("intake_implementation_changed_regenerate")
     allrows = [json.loads(line) for line in raw.decode().splitlines()]
-    rows, ledger = cohort(allrows, target_state, endpoint)
     raw_ledger = (input_dir / "ledger.jsonl").read_bytes()
     require_sha(digest(raw_ledger), intake["ledger_sha256"])
     intake_state_ledger = [
@@ -299,6 +279,15 @@ def run(
         for line in raw_ledger.decode().splitlines()
         if (entry := json.loads(line))["target_state_sha256"] == target_state
     ]
+    context_nodes = {node["node_id"]: node for node in context}
+    for line in raw_ledger.decode().splitlines():
+        entry = components.loads(line)
+        node = context_nodes.get(entry.get("identity_context_node_id"))
+        if node is None or node["record_id"] != entry["record_id"]:
+            raise ValueError("intake_ledger_missing_from_identity_context")
+        if entry.get("source_line") is not None and node["source"].get("source_line") != entry["source_line"]:
+            raise ValueError("intake_ledger_context_origin_mismatch")
+    rows, ledger = cohort(allrows, target_state, endpoint, identity_context=context)
     normalized_state_rows = len(ledger)
     if (
         sum(entry["status"] == "normalized" for entry in intake_state_ledger)
@@ -308,7 +297,7 @@ def run(
     ledger.extend(
         entry for entry in intake_state_ledger if entry["status"] == "excluded"
     )
-    split, group_ids = split_components(rows, seed)
+    split, group_ids = split_components(rows, seed, identity_context=context)
     protocol = {
         "schema_version": MODEL_SCHEMA,
         "target_state_sha256": target_state,
@@ -317,6 +306,11 @@ def run(
         "is_potential_energy": False,
         "intake_summary_sha256": summary_sha256,
         "records_sha256": intake["records_sha256"],
+        "identity_context_sha256": intake["identity_context_sha256"],
+        "identity_component_policy": components.POLICY,
+        "identity_component_implementation_sha256": file_sha(Path(components.__file__)),
+        "identity_context_scope": intake.get("identity_context_scope"),
+        "identity_context_nodes": len(context),
         "seed": seed,
         "ridge_alpha": 10.0,
         "feature_specification": FEATURES,
@@ -324,7 +318,7 @@ def run(
         "top_fraction": 0.2,
         "measurement_metrics_unit": "individual_measurement_rows",
         "candidate_metrics_unit": "unique_canonical_isomeric_chemical_state_with_median_observation_across_retained_assays",
-        "split_policy": "connected_document_or_Murcko_scaffold_or_stereo_independent_ligand; label_blind_70_15_15_deficit_assignment",
+        "split_policy": "all_supplied_metadata_components_including_excluded_rows; label_blind_70_15_15_deficit_assignment",
         "split_record_ids": {
             name: [rows[i]["record_id"] for i in indices]
             for name, indices in split.items()
@@ -400,6 +394,9 @@ def run(
         "intercept": float(model.intercept_),
         "training_protocol_sha256": file_sha(output_dir / "protocol-before-fit.json"),
         "source_sha256": file_sha(Path(__file__)),
+        "identity_component_policy": components.POLICY,
+        "identity_component_implementation_sha256": file_sha(Path(components.__file__)),
+        "identity_context_sha256": intake["identity_context_sha256"],
         "uncertainty_calibrated": False,
         "product_ranking_enabled": False,
         "customer_execution": False,

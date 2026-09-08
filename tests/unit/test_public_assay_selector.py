@@ -10,6 +10,7 @@ import pytest
 
 from tools.product import public_assay_dataset as intake
 from tools.product import train_public_assay_selector as mod
+from tools.product import public_assay_components as components
 
 
 def rows():
@@ -119,8 +120,10 @@ def test_censored_and_eval_rows_remain_in_request_denominator():
     values[0]["observations"][0]["status"] = "censored"
     values[1]["source_provenance"]["row"]["role"] = "test"
     accepted, ledger = mod.cohort(values, "a" * 64, "IC50")
-    assert len(accepted) == 58 and len(ledger) == 60
-    assert ledger[0]["reason"] == "endpoint_not_exact_observation"
+    # Reservation now propagates to the whole five-row identity group before
+    # reading even the censored row's observations. Every request stays visible.
+    assert len(accepted) == 55 and len(ledger) == 60
+    assert ledger[0]["reason"] == "reserved_identity_component"
     assert ledger[1]["reason"] == "evaluation_only_source"
 
 
@@ -183,7 +186,38 @@ def bundle(tmp_path):
             }
         )
     )
+    write_context(source, rows())
     return source
+
+
+def write_context(source, values, extra_nodes=()):
+    nodes = [components.normalized_node(row) for row in values] + list(extra_nodes)
+    for line, node in enumerate(nodes, 2):
+        origin = {"source_sha256": "f"*64, "source_member": "synthetic.tsv", "source_line": line}
+        node["source"] = origin
+        node["node_id"] = "source:" + components.digest(components.canonical(origin))
+    for row, node in zip(values, nodes):
+        row["identity_context_node_id"] = node["node_id"]
+        row["source_provenance"].update(node["source"])
+    (source/"records.jsonl").write_text("".join(intake.json_text(row)+"\n" for row in values))
+    (source/"identity-context.jsonl").write_text("".join(intake.json_text(node)+"\n" for node in nodes))
+    ids = {node["record_id"]: node["node_id"] for node in nodes}
+    ledger = [json.loads(line) for line in (source/"ledger.jsonl").read_text().splitlines()]
+    for entry in ledger:
+        entry["identity_context_node_id"] = ids[entry["record_id"]]
+    (source/"ledger.jsonl").write_text("".join(intake.json_text(entry)+"\n" for entry in ledger))
+    summary = json.loads((source/"summary.json").read_text())
+    summary.update(identity_context_sha256=intake.file_sha(source/"identity-context.jsonl"),
+                   identity_component_policy=components.POLICY,
+                   identity_component_implementation_sha256=intake.file_sha(Path(components.__file__)),
+                   identity_context_scope="entire declared synthetic metadata fixture",
+                   identity_context_source_rows=len(nodes), identity_context_external_rows=0,
+                   all_source_rows=len(nodes), source_sha256="f"*64,
+                   identity_context_source_nodes_sha256=components.node_set_sha(nodes),
+                   identity_context_external_nodes_sha256=components.node_set_sha([]),
+                   records_sha256=intake.file_sha(source/"records.jsonl"),
+                   ledger_sha256=intake.file_sha(source/"ledger.jsonl"))
+    (source/"summary.json").write_text(json.dumps(summary))
 
 
 def test_real_fit_saved_checkpoint_and_separate_loader_match(tmp_path):
@@ -261,6 +295,9 @@ def test_rejections_before_normalization_stay_in_model_request_denominator(tmp_p
     summary["ledger_sha256"] = intake.file_sha(source / "ledger.jsonl")
     summary["requested_target_rows"] = 61
     (source / "summary.json").write_text(json.dumps(summary))
+    rejected = components.node_from_raw({}, None, node_id="synthetic:rejected-node",
+                                        record_id="synthetic:rejected", ligand_id="")
+    write_context(source, rows(), [rejected])
     report = mod.run(
         input_dir=source,
         summary_sha256=intake.file_sha(source / "summary.json"),

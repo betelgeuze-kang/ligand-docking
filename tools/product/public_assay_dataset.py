@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from contextlib import contextmanager
+from functools import lru_cache
 import hashlib
 import io
 import json
@@ -21,6 +22,7 @@ from rdkit import Chem, rdBase
 from rdkit.Chem.Scaffolds import MurckoScaffold
 
 from tools.product.residual_evidence import declared_evaluation_only
+from tools.product import public_assay_components as components
 
 SCHEMA = "public_bindingdb_assay_development_v1"
 ENDPOINTS = ("Ki", "Kd", "IC50", "EC50")
@@ -309,6 +311,35 @@ def assay_index(
     }
 
 
+def assay_policy_index(mapping_path: Path, description_path: Path, ids: set[str]) -> dict:
+    """Scan every supplied source ID, retaining policy fields and origins only."""
+    links, markers = defaultdict(list), defaultdict(list)
+    mapping_sha, description_sha = file_sha(mapping_path), file_sha(description_path)
+    for line, row, member in tsv_records(mapping_path):
+        rid = row.get("REACTANT_SET_ID", "")
+        if rid not in ids:
+            continue
+        key = row["ENTRYID_ASSAYID"]
+        links[key].append(rid)
+        declarations = components.policy_declarations(row)
+        if any(declarations):
+            markers[rid].append({"source_sha256": mapping_sha, "source_member": member,
+                                 "source_line": line, "entry_assay_id": key,
+                                 "declarations": declarations})
+    for line, row, member in tsv_records(description_path):
+        key = row.get("ENTRYID", "") + "_" + row.get("ASSAYID", "")
+        if key not in links:
+            continue
+        declarations = components.policy_declarations(row)
+        if any(declarations):
+            marker = {"source_sha256": description_sha, "source_member": member,
+                      "source_line": line, "entry_assay_id": key,
+                      "declarations": declarations}
+            for rid in links[key]:
+                markers[rid].append(marker)
+    return dict(markers)
+
+
 def target_state_identity(row: dict[str, str]) -> dict:
     # PDB cross-reference lists are annotations, not a change of protein state.
     chain_fields = {
@@ -424,6 +455,7 @@ def build_dataset(
     assay_sha256: str,
     exclusions: dict,
     targets: set[str],
+    reserved_context: list[dict] | None = None,
 ) -> tuple[list[dict], list[dict], dict]:
     if not targets or not source_url.startswith("https://") or not release.strip():
         raise ValueError("missing_target_or_source_identity")
@@ -437,29 +469,64 @@ def build_dataset(
     candidates = []
     source_counts, archive_counts = Counter(), Counter()
     id_counts = Counter()
+    context, candidate_identities = [], {}
+    @lru_cache(maxsize=8192)
+    def metadata_identity(smiles):
+        try:
+            return chemical_identity(smiles)
+        except ValueError:
+            return None
     for line, row, member in tsv_records(source_path):
         archive_counts["all_source_rows"] += 1
         source_counts[row.get("Curation/DataSource", "")] += 1
         id_counts[row.get("BindingDB Reactant_set_id", "")] += 1
+        identity = metadata_identity(row.get("Ligand SMILES", ""))
+        placeholder = {"rdkit_inchikey": "", "canonical_isomeric_smiles_sha256": "",
+                       "connectivity_smiles_sha256": ""}
+        reason = exclusion_reason(row, identity or placeholder, exclusions)
+        origin = {"source_sha256": source_sha256, "source_member": member, "source_line": line}
+        node = components.node_from_raw(
+            row, identity, node_id="source:"+digest(json_text(origin)),
+            record_id="bindingdb:"+row.get("BindingDB Reactant_set_id", ""),
+            ligand_id="bindingdb:"+row["BindingDB MonomerID"] if row.get("BindingDB MonomerID") else "",
+            origin=origin, protected=reason.startswith("protected_"))
+        context.append(node)
         if target_accessions(row) & targets:
             candidates.append((line, row, member))
+            candidate_identities[line] = (identity, node)
+    metadata_identity.cache_clear()
+    joined_policies = assay_policy_index(mapping_path, assay_path, set(id_counts))
+    for node in context:
+        markers = joined_policies.get(node["record_id"].removeprefix("bindingdb:"), [])
+        node["joined_policy_sources"] = markers
+        node["policy_declarations"].extend(d for marker in markers for d in marker["declarations"])
+    source_context_count = len(context)
+    if any(not node.get("node_id", "").startswith("external:") for node in (reserved_context or [])):
+        raise ValueError("invalid_external_identity_context_node_id")
+    context.extend(reserved_context or [])
+    graph = components.component_index(context)
     admitted_identity = []
     ledger = []
     for line, row, member in candidates:
         rid = row.get("BindingDB Reactant_set_id", "")
-        reason, identity = "", None
+        identity, node = candidate_identities[line]
+        reason = ""
         if not rid.strip() or not row.get("BindingDB MonomerID", "").strip():
             reason = "missing_record_or_ligand_id"
         elif id_counts[rid] != 1:
             reason = "duplicate_record_id_all_occurrences_excluded"
         elif target_schema_rejection(row):
             reason = target_schema_rejection(row)
+        elif identity is None:
+            reason = "invalid_smiles"
         else:
-            try:
-                identity = chemical_identity(row.get("Ligand SMILES", ""))
-                reason = exclusion_reason(row, identity, exclusions)
-            except ValueError as exc:
-                reason = str(exc)
+            reason = exclusion_reason(row, identity, exclusions)
+        if not reason and any(declared_evaluation_only(declaration)
+                              for marker in node.get("joined_policy_sources", [])
+                              for declaration in marker["declarations"]):
+            reason = "evaluation_only_join_source"
+        if not reason and graph[node["node_id"]]["blocked"]:
+            reason = "reserved_identity_component"
         # Protected entries get identifiers/reasons only: no measured values,
         # raw row copies or assay text are emitted into the development data.
         entry = {
@@ -468,6 +535,8 @@ def build_dataset(
             "target_state_sha256": digest(json_text(target_state_identity(row))),
             "status": "excluded" if reason else "identity_screened",
             "reason": reason,
+            "identity_context_node_id": node["node_id"],
+            "identity_component_id": graph[node["node_id"]]["component_id"],
         }
         ledger.append(entry)
         if not reason:
@@ -502,6 +571,7 @@ def build_dataset(
             status="normalized", reason=";".join(normalized["admission_issues"])
         )
         records.append(normalized)
+        normalized["identity_context_node_id"] = entry["identity_context_node_id"]
     # Ordinary concurrent source changes invalidate the complete bundle before
     # publication. Hashes are identities, not source authenticity signatures.
     for path, expected in (
@@ -549,6 +619,16 @@ def build_dataset(
         "rdkit_version": rdBase.rdkitVersion,
         "scientific_validation": False,
         "customer_execution": False,
+        "identity_context": context,
+        "identity_component_policy": components.POLICY,
+        "identity_component_implementation_sha256": file_sha(Path(components.__file__)),
+        "identity_context_source_rows": source_context_count,
+        "identity_context_source_nodes_sha256": components.node_set_sha(context[:source_context_count]),
+        "identity_context_external_nodes_sha256": components.node_set_sha(context[source_context_count:]),
+        "identity_context_external_rows": len(reserved_context or []),
+        "identity_context_component_count": len({g["component_id"] for g in graph.values()}),
+        "identity_context_unresolved_chemical_rows": sum(not node["chemical_identity_available"] for node in context),
+        "identity_context_scope": "all supplied archive rows plus explicitly bound external metadata; includes other targets and excluded rows; no global or similarity-completeness claim",
         "scope": "public assay development intake; concentration endpoints remain distinct; no energy or pose labels",
     }
     return records, ledger, summary

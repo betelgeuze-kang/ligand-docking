@@ -9,7 +9,8 @@ energy correction, calibrated uncertainty, or a new molecular engine.
 `python -m tools.product.build_public_assay_development_dataset` consumes an
 already downloaded BindingDB TSV/ZIP, reaction-to-assay mapping, assay description
 file and an identity exclusion catalog. Each input requires its expected SHA-256.
-It writes a new directory with `records.jsonl`, `ledger.jsonl`, and `summary.json`.
+It writes a new directory with `records.jsonl`, `ledger.jsonl`,
+`identity-context.jsonl`, and `summary.json`.
 Existing output directories are rejected. It performs no network request.
 
 The source row, original role/split/evaluation declarations, source line/member,
@@ -58,6 +59,7 @@ This model predicts negative-log molar concentration for its exact endpoint,
 not affinity energy or molecular interaction information.
 
 Before fitting, the command writes the source-bound protocol and split IDs.
+The v2 model contract requires the shared metadata context described below.
 Connected components share a split whenever they share a DOI/PMID alias,
 Murcko scaffold, stereo-independent ligand identity, source ligand ID or
 InChIKey connectivity. Label-blind deficit assignment targets 70/15/15 percent;
@@ -79,6 +81,40 @@ The latter uses the predeclared median across retained assay measurements; it
 does not make heterogeneous assay conditions equivalent. Full-request recall is
 unavailable when excluded/missing/censored labels prevent its determination.
 
+## Metadata admission before target and endpoint selection
+
+`public_assay_components.py` is reused by the real importer and trainer. Every
+occurrence in the supplied TSV archive is a graph vertex, including other
+targets, duplicate IDs, invalid chemistry, rejected rows, and rows without an
+eligible endpoint. Metadata links are constructed before target/endpoint
+selection. Original policy fields and joined assay policy provenance are retained;
+calibration, development-test, protected, and unknown-policy components cannot
+be fit rows. A measured zero declaration is distinguished from an unknown value.
+This graph covers the supplied universe, not an inventory of every public or
+protected dataset. Missing chemistry and similarity coverage remain limitations.
+
+Optional `--reserved-context` and `--reserved-context-sha256` bind a separately
+prepared metadata-only JSONL input. It contains hashed identity links and original
+policy declarations with source hashes/member/line; observation values, assay
+text, coordinates, model output, and nested arbitrary payloads are not accepted.
+External nodes have `external:` identifiers. No external metadata file can grant
+training authorization or reinterpret an experimental endpoint as engine energy.
+
+The cache binds source and external node sets independently, checks every source
+occurrence and its origin-derived ID, and checks all normalized and excluded
+ledger entries before the trainer accesses endpoint observations. Duplicate node
+IDs and duplicate JSON keys fail. Sidecars without this contract require a fresh
+intake directory. This is consistency validation of an explicitly hash-bound
+universe; it is not a signed independent attestation of source completeness.
+
+The record schema stays `public_bindingdb_assay_development_v1`; its chemical and
+measurement meanings do not change. New training checkpoints use
+`public_assay_cheap_selector_ridge_v2` and pin the component implementation,
+context, target, endpoint, feature contract, and protocol. The existing product
+v1 shadow adapter remains separately pinned to its previously measured v1 model;
+it does not automatically accept v2 checkpoints. No new interaction residual or
+customer inference approval follows from this migration.
+
 ## First observed development run, 2026-09-08
 
 The source archive SHA-256 is
@@ -91,8 +127,12 @@ missing exact endpoints, ambiguous assay joins and scope failures remain recorde
 The first model uses one human BACE1 target state and IC50 only. Its denominator
 is 432 source rows, 390 normalized rows, 306 exact eligible endpoint rows and
 126 total excluded rows. The supported fraction is 70.83 percent. The 306 rows
-form 17 connected groups, split 214/47/45 rows (7/5/5 groups). No group crosses
-splits. The development test contains 45 unique chemical states.
+form 17 connected groups, split 214/47/45 rows (7/5/5 groups). No group crossed splits within those 306 selected rows. A later metadata audit
+including 2,343 normalized rows and all 507 BACE source occurrences found a
+component joining 60 fit, 4 calibration, and 2 development-test rows. The original
+results below are retained as observations; they do not satisfy this expanded
+independence criterion. The original development test contains 45 unique chemical
+states. No old split, coefficient, checkpoint, or prediction is rewritten.
 
 | Development-test observation | Fit-weighted mean baseline | Morgan Ridge |
 |---|---:|---:|
@@ -126,6 +166,34 @@ checkpoint SHA-256 is
 `f3334484f501c56f58be673b56abf3a1789ce97909855ae1097c86cee230cd16`.
 The dataset/model are local development artifacts and are not committed to Git.
 The new synthetic module/CLI controls pass 47 tests without protected data.
+
+## Observed full supplied-metadata intake, 2026-09-08
+
+A new directory was generated using the same pinned source archive and requested
+CDK2/BACE1 targets, plus the previously retained 2,343-row identity-only role
+projection. The graph contains all 93,712 source occurrences and 2,343 external
+metadata nodes in 710 components. Ninety-two external nodes declare calibration
+or development-test roles. Across the graph, 303 source occurrences have no
+resolved chemical identity; their available document/record links remain vertices.
+
+The full requested denominator stays 2,387: 1,568 reserved-component exclusions,
+42 duplicate occurrences and 2 invalid SMILES leave 775 normalized rows. Of these,
+593 have at least one eligible exact supported endpoint and 182 have no exact
+supported endpoint. This count is not a fit/calibration/test cohort size or a
+scientific accuracy result. Old data, split assignments and model files remain
+unchanged. The graph is more conservative than the original selected-row split;
+removed candidates are not an engine speedup.
+
+The final source-bound CLI completed with exit 0: 80.9960 s wall,
+80.8486 s CPU, 729,092 KiB process peak RSS.
+The process wrapper measured 81.3199 s including startup. One earlier run used a
+helper before a joined-external-policy correction; both runs have byte-identical
+records, ledger and context. Both raw executions are retained. These are two
+correctness executions on a shared CPU host, not a cold/warm or p50/p95 benchmark.
+No new public-data fit, molecular solver, GPU run or protected qualification was
+executed by this intake. The final local suite passes 141 unique synthetic tests,
+including actual intake/trainer consumers and observation-access traps; hosted
+CI status must be read on the current PR head separately.
 
 ## Offline assay-to-structure identity links
 
