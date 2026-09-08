@@ -127,6 +127,50 @@ checkpoint SHA-256 is
 The dataset/model are local development artifacts and are not committed to Git.
 The new synthetic module/CLI controls pass 47 tests without protected data.
 
+## Offline assay-to-structure identity links
+
+`tools.product.public_assay_structure_links.build_identity_links` consumes local
+SHA-256-bound files and performs no downloads. Its keyword-only API is:
+
+```python
+build_identity_links(records={"path": absolute_jsonl, "sha256": records_sha},
+                     edges=edges, split_assignments=None)
+```
+
+Each edge has exactly `record_id`, `pdb_id`, `entry`, `polymers`, `nonpolymers`
+and `components`. `entry` is a `{path, sha256}` RCSB core JSON binding or `None`;
+the other three metadata fields are lists of bindings. Supply every polymer and
+nonpolymer entity declared by that entry, and CCD metadata for every HET ID
+declared by the source row. Optional split JSON binds `records_sha256` and an
+`assignments` list of `{record_id, split, group}`; absent assignments remain
+unassigned and cannot grant training admission.
+
+The importer admission and original evaluation-only declarations remain gates.
+The consumer separately verifies target UniProt mapping, entry-to-nonpolymer CCD
+membership, and exact canonical isomeric chemistry. Matching a ligand alone
+cannot establish the target. Missing mappings and ambiguous CCD identities remain
+unknown; no unspecified stereochemistry or alternate protonation is resolved.
+It streams the normalized pool, retains selected row/hash/role/split provenance
+and every requested edge outcome, and rechecks declared paths and hashes after
+use. It does not reopen the original archive; that limitation is explicit in
+each source projection. Numeric assay labels and coordinates are not projected.
+
+On 2026-09-08, 14 public source rows declared 41 PDB edges. The source-bound
+consumer returned 6 `identity_link_only`, 34 rejected and 1 unknown. Rejections
+comprised 20 source-intake contract failures and 14 target-UniProt mismatches;
+the unknown edge lacked a polymer UniProt mapping. The six linked edges retain
+three existing calibration assignments, one fit assignment and two unassigned
+records. These are identity observations, not new fit admissions, assay-construct
+equivalence, validated coordinates, charge/force-field support or scientific
+validation. The ligand-only model and its checkpoint are unchanged.
+
+The exact-parent local regression passed 104 synthetic tests: 47 existing intake
+and selector controls plus 57 new identity-link controls. Three independent
+path-binding controls passed separately and are not added to that total. CI
+runs these three test modules and uploads their source, raw log and JUnit; it
+uses no public cohort downloads or protected data. The actual metadata audit is
+separate local evidence and is not a hosted scientific qualification.
+
 ## Next integration gates
 
 The cheap selector remains separate from the product's diagnostic score residual

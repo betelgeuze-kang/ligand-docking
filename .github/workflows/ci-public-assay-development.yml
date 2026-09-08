@@ -6,9 +6,11 @@ on:
       - 'tools/product/public_assay_dataset.py'
       - 'tools/product/build_public_assay_development_dataset.py'
       - 'tools/product/train_public_assay_selector.py'
+      - 'tools/product/public_assay_structure_links.py'
       - 'tools/product/residual_evidence.py'
       - 'tests/unit/test_public_assay_dataset.py'
       - 'tests/unit/test_public_assay_selector.py'
+      - 'tests/unit/test_public_assay_structure_links.py'
       - '.github/workflows/ci-public-assay-development.yml'
   push:
     branches: [main]
@@ -16,9 +18,11 @@ on:
       - 'tools/product/public_assay_dataset.py'
       - 'tools/product/build_public_assay_development_dataset.py'
       - 'tools/product/train_public_assay_selector.py'
+      - 'tools/product/public_assay_structure_links.py'
       - 'tools/product/residual_evidence.py'
       - 'tests/unit/test_public_assay_dataset.py'
       - 'tests/unit/test_public_assay_selector.py'
+      - 'tests/unit/test_public_assay_structure_links.py'
       - '.github/workflows/ci-public-assay-development.yml'
   workflow_dispatch:
 
@@ -55,8 +59,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check tools/product/public_assay_dataset.py tools/product/build_public_assay_development_dataset.py tools/product/train_public_assay_selector.py tests/unit/test_public_assay_dataset.py tests/unit/test_public_assay_selector.py
-          python -m pytest --confcutdir=tests/unit -W error -vv tests/unit/test_public_assay_dataset.py tests/unit/test_public_assay_selector.py --junitxml=public-assay-junit.xml 2>&1 | tee public-assay.log
+          python -m ruff check tools/product/public_assay_dataset.py tools/product/build_public_assay_development_dataset.py tools/product/train_public_assay_selector.py tools/product/public_assay_structure_links.py tests/unit/test_public_assay_dataset.py tests/unit/test_public_assay_selector.py tests/unit/test_public_assay_structure_links.py
+          python -m pytest --confcutdir=tests/unit -W error -vv tests/unit/test_public_assay_dataset.py tests/unit/test_public_assay_selector.py tests/unit/test_public_assay_structure_links.py --junitxml=public-assay-junit.xml 2>&1 | tee public-assay.log
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -67,7 +71,9 @@ jobs:
             tools/product/public_assay_dataset.py
             tools/product/build_public_assay_development_dataset.py
             tools/product/train_public_assay_selector.py
+            tools/product/public_assay_structure_links.py
             tests/unit/test_public_assay_dataset.py
             tests/unit/test_public_assay_selector.py
+            tests/unit/test_public_assay_structure_links.py
           if-no-files-found: error
           retention-days: 14
