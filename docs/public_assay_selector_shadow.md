@@ -1,7 +1,7 @@
-# Public BACE1 IC50 selector shadow
+# Versioned public IC50 selector shadow
 
 The canonical HTVS runner can optionally write predictions from the pinned public
-BACE1 selector before stage1 ligand mapping. The option defaults to disabled.
+BACE1 or CDK2/cyclin A2 selector before stage1 ligand mapping. The option defaults to disabled.
 It neither selects candidates nor changes mapping commands, ranking, stage2 skip
 routing, scores, or the downstream candidate denominator.
 
@@ -74,3 +74,49 @@ not establish that the entire runner is available in a minimal installed wheel.
 Synthetic contract tests and public inference parity establish software behavior;
 they do not establish prospective accuracy, acceleration, docking validity, or
 commercial readiness.
+
+
+## CDK2/cyclin A2 v2 compatibility migration
+
+The v1 bytes and producer binding above remain unchanged. A second exact checkpoint
+is registered for development shadow inference only:
+
+- checkpoint: `00b52d1a6b7e6b7b1c801585adcbca0c73ac57ffe7b8c000cdbc20ad38f1e4fd`
+- schema: `public_assay_cheap_selector_ridge_v2`
+- recorded target state: `52e47746dd4554dd346720ec0340848ab8e3a19adedf9c453c4d5557fe3576c6`
+- producer: `3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26`
+- training protocol: `d3a03b2fca25e290b5ad95fc53169dba910b1a4b5cafdff24149ab1b043d5743`
+- identity context: `f9882e243e973861844a6db119fde6263b77847e1517b1a8bbb9d513d52550ac`
+- component helper: `c21ea44055d60313eb8305f8f438a989b805748e98b90b010ebfce836b9ea29a`
+- policy: `all_supplied_metadata_components_before_target_endpoint_selection_v1`
+
+The producer source is PR #511 head `d40b32be85d92a8daab1d262aba06c6f0dd3acef`.
+Its graph includes all supplied archive rows, excluded and other-target bridges,
+and explicitly bound external metadata before target/endpoint selection. It does
+not claim a globally complete or similarity-complete exclusion inventory. V2
+requires its context/helper/policy fields; dropping them, borrowing the v1 schema,
+swapping the target/endpoint, or supplying unregistered bytes is rejected. The
+runtime imports no training producer or identity graph builder.
+
+This model used 190 as-reported IC50 measurements from the 723 requested rows for
+that recorded state: 131 fit, 28 calibration, and 31 development-test rows across
+8 identity components. Original ATP and assay conditions were retained; this is
+not a condition-specific assay model or a conversion to Ki, Kd, or potential energy.
+The 533 other requested rows remain accounted for and are not assumed negative.
+Calibration has only one component and no calibrated uncertainty claim is made.
+
+The fixed-seed, fixed-alpha Morgan ridge model did **not** improve the mean baseline:
+development RMSE was 1.343573 versus 0.993001, and selecting 7 of 31 unique chemical
+states recovered 4 of 23 positives versus the tied mean baseline's expected
+5.193548 hits. Positives were predeclared as pIC50 >= 6. These are retrospective
+in-scope development observations, not whole-request recall or prospective proof.
+No retraining or threshold tuning followed these outcomes. The model is registered
+so its actual predictions can be inspected, not as an accuracy approval.
+
+Use the existing CLI options with this checkpoint's path/hash and its recorded
+state in the CSV. Output schema `public_assay_selector_shadow_v1` is retained;
+additive `checkpoint_schema_version`, `evidence_kind=ai_prediction`, and
+`compatibility_registration_only=true` distinguish model provenance. The scope
+matches the successfully loaded model at both sidecar and model levels, and is
+null when no model was loaded. All ranking, customer, and calibration capabilities
+remain false. Existing scores and candidate ordering are not replaced.

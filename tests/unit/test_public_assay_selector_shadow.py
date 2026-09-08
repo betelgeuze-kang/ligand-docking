@@ -226,3 +226,97 @@ def test_constructor_cannot_claim_registered_identity_for_forged_weights(tmp_pat
     forged['intercept'] = 999.0
     with pytest.raises((TypeError, ValueError)):
         shadow.PublicAssaySelectorShadow(forged, digest)
+
+
+# Fresh synthetic v2 compatibility controls; these are not assay training data.
+_V2_BINDING = {
+    "source_sha256": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+    "training_protocol_sha256": "d3a03b2fca25e290b5ad95fc53169dba910b1a4b5cafdff24149ab1b043d5743",
+    "target_state_sha256": "52e47746dd4554dd346720ec0340848ab8e3a19adedf9c453c4d5557fe3576c6",
+    "identity_context_sha256": "f9882e243e973861844a6db119fde6263b77847e1517b1a8bbb9d513d52550ac",
+    "identity_component_implementation_sha256": "c21ea44055d60313eb8305f8f438a989b805748e98b90b010ebfce836b9ea29a",
+    "identity_component_policy": "all_supplied_metadata_components_before_target_endpoint_selection_v1",
+    "rdkit_version": "2026.03.6", "endpoint": "IC50",
+    "prediction_quantity": "negative_log10_molar_IC50",
+}
+
+
+def _v2_checkpoint(tmp_path, monkeypatch, change=None):
+    binding = dict(_V2_BINDING, rdkit_version=rdBase.rdkitVersion)
+    payload = dict(binding, schema_version="public_assay_cheap_selector_ridge_v2",
+                   features=dict(shadow.FEATURES), coefficients=[.125] * 1024, intercept=0.,
+                   uncertainty_calibrated=False, product_ranking_enabled=False, customer_execution=False)
+    if change:
+        change(payload)
+    raw = json.dumps(payload).encode()
+    digest = hashlib.sha256(raw).hexdigest()
+    # Also runs against the old adapter, which must reject the new schema.
+    registry = dict(getattr(shadow, "_REGISTERED_V2", {}))
+    registry[digest] = binding
+    monkeypatch.setattr(shadow, "_REGISTERED_V2", registry, raising=False)
+    path = tmp_path / "synthetic-v2.json"
+    path.write_bytes(raw)
+    return path, digest
+
+
+def test_v2_registered_predictor_preserves_scope_context_and_nulls(tmp_path, monkeypatch):
+    path, digest = _v2_checkpoint(tmp_path, monkeypatch)
+    model = shadow.load_public_assay_selector(path, expected_sha256=digest)
+    rows = [_row(target_state_sha256=_V2_BINDING["target_state_sha256"]),
+            _row(), _row(target_state_sha256=_V2_BINDING["target_state_sha256"], is_ood=True)]
+    outputs = model.predict_rows(rows)
+    fp = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024, includeChirality=True)
+    expected = float(fp.GetFingerprintAsNumPy(Chem.MolFromSmiles("CCCCC")).sum()) * .125
+    assert [row["predicted_negative_log10_molar_IC50"] for row in outputs] == [expected, None, None]
+    assert model.metadata["identity_context_sha256"] == _V2_BINDING["identity_context_sha256"]
+    assert model.metadata["identity_component_policy"] == _V2_BINDING["identity_component_policy"]
+    assert model.metadata["prediction_scope"] == "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50"
+    assert model.metadata["evidence_kind"] == "ai_prediction"
+    assert model.metadata["compatibility_registration_only"] is True
+    assert model.metadata["scientific_validation"] is False
+    summary, output, _ = _sidecar(tmp_path, path, digest, [dict(row, is_ood=row.get("is_ood", "")) for row in rows])
+    assert (summary["requested_rows"], summary["evaluated_rows"], summary["unsupported_rows"]) == (3, 1, 2)
+    saved = json.loads(output.read_text())
+    assert saved["prediction_scope"] == saved["model"]["prediction_scope"]
+    assert saved["checkpoint_schema_version"] == "public_assay_cheap_selector_ridge_v2"
+    assert all(saved[key] is False for key in ("product_ranking_enabled", "customer_execution", "uncertainty_calibrated"))
+
+
+@pytest.mark.parametrize("key", [
+    "identity_context_sha256", "identity_component_implementation_sha256", "identity_component_policy",
+    "source_sha256", "training_protocol_sha256", "target_state_sha256", "endpoint", "prediction_quantity",
+])
+@pytest.mark.parametrize("mutation", ["missing", "changed"])
+def test_v2_migration_requires_exact_context_and_state(tmp_path, monkeypatch, key, mutation):
+    def change(payload):
+        if mutation == "missing":
+            payload.pop(key)
+        else:
+            payload[key] = "incompatible"
+    path, digest = _v2_checkpoint(tmp_path, monkeypatch, change)
+    for construct in (lambda: shadow.load_public_assay_selector(path, expected_sha256=digest),
+                      lambda: shadow.PublicAssaySelectorShadow(path, digest)):
+        with pytest.raises(shadow.SelectorContractError, match="schema_keys_mismatch|binding_mismatch"):
+            construct()
+
+
+@pytest.mark.parametrize("change,reason", [
+    (lambda p: p.update(schema_version="public_assay_cheap_selector_ridge_v1"), "feature_contract_mismatch"),
+    (lambda p: p.update(features={}), "feature_contract_mismatch"),
+    (lambda p: p.update(intercept=float("nan")), "invalid_checkpoint_coefficients"),
+    (lambda p: p.update(product_ranking_enabled=True), "unsupported_checkpoint_capability"),
+    (lambda p: p.update(uncertainty_calibrated=True), "unsupported_checkpoint_capability"),
+    (lambda p: p.update(customer_execution=True), "unsupported_checkpoint_capability"),
+])
+def test_v2_cannot_downgrade_or_promote_capability(tmp_path, monkeypatch, change, reason):
+    path, digest = _v2_checkpoint(tmp_path, monkeypatch, change)
+    with pytest.raises(shadow.SelectorContractError, match=reason):
+        shadow.PublicAssaySelectorShadow(path, digest)
+
+
+def test_unavailable_checkpoint_does_not_claim_a_target_scope(tmp_path, monkeypatch):
+    path, _ = _v2_checkpoint(tmp_path, monkeypatch)
+    summary, output, _ = _sidecar(tmp_path, path, "unregistered", [_row()])
+    assert summary["prediction_scope"] is None
+    assert summary["checkpoint_schema_version"] is None
+    assert json.loads(output.read_text())["rows"][0]["status"] == "unsupported"

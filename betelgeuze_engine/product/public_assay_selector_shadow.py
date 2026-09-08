@@ -1,4 +1,4 @@
-"""Pinned legacy public-assay selector compatibility, for pre-docking shadow only.
+"""Versioned public-assay selector compatibility, for pre-docking shadow only.
 
 No training tools are imported. Target identity is the caller's declaration;
 this adapter does not verify a receptor, an assay construct, or chemical OOD.
@@ -32,6 +32,20 @@ _APPROVED_V1 = {
         "prediction_quantity": "negative_log10_molar_IC50",
     },
 }
+# Compatibility registration is not scientific approval or a ranking promotion.
+# The CDK2/cyclin A2 development model did not improve its mean baseline.
+_REGISTERED_V2 = {
+    "00b52d1a6b7e6b7b1c801585adcbca0c73ac57ffe7b8c000cdbc20ad38f1e4fd": {
+        "source_sha256": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+        "training_protocol_sha256": "d3a03b2fca25e290b5ad95fc53169dba910b1a4b5cafdff24149ab1b043d5743",
+        "target_state_sha256": "52e47746dd4554dd346720ec0340848ab8e3a19adedf9c453c4d5557fe3576c6",
+        "identity_context_sha256": "f9882e243e973861844a6db119fde6263b77847e1517b1a8bbb9d513d52550ac",
+        "identity_component_implementation_sha256": "c21ea44055d60313eb8305f8f438a989b805748e98b90b010ebfce836b9ea29a",
+        "identity_component_policy": "all_supplied_metadata_components_before_target_endpoint_selection_v1",
+        "rdkit_version": "2026.03.6", "endpoint": "IC50",
+        "prediction_quantity": "negative_log10_molar_IC50",
+    },
+}
 
 
 class SelectorContractError(ValueError):
@@ -55,7 +69,18 @@ def _number(value: Any) -> bool:
     return type(value) in (int, float) and math.isfinite(value)
 
 
-def _contract() -> dict[str, Any]:
+def _registration(checkpoint_sha256: str) -> tuple[str, dict[str, Any]]:
+    for version, registry in (("v1", _APPROVED_V1), ("v2", _REGISTERED_V2)):
+        if checkpoint_sha256 in registry:
+            return f"public_assay_cheap_selector_ridge_{version}", registry[checkpoint_sha256]
+    raise SelectorContractError("unregistered_checkpoint_sha256")
+
+
+def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
+    scopes = {
+        "public_assay_cheap_selector_ridge_v1": "BACE1_exact_recorded_state_mixed_assay_conditions_IC50",
+        "public_assay_cheap_selector_ridge_v2": "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50",
+    }
     return {
         "schema_version": ADAPTER_SCHEMA,
         "runtime_adapter_sha256": _sha(Path(__file__).read_bytes()),
@@ -64,7 +89,10 @@ def _contract() -> dict[str, Any]:
         "uncertainty": None, "ood_status": "not_assessed",
         "target_identity_basis": "caller_declared_original_assay_record_state",
         "receptor_or_assay_construct_verified": False,
-        "prediction_scope": "BACE1_exact_recorded_state_mixed_assay_conditions_IC50",
+        "checkpoint_schema_version": checkpoint_schema,
+        "prediction_scope": scopes.get(checkpoint_schema),
+        "evidence_kind": "ai_prediction", "scientific_validation": False,
+        "compatibility_registration_only": True,
         "physical_energy_prediction": False,
     }
 
@@ -81,8 +109,9 @@ class PublicAssaySelectorShadow:
             radius=2, fpSize=1024, includeChirality=True)
         self._coefficients = np.asarray(payload["coefficients"], dtype=np.float64)
         self._intercept = float(payload["intercept"])
-        self.metadata = {**_contract(), "checkpoint_sha256": checkpoint_sha256,
-                         **{key: payload[key] for key in _APPROVED_V1[checkpoint_sha256]},
+        schema, binding = _registration(checkpoint_sha256)
+        self.metadata = {**_contract(schema), "checkpoint_sha256": checkpoint_sha256,
+                         **{key: payload[key] for key in binding},
                          "features": dict(FEATURES)}
 
     def _fingerprint(self, row: Mapping[str, Any]):
@@ -143,18 +172,16 @@ class PublicAssaySelectorShadow:
 
 def _read_validated_payload(path: str | Path, *, expected_sha256: str) -> dict[str, Any]:
     """Load only the registered checkpoint bytes, without importing their producer."""
-    if expected_sha256 not in _APPROVED_V1:
-        raise SelectorContractError("unregistered_checkpoint_sha256")
+    schema, binding = _registration(expected_sha256)
     raw = Path(path).read_bytes()
     if _sha(raw) != expected_sha256:
         raise SelectorContractError("checkpoint_sha256_mismatch")
     payload = json.loads(raw, object_pairs_hook=_strict_object)
-    binding = _APPROVED_V1[expected_sha256]
     required = set(binding) | {"schema_version", "features", "coefficients", "intercept",
                                "uncertainty_calibrated", "product_ranking_enabled", "customer_execution"}
     if not isinstance(payload, dict) or set(payload) != required:
         raise SelectorContractError("checkpoint_schema_keys_mismatch")
-    if payload["schema_version"] != "public_assay_cheap_selector_ridge_v1" or payload["features"] != FEATURES:
+    if payload["schema_version"] != schema or payload["features"] != FEATURES:
         raise SelectorContractError("checkpoint_feature_contract_mismatch")
     for key, expected in binding.items():
         if payload[key] != expected:
@@ -219,6 +246,7 @@ def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_
             result.update(requested_rows=len(rows), unsupported_rows=len(rows))
             try:
                 model = load_public_assay_selector(checkpoint, expected_sha256=checkpoint_sha256)
+                result.update(_contract(model.metadata["checkpoint_schema_version"]))
                 result["model"] = model.metadata
                 valid_indices = [i for i, values in enumerate(cells) if schema_ok and len(values) == len(header)]
                 predictions = model.predict_rows([rows[i] for i in valid_indices])

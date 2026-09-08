@@ -1,4 +1,6 @@
 """Canonical HTVS entrypoint interception; no child molecular commands execute."""
+import pytest
+
 from betelgeuze_engine.product.runners import htvs_pipeline as pipeline
 
 
@@ -13,20 +15,22 @@ def test_public_assay_shadow_cli_is_explicit_and_default_disabled():
     assert args.public_assay_shadow_checkpoint_sha256 == 'a' * 64
 
 
-def test_actual_entrypoint_writes_shadow_before_unchanged_mapping_command(tmp_path, monkeypatch):
+@pytest.mark.parametrize("version", ["v1", "v2"])
+def test_actual_entrypoint_writes_shadow_before_unchanged_mapping_command(tmp_path, monkeypatch, version):
     import csv
     import hashlib
     import json
     from rdkit import rdBase
     from betelgeuze_engine.product import public_assay_selector_shadow as shadow
 
-    binding = dict(next(iter(shadow._APPROVED_V1.values())), rdkit_version=rdBase.rdkitVersion)
-    payload = dict(binding, schema_version='public_assay_cheap_selector_ridge_v1',
+    registry = shadow._APPROVED_V1 if version == "v1" else shadow._REGISTERED_V2
+    binding = dict(next(iter(registry.values())), rdkit_version=rdBase.rdkitVersion)
+    payload = dict(binding, schema_version=f'public_assay_cheap_selector_ridge_{version}',
                    features=shadow.FEATURES, coefficients=[0.] * 1024, intercept=2.5,
                    uncertainty_calibrated=False, product_ranking_enabled=False, customer_execution=False)
     raw = json.dumps(payload).encode()
     digest = hashlib.sha256(raw).hexdigest()
-    monkeypatch.setitem(shadow._APPROVED_V1, digest, binding)
+    monkeypatch.setitem(registry, digest, binding)
     checkpoint = tmp_path / 'synthetic.json'
     checkpoint.write_bytes(raw)
     requests = tmp_path / 'requests.csv'
