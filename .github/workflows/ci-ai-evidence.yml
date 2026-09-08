@@ -15,6 +15,7 @@ on:
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
       - 'tests/unit/test_residual_input_review_followups.py'
+      - 'tests/unit/test_residual_training_cache_binding.py'
       - 'tools/product/build_residual_production_supervised_dataset.py'
       - 'tools/product/residual_evidence.py'
       - 'tools/builder_table_utils.py'
@@ -37,6 +38,7 @@ on:
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
       - 'tests/unit/test_residual_input_review_followups.py'
+      - 'tests/unit/test_residual_training_cache_binding.py'
       - 'tools/product/build_residual_production_supervised_dataset.py'
       - 'tools/product/residual_evidence.py'
       - 'tools/builder_table_utils.py'
@@ -90,6 +92,7 @@ jobs:
             tests/unit/test_train_residual_production_score_model.py \
             tests/unit/test_residual_training_integrity.py \
             tests/unit/test_residual_input_review_followups.py \
+            tests/unit/test_residual_training_cache_binding.py \
             tests/unit/test_csv_bom_whitespace.py \
             tests/unit/test_build_residual_production_supervised_dataset.py \
             tests/unit/test_residual_evidence_pairs.py \
@@ -119,6 +122,7 @@ jobs:
             tests/unit/test_train_residual_production_score_model.py
             tests/unit/test_residual_training_integrity.py
             tests/unit/test_residual_input_review_followups.py
+            tests/unit/test_residual_training_cache_binding.py
             tests/unit/test_csv_bom_whitespace.py
           if-no-files-found: error
           retention-days: 7
