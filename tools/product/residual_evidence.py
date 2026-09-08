@@ -149,11 +149,19 @@ def declared_evaluation_only(row: dict[str, Any]) -> bool:
 
 def score_reference_rejection(row: dict[str, Any]) -> str:
     """Do not subtract a declared assay/physical endpoint from a composite score."""
-    incompatible = {"ic50", "ki", "kd", "potential_energy", "experimental_label", "experimental"}
+    assay_endpoints = {"ic50", "ki", "kd", "ec50"}
+    incompatible = {"potential_energy", "experimental_label", "experimental", *assay_endpoints,
+                    *("p" + endpoint for endpoint in assay_endpoints),
+                    *("negative_log10_molar_" + endpoint for endpoint in assay_endpoints)}
+    declarations = {"reference_label_kind", "reference_quantity", "reference_evidence_kind",
+                    "label_evidence_kind", "evidence_kind", "endpoint", "declared_endpoint"}
     sources = [row, *(record["row"] for record in provenance_records(row))]
     for source in sources:
-        for key in ("reference_label_kind", "reference_quantity", "reference_evidence_kind", "label_evidence_kind"):
-            if str(source.get(key, "")).strip().casefold() in incompatible:
+        # Generic assay exports need not use residual-specific column names.
+        # Inspect every original declaration, including conflicting aliases.
+        for key, value in source.items():
+            if (str(key).strip().casefold() in declarations
+                    and str(value).strip().casefold() in incompatible):
                 return "incompatible_score_reference_semantics"
     return ""
 

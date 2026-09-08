@@ -16,7 +16,8 @@ from typing import Any
 
 from tools.product.residual_evidence import (
     IDENTITY_FIELDS, PROVENANCE_FIELD, REFINE_JOIN_CONTRACT, _sha, declared_evaluation_only, merge_source_provenance,
-    first_numeric_observation, require_complete_csv_row, source_provenance_json, validated_csv_fieldnames,
+    first_numeric_observation, require_complete_csv_row, score_reference_rejection,
+    source_provenance_json, validated_csv_fieldnames,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -262,8 +263,12 @@ def _apply_refine_meta(row: dict[str, Any], meta: dict[str, Any], join_method: s
             row["refine_tier_join_status"] = "rejected_identity_mismatch:" + key
             return False
     row["refine_tier_identity_status"] = "declared_identity_matched" if identity_complete else "unverified_missing_identity"
-    if row["refine_tier_evidence_kind"].casefold() in {"experimental", "experimental_label", "ai_prediction", "heuristic"}:
+    if row["refine_tier_evidence_kind"].strip().casefold() in {"experimental", "experimental_label", "ai_prediction", "heuristic"}:
         row["refine_tier_join_status"] = "rejected_incompatible_refine_evidence_kind"
+        return False
+    reference_rejection = score_reference_rejection(row)
+    if reference_rejection:
+        row["refine_tier_join_status"] = "rejected_" + reference_rejection
         return False
     if meta["value_status"] != "observed":
         row["refine_tier_join_status"] = meta["value_status"]

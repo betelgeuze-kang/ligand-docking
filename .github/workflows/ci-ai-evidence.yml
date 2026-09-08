@@ -10,6 +10,7 @@ on:
       - 'tools/product/run_refine_tier_residual_training_chain.py'
       - 'tools/product/build_refine_tier_residual_training_dataset.py'
       - 'tests/unit/test_refine_tier_residual_integrity.py'
+      - 'tests/unit/test_residual_assay_boundary.py'
       - 'tests/unit/test_run_refine_tier_residual_training_chain.py'
       - 'tests/unit/test_csv_bom_whitespace.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
@@ -33,6 +34,7 @@ on:
       - 'tools/product/run_refine_tier_residual_training_chain.py'
       - 'tools/product/build_refine_tier_residual_training_dataset.py'
       - 'tests/unit/test_refine_tier_residual_integrity.py'
+      - 'tests/unit/test_residual_assay_boundary.py'
       - 'tests/unit/test_run_refine_tier_residual_training_chain.py'
       - 'tests/unit/test_csv_bom_whitespace.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
@@ -97,6 +99,7 @@ jobs:
             tests/unit/test_build_residual_production_supervised_dataset.py \
             tests/unit/test_residual_evidence_pairs.py \
             tests/unit/test_refine_tier_residual_integrity.py \
+            tests/unit/test_residual_assay_boundary.py \
             tests/unit/test_run_refine_tier_residual_training_chain.py \
             --junitxml=ai-evidence-junit.xml 2>&1 | tee ai-evidence.log
       - name: Preserve exact test evidence
@@ -112,6 +115,7 @@ jobs:
             tools/product/run_refine_tier_residual_training_chain.py
             tools/product/build_refine_tier_residual_training_dataset.py
             tests/unit/test_refine_tier_residual_integrity.py
+            tests/unit/test_residual_assay_boundary.py
             tests/unit/test_run_refine_tier_residual_training_chain.py
             tools/builder_table_utils.py
             tools/product/builder_table_utils.py
