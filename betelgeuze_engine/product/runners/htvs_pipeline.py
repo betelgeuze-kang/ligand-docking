@@ -39,7 +39,9 @@ from tools.product.engine_refinement_config import (
 )
 from tools.product.four_bead_gate_evaluator import evaluate_four_bead_gate
 from tools.product.materialize_docking_htvs_request import materialize_from_docking_request
-from tools.product.merge_stage2_manifests import merge_stage2_manifests
+from tools.product.merge_stage2_manifests import (
+    manifest_publication_identity, merge_stage2_manifests, validate_stage2_manifest,
+)
 from tools.product.stage2_skip_inline_scorer import build_skip_inline_manifest
 from tools.product.stage2_skip_router import apply_stage2_skip_router
 
@@ -2527,7 +2529,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         )
         traj_queue_csv = queue_csv
         if os.path.exists(queue_csv):
-            qdf = pd.read_csv(queue_csv)
+            qdf = pd.read_csv(queue_csv, converters={"queue_id": str})
             if not qdf.empty:
                 family_hint = _infer_traj_prod_stage2_preset_family(args)
                 traj_rows, stage2_router_meta = apply_stage2_skip_router(
@@ -2716,6 +2718,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             stage2_router_meta.get("row_count", 0) > 0
             and stage2_router_meta.get("stage2_full_count") == 0
         )
+        manifest_before = (
+            manifest_publication_identity(stage2_traj_manifest_csv)
+            if "row_count" in stage2_router_meta and not all_stage2_rows_skipped else None
+        )
         if all_stage2_rows_skipped:
             rec_traj = {"ok": True, "skipped": True, "reason": "all_candidates_routed_inline",
                         "cmd": [], "cmd_str": "", "trajectory_row_count": 0}
@@ -2739,25 +2745,44 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 "artifacts": {"summary_json": f"{out_prefix}_summary.json"},
             }
             return _finalize_and_write(out_prefix, payload, args)
-        if not all_stage2_rows_skipped and stage2_skip_manifest_csv and os.path.exists(stage2_traj_manifest_csv):
+        if "row_count" in stage2_router_meta:
+            expected_traj = [row.get("queue_id") for row in stage2_router_meta["routed_rows"]
+                             if not row["stage2_skip_applied"]]
+            expected_skip = [row.get("queue_id") for row in stage2_router_meta["skipped_rows"]]
             try:
-                merged_meta = merge_stage2_manifests(
-                    stage2_traj_manifest_csv,
-                    stage2_skip_manifest_csv,
-                    out_csv=f"{stage2_traj_prefix}_merged_manifest.csv",
-                )
-                stage2_merged_manifest_csv = str(merged_meta.get("merged_manifest_csv", stage2_traj_manifest_csv))
+                if expected_traj:
+                    current = manifest_publication_identity(stage2_traj_manifest_csv)
+                    if current is None or current == manifest_before:
+                        raise ValueError("trajectory command did not publish a current manifest")
+                if expected_traj and expected_skip:
+                    merged_meta = merge_stage2_manifests(
+                        stage2_traj_manifest_csv, stage2_skip_manifest_csv,
+                        out_csv=f"{stage2_traj_prefix}_merged_manifest.csv",
+                        expected_traj_queue_ids=expected_traj, expected_skip_queue_ids=expected_skip,
+                    )
+                    stage2_merged_manifest_csv = merged_meta["merged_manifest_csv"]
+                else:
+                    selected = stage2_skip_manifest_csv if expected_skip else stage2_traj_manifest_csv
+                    merged_meta = validate_stage2_manifest(selected, expected_queue_ids=expected_skip or expected_traj)
+                    stage2_merged_manifest_csv = selected
+                    merged_meta.update(merged_manifest_csv=selected,
+                                       traj_manifest_csv="" if expected_skip else selected,
+                                       skip_manifest_csv=selected if expected_skip else "")
                 stage2_router_meta["merged_manifest"] = merged_meta
             except Exception as exc:
-                stage2_router_meta.setdefault("warnings", []).append(f"stage2_manifest_merge_failed:{exc}")
-        elif stage2_skip_manifest_csv and os.path.exists(stage2_skip_manifest_csv):
-            stage2_merged_manifest_csv = stage2_skip_manifest_csv
-            stage2_router_meta["merged_manifest"] = {
-                "merged_manifest_csv": stage2_skip_manifest_csv,
-                "row_count": int(_csv_rows_minus_header(stage2_skip_manifest_csv)),
-                "traj_manifest_csv": "",
-                "skip_manifest_csv": stage2_skip_manifest_csv,
-            }
+                failure = {"ok": False, "reason": str(exc), "error_code": type(exc).__name__,
+                           "requested_count": stage2_router_meta["row_count"],
+                           "not_forwarded_count": stage2_router_meta["row_count"],
+                           "expected_trajectory_count": len(expected_traj), "expected_inline_count": len(expected_skip)}
+                stage2_router_meta["manifest_validation"] = failure
+                rec_traj["stage2_router_meta"] = stage2_router_meta
+                payload = {"pass": False, "failed_stage": "stage2_manifest_validation",
+                           "stages": {"stage0_leakage_audit": rec0, "stage1_ligand_mapping": rec1,
+                                      "stage1_eval_positive_check": stage1_positive_check,
+                                      "stage2_trajectory_generation": rec_traj,
+                                      "stage2_manifest_validation": failure},
+                           "artifacts": {"summary_json": f"{out_prefix}_summary.json"}}
+                return _finalize_and_write(out_prefix, payload, args)
     elif not generated_trajectory_root:
         raise ValueError("trajectory source missing: set --trajectory-root or enable --run-trajectory-sim")
     if isinstance(rec_traj, dict):

@@ -4,18 +4,26 @@ on:
   pull_request:
     paths:
       - 'tools/product/stage2_skip_router.py'
+      - 'tools/product/merge_stage2_manifests.py'
+      - 'tools/product/generate_ligand_trajectory_batch.py'
+      - 'tools/generate_ligand_trajectory_engine.py'
       - 'betelgeuze_engine/product/runners/htvs_pipeline.py'
       - 'tests/unit/test_stage2_skip_router_integrity.py'
       - 'tests/unit/test_htvs_stage2_router_integration.py'
+      - 'tests/unit/test_stage2_manifest_integrity.py'
       - 'tests/unit/test_run_ligand_htvs_pipeline_contract_claim.py'
       - '.github/workflows/ci-stage2-routing-integrity.yml'
   push:
     branches: [main]
     paths:
       - 'tools/product/stage2_skip_router.py'
+      - 'tools/product/merge_stage2_manifests.py'
+      - 'tools/product/generate_ligand_trajectory_batch.py'
+      - 'tools/generate_ligand_trajectory_engine.py'
       - 'betelgeuze_engine/product/runners/htvs_pipeline.py'
       - 'tests/unit/test_stage2_skip_router_integrity.py'
       - 'tests/unit/test_htvs_stage2_router_integration.py'
+      - 'tests/unit/test_stage2_manifest_integrity.py'
       - 'tests/unit/test_run_ligand_htvs_pipeline_contract_claim.py'
       - '.github/workflows/ci-stage2-routing-integrity.yml'
   workflow_dispatch:
@@ -62,6 +70,7 @@ jobs:
           python -m pytest --confcutdir=tests/unit -W error -vv \
             tests/unit/test_stage2_skip_router_integrity.py \
             tests/unit/test_htvs_stage2_router_integration.py \
+            tests/unit/test_stage2_manifest_integrity.py \
             --junitxml=stage2-routing-junit.xml 2>&1 | tee stage2-routing.log
           python -m pytest --confcutdir=tests/unit -W error -vv \
             tests/unit/test_run_ligand_htvs_pipeline_contract_claim.py \
@@ -78,9 +87,13 @@ jobs:
             stage2-consumer-regression.log
             stage2-consumer-regression-junit.xml
             tools/product/stage2_skip_router.py
+            tools/product/merge_stage2_manifests.py
+            tools/product/generate_ligand_trajectory_batch.py
+            tools/generate_ligand_trajectory_engine.py
             betelgeuze_engine/product/runners/htvs_pipeline.py
             tests/unit/test_stage2_skip_router_integrity.py
             tests/unit/test_htvs_stage2_router_integration.py
+            tests/unit/test_stage2_manifest_integrity.py
             tests/unit/test_run_ligand_htvs_pipeline_contract_claim.py
           if-no-files-found: error
           retention-days: 7

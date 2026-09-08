@@ -20,7 +20,8 @@ def _row(queue_id, **overrides):
     return row
 
 
-def _run_synthetic_consumer(tmp_path, monkeypatch, rows, options=(), stale_manifest=False):
+def _run_synthetic_consumer(tmp_path, monkeypatch, rows, options=(), stale_manifest=False,
+                            manifest_defect=None, raw_payload=False):
     prefix = tmp_path / "synthetic"
     args = mod.build_parser().parse_args([
         "--out-prefix", str(prefix), "--targets", "synthetic_target", "--no-single-instance",
@@ -42,9 +43,15 @@ def _run_synthetic_consumer(tmp_path, monkeypatch, rows, options=(), stale_manif
             pd.DataFrame(rows).to_csv(value(cmd, "--out-queue-csv"), index=False)
             return {"ok": True, "synthetic_stub": True}
         if cmd[1] == "tools/product/generate_ligand_trajectory_batch.py":
-            queue = pd.read_csv(value(cmd, "--queue-csv"))
+            queue = pd.read_csv(value(cmd, "--queue-csv"), converters={"queue_id": str})
             trajectory_ids.extend(queue["queue_id"].tolist())
-            queue[["queue_id"]].to_csv(value(cmd, "--out-manifest-csv"), index=False)
+            manifest = queue[["queue_id"]]
+            if manifest_defect == "partial":
+                manifest = manifest.iloc[:0]
+            elif manifest_defect == "duplicate":
+                manifest = pd.concat([manifest, manifest], ignore_index=True)
+            if manifest_defect != "missing":
+                manifest.to_csv(value(cmd, "--out-manifest-csv"), index=False)
             return {"ok": True, "synthetic_stub": True}
         assert cmd[1] == "tools/product/run_ligand_residual_meta_cycle.py", cmd
         # Stop at the next orchestration boundary before any training or scoring.
@@ -60,6 +67,8 @@ def _run_synthetic_consumer(tmp_path, monkeypatch, rows, options=(), stale_manif
     monkeypatch.setattr(mod, "build_skip_inline_manifest", fake_inline)
     monkeypatch.setattr(mod, "_finalize_and_write", lambda _prefix, payload, _args: payload)
     payload = mod.run_pipeline(args)
+    if raw_payload:
+        return payload, child_commands
     assert payload["failed_stage"] == "stage2_residual_meta"
     assert payload["stages"]["stage2_residual_meta"]["synthetic_stop"] is True
     trajectory = payload["stages"]["stage2_trajectory_generation"]
@@ -144,3 +153,50 @@ def test_all_skipped_sla_never_reads_stale_trajectory_telemetry(tmp_path, monkey
     assert "traj_stage2_engine_summary" not in summary
     assert "traj_stage2_engine_mean_sim_frames_count" not in summary
     assert summary["queue_rate_stage2_rows_per_sec"] is None
+
+
+@pytest.mark.parametrize("defect", ["merge_exception", "missing", "partial", "duplicate"])
+def test_incomplete_mixed_manifests_stop_before_meta_or_scoring(tmp_path, monkeypatch, defect):
+    if defect == "merge_exception":
+        def fail_merge(*_args, **_kwargs):
+            raise OSError("new synthetic merge failure")
+        monkeypatch.setattr(mod, "merge_stage2_manifests", fail_merge)
+    payload, commands = _run_synthetic_consumer(
+        tmp_path, monkeypatch, [_row("inline"), _row("trajectory", is_ood=True)],
+        manifest_defect=defect, raw_payload=True,
+    )
+    assert payload["pass"] is False
+    assert payload["failed_stage"] == "stage2_manifest_validation"
+    assert not any(cmd[1] in {"tools/product/run_ligand_residual_meta_cycle.py",
+                             "tools/run_ligand_backmapping_scoring.py"} for cmd in commands)
+    failure = payload["stages"]["stage2_manifest_validation"]
+    assert failure["requested_count"] == failure["not_forwarded_count"] == 2
+    assert failure["expected_trajectory_count"] == failure["expected_inline_count"] == 1
+    assert failure["reason"]
+
+
+def test_full_only_missing_manifest_cannot_use_prior_run(tmp_path, monkeypatch):
+    payload, commands = _run_synthetic_consumer(
+        tmp_path, monkeypatch, [_row("trajectory", is_ood=True)],
+        stale_manifest=True, manifest_defect="missing", raw_payload=True,
+    )
+    assert payload["failed_stage"] == "stage2_manifest_validation"
+    assert not any(cmd[1] == "tools/product/run_ligand_residual_meta_cycle.py" for cmd in commands)
+
+
+def test_matching_prior_ids_do_not_prove_current_manifest_publication(tmp_path, monkeypatch):
+    pd.DataFrame([{"queue_id": "trajectory"}]).to_csv(tmp_path / "synthetic_stage2_traj_manifest.csv", index=False)
+    payload, commands = _run_synthetic_consumer(
+        tmp_path, monkeypatch, [_row("trajectory", is_ood=True)],
+        manifest_defect="missing", raw_payload=True,
+    )
+    assert payload["failed_stage"] == "stage2_manifest_validation"
+    assert "did not publish" in payload["stages"]["stage2_manifest_validation"]["reason"]
+    assert not any(cmd[1] == "tools/product/run_ligand_residual_meta_cycle.py" for cmd in commands)
+
+
+@pytest.mark.parametrize("queue_id", ["001", "NA"])
+def test_consumer_keeps_literal_queue_ids(tmp_path, monkeypatch, queue_id):
+    trajectory, ids, _, _ = _run_synthetic_consumer(tmp_path, monkeypatch, [_row(queue_id, is_ood=True)])
+    assert ids == [queue_id]
+    assert trajectory["stage2_router_meta"]["merged_manifest"]["queue_coverage_validated"] is True
