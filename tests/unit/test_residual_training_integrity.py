@@ -385,7 +385,7 @@ def test_invalid_primary_rank_does_not_fall_back_to_valid_tail_alias():
 
 
 def test_router_mixed_batch_preserves_accounting_and_input():
-    rows = [{"id": "top", "rank_pct": 0.}, {"id": "unknown"}, {"id": "tail", "rank_pct": 1.}]
+    rows = [{"id": "top", "rank_pct": 0.}, {"id": "unknown"}, {"id": "tail", "rank_pct": 1., "affinity_hint": 0., "onsps_norm": 0., "mw_norm": 0.}]
     before = [row.copy() for row in rows]
     selected, summary = apply_stage2_skip_router(rows)
     assert rows == before

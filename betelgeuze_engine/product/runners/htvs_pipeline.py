@@ -1181,7 +1181,13 @@ def _build_sla_summary(
         out["traj_prod_light_artifacts"] = op.get("light_artifacts")
         out["traj_prod_effective_writer_workers"] = op.get("effective_writer_workers")
         out["traj_prod_effective_writer_max_pending"] = op.get("effective_writer_max_pending")
-    stage2_engine = _traj_stage2_engine_telemetry(traj_stage2_summary_json)
+    all_stage2_rows_skipped = (
+        isinstance(stage2_traj, dict) and stage2_traj.get("reason") == "all_candidates_routed_inline"
+    )
+    # A skipped command did not refresh any prior artifact at this prefix.
+    stage2_engine = {} if all_stage2_rows_skipped else _traj_stage2_engine_telemetry(traj_stage2_summary_json)
+    if all_stage2_rows_skipped:
+        out["stage2_trajectory_skipped_reason"] = "all_candidates_routed_inline"
     if stage2_engine:
         out["traj_stage2_engine_summary"] = stage2_engine
         out["traj_stage2_summary_json_present"] = bool(stage2_engine.get("summary_json_present", False))
@@ -1765,6 +1771,8 @@ def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
         "stage3_residual_assist_mode": "stage3_residual_assist_mode",
         "stage3_hbond_onsps_weight": "stage3_hbond_onsps_weight",
         "stage2_skip_router_enabled": "stage2_skip_router_enabled",
+        "stage2_skip_fraction_target": "stage2_skip_fraction_target",
+        "stage2_skip_max_fraction": "stage2_skip_max_fraction",
         "stage3_force_residual_shortlist": "stage3_force_residual_shortlist",
         "run_physics_refinement": "run_physics_refinement",
         "physics_refinement_mode": "physics_refinement_mode",
@@ -1786,8 +1794,11 @@ def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
         "protein_sequence": "protein_sequence",
     }
     applied_keys: List[str] = []
+    explicit_router_keys = set(getattr(args, "_explicit_cli_dests", ())) & {
+        "stage2_skip_router_enabled", "stage2_skip_fraction_target", "stage2_skip_max_fraction",
+    }
     for src, dst in mapping.items():
-        if src in preset:
+        if src in preset and dst not in explicit_router_keys:
             setattr(args, dst, preset[src])
             applied_keys.append(dst)
     gate = preset.get("gate", {})
@@ -2515,21 +2526,23 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             else "tools/product/generate_ligand_trajectory_batch.py"
         )
         traj_queue_csv = queue_csv
-        if bool(getattr(args, "stage2_skip_router_enabled", True)) and os.path.exists(queue_csv):
+        if os.path.exists(queue_csv):
             qdf = pd.read_csv(queue_csv)
             if not qdf.empty:
                 family_hint = _infer_traj_prod_stage2_preset_family(args)
                 traj_rows, stage2_router_meta = apply_stage2_skip_router(
                     qdf.to_dict(orient="records"),
                     family=str(getattr(args, "target_family", "") or family_hint),
+                    enabled=getattr(args, "stage2_skip_router_enabled", True),
+                    skip_fraction_target=getattr(args, "stage2_skip_fraction_target", None),
+                    max_skip_fraction=getattr(args, "stage2_skip_max_fraction", None),
                 )
                 routed_csv = f"{stage2_traj_prefix}_routed_queue.csv"
-                pd.DataFrame(traj_rows if traj_rows else qdf.to_dict(orient="records")).to_csv(
-                    routed_csv, index=False
-                )
+                routed_columns = list(stage2_router_meta["routed_rows"][0])
+                pd.DataFrame(traj_rows, columns=routed_columns).to_csv(routed_csv, index=False)
                 traj_queue_csv = routed_csv
                 stage2_router_meta["routed_queue_csv"] = routed_csv
-                stage2_router_meta["enabled"] = True
+                stage2_router_meta["enabled"] = stage2_router_meta["router_enabled"]
                 skipped_rows = list(stage2_router_meta.get("skipped_rows", []) or [])
                 if skipped_rows:
                     stage2_skip_manifest_csv = f"{stage2_traj_prefix}_skip_manifest.csv"
@@ -2699,7 +2712,15 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 else "--no-abort-on-cpu-backend"
             )
         traj_cmd.append("--fail-on-missing-native" if bool(args.require_native_path) else "--no-fail-on-missing-native")
-        rec_traj = _run_cmd(traj_cmd)
+        all_stage2_rows_skipped = (
+            stage2_router_meta.get("row_count", 0) > 0
+            and stage2_router_meta.get("stage2_full_count") == 0
+        )
+        if all_stage2_rows_skipped:
+            rec_traj = {"ok": True, "skipped": True, "reason": "all_candidates_routed_inline",
+                        "cmd": [], "cmd_str": "", "trajectory_row_count": 0}
+        else:
+            rec_traj = _run_cmd(traj_cmd)
         if isinstance(rec_traj, dict):
             rec_traj["traj_stage2_settings"] = traj_stage2_settings
             rec_traj["traj_stage2_preset_diagnostics"] = traj_stage2_diag
@@ -2718,7 +2739,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 "artifacts": {"summary_json": f"{out_prefix}_summary.json"},
             }
             return _finalize_and_write(out_prefix, payload, args)
-        if stage2_skip_manifest_csv and os.path.exists(stage2_traj_manifest_csv):
+        if not all_stage2_rows_skipped and stage2_skip_manifest_csv and os.path.exists(stage2_traj_manifest_csv):
             try:
                 merged_meta = merge_stage2_manifests(
                     stage2_traj_manifest_csv,
@@ -2743,7 +2764,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         rec_traj.setdefault("traj_stage2_settings", traj_stage2_settings)
         rec_traj.setdefault("traj_stage2_preset_diagnostics", traj_stage2_diag)
         rec_traj.setdefault("traj_prod", traj_prod_summary)
-        if stage2_router_meta.get("enabled"):
+        if "row_count" in stage2_router_meta:
             rec_traj["stage2_router_meta"] = stage2_router_meta
 
     stage2_prefix = f"{out_prefix}_stage2"
@@ -4420,7 +4441,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             "ligand_json": ligand_json,
             "stage1_summary_json": stage1_summary,
             "trajectory_engine_mode": str(args.trajectory_engine_mode),
-            "stage2_trajectory_summary_json": f"{stage2_traj_prefix}_summary.json",
+            "stage2_trajectory_summary_json": (
+                "" if isinstance(rec_traj, dict) and rec_traj.get("reason") == "all_candidates_routed_inline"
+                else f"{stage2_traj_prefix}_summary.json"
+            ),
             "trajectory_root": str(generated_trajectory_root),
             "stage2_summary_json": f"{stage2_prefix}_summary.json",
             "stage3_summary_json": f"{stage3_prefix}_summary.json",
@@ -4485,7 +4509,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         f"- stage0_leakage_summary_json: `{payload['artifacts']['stage0_leakage_summary_json']}`",
         f"- trajectory_engine_mode: `{str(args.trajectory_engine_mode)}`",
         f"- trajectory_root: `{generated_trajectory_root}`",
-        f"- stage2_trajectory_summary_json: `{stage2_traj_prefix}_summary.json`",
+        f"- stage2_trajectory_summary_json: `{payload['artifacts']['stage2_trajectory_summary_json']}`",
         f"- stage2_summary_json: `{stage2_prefix}_summary.json`",
         f"- stage3_summary_json: `{stage3_prefix}_summary.json`",
         f"- stage3_scores_csv: `{stage3_prefix}_scores.csv`",
@@ -4939,6 +4963,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--engine-refinement-config", type=str, default="")
     p.add_argument("--protein-sequence", type=str, default="")
     p.add_argument("--stage2-skip-router-enabled", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--stage2-skip-fraction-target", type=float, default=None,
+                   help="Tail-rank eligibility target in [0, 1]; not a quota or hard cap.")
+    p.add_argument("--stage2-skip-max-fraction", type=float, default=None,
+                   help="Optional hard cap: skip at most floor(queue rows * fraction).")
     p.add_argument("--stage3-ligand-model", type=str, default="auto")
     p.add_argument("--stage3-onsps-4bead-cascade", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--stage3-two-pass-scoring", action=argparse.BooleanOptionalAction, default=True)
