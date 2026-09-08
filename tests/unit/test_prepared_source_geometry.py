@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from test_score_prepared_cross_interactions import _case, _prepared, _request, _run
-from test_v2_prepared_cross_interaction import _pair, _system as _separate_chains
+from tests.unit.test_score_prepared_cross_interactions import _case, _prepared, _request, _run
+from tests.unit.test_v2_prepared_cross_interaction import _pair, _system as _separate_chains
 from tools.product import score_prepared_cross_interactions as consumer
 
 
