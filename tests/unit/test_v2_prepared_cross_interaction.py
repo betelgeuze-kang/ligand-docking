@@ -658,3 +658,91 @@ def test_returned_document_mutation_does_not_affect_a_later_call_or_sources():
     for value in (expected, second):
         value.pop("cost")
     assert second == expected
+
+
+# Projection optimization controls use new synthetic constants only.
+def test_conservative_projection_removes_unrelated_slots_but_keeps_full_states(monkeypatch):
+    receptor = _system([[0., 0., 0.]] + [[1000. + 2*i, 0., 0.] for i in range(63)], [0.2]*64)
+    ligand = _system([[4., 0., 0.], [2000., 0., 0.]], [-0.3, -0.3])
+    state = receptor, ligand, _parameters(receptor), _parameters(ligand)
+    projected_counts = []
+    original = adapter.evaluate_reference_force_field
+    def observed(system, graph, parameters):
+        projected_counts.append(system.atom_count)
+        return original(system, graph, parameters)
+    monkeypatch.setattr(adapter, 'evaluate_reference_force_field', observed)
+    result = _evaluate(*state, pocket_center_angstrom=[1000., 0., 0.], pocket_radius_angstrom=1100.)
+    _assert_oracle(result, state)
+    assert projected_counts == [2]
+    accounting = result['pair_accounting']
+    assert accounting['requested_cross_pairs'] == 128 and accounting['kernel_tiles'] == 1
+    assert accounting['projection_compaction']['original_atom_slots'] == 66
+    assert accounting['projection_compaction']['projected_atom_slots'] == 2
+    assert accounting['projection_compaction']['omitted_outside_cube_atom_slots'] == 64
+    assert len(result['sources']['receptor']['nonbonded_parameters']) == 64
+    assert len(result['sources']['ligand']['nonbonded_parameters']) == 2
+    assert result['quantities']['receptor_cross_forces_kcal_per_mol_angstrom'][1:] == [[0.]*3]*63
+    assert result['quantities']['ligand_cross_forces_kcal_per_mol_angstrom'][1] == [0.]*3
+
+
+@pytest.mark.parametrize('distance', [math.nextafter(8., 0.), 8., math.nextafter(8., math.inf),
+                                     math.nextafter(10., 0.), 10., math.nextafter(10., math.inf)])
+def test_compaction_preserves_switch_and_cutoff_adjacent_pair_identity(distance):
+    receptor = _system([[0., 0., 0.], [1000., 0., 0.]], [0.2, 0.2])
+    ligand = _system([[distance, 0., 0.], [0., 4., 0.]], [-0.3, -0.3])
+    state = receptor, ligand, _parameters(receptor), _parameters(ligand)
+    result = _evaluate(*state)
+    _assert_oracle(result, state)
+    assert result['pair_accounting']['projection_compaction']['projected_atom_slots'] == 3
+
+
+def test_conservative_cube_can_retain_zero_interaction_slots_without_changing_spherical_cutoff():
+    receptor = _system([[0., 0., 0.], [9., 9., 9.]], [0.2, 0.2])
+    ligand = _system([[4., 0., 0.]], [-0.3])
+    state = receptor, ligand, _parameters(receptor), _parameters(ligand)
+    result = _evaluate(*state)
+    _assert_oracle(result, state)
+    assert result['pair_accounting']['projection_compaction']['projected_atom_slots'] == 3
+    assert result['pair_accounting']['within_declared_cutoff'] == 1
+
+
+@pytest.mark.parametrize('parameter', ['charge_e', 'sigma_angstrom', 'epsilon_kcal_per_mol'])
+def test_compaction_preserves_original_excluded_pair_numeric_rejection(parameter):
+    charges = [0.2, 1e200, 1e200] if parameter == 'charge_e' else [0.2]*3
+    receptor = _system([[0., 0., 0.], [100., 0., 0.], [101., 0., 0.]], charges)
+    ligand = _system([[4., 0., 0.]], [-0.3])
+    rp, lp = _parameters(receptor), _parameters(ligand)
+    if parameter != 'charge_e':
+        for row in rp[1:]:
+            row[parameter] = 1e200
+    with pytest.raises(ValueError, match='finite'):
+        _evaluate(receptor, ligand, rp, lp)
+
+
+def test_numeric_fallback_is_not_a_new_parameter_rejection():
+    receptor = _system([[0., 0., 0.], [100., 0., 0.]], [0.2, 1e200])
+    ligand = _system([[4., 0., 0.]], [-0.3])
+    result = _evaluate(receptor, ligand, _parameters(receptor), _parameters(ligand))
+    assert result['status'] == 'evaluated'
+    accounting = result['pair_accounting']['projection_compaction']
+    assert accounting['enabled'] is False
+    assert accounting['fallback'] == 'original_full_tiles_preserve_numeric_guards'
+    assert accounting['original_atom_slots'] == accounting['projected_atom_slots'] == 3
+
+
+def test_projection_keeps_original_far_coordinate_sum_overflow_rejection():
+    receptor = _system([[0.0, 0.0, 0.0], [3e307, 3e307, 3e307], [4e307, 3e307, 3e307]], [0.2, 0.2, 0.2])
+    ligand = _system([[4.0, 0.0, 0.0]], [-0.3])
+    with pytest.raises(ValueError, match="energy term must be finite"):
+        _evaluate(receptor, ligand, _parameters(receptor), _parameters(ligand))
+
+
+def test_large_finite_coordinates_use_original_projection_without_new_rejection():
+    receptor = _system([[0.0, 0.0, 0.0], [2e6, 0.0, 0.0]], [0.2, 0.2])
+    ligand = _system([[4.0, 0.0, 0.0]], [-0.3])
+    result = _evaluate(receptor, ligand, _parameters(receptor), _parameters(ligand))
+    assert result["status"] == "evaluated"
+    assert result["pair_accounting"]["projection_compaction"]["enabled"] is False
+    assert result["pair_accounting"]["projection_compaction"]["fallback"] == "original_full_tiles_preserve_numeric_guards"
+    assert result["pair_accounting"]["projection_compaction"]["projected_atom_slots"] == 3
+    assert result["sources"]["receptor"]["system_sha256"] == canonical_system_sha256(receptor)

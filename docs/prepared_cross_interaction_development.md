@@ -237,3 +237,113 @@ coverage, unchanged physical output, original numerical rejection, bounded
 display and unavailable capacity. Independent synthetic checks additionally
 exercise rotation, translation, atom permutation, remapped bond indices and
 the inclusive radius boundary. No protected molecular outcome is used.
+
+
+## Conservative mathematical projection compaction
+
+Within each original 64+64 tile that survives the existing exact cutoff cull,
+the adapter can omit a mathematical projection atom that lies outside every
+opposite-side coordinatewise cutoff cube. A conservative rounding margin keeps
+boundary atoms; the unchanged V2 radius graph decides the exact spherical pair
+set. Original tile iteration and source order remain fixed. Complete source
+states, source validation, all requested cross pairs and all source-indexed force
+components remain in the report. This reduces repeated projection/graph work,
+not the number of ligand candidates or the declared physical cutoff.
+
+The optimization has explicit numerical eligibility bounds: absolute source
+coordinates at most 1e6 Å, absolute charges/sigma/epsilon at most 100 in their
+declared units, dielectric in [1e-3, 1e3], and inverse screening length at most
+1e3 /Å. Inputs outside these bounds use the original full tile. These bounds do
+not reject an input or expand its physical applicability. They preserve original
+nonfinite-intermediate errors: the V2 kernel evaluates masked terms and forms a
+zero from the coordinate sum. Initial drafts hid errors from excluded extreme
+charges/LJ parameters and from very large finite coordinates. Fresh synthetic
+controls reproduced those failures; both drafts and their failed logs are
+retained, and the original path restores each error without weakening a guard.
+
+The additive `pair_accounting.projection_compaction` object names the algorithm,
+eligibility/fallback, original/projected atom slots and the omitted mathematical
+slots. Existing result schema, units, checkpoints and source identities retain
+their meaning. Strict validators must allow the added accounting object. This is
+not a cache or a batch API and does not supply strain, solvent, affinity, a
+learned residual, calibrated uncertainty or dynamics.
+
+### Latest source-reservation and molecular-state audit
+
+A newer complete metadata component graph contains 126,655 nodes. Under the
+existing conservative source/scaffold/document reservation policy, all 42 MCL1
+entries in the pinned OpenFF source now connect to a component containing 1,013
+reserved/protected nodes. An explicit witness is lig_27 → scaffold →
+ChEMBL activity 9585896 → document → ChEMBL activity 9582185 → scaffold →
+BindingDB record 42649 (`protected=true`). The former unblocked receipt is stale.
+These entries are not newly admitted for training, evaluation or benchmarking;
+previous observations are retained as historical engineering evidence. No
+protected molecular outcome is read by this metadata graph audit, and no
+reservation edge or original role is removed to obtain a split.
+
+The original paper's compound 60 links to PDB 4HW3 and CCD 19G, but the prepared
+carboxylate and the CCD neutral acid are distinct chemical states. The common
+4HW3 receptor does not make prepared lig_23/lig_26 poses their own experimental
+cocrystals. A different 6O6F source has a different paper and construct. These
+sources do not yet supply matched experimental pose/affinity labels for the
+current calculation. Original author text was inspected for these mappings;
+full text transmission and limited SAR-text exposure are disclosed in the audit.
+The current cost comparison consequently uses newly invented numerical states.
+
+### Measured synthetic costs of the final implementation
+
+The frozen sparse workload has 64, 512 or 2,048 source receptor atoms and 13
+ligand atoms; four receptor atoms per original tile are near the ligand and 60
+are far away. These are invented numerical constants, not protein chemistry or
+screening data. Each mode/size has three interleaved fresh processes, one first
+and two warm evaluations per process. All 54 full outputs retain all requested
+rows, source coordinates/parameters, forces and exact cutoff pairs; no failures,
+skips or timeouts occurred. Parent and final candidate energies/forces are
+exactly equal in these outputs. Independent scalar expressions agree within
+1.78e-15 kcal/mol and 2.23e-15 kcal/mol/Å under fixed 1e-8 tolerances.
+
+CPU float64, one Torch/BLAS thread on one shared host; no GPU or batch API was
+measured. Cold readiness includes process startup, manifest verification,
+imports, source construction, first evaluation and writing its complete output.
+Warm evaluation reuses canonical objects but still runs complete validation,
+guards, graph construction and physics; output serialization is separate.
+Percentiles are interpolated descriptive statistics from cold n=3 and warm n=6,
+not production tail-latency guarantees. OS caches/background load were not
+controlled. RSS is whole-child high-water memory, not incremental call memory.
+
+| Receptor atoms | Cold p50/p95 s, parent → final | Warm p50/p95 s, parent → final | Warm CPU p50 s, parent → final | Process peak RSS p50 KiB, parent → final |
+| ---: | --- | --- | --- | --- |
+| 64 | 1.382108/1.411117 → 1.620797/1.684108 | 0.075035/0.077941 → 0.024667/0.025186 | 0.074672 → 0.024602 | 535,096 → 533,600 |
+| 512 | 1.896424/1.899848 → 1.819672/1.829930 | 0.588846/0.603860 → 0.184844/0.206674 | 0.588684 → 0.184682 | 541,340 → 541,144 |
+| 2,048 | 3.846349/3.847871 → 2.548346/2.570817 | 2.326555/2.350847 → 0.707695/0.714727 | 2.325101 → 0.707630 | 565,536 → 565,132 |
+
+The smallest sparse cold case is slower despite lower warm evaluation cost;
+memory changes are small. Sparse warm improvement does not establish general
+molecular-engine acceleration, hit recovery or end-to-end product savings.
+An earlier candidate's 54 outputs are retained separately as historical evidence:
+a subsequent independent extreme-coordinate control exposed a guard regression,
+so all 18 processes were repeated against the corrected final source.
+
+Local final-source regression passes 305 tests with zero failures/errors/skips,
+including parser and subprocess consumer integration. An independent 56-control
+synthetic review passes separately. Neither is an external scientific reviewer
+or approval. The initial incomplete-snapshot test failure and all intermediate
+numeric-regression failures remain in the raw evidence; assertions and original
+V2 guards were not weakened. No checkpoint or physical score migration occurs.
+
+A separate dense follow-up was declared after inspecting sparse timings to test
+the cost when compaction retains every atom. All 832 pairs of its 64×13
+numerical state lie within cutoff; all 77 projection atom slots remain. Six
+processes and 18 complete outputs passed the same source, pair, energy and force
+checks, with zero failed/skipped/timeouts. This follow-up is reported separately
+and is not pooled with the earlier sparse experiment.
+
+- Cold readiness p50/p95 seconds: 1.405707/1.430831 → 1.699944/1.720087.
+- Warm evaluation p50/p95 seconds: 0.099477/0.101543 → 0.096478/0.097519.
+- Warm CPU p50/p95 seconds: 0.099407/0.101435 → 0.096318/0.097398.
+- Whole-child peak RSS p50/p95 KiB: 535,960/535,978.0 → 536,656/536,724.4.
+
+Dense warm times are close at this sample size; cold readiness is worse and
+the reason is unresolved. These measurements do not support a universal speedup
+or lower memory claim. Cache on/off, true batched evaluation, GPU/VRAM, actual
+admitted molecular workloads and quality at a fixed total budget remain unmeasured.

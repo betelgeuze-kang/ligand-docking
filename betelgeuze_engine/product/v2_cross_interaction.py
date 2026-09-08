@@ -223,6 +223,19 @@ def evaluate_prepared_cross_interaction(
     pairs = []
     blocks = 0
     outside = 0
+    original_projection_slots = 0
+    compact_projection_slots = 0
+    # The original kernel also computes masked/excluded intermediate terms.
+    # Keep the original full projections for numerically extreme inputs: removing
+    # an irrelevant atom must not hide an existing nonfinite-intermediate error.
+    # The coordinate bound also preserves the original zero-term coordinate-sum
+    # overflow rejection. These bounds affect optimization, not input admission.
+    compact_enabled = (bool((receptor.coordinates.abs() <= 1e6).all())
+                       and bool((ligand.coordinates.abs() <= 1e6).all())
+                       and 1e-3 <= config["dielectric"] <= 1e3
+                       and config["screening_kappa_per_angstrom"] <= 1e3
+                       and all(abs(p["charge_e"]) <= 100.0 and p["sigma_angstrom"] <= 100.0
+                               and p["epsilon_kcal_per_mol"] <= 100.0 for p in (*rp, *lp)))
     with torch.inference_mode(False), torch.enable_grad(), torch.autocast(device_type="cpu",enabled=False):
         for rstart in range(0,receptor.atom_count,TILE_ATOMS_PER_COMPONENT):
             ri=list(range(rstart,min(receptor.atom_count,rstart+TILE_ATOMS_PER_COMPONENT)))
@@ -230,17 +243,31 @@ def evaluate_prepared_cross_interaction(
                 li=list(range(lstart,min(ligand.atom_count,lstart+TILE_ATOMS_PER_COMPONENT)))
                 # Exact bounded distance cull, not a candidate omission. Cutoff is
                 # part of the declared physics model; at cutoff the switch is zero.
-                distances=torch.linalg.vector_norm(receptor.coordinates[0,ri,None]-ligand.coordinates[0,None,li],dim=-1)
+                offsets = receptor.coordinates[0,ri,None]-ligand.coordinates[0,None,li]
+                distances = torch.linalg.vector_norm(offsets, dim=-1)
                 if not bool((distances <= config["cutoff_angstrom"]).any()):
                     outside += 1
                     continue
-                energy,force,ids=_tile(receptor,ligand,ri,li,rp,lp,config)
+                # Full states passed admission above. Within this mathematical
+                # tile, an atom outside every opposite-side cutoff cube cannot
+                # contribute a cross pair. Keep a conservative rounding margin;
+                # the unchanged V2 graph still decides the exact spherical set.
+                active_ri, active_li = ri, li
+                if compact_enabled:
+                    cube = (offsets.abs() <= config["cutoff_angstrom"] * (1.0 + 1e-12)).all(dim=-1)
+                    active_ri = [i for i, keep in zip(ri, cube.any(dim=1).tolist()) if keep]
+                    active_li = [i for i, keep in zip(li, cube.any(dim=0).tolist()) if keep]
+                    if not active_ri or not active_li:
+                        raise PreparedInteractionError("surviving cross tile has no conservative projection")
+                original_projection_slots += len(ri) + len(li)
+                compact_projection_slots += len(active_ri) + len(active_li)
+                energy,force,ids=_tile(receptor,ligand,active_ri,active_li,rp,lp,config)
                 blocks += 1
                 pairs.extend(ids)
                 for name in values:
                     values[name].append(energy[name])
-                rforces[ri] += force[:len(ri)]
-                lforces[li] += force[len(ri):]
+                rforces[active_ri] += force[:len(active_ri)]
+                lforces[active_li] += force[len(active_ri):]
     AllAtomSystem.assert_integrity(receptor)
     AllAtomSystem.assert_integrity(ligand)
     if len(pairs) != len(set(pairs)):
@@ -277,6 +304,14 @@ def evaluate_prepared_cross_interaction(
                            "within_declared_cutoff":len(pairs),"cross_pair_indices":sorted(pairs),
                            "pair_indices_sha256":sha256_canonical(sorted(pairs)),
                            "kernel_tiles":blocks,"exact_outside_cutoff_tiles":outside,
+                           "projection_compaction": {"algorithm": "conservative_cross_cube_v1",
+                               "enabled": compact_enabled,
+                               "eligibility_scope": "optimization only: abs(coordinates)<=1e6 Angstrom; abs(charge),sigma,epsilon<=100; 1e-3<=dielectric<=1e3; kappa<=1e3",
+                               "fallback": None if compact_enabled else "original_full_tiles_preserve_numeric_guards",
+                               "original_atom_slots": original_projection_slots,
+                               "projected_atom_slots": compact_projection_slots,
+                               "omitted_outside_cube_atom_slots": original_projection_slots-compact_projection_slots,
+                               "scope": "mathematical projection work only; full sources and requested cross pairs retained"},
                            "receptor_atoms":receptor.atom_count,"ligand_atoms":ligand.atom_count},
         "cost":{"wall_seconds":time.perf_counter()-start,"cpu_seconds":time.process_time()-cpu,
                 "scope":"validation, canonical identity, bounded projection and V2 cross evaluation; startup/import/output excluded"},
