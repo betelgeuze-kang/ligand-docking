@@ -103,7 +103,8 @@ def main(argv=None) -> int:
     result["exit_code"] = exit_code
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x", encoding="utf-8") as output:
-        output.write(json.dumps(result, sort_keys=True, indent=2, allow_nan=False)+"\n")
+        json.dump(result, output, sort_keys=True, indent=2, allow_nan=False)
+        output.write("\n")
     print(json.dumps({"output": str(args.output), "exit_code": exit_code,
                       "denominator": result["denominator"]}, allow_nan=False))
     return exit_code

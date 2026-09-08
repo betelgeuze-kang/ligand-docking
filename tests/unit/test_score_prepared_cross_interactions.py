@@ -16,6 +16,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tracemalloc
+from types import SimpleNamespace
 
 import pytest
 
@@ -275,3 +277,179 @@ def test_prepared_reader_and_consumer_have_no_solver_import_or_invocation():
                 assert (node.module or "").split(".")[0] not in forbidden
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                 assert node.func.id not in {"exec", "eval", "__import__"}
+
+
+def _serialization_report(*, failed=False, unicode=False, many_values=False):
+    count = 32 if many_values else 2
+    rows = [{"request_index": i, "case_id": f"synthetic-{i}", "status": "evaluated",
+             "result": {"values": list(range(4096)) if many_values else [0.0, -0.0, 1e-30, 1e30, None],
+                        "metadata": {"text": 'escaped "text" and \\ and \n', "measured": False}}}
+            for i in range(count)]
+    if failed:
+        rows[-1] = {"request_index": count - 1, "case_id": "synthetic-failure", "status": "failed",
+                    "error_type": "SyntheticUnsupported", "reason": "explicit synthetic failure"}
+    if unicode:
+        rows[0]["result"]["metadata"]["text"] = "공개 개발 · café · ΔG · 😀"
+    return {"schema_version": "prepared_cross_interaction_report_v1", "rows": rows,
+            "denominator": {"requested": count, "evaluated": count - int(failed),
+                            "failed": int(failed), "skipped": 0},
+            "customer_execution": False, "scientifically_validated": False, "external_solver_called": False}
+
+
+def _fixed_report_main(monkeypatch, tmp_path, report):
+    request = tmp_path / "writer-request.json"
+    output = tmp_path / "writer-report.json"
+    request.write_text(json.dumps(_request([None])))
+    monkeypatch.setattr(consumer, "evaluate_request", lambda request: report)
+    monkeypatch.setattr(consumer, "time", SimpleNamespace(perf_counter=lambda: 123.0, process_time=lambda: 45.0))
+    monkeypatch.setattr(consumer, "platform", SimpleNamespace(platform=lambda: "synthetic fixed platform"))
+    monkeypatch.setattr(consumer, "resource", SimpleNamespace(RUSAGE_SELF=0,
+        getrusage=lambda who: SimpleNamespace(ru_maxrss=256)))
+    return request, output, ["--request", str(request), "--output", str(output)]
+
+
+@pytest.mark.parametrize("failed,unicode", [(False, False), (True, False), (False, True), (True, True)])
+def test_report_serialization_bytes_equal_legacy_for_same_emitted_object(monkeypatch, tmp_path, capsys, failed, unicode):
+    report = _serialization_report(failed=failed, unicode=unicode)
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    before = request.read_bytes()
+    code = consumer.main(argv)
+    # main enriches this same object with the actual, unmodified source SHA and
+    # fixed process observations; no other revision's provenance is fabricated.
+    legacy_bytes = (json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    assert output.read_bytes() == legacy_bytes
+    assert code == (2 if failed else 0)
+    assert report["consumer_source_sha256"] == hashlib.sha256(Path(consumer.__file__).read_bytes()).hexdigest()
+    assert request.read_bytes() == before
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["exit_code"] == code and summary["denominator"] == report["denominator"]
+
+
+class _DigestSink:
+    """Consume text without retaining the report or choosing encoder chunks."""
+    def __init__(self):
+        self.sha = hashlib.sha256()
+        self.bytes = 0
+        self.largest_write = 0
+
+    def write(self, text):
+        payload = text.encode("utf-8")
+        self.sha.update(payload)
+        self.bytes += len(payload)
+        self.largest_write = max(self.largest_write, len(payload))
+        return len(text)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def test_report_writer_does_not_materialize_aggregate_text(monkeypatch, tmp_path):
+    # Construct the retained producer object BEFORE tracing writer allocations.
+    # Many small fields are deliberate: this does not bound one giant string.
+    report = _serialization_report(many_values=True)
+    _, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    sink = _DigestSink()
+    original_open = Path.open
+
+    def open_output(path, mode="r", *args, **kwargs):
+        if path == output and mode == "x":
+            return sink
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_output)
+    assert not tracemalloc.is_tracing()
+    tracemalloc.start()
+    try:
+        code = consumer.main(argv)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    # The compatibility oracle is deliberately outside the measured interval.
+    legacy_bytes = (json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    assert code == 0
+    assert sink.bytes == len(legacy_bytes)
+    assert sink.sha.hexdigest() == hashlib.sha256(legacy_bytes).hexdigest()
+    observation = {"serialized_bytes": sink.bytes, "peak_additional_python_bytes": peak,
+                   "largest_write_bytes": sink.largest_write,
+                   "scope": "writer-only tracemalloc, prebuilt report, many small tokens; not whole-process RSS"}
+    (tmp_path / "writer-memory-observation.json").write_text(json.dumps(observation, indent=2) + "\n")
+    print(json.dumps(observation, sort_keys=True))
+    assert sink.bytes > 1024 * 1024
+    assert peak < 1024 * 1024
+    assert sink.largest_write < sink.bytes // 8
+
+
+def test_report_writer_late_nonfinite_error_has_no_success_summary(monkeypatch, tmp_path, capsys):
+    report = _serialization_report()
+    report["zz_invalid"] = float("nan")
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    before = request.read_bytes()
+    with pytest.raises(ValueError, match="JSON compliant"):
+        consumer.main(argv)
+    assert not capsys.readouterr().out
+    assert request.read_bytes() == before
+    # Neither an empty legacy file nor a streaming prefix is a valid report.
+    # Publication was already non-atomic; errors propagate rather than succeed.
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(output.read_text())
+
+
+def test_report_writer_io_error_propagates_without_success_or_source_change(monkeypatch, tmp_path, capsys):
+    report = _serialization_report()
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    before = request.read_bytes()
+    original_open = Path.open
+
+    class FailAfterPrefix:
+        def __init__(self, stream):
+            self.stream, self.remaining = stream, 30
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.stream.close()
+            return False
+
+        def write(self, text):
+            prefix = text[:self.remaining]
+            self.stream.write(prefix)
+            self.remaining -= len(prefix)
+            if len(prefix) < len(text):
+                raise OSError("synthetic output storage failure")
+            return len(text)
+
+    def open_output(path, mode="r", *args, **kwargs):
+        stream = original_open(path, mode, *args, **kwargs)
+        return FailAfterPrefix(stream) if path == output and mode == "x" else stream
+
+    monkeypatch.setattr(Path, "open", open_output)
+    with pytest.raises(OSError, match="synthetic output storage failure"):
+        consumer.main(argv)
+    assert not capsys.readouterr().out
+    assert request.read_bytes() == before
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(output.read_text())
+
+
+def test_report_writer_exclusive_open_keeps_racing_existing_output(monkeypatch, tmp_path, capsys):
+    report = _serialization_report()
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    before = request.read_bytes()
+    original_open = Path.open
+
+    def open_output(path, mode="r", *args, **kwargs):
+        if path == output and mode == "x":
+            with original_open(path, "x", encoding="utf-8") as competing:
+                competing.write("competing evidence\n")
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_output)
+    with pytest.raises(FileExistsError):
+        consumer.main(argv)
+    assert not capsys.readouterr().out
+    assert request.read_bytes() == before
+    assert output.read_bytes() == b"competing evidence\n"
