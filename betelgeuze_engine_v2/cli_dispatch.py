@@ -31,6 +31,7 @@ def _top_level_parser() -> argparse.ArgumentParser:
         ),
     )
     commands = parser.add_subparsers(dest="command")
+    commands.add_parser("evaluate-fixed-components", help="Join explicit components and evaluate a fixed pose.", add_help=False)
     commands.add_parser("evaluate-fixed-pose", help="Evaluate one explicit fixed pose on CPU.", add_help=False)
     commands.add_parser(
         "dock-canonical",
@@ -197,6 +198,9 @@ def _verify_bundle(argv: Sequence[str]) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] == "evaluate-fixed-components":
+        from .fixed_components_cli import main as fixed_components_main
+        return fixed_components_main(arguments[1:])
     if arguments and arguments[0] == "evaluate-fixed-pose":
         from .fixed_pose_cli import main as fixed_pose_main
         return fixed_pose_main(arguments[1:])

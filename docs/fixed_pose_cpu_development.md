@@ -92,6 +92,46 @@ Peak RSS/VRAM are unmeasured, and no speedup is claimed.
 
 ## Verification and remaining work
 
+### Separate receptor and ligand inputs
+
+`betelgeuze-engine-v2 evaluate-fixed-components --components components.json
+--pocket pocket.json --output evaluated.json` accepts two explicit canonical
+systems in their already shared coordinate frame. `components.json` has exactly
+six fields: `receptor_system`, `receptor_parameters`, `ligand_system`,
+`ligand_parameters`, `frame_declaration`, and `state_declarations`. Systems and
+parameters use the same documents described above. `state_declarations` uses the
+same four fields as the fixed-pose partition document. The frame declaration has
+exactly `coordinate_frame_id`, `receptor_coordinates_sha256`, and
+`ligand_coordinates_sha256`; each coordinate hash is the existing canonical
+coordinate fingerprint of its source system. The frame ID must match the pocket
+and any explicit frame ID in source metadata. This is a caller assertion; no
+coordinate registration is performed.
+
+The version 1 assembly adapter checks each original parameter topology hash,
+index range, bonded coverage and explicit charge before assigning combined
+indices. Receptor atoms precede ligand atoms; original atom, bond, residue and
+chain mappings, metadata and provenance are retained. Chain IDs receive `R:` or
+`L:` prefixes with their original IDs recorded. Coordinates are unchanged, and
+no atom, hydrogen, charge, parameter or covalent cross bond is inferred. The
+combined 2–256 atom limit and the existing fixed-pose admission checks still apply.
+
+Both sources must explicitly use identical parameter family/version, global
+nonbonded settings and applicability bounds. Original internal exclusions and
+pair scaling are remapped. Separate components cannot declare cross exceptions:
+this adapter explicitly assigns all cross pairs unit nonbonded scaling. Use the
+single canonical complex path for a supported explicit cross exception policy.
+The assembly-only API checks structural input contracts; its evaluation wrapper
+then applies the existing numerical admission checks and fixed-pose evaluator.
+
+Results retain both complete source documents and fingerprints, index mappings,
+frame declaration, the combined evaluated system and parameters, and the exact
+input byte hashes. This adds a versioned assembly record to the existing result;
+it does not migrate a checkpoint or reinterpret prior scores. Consumer cost
+includes input reading, assembly, validation and evaluation, and excludes import
+and output writing. No assembly speedup or chemical qualification is claimed.
+
+### Numerical controls
+
 New synthetic tests independently implement scalar LJ/screened-Coulomb and
 switch derivatives, check conservative forces and rigid transformations, remap
 atom order, preserve weak cross interactions beside large internal energies,
