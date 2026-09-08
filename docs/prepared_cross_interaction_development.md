@@ -290,60 +290,66 @@ current calculation. Original author text was inspected for these mappings;
 full text transmission and limited SAR-text exposure are disclosed in the audit.
 The current cost comparison consequently uses newly invented numerical states.
 
-### Measured synthetic costs of the final implementation
+### Matched synthetic cost measurements
 
-The frozen sparse workload has 64, 512 or 2,048 source receptor atoms and 13
-ligand atoms; four receptor atoms per original tile are near the ligand and 60
-are far away. These are invented numerical constants, not protein chemistry or
-screening data. Each mode/size has three interleaved fresh processes, one first
-and two warm evaluations per process. All 54 full outputs retain all requested
-rows, source coordinates/parameters, forces and exact cutoff pairs; no failures,
-skips or timeouts occurred. Parent and final candidate energies/forces are
-exactly equal in these outputs. Independent scalar expressions agree within
-1.78e-15 kcal/mol and 2.23e-15 kcal/mol/Å under fixed 1e-8 tolerances.
+The final comparison uses two fresh 308-source-file snapshots with zero Python
+bytecode caches before and after every process. Bytecode writing is disabled.
+It repeats the same fixtures, order, final adapter bytes and independent scalar
+reference with unchanged 1e-8 energy/force tolerances. Installed dependency and
+OS caches are shared/uncontrolled; this is not a physical cold-cache benchmark.
 
-CPU float64, one Torch/BLAS thread on one shared host; no GPU or batch API was
-measured. Cold readiness includes process startup, manifest verification,
-imports, source construction, first evaluation and writing its complete output.
-Warm evaluation reuses canonical objects but still runs complete validation,
-guards, graph construction and physics; output serialization is separate.
-Percentiles are interpolated descriptive statistics from cold n=3 and warm n=6,
-not production tail-latency guarantees. OS caches/background load were not
-controlled. RSS is whole-child high-water memory, not incremental call memory.
+Sparse numerical fixtures have 64, 512 or 2,048 receptor atoms and 13 ligand
+atoms, with four near and 60 far receptor atoms per original tile. A separate
+dense 64×13 fixture keeps all 77 projection atom slots and all 832 cross pairs.
+The dense follow-up was selected after sparse timings to investigate overhead,
+not pooled into a more favorable average. None is a model of protein chemistry.
 
-| Receptor atoms | Cold p50/p95 s, parent → final | Warm p50/p95 s, parent → final | Warm CPU p50 s, parent → final | Process peak RSS p50 KiB, parent → final |
-| ---: | --- | --- | --- | --- |
-| 64 | 1.382108/1.411117 → 1.620797/1.684108 | 0.075035/0.077941 → 0.024667/0.025186 | 0.074672 → 0.024602 | 535,096 → 533,600 |
-| 512 | 1.896424/1.899848 → 1.819672/1.829930 | 0.588846/0.603860 → 0.184844/0.206674 | 0.588684 → 0.184682 | 541,340 → 541,144 |
-| 2,048 | 3.846349/3.847871 → 2.548346/2.570817 | 2.326555/2.350847 → 0.707695/0.714727 | 2.325101 → 0.707630 | 565,536 → 565,132 |
+Each mode/fixture has three interleaved fresh processes and one first plus two
+warm evaluations. In total, 24 processes retain 72 complete evaluation outputs,
+with zero failures, skips or timeouts. Every source coordinate, parameter,
+source-indexed force component, pair set and requested denominator is retained.
+Parent and final candidate energy/force outputs are exactly equal here. Separate
+scalar expressions agree within 3.56e-15 kcal/mol and 2.23e-15 kcal/mol/Å, below
+the predeclared 1e-8 tolerances. All loaded first-party module hashes match the
+snapshots. These are mathematical equivalence checks, not molecular validation.
 
-The smallest sparse cold case is slower despite lower warm evaluation cost;
-memory changes are small. Sparse warm improvement does not establish general
-molecular-engine acceleration, hit recovery or end-to-end product savings.
-An earlier candidate's 54 outputs are retained separately as historical evidence:
-a subsequent independent extreme-coordinate control exposed a guard regression,
-so all 18 processes were repeated against the corrected final source.
+CPU float64, one Torch/BLAS thread on a shared host. Cold readiness is process
+launch through source verification, imports, construction, first evaluation and
+writing its complete output. Warm evaluation reuses canonical objects but still
+runs complete validation, integrity guards, graph construction and physics;
+output serialization is separate. RSS is whole-child high-water memory. Cold
+n=3 and warm n=6 are small, dependent-within-process samples; interpolated p95
+is descriptive and does not establish production tail latency.
 
-Local final-source regression passes 305 tests with zero failures/errors/skips,
-including parser and subprocess consumer integration. An independent 56-control
-synthetic review passes separately. Neither is an external scientific reviewer
-or approval. The initial incomplete-snapshot test failure and all intermediate
-numeric-regression failures remain in the raw evidence; assertions and original
-V2 guards were not weakened. No checkpoint or physical score migration occurs.
+| Fixture | Cold p50/p95 s, parent → final | Warm p50/p95 s, parent → final | Warm CPU p50 s, parent → final | Whole-child RSS p50 KiB, parent → final |
+| --- | --- | --- | --- | --- |
+| sparse, 64×13 | 1.712596/1.714145 → 1.664254/1.665763 | 0.074823/0.075545 → 0.025153/0.026057 | 0.074601 → 0.025080 | 536,000 → 535,524 |
+| sparse, 512×13 | 2.247224/2.272540 → 1.817365/1.823005 | 0.567968/0.572796 → 0.184907/0.207018 | 0.567944 → 0.184904 | 542,488 → 540,896 |
+| sparse, 2,048×13 | 4.121041/4.198863 → 2.534599/2.535812 | 2.333361/2.364392 → 0.707141/0.717376 | 2.333222 → 0.706342 | 565,188 → 564,640 |
+| dense, 64×13 | 1.697243/1.709706 → 1.714009/1.719456 | 0.096840/0.097996 → 0.097764/0.102324 | 0.096641 → 0.097353 | 535,916 → 536,672 |
 
-A separate dense follow-up was declared after inspecting sparse timings to test
-the cost when compaction retains every atom. All 832 pairs of its 64×13
-numerical state lie within cutoff; all 77 projection atom slots remain. Six
-processes and 18 complete outputs passed the same source, pair, energy and force
-checks, with zero failed/skipped/timeouts. This follow-up is reported separately
-and is not pooled with the earlier sparse experiment.
+Sparse warm costs fall at unchanged outputs, while dense times are close with
+about 1% higher measured warm/cold medians. RSS changes are small. This does not
+establish a universal speedup, real screening benefit, improved pose/hit recovery
+or lower memory. No engine cache on/off, true batch API, GPU/VRAM, or admitted
+real-molecule quality-at-equal-budget comparison is measured by this experiment.
 
-- Cold readiness p50/p95 seconds: 1.405707/1.430831 → 1.699944/1.720087.
-- Warm evaluation p50/p95 seconds: 0.099477/0.101543 → 0.096478/0.097519.
-- Warm CPU p50/p95 seconds: 0.099407/0.101435 → 0.096318/0.097398.
-- Whole-child peak RSS p50/p95 KiB: 535,960/535,978.0 → 536,656/536,724.4.
+Earlier sparse/dense observations are retained, not pooled or silently removed.
+An independent audit found 176 valid loaded-module Python bytecode caches only
+on the parent (179 total cache files), and none on the candidate. Disabling
+bytecode writing had not disabled reading those existing caches. Their numerical
+comparisons still pass, but their cold/process differences cannot be attributed
+to this code change. The matched repeat above corrects the harness. The first
+attempt to make fresh snapshots copied cached entries present in the old parent
+manifest; its zero-cache assertion stopped before any measurement. That error
+and the new manifest-only non-bytecode copy are documented without altering
+source bytes, assertions, physical guards or earlier evidence.
 
-Dense warm times are close at this sample size; cold readiness is worse and
-the reason is unresolved. These measurements do not support a universal speedup
-or lower memory claim. Cache on/off, true batched evaluation, GPU/VRAM, actual
-admitted molecular workloads and quality at a fixed total budget remain unmeasured.
+An even earlier compaction draft hid extreme-coordinate errors. Its 54 outputs
+remain historical rather than final guard validation. Final local regression
+passes 305 tests with zero failures/errors/skips, including actual parser and
+subprocess consumer integration. Independent final-source synthetic controls
+pass 56 tests; two saved-output audits and six reference arithmetic controls are
+reported separately. These are internal automated checks, not external human
+review, scientific validation or customer approval. No new model is trained and
+no checkpoint or physical-score migration occurs in this change.
