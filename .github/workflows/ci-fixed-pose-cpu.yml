@@ -5,14 +5,17 @@ on:
     paths:
       - '.github/workflows/ci-fixed-pose-cpu.yml'
       - 'betelgeuze_engine_v2/docking/fixed_pose.py'
+      - 'betelgeuze_engine_v2/docking/fixed_pose_assembly.py'
       - 'betelgeuze_engine_v2/docking/authority.py'
       - 'betelgeuze_engine_v2/cli.py'
       - 'betelgeuze_engine_v2/cli_dispatch.py'
       - 'betelgeuze_engine_v2/fixed_pose_cli.py'
+      - 'betelgeuze_engine_v2/fixed_components_cli.py'
       - 'betelgeuze_engine_v2/physics/**'
       - 'betelgeuze_engine_v2/molecular/**'
       - 'betelgeuze_engine_v2/geometry/**'
       - 'tests/unit/test_engine_v2_fixed_pose*.py'
+      - 'tests/unit/test_engine_v2_fixed_components_cli.py'
       - 'tests/unit/test_engine_v2_reference_physics.py'
 
 permissions:
@@ -50,6 +53,8 @@ jobs:
           python -m pytest -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
             tests/unit/test_engine_v2_fixed_pose.py \
             tests/unit/test_engine_v2_fixed_pose_cli.py \
+            tests/unit/test_engine_v2_fixed_pose_assembly.py \
+            tests/unit/test_engine_v2_fixed_components_cli.py \
             tests/unit/test_engine_v2_reference_physics.py \
             --junitxml=fixed-pose-junit.xml 2>&1 | tee fixed-pose.log
       - name: Preserve numerical software evidence
