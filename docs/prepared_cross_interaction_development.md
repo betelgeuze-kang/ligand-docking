@@ -198,3 +198,42 @@ study/scaffold component, so they do not supply independent fit/calibration/test
 groups. No thrombin model is fitted and no measured free energy is subtracted
 from this cross potential energy. The original author thesis has separate
 noncommercial rights; its full text is not redistributed with development data.
+
+## Source-coordinate observations in the actual consumer
+
+Every command row now carries `source_geometry_observation` under the additive
+`prepared_source_geometry_observation_v1` contract. After successful preparation,
+the consumer retains preparation provenance even if the physical evaluator later
+rejects the input. The observer reuses canonical V2 components and the compact
+radius graph, examining all supplied atoms in the single CPU float64 nonperiodic
+frame. Coordinates, atom order, energy, forces, pocket selection and the physical
+admission guards are unchanged. No checkpoint or score-unit migration is needed.
+The request and existing result schemas remain v1; strict output consumers must
+accept the additional row field and provenance on successfully parsed failures.
+
+The fixed inclusive 1 Å radius is a descriptive search window, not a calibrated
+clash threshold or a chemical validity test. Receptor, ligand and cross groups
+report complete unique pair counts within that window and up to 16 nearest
+pairs per list, with the exact undisplayed count. Atom indices, source serials,
+chain/residue/insertion codes and canonical source hashes identify observations.
+The supplied direct adjacency alone separates direct bonds from other pairs;
+1–3/1–4 exclusions and a complete chemical nonbonded interpretation are not
+claimed. A missing source molecule or `[ bonds ]` section leaves bond-filtered
+counts null. An explicit empty section is retained as supplied information,
+not evidence that the chemical topology is complete.
+
+Missing preparation, nonfinite/unsupported geometry, invalid adjacency or the
+bounded neighbor/cell capacity yields an unavailable observation with null
+groups. A successful zero count remains distinct. Neighbor capacity can depend
+on coordinate orientation and grid placement; overflow does not authorize a
+zero or partial count. Observer failures are visible and do not replace the
+independent physical evaluator's result. The observation records its own wall
+and CPU cost; total consumer cost includes that work. This adds interpretive
+evidence and may add cost; it is not an engine acceleration or affinity claim.
+
+Fresh synthetic controls reproduce the former missing output field and cover
+missing versus explicit empty bond sources, complete canonical chain/molecule
+coverage, unchanged physical output, original numerical rejection, bounded
+display and unavailable capacity. Independent synthetic checks additionally
+exercise rotation, translation, atom permutation, remapped bond indices and
+the inclusive radius boundary. No protected molecular outcome is used.

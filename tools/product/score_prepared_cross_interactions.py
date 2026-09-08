@@ -37,6 +37,10 @@ def evaluate_request(request: dict) -> dict:
     for index, case in enumerate(request["cases"]):
         started, cpu = time.perf_counter(), time.process_time()
         row = {"request_index": index, "case_id": case.get("case_id") if isinstance(case, dict) and type(case.get("case_id")) is str else None}
+        row["source_geometry_observation"] = {
+            "schema_version": "prepared_source_geometry_observation_v1",
+            "status": "unavailable", "reason": "prepared_input_not_loaded", "groups": None,
+            "physical_validity_assessed": False, "affects_score_or_admission": False}
         try:
             if (not isinstance(case, dict) or set(case) != {"case_id", "prepared_input", "evaluation"}
                     or type(case["case_id"]) is not str or not case["case_id"].strip()
@@ -50,15 +54,22 @@ def evaluate_request(request: dict) -> dict:
             from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
             from betelgeuze_engine.product.v2_cross_interaction import evaluate_prepared_cross_interaction
             receptor, ligand, rp, lp, provenance = load_prepared_gromacs_components(case["prepared_input"])
+            row["preparation_provenance"] = provenance
+            try:
+                from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+                row["source_geometry_observation"] = observe_prepared_source_geometry(receptor, ligand, provenance)
+            except Exception as exc:
+                row["source_geometry_observation"].update(
+                    reason="source_geometry_observation_failed", error_type=type(exc).__name__, detail=str(exc))
             result = evaluate_prepared_cross_interaction(
                 receptor, ligand, rp, lp,
                 source_declarations=case["prepared_input"]["source_declarations"], **evaluation)
-            row.update(status="evaluated", result=result, preparation_provenance=provenance)
+            row.update(status="evaluated", result=result)
         except Exception as exc:
             row.update(status="failed", error_type=type(exc).__name__, reason=str(exc))
         row["cost"] = {"wall_seconds": time.perf_counter()-started,
                        "cpu_seconds": time.process_time()-cpu,
-                       "scope": "case validation, any first-call lazy imports, parsing, hash validation and evaluation; output excluded"}
+                       "scope": "case validation, any first-call lazy imports, parsing, hash validation, source geometry observation and evaluation; output excluded"}
         rows.append(row)
     success = sum(row["status"] == "evaluated" for row in rows)
     return {"schema_version": "prepared_cross_interaction_report_v1", "rows": rows,
