@@ -159,3 +159,46 @@ def test_argument_errors_preserve_failure_accounting(tmp_path, missing):
     assert failure["requested_count"] == failure["failure_count"] == 1
     assert failure["evaluated_count"] == 0
     assert failure["reason"]
+
+
+@pytest.mark.parametrize("name", ["system", "parameters", "pocket", "partition"])
+def test_output_must_not_replace_input(tmp_path, name):
+    documents = fresh_documents()
+    completed = run_console(tmp_path, documents, "--output", str(tmp_path / (name + ".json")), "--overwrite")
+    assert completed.returncode == 2
+    failure = json.loads(completed.stderr)
+    assert failure["error_code"] == "FixedPoseInputError"
+    assert failure["evaluated_count"] == 0
+    assert "input" in failure["reason"]
+    assert all((tmp_path / (key + ".json")).read_bytes() == value for key, value in documents.items())
+
+
+def test_output_parent_alias_cannot_replace_input(tmp_path):
+    alias = tmp_path / "directory-alias"
+    alias.symlink_to(tmp_path, target_is_directory=True)
+    documents = fresh_documents()
+    completed = run_console(tmp_path, documents, "--output", str(alias / "system.json"), "--overwrite")
+    assert completed.returncode == 2
+    assert json.loads(completed.stderr)["evaluated_count"] == 0
+    assert (tmp_path / "system.json").read_bytes() == documents["system"]
+
+
+def test_explicit_overwrite_replaces_only_separate_output(tmp_path):
+    documents = fresh_documents()
+    output = tmp_path / "old-result.json"
+    output.write_text("prior output")
+    completed = run_console(tmp_path, documents, "--output", str(output), "--overwrite")
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(output.read_text())["status"] == "evaluated"
+    assert all((tmp_path / (key + ".json")).read_bytes() == value for key, value in documents.items())
+
+
+@pytest.mark.parametrize("field", ["unsupported_chemical_state", "evaluation_only"])
+def test_system_envelope_cannot_silently_discard_fields(field):
+    from betelgeuze_engine_v2.fixed_pose_cli import FixedPoseInputError, evaluate_documents
+    documents = fresh_documents()
+    system = json.loads(documents["system"])
+    system[field] = True
+    documents["system"] = json.dumps(system, sort_keys=True, separators=(",", ":")).encode()
+    with pytest.raises(FixedPoseInputError, match="canonical system requires exactly"):
+        evaluate_documents(**{key + "_raw": raw for key, raw in documents.items()})

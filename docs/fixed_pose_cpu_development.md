@@ -19,6 +19,11 @@ field. Parameters, excluded pairs, pair scaling, cutoff, switch, dielectric, and
 screening must be supplied explicitly. No missing charge, hydrogen, atom, bond,
 stereochemistry, or parameter is assigned.
 
+Harmonic angle cosines must lie strictly inside `(-1 + 1e-12, 1 - 1e-12)`.
+Angles in the existing primitive's clamp region are rejected because its
+coordinate derivative does not represent the unclamped harmonic potential there.
+Zero-length angle edges and undefined torsion geometry are also unsupported.
+
 Receptor and ligand indices must be nonempty, disjoint and exhaustive. A residue
 cannot cross that partition, and covalent receptor–ligand bonds are unsupported.
 A declared known-pocket sphere in the same coordinate frame must contain every
@@ -79,7 +84,8 @@ validated composition, product qualification and production claims remain false.
 
 Failures exit 2, include a reason and retain the requested case in the failure
 count. Successful evaluations exit 0. Existing output needs explicit
-`--overwrite`; a write failure identifies the output stage separately from input
+`--overwrite`; output must always differ from every input artifact, including
+path aliases. A write failure identifies the output stage separately from input
 or evaluation failure. Timings distinguish evaluator cost and input-to-result
 consumer cost, excluding import and output serialization/write as labeled.
 Peak RSS/VRAM are unmeasured, and no speedup is claimed.

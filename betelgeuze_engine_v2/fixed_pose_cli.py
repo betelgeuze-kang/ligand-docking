@@ -70,6 +70,18 @@ def _record(cls, document):
     return cls(**document)
 
 
+def require_distinct_output(output: Path | None, inputs: Sequence[Path]) -> None:
+    """Overwrite applies to prior results, never to an input artifact."""
+    if output is None:
+        return
+    resolved = output.resolve()
+    for source in inputs:
+        if resolved == source.resolve() or (
+            output.exists() and source.exists() and output.samefile(source)
+        ):
+            raise FixedPoseInputError("output must be distinct from every input artifact")
+
+
 def parameters_from_document(document: dict) -> ReferenceForceFieldParameters:
     """Read exactly the existing parameter to_dict contract, without defaults."""
     _exact_keys(document, {f.name for f in fields(ReferenceForceFieldParameters)},
@@ -106,6 +118,7 @@ def evaluate_documents(*, system_raw: bytes, parameters_raw: bytes,
     if any(len(raw) > MAX_INPUT_BYTES for raw in raw_inputs.values()):
         raise FixedPoseInputError("fixed-pose input exceeds byte limit")
     documents = {name: _load_object(raw) for name, raw in raw_inputs.items()}
+    _exact_keys(documents["system"], {"schema_id", "system_sha256", "system"}, "canonical system")
     system = all_atom_system_from_canonical_json(system_raw, device="cpu")
     parameters = parameters_from_document(documents["parameters"])
     pocket = _cli._pocket_from_document(documents["pocket"])
@@ -137,6 +150,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     result = None
     try:
         args = parser.parse_args(argv)
+        require_distinct_output(args.output, [getattr(args, name) for name in ("system", "parameters", "pocket", "partition")])
         result = evaluate_documents(**{
             name + "_raw": _cli._read_bounded(getattr(args, name),
                 maximum=MAX_INPUT_BYTES, name="fixed-pose " + name)

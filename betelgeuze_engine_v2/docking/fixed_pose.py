@@ -36,6 +36,7 @@ from .authority import DockingScope, PocketDefinition
 FIXED_POSE_SCHEMA_ID = "betelgeuze.engine_v2_fixed_pose_evaluation/1.0.0"
 MAX_FIXED_POSE_ATOMS = 256
 SUPPORTED_ELEMENTS = frozenset({"H", "C", "N", "O"})
+_REFERENCE_ANGLE_COSINE_MARGIN = 1.0e-12
 _DECLARATIONS = frozenset({
     "chemical_state_id", "hydrogen_state", "charge_source", "parameter_source",
 })
@@ -86,6 +87,32 @@ def _check_evaluation(evaluation: ReferencePhysicsEvaluation, atom_count: int) -
 
 def _quantity(value: Any, unit: str, semantics: str) -> dict[str, Any]:
     return {"value": value, "unit": unit, "status": "evaluated", "semantics": semantics}
+
+
+def _require_unclamped_angles(
+    system: AllAtomSystem,
+    parameters: ReferenceForceFieldParameters,
+) -> None:
+    """Reject the frozen evaluator's angle clamp region before force evaluation."""
+    for row in parameters.angles:
+        indices = (row.atom_i, row.atom_j, row.atom_k)
+        if any(not 0 <= index < system.atom_count for index in indices):
+            raise FixedPoseError("angle parameter index is outside the canonical topology")
+        first = system.coordinates[:, row.atom_i] - system.coordinates[:, row.atom_j]
+        second = system.coordinates[:, row.atom_k] - system.coordinates[:, row.atom_j]
+        first_norm = torch.linalg.vector_norm(first, dim=-1)
+        second_norm = torch.linalg.vector_norm(second, dim=-1)
+        if bool((first_norm <= 1.0e-12).any().item()) or bool((second_norm <= 1.0e-12).any().item()):
+            raise FixedPoseError("angle contains a zero-length vector")
+        cosine = (first * second).sum(dim=-1) / (first_norm * second_norm)
+        # Keep the same cosine calculation and bounds as reference_forcefield._angle.
+        # Its acos clamp is constant outside these bounds and suppresses real forces.
+        if (
+            not bool(torch.isfinite(cosine).all().item())
+            or bool((cosine <= -1.0 + _REFERENCE_ANGLE_COSINE_MARGIN).any().item())
+            or bool((cosine >= 1.0 - _REFERENCE_ANGLE_COSINE_MARGIN).any().item())
+        ):
+            raise FixedPoseError("harmonic angle geometry is outside the unclamped cosine domain")
 
 
 def evaluate_fixed_pose(
@@ -183,6 +210,7 @@ def _evaluate_fixed_pose(
     partition = {"receptor_atom_indices": list(receptor), "ligand_atom_indices": list(ligand)}
     # A private coordinate snapshot keeps both evaluations bound to the same pose.
     snapshot = replace(system, coordinates=system.coordinates.detach().clone())
+    _require_unclamped_angles(snapshot, parameters)
     neighbors = build_compact_radius_graph(
         snapshot.coordinates,
         RadiusGraphConfig(parameters.cutoff_angstrom, max_neighbors=system.atom_count - 1,
@@ -231,6 +259,10 @@ def _evaluate_fixed_pose(
             "device": "cpu", "dtype": "float64", "coordinate_shape": [1, system.atom_count, 3],
             "max_atoms": MAX_FIXED_POSE_ATOMS, "supported_elements": sorted(SUPPORTED_ELEMENTS),
             "periodic": False, "cross_covalent_bonds_supported": False,
+            "harmonic_angle_cosine_open_interval": [
+                -1.0 + _REFERENCE_ANGLE_COSINE_MARGIN,
+                1.0 - _REFERENCE_ANGLE_COSINE_MARGIN,
+            ],
             "chemical_state_mode": "caller_supplied_not_inferred",
             "parameter_assignment_performed": False,
         },

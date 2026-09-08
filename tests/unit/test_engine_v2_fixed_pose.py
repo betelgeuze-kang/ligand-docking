@@ -262,6 +262,107 @@ def test_weak_cross_term_survives_large_internal_bond_energy():
     assert _value(result, "cross_forces")[2][0] == pytest.approx(-sum(row[1] for pair in (first, second) for row in pair.values()), abs=1e-14)
 
 
+def _synthetic_angle_case(bend, near_zero):
+    outer_x = -1.0 if near_zero else 2.0
+    arm_length = abs(outer_x - 1.0)
+    system = _system(
+        ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (outer_x, bend, 0.0), (6.0, 0.0, 0.0)),
+        charges=(0.0,) * 4,
+        residue_groups=((0, 1, 2), (3,)),
+        bond_pairs=((0, 1), (1, 2)),
+    )
+    parameters = _parameters(
+        system,
+        epsilon=0.0,
+        bonds=(
+            HarmonicBondParameter(0, 1, 1.0, 200.0),
+            HarmonicBondParameter(1, 2, math.hypot(arm_length, bend), 200.0),
+        ),
+        angles=(HarmonicAngleParameter(0, 1, 2, 2.0, 40.0),),
+        excluded_pairs=((0, 1), (0, 2), (1, 2)),
+    )
+    return system, parameters, arm_length
+
+
+@pytest.mark.parametrize("near_zero", [False, True], ids=["near_pi", "near_zero"])
+@pytest.mark.parametrize("bend", [0.0, 1e-7], ids=["collinear", "clamped"])
+def test_harmonic_angle_clamp_region_is_rejected(bend, near_zero):
+    system, parameters, _ = _synthetic_angle_case(bend, near_zero)
+    with pytest.raises(FixedPoseError, match="angle.*clamp"):
+        _evaluate(system, parameters, receptor_atom_indices=(0, 1, 2), ligand_atom_indices=(3,))
+
+
+@pytest.mark.parametrize("near_zero", [False, True], ids=["near_pi", "near_zero"])
+@pytest.mark.parametrize("bend", [1e-5, 0.3], ids=["outside_clamp", "regular_angle"])
+def test_unclamped_harmonic_angle_force_matches_independent_math(bend, near_zero):
+    system, parameters, arm_length = _synthetic_angle_case(bend, near_zero)
+    result = _evaluate(system, parameters, receptor_atom_indices=(0, 1, 2), ligand_atom_indices=(3,))
+    acute = math.atan(bend / arm_length)
+    theta = acute if near_zero else math.pi - acute
+    theta_derivative = (1.0 if near_zero else -1.0) * arm_length / (arm_length**2 + bend**2)
+    expected_force_y = -40.0 * (theta - 2.0) * theta_derivative
+    assert result["status"] == "evaluated"
+    assert result["component_energies"]["harmonic_angle"]["total"] == pytest.approx(
+        20.0 * (theta - 2.0)**2, rel=2e-6, abs=1e-10,
+    )
+    assert _value(result, "total_forces")[2][1] == pytest.approx(expected_force_y, rel=2e-6, abs=1e-9)
+    assert abs(expected_force_y) > 1.0
+    assert _value(result, "cross_energy") == 0.0
+    assert _value(result, "cross_forces") == [[0.0, 0.0, 0.0]] * 4
+
+
+def test_collinear_atoms_without_harmonic_angles_remain_supported():
+    system, _, _ = _synthetic_angle_case(0.0, False)
+    system = replace(system, bonds=())
+    result = _evaluate(
+        system, _parameters(system, epsilon=0.0),
+        receptor_atom_indices=(0, 1, 2), ligand_atom_indices=(3,),
+    )
+    assert result["status"] == "evaluated"
+    assert _value(result, "total_energy") == 0.0
+    assert result["applicability_domain"]["harmonic_angle_cosine_open_interval"] == [
+        -1.0 + 1e-12, 1.0 - 1e-12,
+    ]
+
+
+@pytest.mark.parametrize("indices", [(4, 1, 2), (0, 4, 2), (0, 1, 4)])
+def test_angle_domain_gate_preserves_out_of_range_parameter_error(indices):
+    system, parameters, _ = _synthetic_angle_case(0.3, False)
+    parameters = replace(parameters, angles=(HarmonicAngleParameter(*indices, 2.0, 40.0),))
+    with pytest.raises(FixedPoseError, match="angle.*index"):
+        _evaluate(system, parameters, receptor_atom_indices=(0, 1, 2), ligand_atom_indices=(3,))
+
+
+def test_regular_torsion_keeps_independent_energy_and_force():
+    phi = 0.7
+    system = _system(
+        ((0.0, 1.0, 0.0), (0.0, 0.0, 0.0), (1.0, 0.0, 0.0),
+         (1.0, math.cos(phi), math.sin(phi)), (6.0, 0.0, 0.0)),
+        charges=(0.0,) * 5,
+        residue_groups=((0, 1, 2, 3), (4,)),
+        bond_pairs=((0, 1), (1, 2), (2, 3)),
+    )
+    parameters = _parameters(
+        system, epsilon=0.0,
+        bonds=tuple(HarmonicBondParameter(i, i + 1, 1.0, 200.0) for i in range(3)),
+        angles=(
+            HarmonicAngleParameter(0, 1, 2, math.pi / 2.0, 40.0),
+            HarmonicAngleParameter(1, 2, 3, math.pi / 2.0, 40.0),
+        ),
+        torsions=(PeriodicTorsionParameter(0, 1, 2, 3, 3, 0.2, 0.5),),
+        excluded_pairs=tuple((i, j) for i in range(4) for j in range(i + 1, 4)),
+    )
+    result = _evaluate(system, parameters, receptor_atom_indices=(0, 1, 2, 3), ligand_atom_indices=(4,))
+    expected_energy = 0.5 * (1.0 + math.cos(3.0 * phi - 0.2))
+    expected_torque = 1.5 * math.sin(3.0 * phi - 0.2)
+    assert _value(result, "total_energy") == pytest.approx(expected_energy, abs=1e-12)
+    assert _value(result, "total_forces")[3] == pytest.approx(
+        [0.0, -expected_torque * math.sin(phi), expected_torque * math.cos(phi)], abs=1e-11,
+    )
+    assert _value(result, "cross_energy") == 0.0
+    assert _value(result, "cross_forces") == [[0.0, 0.0, 0.0]] * 5
+
+
 def test_zero_results_remain_evaluated_while_uncomputed_quantities_are_null():
     system = _system(charges=(0.0, 0.0))
     result = _evaluate(system, _parameters(system, epsilon=0.0))
