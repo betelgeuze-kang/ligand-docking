@@ -10,6 +10,7 @@ import ast
 import builtins
 import copy
 import hashlib
+import io
 import json
 import math
 import os
@@ -30,6 +31,122 @@ ENVIRONMENT = {
     "BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP": "disabled", "OMP_NUM_THREADS": "1",
     "MKL_NUM_THREADS": "1", "CUDA_VISIBLE_DEVICES": "", "HIP_VISIBLE_DEVICES": "", "ROCR_VISIBLE_DEVICES": "",
 }
+
+
+def test_report_writer_preserves_measured_zero_absence_failure_and_provenance():
+    report = {"rows": [
+        {"case_id": "같은 ID", "status": "evaluated", "coordinates": [[-0.0, 1e-300, 1e300]],
+         "force": [[0.0, -0.0, 0.0]], "affinity": None, "source": {"IC50[uM]": "0", "error": "-1"}},
+        {"case_id": "같은 ID", "status": "failed", "reason": "missing \"charge\"\nfield", "force": None}],
+        "denominator": {"requested": 2, "evaluated": 1, "failed": 1, "skipped": 0},
+        "customer_execution": False, "large_integer_source_id": 2**60 + 1}
+    output = io.StringIO()
+    consumer._write_report_json(report, output)
+    decoded = json.loads(output.getvalue())
+    # The standard encoder comparison also distinguishes signed zero, bool,
+    # integer and float representations that ordinary Python equality merges.
+    assert json.dumps(decoded, sort_keys=True) == json.dumps(report, sort_keys=True)
+    assert output.getvalue().endswith("\n")
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_report_writer_still_rejects_nonfinite_nested_numbers(value):
+    with pytest.raises(ValueError, match="Out of range float"):
+        consumer._write_report_json({"rows": [{"force": [[value, 0.0, 0.0]]}]}, io.StringIO())
+
+
+def test_report_writer_limits_each_output_chunk_to_one_case():
+    class ObservedOutput(io.StringIO):
+        largest_chunk = 0
+
+        def write(self, text):
+            self.largest_chunk = max(self.largest_chunk, len(text))
+            return super().write(text)
+
+    row = {"source": "supplied metadata " * 100, "score": 0.0, "unevaluated": None}
+    report = {"rows": [row] * 32, "denominator": {"requested": 32}}
+    output = ObservedOutput()
+    consumer._write_report_json(report, output)
+    assert json.loads(output.getvalue()) == report
+    assert output.largest_chunk == len(json.dumps(row, sort_keys=True, separators=(",", ":")))
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_explicit_compact_main_preserves_full_payload_and_exit(monkeypatch, tmp_path, capsys, failed):
+    report = _serialization_report(failed=failed, unicode=True)
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    before = request.read_bytes()
+    code = consumer.main(argv + ["--output-format", "compact"])
+    expected = (json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    assert output.read_bytes() == expected
+    assert code == (2 if failed else 0)
+    assert request.read_bytes() == before
+    assert report["consumer_source_sha256"] == hashlib.sha256(Path(consumer.__file__).read_bytes()).hexdigest()
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["exit_code"] == code and summary["denominator"] == report["denominator"]
+
+
+@pytest.mark.parametrize("inside_row", [False, True])
+def test_compact_main_nonfinite_failure_never_reports_success(monkeypatch, tmp_path, capsys, inside_row):
+    report = _serialization_report()
+    if inside_row:
+        report["rows"][-1]["result"]["values"].append(math.nan)
+    else:
+        report["zz_invalid"] = math.nan
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    before = request.read_bytes()
+    with pytest.raises(ValueError, match="JSON compliant"):
+        consumer.main(argv + ["--output-format", "compact"])
+    assert not capsys.readouterr().out
+    assert request.read_bytes() == before
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(output.read_text())
+
+
+def test_compact_main_write_failure_propagates_and_preserves_request(monkeypatch, tmp_path, capsys):
+    request, output, argv = _fixed_report_main(monkeypatch, tmp_path, _serialization_report())
+    before = request.read_bytes()
+    original_open = Path.open
+
+    class FailingOutput:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.stream.close()
+
+        def write(self, text):
+            self.stream.write(text[:1])
+            raise OSError("synthetic compact storage failure")
+
+    def open_output(path, mode="r", *args, **kwargs):
+        stream = original_open(path, mode, *args, **kwargs)
+        return FailingOutput(stream) if path == output and mode == "x" else stream
+
+    monkeypatch.setattr(Path, "open", open_output)
+    with pytest.raises(OSError, match="synthetic compact storage failure"):
+        consumer.main(argv + ["--output-format", "compact"])
+    assert not capsys.readouterr().out
+    assert request.read_bytes() == before
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(output.read_text())
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_compact_main_invalid_request_retains_null_denominator(tmp_path, capsys, missing):
+    request, output = tmp_path / "invalid.json", tmp_path / "invalid-report.json"
+    if not missing:
+        request.write_text("{ invalid JSON")
+    code = consumer.main(["--request", str(request), "--output", str(output), "--output-format", "compact"])
+    report = json.loads(output.read_text())
+    assert code == 2 and report["status"] == "invalid_request"
+    assert report["denominator"] is None and report["customer_execution"] is False
+    assert report["request_sha256"] == (None if missing else hashlib.sha256(request.read_bytes()).hexdigest())
+    assert json.loads(capsys.readouterr().out)["exit_code"] == 2
+    assert request.exists() is not missing
 
 
 def _write_source(directory, filename, content):

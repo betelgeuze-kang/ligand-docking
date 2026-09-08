@@ -79,10 +79,33 @@ def evaluate_request(request: dict) -> dict:
             "external_solver_called": False}
 
 
+def _write_report_json(result: dict, output) -> None:
+    """Keep the full JSON payload while encoding at most one case at a time."""
+    options = {"sort_keys": True, "separators": (",", ":"), "allow_nan": False}
+    output.write("{")
+    for index, key in enumerate(sorted(result)):
+        if index:
+            output.write(",")
+        output.write(json.dumps(key) + ":")
+        value = result[key]
+        if key == "rows" and isinstance(value, list):
+            output.write("[")
+            for row_index, row in enumerate(value):
+                if row_index:
+                    output.write(",")
+                output.write(json.dumps(row, **options))
+            output.write("]")
+        else:
+            output.write(json.dumps(value, **options))
+    output.write("}\n")
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--request", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output-format", choices=("pretty", "compact"), default="pretty",
+                        help="JSON representation only; compact preserves every field and encodes one case at a time")
     args = parser.parse_args(argv)
     if args.output.exists() or args.output.is_symlink():
         parser.error("output must be a new path; existing evidence and source files are preserved")
@@ -114,8 +137,11 @@ def main(argv=None) -> int:
     result["exit_code"] = exit_code
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x", encoding="utf-8") as output:
-        json.dump(result, output, sort_keys=True, indent=2, allow_nan=False)
-        output.write("\n")
+        if args.output_format == "compact":
+            _write_report_json(result, output)
+        else:
+            json.dump(result, output, sort_keys=True, indent=2, allow_nan=False)
+            output.write("\n")
     print(json.dumps({"output": str(args.output), "exit_code": exit_code,
                       "denominator": result["denominator"]}, allow_nan=False))
     return exit_code
