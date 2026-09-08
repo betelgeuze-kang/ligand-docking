@@ -305,3 +305,122 @@ outcomes. New cross-source connections can reveal dependence between previous
 roles. Preserve those original roles and historical scores and report the newly
 observed connections separately. Scientific, training, customer-runtime and
 commercial approvals remain separate and are not granted by this extension.
+
+## Native ChEMBL measured intake and staged learning
+
+`public_chembl_measurement.py` interprets the native published/standard activity
+pair, retains original field presence and values, checks supported concentration
+or explicit logarithmic transformations, and separates point observations from
+censoring, ranges, missing values and inconsistencies. A measured zero is not a
+missing value; a zero concentration has no finite negative-log concentration
+label. Endpoint names remain distinct. It never generates an energy residual or
+force label. Numerical normalization and purpose-specific admission are separate.
+
+`public_chembl_assay_dataset.py` uses the existing chemical canonicalizer and
+metadata component helper. Its `public_chembl_assay_development_v1` schema is
+explicitly ChEMBL-native; the legacy identity projection is identified separately
+from the native API record and response/request origin. Full supplied metadata,
+including excluded rows, is checked before any activity capture is read. Native
+IDs and the identity projection must agree. Cached chemistry is reproduced for
+all activity metadata, and an already declared component split is reproduced
+without labels. A rejected or withheld measurement remains in the full ledger
+and retains its role. Newly assigned calibration/development reservations are
+added to the complete context without replacing prior declarations.
+
+The first scope is database-curated reported enzyme-inhibition IC50 with mixed
+assay conditions, under the ChEMBL target annotation CHEMBL3038469. It does not
+verify the experimental CDK2/cyclin A2 construct, an assayed microstate, or a
+receptor coordinate state. Known secondary reviews and peptide-displacement FP
+assays are excluded before this experiment's role assignment. Public access and
+primary-paper method compatibility are recorded separately from compound-level
+source-value verification. Missing ATP, pH, temperature and construct metadata
+are not filled with defaults.
+
+`train_public_chembl_selector.py` reuses the existing Morgan 1024-bit, radius-2,
+chirality-aware features and Ridge(alpha=10) model. It is a pre-docking ligand-only
+cheap-selector experiment; target identity is an admission constraint, not an
+interaction feature. The trainer reconstructs records, the ledger, role context
+and summary source/count bindings from native captures. A rehashed cache is not
+accepted as independent proof of eligibility or a training label.
+
+The fit phase reads only preassigned fit outcomes, writes a protocol before
+fitting, and freezes serialized-checkpoint predictions for every selected
+candidate before evaluation outcome acquisition. The evaluation phase requires
+that frozen bundle, verifies mean-baseline values and chemical abstentions as
+well as numerical predictions, and preserves unsupported/censored outcomes in
+its denominator report. No resplitting or hyperparameter search follows
+exclusions. The calibration role is reserved for diagnostics in this first run;
+no probability or uncertainty calibration is claimed.
+
+Example module interfaces (hashes bind the actual source files and captures):
+
+```bash
+python -m tools.product.public_chembl_assay_dataset \
+  --manifest metadata-manifest.json --manifest-sha256 SHA256 \
+  --captures fit-capture-manifest.json --captures-sha256 SHA256 \
+  --phase fit --output-dir fit-intake
+python -m tools.product.train_public_chembl_selector \
+  --phase fit --input-dir fit-intake --summary-sha256 SHA256 --output-dir fit
+```
+
+Evaluation acquisition is a separate developer action after `fit/frozen-fit.json`
+exists. Its capture manifest binds that file and the request/response execution
+origins. Run the same intake command with `--phase evaluation` and then the trainer
+with `--phase evaluation --frozen-fit fit/frozen-fit.json
+--frozen-fit-sha256 SHA256`. These tools do not download data or invoke a molecular
+solver themselves. Public API acquisition remains separate and auditable.
+
+The new checkpoint schema is `public_chembl_cheap_selector_ridge_v1`, with a
+catalogue target annotation hash, explicit prediction quantity and source
+implementation bindings. Old BindingDB intakes/checkpoints are not relabeled or
+migrated by changing a schema string. Keep original frozen consumers for earlier
+models. This developer consumer does not register a new checkpoint in the
+BioDiscovery product shadow loader, enable ranking, calibrate uncertainty, or
+approve customer execution. IC50/pIC50 is not subtracted from the independent
+Engine V2 potential energy.
+
+### First ChEMBL development measurement, 2026-09-09 KST
+
+The full requested metadata universe had 27,489 activity rows. After prior role
+reservations and source/method exclusions, 144 candidates were assigned before
+activity-value access: fit 101, calibration 22, development test 21. The frozen
+plan SHA256 is `ec80249b46e825f24029c8a097ab67497985b414f51fcd94e5495cd7efb11744`.
+
+Native fit captures contained 53 exact, 38 censored and 10 missing observations.
+Only the 53 exact rows from four connected components entered this point model.
+The frozen checkpoint is
+`5733e7ba2d21f643034ec111648b94244c5114dfd875391d874eb983e949dca6`.
+All 144 selected candidates received predictions before the 43 evaluation labels
+were acquired. Calibration retained 20/22 exact rows in two components;
+development evaluation retained 18/21 in five components. Remaining labels stay
+in the ledger and are not assumed negative.
+
+| Development test: 18 exact observations | Mean baseline | Morgan Ridge |
+|---|---:|---:|
+| MAE, negative-log-molar IC50 units | 1.1772403 | 1.2902383 |
+| RMSE, same units | 1.5398050 | 1.6647280 |
+| Average precision, threshold pIC50 >= 6 | 0.7777778 | 0.8026326 |
+| Positive hits at budget 4, fractional treatment of ties | 3.1111111 | 3.0000000 |
+
+The model did not improve error or positive recovery at the declared budget.
+Calibration's 20 exact observations were all positive, so its AP=1 for both
+methods is not discrimination or calibration evidence. Neither model selection
+nor a new split was based on these results. Product ranking remains disabled.
+This is retrospective, database-curated development evidence, not confirmation
+of the paper's individual compound-to-value mappings or prospective assay hits.
+
+The actual CPU fit process took 35.383 s wall / 35.380 s CPU, peak RSS
+2,133,188 KiB, including full metadata/capture verification and serialized
+prediction checks. Within that process, featurization took 0.006729 s and the
+Ridge fit 0.001392 s. These are single-process observations, not p50/p95,
+end-to-end docking speedup, or an equal-quality cost improvement. Input download,
+intake, evaluation, source-paper review and packaging costs are separate.
+
+Validation retained the original 184 public-assay tests and added 99 portable
+measurement/staged-consumer controls: 283 passed, no failures/errors/skips,
+with warnings treated as errors. A separate internal AI reviewer used 20 new
+metadata/cache/frozen-prediction controls; they passed on the same three module
+hashes. Intermediate implementation failures and reference-fixture errata are
+retained in the evidence bundle. An accidentally broad collection against the
+partial repository snapshot produced 1,273 collection errors; it was not a
+passing full-repository suite and no protection was removed to pass it.
