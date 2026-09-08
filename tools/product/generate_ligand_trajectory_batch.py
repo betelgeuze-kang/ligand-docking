@@ -224,7 +224,7 @@ def run_batch(args: argparse.Namespace) -> Dict[str, Any]:
     queue_csv = str(args.queue_csv).strip()
     if (not queue_csv) or (not os.path.exists(queue_csv)):
         raise FileNotFoundError(f"queue csv not found: {queue_csv}")
-    df = pd.read_csv(queue_csv)
+    df = pd.read_csv(queue_csv, converters={"queue_id": str})
     if df.empty:
         raise ValueError(f"queue csv is empty: {queue_csv}")
     max_jobs = int(args.max_jobs)
