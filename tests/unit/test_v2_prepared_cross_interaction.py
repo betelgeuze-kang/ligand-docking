@@ -7,6 +7,7 @@ used here. The oracle neither calls the V2 evaluator nor imports its formulas.
 from __future__ import annotations
 
 from contextlib import nullcontext
+import copy
 from dataclasses import replace
 import json
 import math
@@ -558,3 +559,102 @@ def test_large_finite_tile_accumulation_positive_control_matches_scalar_math():
     assert result["pair_accounting"]["kernel_tiles"] == 16
     assert result["pair_accounting"]["within_declared_cutoff"] == 16
     json.dumps(result, allow_nan=False)
+
+
+def _state_with_nested_tensor_metadata():
+    systems = []
+    for system in _pair()[:2]:
+        nested = {"nested": {"tensor": torch.tensor([1.25], dtype=torch.float64)}}
+        systems.append(replace(system, metadata=nested,
+            atoms=(replace(system.atoms[0], metadata=nested),),
+            provenance=replace(system.provenance, metadata=nested)))
+    return (*systems, _parameters(systems[0]), _parameters(systems[1]))
+
+
+def _mutate_without_parent_tensor_version(system, kind):
+    if kind in ("numpy", "data"):
+        tensor = system.coordinates
+    elif kind == "system_metadata":
+        tensor = system.metadata["nested"]["tensor"]
+    elif kind == "atom_metadata":
+        tensor = system.atoms[0].metadata["nested"]["tensor"]
+    else:
+        tensor = system.provenance.metadata["nested"]["tensor"]
+    before_version = tensor._version
+    if kind == "data":
+        tensor.data.reshape(-1)[0] += 0.125
+    else:
+        tensor.numpy().reshape(-1)[0] += 0.125
+    assert tensor._version == before_version
+
+
+@pytest.mark.parametrize("side", [0, 1])
+@pytest.mark.parametrize("stage", ["before_physics", "after_physics", "output"])
+@pytest.mark.parametrize("kind", ["numpy", "data", "system_metadata", "atom_metadata", "provenance_metadata"])
+def test_full_integrity_guards_reject_mutation_at_existing_boundaries(monkeypatch, side, stage, kind):
+    state = _state_with_nested_tensor_metadata()
+    target = state[side]
+    mutated = []
+
+    def mutate():
+        assert not mutated
+        _mutate_without_parent_tensor_version(target, kind)
+        mutated.append(True)
+
+    if stage == "before_physics":
+        original = adapter._validate_component_minimum_distance
+
+        def checked(system, label):
+            original(system, label)
+            if label == "ligand":
+                mutate()
+
+        def unexpected_physics(*args, **kwargs):
+            raise AssertionError("the original pre-physics integrity boundary was skipped")
+
+        monkeypatch.setattr(adapter, "_validate_component_minimum_distance", checked)
+        monkeypatch.setattr(adapter, "_tile", unexpected_physics)
+    elif stage == "after_physics":
+        original = adapter._tile
+
+        def evaluated(*args, **kwargs):
+            result = original(*args, **kwargs)
+            mutate()
+            return result
+
+        monkeypatch.setattr(adapter, "_tile", evaluated)
+    else:
+        original = adapter.canonical_coordinates_sha256
+
+        def exporting(system):
+            if system is target:
+                mutate()
+            return original(system)
+
+        # Only this adapter's alias is wrapped; the frozen canonical function
+        # and object integrity method are unchanged and actually execute.
+        monkeypatch.setattr(adapter, "canonical_coordinates_sha256", exporting)
+    with pytest.raises(MolecularIntegrityError, match="changed after construction"):
+        _evaluate(*state)
+    assert mutated == [True]
+
+
+@pytest.mark.parametrize("kind", ["numpy", "data"])
+def test_successful_call_does_not_cache_admission_across_later_source_mutation(kind):
+    state = _state_with_nested_tensor_metadata()
+    _assert_oracle(_evaluate(*state), state)
+    _mutate_without_parent_tensor_version(state[0], kind)
+    with pytest.raises(MolecularIntegrityError):
+        _evaluate(*state)
+
+
+def test_returned_document_mutation_does_not_affect_a_later_call_or_sources():
+    state = _state_with_nested_tensor_metadata()
+    first = _evaluate(*state)
+    expected = copy.deepcopy(first)
+    first["sources"]["receptor"]["system"]["system_sha256"] = "0" * 64
+    first["quantities"]["ligand_cross_forces_kcal_per_mol_angstrom"][0][0] = 999.0
+    second = _evaluate(*state)
+    for value in (expected, second):
+        value.pop("cost")
+    assert second == expected

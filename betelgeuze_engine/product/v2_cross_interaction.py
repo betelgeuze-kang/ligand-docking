@@ -19,7 +19,7 @@ import torch
 from betelgeuze_engine_v2.geometry import RadiusGraphConfig, build_compact_radius_graph
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem, Chain, Residue, StructureProvenance,
-    canonical_coordinates_sha256, canonical_system_document, canonical_system_sha256,
+    canonical_coordinates_sha256, canonical_system_document,
     canonical_topology_sha256, require_valid_all_atom_system,
 )
 from betelgeuze_engine_v2.molecular.serialization import canonical_json_value, sha256_canonical
@@ -55,7 +55,7 @@ def _finite(value: Any, label: str, minimum: float | None = None) -> float:
 def _component(system: AllAtomSystem, rows: Sequence[Mapping[str, Any]], limit: int, side: str):
     if type(system) is not AllAtomSystem or not 1 <= system.atom_count <= limit:
         raise PreparedInteractionError(f"{side} requires a bounded canonical AllAtomSystem")
-    require_valid_all_atom_system(system)
+    validation = require_valid_all_atom_system(system)
     if (system.cell is not None or system.coordinates.dtype != torch.float64
             or system.coordinates.device.type != "cpu"
             or tuple(system.coordinates.shape) != (1, system.atom_count, 3)):
@@ -80,7 +80,12 @@ def _component(system: AllAtomSystem, rows: Sequence[Mapping[str, Any]], limit: 
             raise PreparedInteractionError("zero sigma with nonzero epsilon is outside the V1 projection domain")
         clean.append({"atom_index": index, "charge_e": charge,
                       "sigma_angstrom": sigma, "epsilon_kcal_per_mol": epsilon})
-    return clean
+    # Successful canonical validation already serialized and hashed this exact
+    # system. Retain its digest only for this call; integrity is checked again
+    # at the original pre/post-evaluation boundaries below.
+    if type(validation.system_sha256) is not str:
+        raise PreparedInteractionError(f"{side} canonical validation did not return an identity")
+    return clean, validation.system_sha256
 
 
 
@@ -188,8 +193,8 @@ def evaluate_prepared_cross_interaction(
     if (not isinstance(source_declarations, Mapping) or set(source_declarations) != fields
             or any(type(v) is not str or not v.strip() for v in source_declarations.values())):
         raise PreparedInteractionError("complete explicit source declarations are required")
-    rp = _component(receptor, receptor_parameters, MAX_RECEPTOR_ATOMS, "receptor")
-    lp = _component(ligand, ligand_parameters, MAX_LIGAND_ATOMS, "ligand")
+    rp, receptor_sha256 = _component(receptor, receptor_parameters, MAX_RECEPTOR_ATOMS, "receptor")
+    lp, ligand_sha256 = _component(ligand, ligand_parameters, MAX_LIGAND_ATOMS, "ligand")
     config = {"cutoff_angstrom": _finite(cutoff_angstrom, "cutoff", 0.0),
               "switch_start_angstrom": _finite(switch_start_angstrom, "switch start", 0.0),
               "dielectric": _finite(dielectric, "dielectric", 0.0),
@@ -206,7 +211,12 @@ def evaluate_prepared_cross_interaction(
         raise PreparedInteractionError("ligand is outside the explicit pocket")
     _validate_component_minimum_distance(receptor, "receptor")
     _validate_component_minimum_distance(ligand, "ligand")
-    before = (canonical_system_sha256(receptor), canonical_system_sha256(ligand))
+    # Keep the full protected mutation guards at both original boundaries.
+    # An unchanged object has the canonical digest obtained during validation;
+    # recomputing its canonical serialization here adds no new identity.
+    AllAtomSystem.assert_integrity(receptor)
+    AllAtomSystem.assert_integrity(ligand)
+    before = (receptor_sha256, ligand_sha256)
     rforces = torch.zeros((receptor.atom_count,3),dtype=torch.float64,device="cpu")
     lforces = torch.zeros((ligand.atom_count,3),dtype=torch.float64,device="cpu")
     values = {"lennard_jones":[], "screened_coulomb":[]}
@@ -231,8 +241,8 @@ def evaluate_prepared_cross_interaction(
                     values[name].append(energy[name])
                 rforces[ri] += force[:len(ri)]
                 lforces[li] += force[len(ri):]
-    if before != (canonical_system_sha256(receptor),canonical_system_sha256(ligand)):
-        raise PreparedInteractionError("source state changed during evaluation")
+    AllAtomSystem.assert_integrity(receptor)
+    AllAtomSystem.assert_integrity(ligand)
     if len(pairs) != len(set(pairs)):
         raise PreparedInteractionError("cross pair evaluated more than once")
     if not bool(torch.isfinite(rforces).all()) or not bool(torch.isfinite(lforces).all()):
