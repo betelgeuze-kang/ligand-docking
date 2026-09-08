@@ -23,6 +23,7 @@ from betelgeuze_engine_v2.molecular.validation import require_valid_all_atom_sys
 
 
 SCHEMA_VERSION = "prepared_gromacs_components_v1"
+MOLECULE_LIST_SCHEMA_VERSION = "prepared_gromacs_components_v2"
 _MAX_BYTES = 16 * 1024 * 1024
 _MOLECULE_SECTIONS = {"moleculetype", "atoms", "bonds", "pairs", "angles", "dihedrals"}
 _DECLARATIONS = {"coordinate_frame_id", "prepared_state_id", "parameter_source_id", "charge_source_id"}
@@ -298,7 +299,8 @@ def _pdb_projection(raw: bytes, chains: list[dict], molecules: dict, types: dict
                                       "pdb_atom_name": name, "itp_atom_name": source["atom_name"],
                                       "original_element_annotation": annotation, "atomic_number": number,
                                       "transferred_element": element, "atomtype": source["atomtype"],
-                                      "element_source": "protein_atomtypes", "molecule_source": label})
+                                      "element_source": "protein_atomtypes",
+                                      "molecule_source": source.get("source_molecule_label", label)})
     projected = "".join(lines).encode("utf-8")
     return projected, {"policy": policy, "original_sha256": hashlib.sha256(raw).hexdigest(),
                        "projected_sha256": hashlib.sha256(projected).hexdigest(), "transfers": transfers,
@@ -335,6 +337,42 @@ def _bound_system(system: AllAtomSystem, atoms: list, source_hashes: list[str], 
     return result
 
 
+def _protein_molecules(request: dict, sources: dict, tops: dict) -> tuple[list[str], dict]:
+    """Bind declared compiled molecules to the unchanged PDB chain ordering."""
+    chains = request["protein_chains"]
+    _require(isinstance(chains, list) and bool(chains), "explicit protein chain molecules required")
+    declared_ids, molecules = [], {}
+    for chain in chains:
+        if request["schema_version"] == SCHEMA_VERSION:
+            _keys(chain, {"chain_id", "molecule_itp"}, "protein chain")
+            chain_id = _text(chain["chain_id"], "chain_id")
+            refs = [chain["molecule_itp"]]
+        else:
+            _keys(chain, {"chain_id", "molecule_itps"}, "protein chain")
+            chain_id = chain["chain_id"]
+            _require(isinstance(chain_id, str) and len(chain_id) <= 1
+                     and chain_id == chain_id.strip(), "chain_id: exact PDB character or empty required")
+            refs = chain["molecule_itps"]
+            _require(isinstance(refs, list) and 1 <= len(refs) <= 32,
+                     "explicit ordered protein molecule sources required (1-32)")
+        _require(chain_id not in declared_ids, "duplicate protein chain declaration")
+        declared_ids.append(chain_id)
+        label = "protein_chain_" + chain_id
+        atoms, adjacency = [], set()
+        for molecule_index, ref in enumerate(refs):
+            source_label = label if request["schema_version"] == SCHEMA_VERSION else f"{label}_molecule_{molecule_index}"
+            tops[source_label] = _topology(_read_source(ref, source_label, sources), source_label, role="molecule")
+            rows, pairs = _molecule(tops[source_label], source_label)
+            offset = len(atoms)
+            if request["schema_version"] == MOLECULE_LIST_SCHEMA_VERSION:
+                rows = [{**row, "source_molecule_label": source_label,
+                         "chain_molecule_index": molecule_index} for row in rows]
+            atoms.extend(rows)
+            adjacency.update((i + offset, j + offset) for i, j in pairs)
+        molecules[label] = atoms, adjacency
+    return declared_ids, molecules
+
+
 def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllAtomSystem, list[dict], list[dict], dict]:
     """Return canonical receptor/ligand, explicit per-atom parameters and evidence.
 
@@ -346,7 +384,7 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
                     "ligand_sdf", "ligand_gro", "ligand_itp", "ligand_atomtypes", "ligand_defaults",
                     "ligand_atomtype_name_mapping", "ligand_residue_name_mapping", "naming_convention",
                     "pdb_element_policy", "source_declarations", "source_relationship"}, "request")
-    _require(request["schema_version"] == SCHEMA_VERSION, "unsupported prepared GROMACS schema")
+    _require(request["schema_version"] in (SCHEMA_VERSION, MOLECULE_LIST_SCHEMA_VERSION), "unsupported prepared GROMACS schema")
     _keys(request["source_declarations"], _DECLARATIONS, "source_declarations")
     for key, value in request["source_declarations"].items():
         _text(value, key)
@@ -385,16 +423,7 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
             value["atomic_number"] = original["atomic_number"]
             value["atomic_number_source"] = {"source": "ligand_defaults", "atomtype": source_name, "original": original}
     chains = request["protein_chains"]
-    _require(isinstance(chains, list) and bool(chains), "explicit protein chain molecules required")
-    declared_ids, molecules = [], {}
-    for chain in chains:
-        _keys(chain, {"chain_id", "molecule_itp"}, "protein chain")
-        chain_id = _text(chain["chain_id"], "chain_id")
-        _require(chain_id not in declared_ids, "duplicate protein chain declaration")
-        declared_ids.append(chain_id)
-        label = "protein_chain_" + chain_id
-        tops[label] = _topology(_read_source(chain["molecule_itp"], label, sources), label, role="molecule")
-        molecules[label] = _molecule(tops[label], label)
+    declared_ids, molecules = _protein_molecules(request, sources, tops)
     pdb_block, pdb_projection = _pdb_projection(raw["protein_pdb"], chains, molecules, rtypes,
         policy=request["pdb_element_policy"], naming=request["naming_convention"])
     receptor = parse_pdb(pdb_block, source_id=request["protein_pdb"]["source_id"], dtype=torch.float64, device="cpu", unit_cell_policy="ignore")
@@ -462,7 +491,7 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
             postflight = stream.read(_MAX_BYTES + 1)
         _require(len(postflight) <= _MAX_BYTES and hashlib.sha256(postflight).hexdigest() == source["sha256"], f"{label}: source changed during parsing")
     provenance = {
-        "schema_version": SCHEMA_VERSION, "sources": sources, "source_hashes_postflight_verified": True,
+        "schema_version": request["schema_version"], "sources": sources, "source_hashes_postflight_verified": True,
         "source_declarations": dict(request["source_declarations"]), "declarations_verified": False,
         "source_relationship": request["source_relationship"], "source_coevality_verified": False,
         "original_topologies": tops, "defaults_by_source": defaults,
@@ -493,4 +522,4 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
     return receptor, ligand, rparams, lparams, provenance
 
 
-__all__ = ["PreparedGromacsInputError", "SCHEMA_VERSION", "load_prepared_gromacs_components"]
+__all__ = ["PreparedGromacsInputError", "SCHEMA_VERSION", "MOLECULE_LIST_SCHEMA_VERSION", "load_prepared_gromacs_components"]

@@ -126,3 +126,75 @@ requests/responses, identity-only protected-catalogue comparisons, command logs,
 actual coordinates/parameters/force vectors, the unchanged reference script,
 premeasurement tolerances, source hashes and JUnit. No molecular outcome from a
 protected catalogue was read or executed.
+
+## Ordered molecule sources in prepared-input v2
+
+The unchanged command envelope accepts the additive prepared input schema
+`prepared_gromacs_components_v2`. Each `protein_chains` entry contains an exact
+PDB `chain_id` (one non-whitespace character or the empty string for an original
+blank field) and `molecule_itps`, an explicit ordered list of 1–32 independently
+hash-bound original molecule files. Molecule atom indices may restart at one.
+The reader offsets only canonical adjacency indices while retaining each original
+source atom index, topology row and source-molecule label. PDB residue numbers,
+chain fields, atom order and coordinates are not rewritten. All existing count,
+residue, atom-name, element, charge, parameter and distance checks still apply.
+
+`prepared_gromacs_components_v1` keeps its original one-file `molecule_itp` and
+nonblank-chain contract. Existing v1 canonical hashes, parameters and complete
+provenance were equal before/after in a separate invented input. Clients opt into
+v2 explicitly; there is no checkpoint or score-unit migration. A synthetic
+blank-element transfer found a source-label omission in the initial v2 draft;
+the corrected ledger resolves the original molecule file, with the v1 label as
+its unchanged fallback. The new controls also cover nonzero bond-index offsets.
+
+## Third distinct public prepared input: thrombin/lig_5
+
+The pinned OpenFF thrombin PDB retains a blank chain field, 4,688 atoms and
+original residue numbers 1–295. Its declared protein molecule topology is split
+into 4,527-atom and 161-atom files, with the second file restarting atom indices.
+The original v1 consumer rejected this representation (`chain_id: nonblank string
+required`, one requested/zero evaluated/one failed). V2 explicitly represents the
+two original files under the blank chain; no chain name, atom, charge or hydrogen
+position is fabricated. The successful repeat is the same distinct input, not a
+new denominator member. The ligand has 52 supplied atoms and retains its +1 state.
+
+The actual command on exact parent source plus this adapter change exited zero,
+with one requested/one evaluated/zero failed/zero skipped. Independent NumPy
+expressions, which import no engine or solver, compared all 243,776 cross pairs
+and exactly matched the 13,977 pairs within the declared 10 Å cutoff. LJ is
+-39.39911546111321 kcal/mol, Coulomb is -116.1653778597004 kcal/mol, and total
+cross energy is -155.5644933208136 kcal/mol. Absolute total-energy difference is
+2.27e-13 kcal/mol; maximum difference across all 14,220 force components is
+2.91e-13 kcal/mol/Å. Both pass the predeclared 1e-8 tolerances. Unevaluated
+internal energy, strain, solvation, residual and affinity remain null.
+
+The whole fresh process, including output and source-origin audit, took 11.336 s
+and peaked at 799,272 KiB RSS. The command-main scope excluding startup/output
+reported 9.866 wall/9.856 CPU seconds; the inner adapter scope reported 5.776
+wall/5.769 CPU seconds. These are one-state observations, not p50/p95, a speedup,
+a CPU/GPU comparison or a fair comparison against the array-only reference.
+
+Across distinct public inputs, coverage is now **2 numerically compared / 3
+requested**, or **2 / 2 within the declared source-distance domain**. The earlier
+CDK2 failure remains. This thrombin state and BACE use separate independently
+written static references; neither establishes binding affinity or dynamics.
+The separately sourced protein parameter table still does not establish identity
+to the original OpenFF simulation Hamiltonian.
+
+Local exact-parent regression passed 270 tests (257 existing plus 13 v2 controls),
+with no skips. Four independent adapter controls passed separately, including
+v1 output equality. The reference has six synthetic formula controls and one
+actual-state comparison; those totals are separate. The evidence retains an
+initial collection failure from an incomplete source snapshot, the initial
+post-execution origin-check misclassification of the installed native dependency,
+and an audit's incorrect blank-element assumption. These were harness errors;
+the corrected run verifies all repository module hashes/origins, records the
+installed dependency separately, and leaves source guards unchanged.
+
+The source's 11 measured thrombin binding free energies were checked against the
+original author table. One uncertainty annotation differs (lig_5: OpenFF -1
+versus author-table 0.3 kJ/mol) and is unresolved. All 11 compounds share one
+study/scaffold component, so they do not supply independent fit/calibration/test
+groups. No thrombin model is fitted and no measured free energy is subtracted
+from this cross potential energy. The original author thesis has separate
+noncommercial rights; its full text is not redistributed with development data.

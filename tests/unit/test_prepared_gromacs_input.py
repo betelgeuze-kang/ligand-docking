@@ -66,6 +66,111 @@ def _change(ref, transform):
     ref["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _ordered_molecule_request(request_doc, chain_id=""):
+    refs = [entry["molecule_itp"] for entry in request_doc["protein_chains"]]
+    _change(refs[1], lambda text: text.replace("1 N 1 SYN", "1 N 2 SYN"))
+
+    def project(text):
+        lines = []
+        for line in text.splitlines(keepends=True):
+            if line.startswith("ATOM  "):
+                residue = 2 if int(line[6:11]) == 4 else 1
+                line = line[:21] + (chain_id or " ") + f"{residue:4d}" + line[26:]
+            lines.append(line)
+        return "".join(lines)
+
+    _change(request_doc["protein_pdb"], project)
+    request_doc["schema_version"] = "prepared_gromacs_components_v2"
+    request_doc["protein_chains"] = [{"chain_id": chain_id, "molecule_itps": refs}]
+    return request_doc
+
+
+def _ordered_bonded_molecules(request_doc, chain_id=""):
+    request = _ordered_molecule_request(request_doc, chain_id)
+    second = request["protein_chains"][0]["molecule_itps"][1]
+    _change(second, lambda text: text + "2 H 2 SYN H2 2 0.125 1.008\n[ bonds ]\n1 2 1\n")
+    atom = _pdb_atom(5, "H2", "H", chain_id or " ", 5.)
+    atom = atom[:22] + f"{2:4d}" + atom[26:]
+    _change(request["protein_pdb"], lambda text: text.replace("END\n", atom + "END\n"))
+    return request
+
+
+@pytest.mark.parametrize("chain_id", ["", "A"])
+def test_v2_ordered_molecules_preserve_original_atoms_and_source_indices(request_doc, chain_id):
+    request = _ordered_bonded_molecules(request_doc, chain_id)
+    before = copy.deepcopy(request)
+    raw_pdb = Path(request["protein_pdb"]["path"]).read_bytes()
+    receptor, _, params, _, evidence = parser.load_prepared_gromacs_components(request)
+    assert request == before and Path(request["protein_pdb"]["path"]).read_bytes() == raw_pdb
+    assert [chain.chain_id for chain in receptor.chains] == [chain_id]
+    assert receptor.atom_count == 5
+    assert receptor.coordinates.tolist() == [[[0., 0., 0.], [1., 0., 0.], [2., 0., 0.], [4., 0., 0.], [5., 0., 0.]]]
+    assert [row["charge_e"] for row in params] == [0., .25, -.25, -0., .125]
+    origins = [atom.metadata["prepared_gromacs_source"] for atom in receptor.atoms]
+    assert [row["source_atom_index"] for row in origins] == [1, 2, 3, 1, 2]
+    assert [row["chain_molecule_index"] for row in origins] == [0, 0, 0, 1, 1]
+    assert origins[0]["source_molecule_label"] != origins[3]["source_molecule_label"]
+    assert all(row["source_molecule_label"] in evidence["sources"] for row in origins)
+    assert evidence["receptor_source_bond_adjacency"] == [[0, 1], [1, 2], [3, 4]]
+    assert evidence["schema_version"] == "prepared_gromacs_components_v2"
+    assert not evidence["coordinates_generated"] and not any(evidence["claim_policy"].values())
+
+
+def test_v2_blank_element_transfer_resolves_original_molecule_source(request_doc):
+    request = _ordered_bonded_molecules(request_doc)
+    request["pdb_element_policy"] = "pdb_blank_element_from_matching_topology_atomic_number"
+    _change(request["protein_pdb"], lambda text: "".join(
+        line[:76] + "  " + line[78:] if line.startswith("ATOM  ") else line
+        for line in text.splitlines(keepends=True)))
+    receptor, _, _, _, evidence = parser.load_prepared_gromacs_components(request)
+    transfers = evidence["pdb_element_projection"]["transfers"]
+    assert len(transfers) == 5
+    for transfer, atom in zip(transfers, receptor.atoms):
+        origin = atom.metadata["prepared_gromacs_source"]
+        assert transfer["molecule_source"] in evidence["sources"]
+        assert transfer["molecule_source"] in evidence["original_topologies"]
+        assert transfer["molecule_source"] == origin["source_molecule_label"]
+        assert transfer["source_atom_index"] == origin["source_atom_index"]
+
+
+@pytest.mark.parametrize("bad_chain", [" ", "AA", None, 0])
+def test_v2_chain_field_cannot_invent_or_normalize_a_pdb_identifier(request_doc, bad_chain):
+    request = _ordered_molecule_request(request_doc)
+    request["protein_chains"][0]["chain_id"] = bad_chain
+    with pytest.raises(parser.PreparedGromacsInputError, match="exact PDB character"):
+        parser.load_prepared_gromacs_components(request)
+
+
+@pytest.mark.parametrize("change,match", [
+    ("empty", "ordered protein molecule"),
+    ("reverse", "residue identity mismatch"),
+    ("omit", "atom count mismatch"),
+    ("repeat", "atom count mismatch"),
+    ("stale", "SHA-256 mismatch"),
+])
+def test_v2_ordered_molecule_sources_require_exact_complete_binding(request_doc, change, match):
+    request = _ordered_molecule_request(request_doc)
+    refs = request["protein_chains"][0]["molecule_itps"]
+    if change == "empty":
+        refs.clear()
+    elif change == "reverse":
+        refs.reverse()
+    elif change == "omit":
+        refs.pop()
+    elif change == "repeat":
+        refs.append(copy.deepcopy(refs[0]))
+    else:
+        refs[1]["sha256"] = "0" * 64
+    with pytest.raises(parser.PreparedGromacsInputError, match=match):
+        parser.load_prepared_gromacs_components(request)
+
+
+def test_v1_still_requires_single_nonblank_chain_molecule(request_doc):
+    request_doc["protein_chains"][0]["chain_id"] = ""
+    with pytest.raises(parser.PreparedGromacsInputError, match="nonblank string"):
+        parser.load_prepared_gromacs_components(request_doc)
+
+
 def test_explicit_units_zeros_coordinates_and_provenance(request_doc):
     receptor, ligand, rparams, lparams, provenance = parser.load_prepared_gromacs_components(request_doc)
     assert receptor.atom_count == 4 and ligand.atom_count == 3
