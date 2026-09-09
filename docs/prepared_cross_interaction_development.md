@@ -440,6 +440,21 @@ includes fresh synthetic observation controls; actual public sources and their
 local Gemmi cross-check are retained in the development evidence bundle and are
 not downloaded by CI. No external solver or model fitting is added.
 
+The additive `source_polymer_context` field carries entry-wide deposited entity,
+polymer sequence, database alignment, sequence difference, modified-residue and
+unobserved-residue declarations. Original category tags, token values and row
+order are preserved; missing categories are null. Duplicate declaration rows are
+retained without resolving them, and declaration consistency remains unverified.
+This metadata does not assign a receptor chain to the selected ligand, prepare
+missing coordinates, or establish assay-construct equivalence. An accession match
+alone can conceal engineered mutations, deletions and unobserved phosphorylation.
+For example, the public fit-associated 2P2H and 2P2I entries both declare C817A,
+E990V and deletion 940–989, while only 2P2H also declares V916T. PTR1054/1059
+are unobserved in their coordinate models. These declarations accompany the
+observed ligand coordinates rather than being replaced by a wild-type assumption.
+The nested context has its own `mmcif_source_polymer_context_v1` identifier; the
+existing request, score/checkpoint and prepared-state admission are unchanged.
+
 
 ## Source metadata projection and actual fixed-pose comparison
 

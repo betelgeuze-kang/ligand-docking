@@ -206,3 +206,66 @@ def test_neighbor_overflow_remains_unavailable(monkeypatch, tmp_path):
     assert r['geometry']['status'] == 'unavailable'
     assert r['geometry']['pair_count'] is None and r['geometry']['pairs'] is None
     assert r['all_atom_prepared'] is False
+
+
+def test_absent_polymer_metadata_is_not_wild_type_or_complete(tmp_path):
+    context = observe(case(tmp_path))['source_polymer_context']
+    assert context['declarations']['polymer_sequences'] is None
+    assert context['declarations']['sequence_differences'] is None
+    assert context['declarations']['unobserved_residues'] is None
+    assert context['selected_ligand_receptor_assignment'] is None
+    assert context['complete_receptor_coordinates_verified'] is False
+    assert context['assay_construct_equivalence_verified'] is False
+
+
+def test_construct_declarations_preserve_source_order_missing_and_quoted_tokens(tmp_path):
+    text = source_text().replace('_entity.type\n1 non-polymer\n',
+                                "_entity.type\n_entity.pdbx_mutation\n1 non-polymer ?\n2 polymer 'C10A, delete 12-15'\n")
+    text += """loop_
+_entity_poly.entity_id
+_entity_poly.pdbx_seq_one_letter_code
+2
+;AC(PTR)
+GG
+;
+loop_
+_struct_ref_seq_dif.mon_id
+_struct_ref_seq_dif.db_mon_id
+_struct_ref_seq_dif.pdbx_seq_db_seq_num
+_struct_ref_seq_dif.details
+ALA CYS 10 'engineered mutation'
+HIS ? ? 'expression tag'
+loop_
+_pdbx_unobs_or_zero_occ_residues.auth_comp_id
+_pdbx_unobs_or_zero_occ_residues.auth_seq_id
+_pdbx_unobs_or_zero_occ_residues.occupancy_flag
+PTR 11 0
+PTR 11 '?'
+"""
+    result = observe(case(tmp_path, text))
+    declarations = result['source_polymer_context']['declarations']
+    assert declarations['entities'][0]['values']['_entity.pdbx_mutation'] is None
+    assert declarations['entities'][1]['values']['_entity.pdbx_mutation'] == 'C10A, delete 12-15'
+    assert declarations['polymer_sequences'][0]['values']['_entity_poly.pdbx_seq_one_letter_code'] == 'AC(PTR)\nGG'
+    differences = declarations['sequence_differences']
+    assert [r['source_row'] for r in differences] == [0, 1]
+    assert differences[0]['values']['_struct_ref_seq_dif.pdbx_seq_db_seq_num'] == '10'
+    assert differences[1]['values']['_struct_ref_seq_dif.pdbx_seq_db_seq_num'] is None
+    # Duplicate declarations stay visible; they are not resolved by last row.
+    missing = declarations['unobserved_residues']
+    assert len(missing) == 2
+    assert missing[0]['values']['_pdbx_unobs_or_zero_occ_residues.occupancy_flag'] == '0'
+    assert missing[1]['values']['_pdbx_unobs_or_zero_occ_residues.occupancy_flag'] == '?'
+    assert result['source_polymer_context']['declaration_consistency_verified'] is False
+    assert result['potential_energy'] is None and result['training_admitted'] is False
+
+
+def test_scalar_polymer_metadata_and_ambiguous_category(tmp_path):
+    text = source_text() + "_entity_poly.entity_id 2\n_entity_poly.pdbx_seq_one_letter_code AAA\n"
+    context = observe(case(tmp_path, text))['source_polymer_context']
+    assert context['declarations']['polymer_sequences'] == [
+        {'source_row': 0, 'values': {'_entity_poly.entity_id': '2', '_entity_poly.pdbx_seq_one_letter_code': 'AAA'}}]
+    with pytest.raises(ValueError, match='duplicate_data_name'):
+        observe(case(tmp_path, text + 'loop_\n_entity_poly.entity_id\n3\n'))
+    with pytest.raises(ValueError, match='ambiguous_category:_entity_poly'):
+        observe(case(tmp_path, text + 'loop_\n_entity_poly.type\npolypeptide(L)\n'))

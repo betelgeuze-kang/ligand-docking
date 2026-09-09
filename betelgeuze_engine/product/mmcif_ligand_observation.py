@@ -79,6 +79,40 @@ def _charge(row, key):
     return int(value)
 
 
+def _source_polymer_context(block):
+    """Carry deposited construct declarations without assigning a receptor state.
+
+    This is entry-wide metadata: a ligand's chain does not identify its receptor
+    chain. Null categories mean the source did not supply them, not zero missing
+    residues or a wild-type construct. Original tags and row order are retained.
+    """
+    categories = {
+        "entities": "_entity",
+        "polymer_sequences": "_entity_poly",
+        "database_references": "_struct_ref",
+        "sequence_alignments": "_struct_ref_seq",
+        "sequence_differences": "_struct_ref_seq_dif",
+        "unobserved_residues": "_pdbx_unobs_or_zero_occ_residues",
+        "modified_residues": "_pdbx_struct_mod_residue",
+    }
+    declarations = {}
+    for name, category in categories.items():
+        present = any(category in loop.categories for loop in block.loops) or any(
+            tag.startswith(category + ".") for tag in block.scalar_values)
+        declarations[name] = ([{"source_row": ordinal,
+                                "values": {tag: _value(token) for tag, token in row.items()}}
+                               for ordinal, row in _table(block, category, [])]
+                              if present else None)
+    return {"schema_version": "mmcif_source_polymer_context_v1",
+            "scope": "entry_wide_source_declarations_all_entities_chains_and_models",
+            "declarations": declarations,
+            "selected_ligand_receptor_assignment": None,
+            "declaration_consistency_verified": False,
+            "complete_receptor_coordinates_verified": False,
+            "assay_construct_equivalence_verified": False,
+            "interpretation": "source_metadata_only_not_a_prepared_receptor_or_assay_state"}
+
+
 def observe_mmcif_ligand(*, source: dict, selection: dict) -> dict:
     """Observe one explicit source instance, retaining source order and absence."""
     if (not isinstance(source, dict) or set(source) != {"path", "sha256"}
@@ -216,10 +250,12 @@ def observe_mmcif_ligand(*, source: dict, selection: dict) -> dict:
     except NeighborOverflowError as exc:
         geometry = {"status": "unavailable", "radius_angstrom": 1.0, "pairs": None, "pair_count": None,
                     "reason": str(exc), "error_type": type(exc).__name__}
+    polymer_context = _source_polymer_context(block)
     if hashlib.sha256(path.read_bytes()).hexdigest() != source["sha256"]:
         raise ValueError("source_changed_during_observation")
     missing_h = sum(a["element"] in {"H", "D"} for a in missing)
     return {"schema_version": SCHEMA, "source": dict(source), "selection": dict(selection),
+            "source_polymer_context": polymer_context,
             "source_atom_site_count": len(sites), "selected_atom_site_count": len(atoms),
             "atoms": atoms, "bonds": bonds, "component_atoms_without_source_coordinates": missing,
             "component_bonds_without_source_coordinates": absent_bonds,
