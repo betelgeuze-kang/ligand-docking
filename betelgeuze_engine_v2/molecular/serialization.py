@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import torch
 
@@ -71,7 +70,7 @@ def canonical_json_value(value: Any, *, path: str = "$") -> Any:
             )
             for field in fields(value)
         }
-    if issubclass(type(value), Mapping):
+    if isinstance(value, Mapping):
         normalized: dict[str, Any] = {}
         for key in sorted(value, key=lambda item: str(item)):
             text = str(key)
@@ -227,7 +226,7 @@ def _decode_canonical_value(value: Any, *, path: str = "$") -> Any:
 
 
 def _require_mapping(value: Any, *, path: str) -> Mapping[str, Any]:
-    if not issubclass(type(value), Mapping):
+    if not isinstance(value, Mapping):
         raise CanonicalSerializationError(f"expected mapping at {path}")
     return value
 

@@ -14,14 +14,13 @@ system from its public dataclass state therefore remains compatible.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 import hashlib
 import json
 import math
 import sys
 import threading
-from typing import Any
+from typing import Any, Mapping
 import weakref
 
 import torch
@@ -72,7 +71,7 @@ def _identity_value(value: Any) -> Any:
             field.name: _identity_value(getattr(value, field.name))
             for field in fields(value)
         }
-    if issubclass(type(value), Mapping):
+    if isinstance(value, Mapping):
         return {
             str(key): _identity_value(item)
             for key, item in sorted(value.items(), key=lambda row: str(row[0]))
