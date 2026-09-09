@@ -516,3 +516,32 @@ HTVS-interception costs are recorded separately; they are not p50/p95,
 cold/warm, GPU, full-docking or engine-speedup evidence. No checkpoint, score or
 schema rewrite; no independent-person review, approval receipt, scientific
 qualification or customer promotion is asserted.
+
+### VEGFR2 IC50 development checkpoint
+
+Checkpoint `1255488791dd517bf12c261bb376c1e778def7bab1cb30e242ad427b3c4cb066`
+uses the existing native BindingDB schema and pre-docking Morgan/Ridge loader.
+Registration binds the exact source, manifest, split, training protocol, target
+annotation and IC50 quantity; it is compatibility only and remains `NOT_PROMOTED`.
+No checkpoint/score/schema migration or customer/ranking permission is introduced.
+
+The metadata-only selection retained all 1242 requested target records and froze
+180 rows (137 fit, 25 calibration, 18 development) before reading outcomes. The fit
+used 95 exact HTRF biochemical IC50 observations in two independent components.
+Six fit descriptions explicitly named BRAF rather than the requested P35968
+VEGFR2 annotation and were excluded before value admission; censored observations
+were not fitted as exact numbers. Conditions and physical constructs remain
+unverified, and no experimental IC50 is treated as potential energy.
+
+All 180 predictions were frozen before opening the 43 evaluation observations.
+Primary HTRF development support is 11 rows in one component, with seven positives
+at the fixed pIC50 >= 6 threshold. The top-three budget retrieves two positives;
+MAE 0.8391 and AP 0.6114 are worse than the fitted-mean baseline's 0.6825 and 0.6364.
+No in-domain calibration rows remain. A separately preregistered alternate-readout
+diagnostic is not in-domain calibration or promotion evidence. Full-request recall
+is unavailable; missing/unsupported/censored observations remain visible.
+
+The product integration is metadata-only shadow replay. Upstream-unselected rows
+retain null predictions; enabling shadow does not change the mapping command.
+An integration run stopped before the first mapping child demonstrates this hook,
+not full docking, engine speedup, pose recovery or an AI ranking improvement.

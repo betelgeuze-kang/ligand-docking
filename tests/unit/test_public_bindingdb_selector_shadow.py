@@ -289,3 +289,34 @@ def test_cathepsin_l_sidecar_keeps_failed_rows_and_sparse_evidence(tmp_path, mon
     assert all(model[k] is False for k in ("customer_execution", "product_ranking_enabled",
         "scientific_validation", "receptor_or_assay_construct_verified", "physical_energy_prediction"))
     assert path.read_bytes() == raw
+
+
+def test_vegfr2_registered_contract_keeps_ic50_target_and_ood_boundaries(tmp_path, monkeypatch):
+    digest = '1255488791dd517bf12c261bb376c1e778def7bab1cb30e242ad427b3c4cb066'
+    binding = deepcopy(shadow._REGISTERED_BINDINGDB_V1[digest])
+    binding['rdkit_version'] = rdBase.rdkitVersion
+    # Fresh synthetic weights exercise the real registered contract without
+    # embedding public observations or requiring a local checkpoint in CI.
+    payload = dict(binding, schema_version=shadow.BINDINGDB_SCHEMA,
+                   features=dict(shadow.BINDINGDB_FEATURES), coefficients=[0.] * 1024,
+                   intercept=0., uncertainty_calibrated=False,
+                   product_ranking_enabled=False, customer_execution=False)
+    raw = json.dumps(payload).encode()
+    synthetic_digest = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setitem(shadow._REGISTERED_BINDINGDB_V1, synthetic_digest, binding)
+    checkpoint = tmp_path / 'synthetic-vegfr2.json'
+    checkpoint.write_bytes(raw)
+    model = shadow.load_public_assay_selector(checkpoint, expected_sha256=synthetic_digest)
+    valid = dict(ligand_id='same-id', smiles='CCCCC', endpoint='IC50',
+                 target_annotation_sha256=binding['target_annotation_sha256'])
+    output = model.predict_rows([valid, dict(valid, endpoint='Ki'),
+                                 dict(valid, target_annotation_sha256=TARGET),
+                                 dict(valid, is_ood=True)])
+    assert output[0]['status'] == 'evaluated' and output[0]['predicted_value'] == 0.
+    assert [row['status'] for row in output[1:]] == ['unsupported'] * 3
+    assert all(row['predicted_value'] is None for row in output[1:])
+    assert all(row['prediction_quantity'] == 'negative_log10_molar_IC50' for row in output)
+    assert model.metadata['compatibility_registration_only'] is True
+    assert all(model.metadata[key] is False for key in (
+        'customer_execution', 'product_ranking_enabled', 'scientific_validation',
+        'physical_energy_prediction', 'uncertainty_calibrated'))
