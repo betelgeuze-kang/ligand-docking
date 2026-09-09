@@ -468,3 +468,51 @@ initializer; current measurements are bound to the corrected initializer hash.
 Evidence root: `/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-selector-static-import-d0ox85bl`. Source, full commands, exits, environment,
 raw logs, paired samples, original failure and JUnit are retained. The current
 negative AKT1 quality evidence and disabled ranking/customer execution are unchanged.
+
+
+## Cathepsin L native Ki compatibility registration
+
+The existing adapter now recognizes unchanged checkpoint
+`e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d`
+for metadata-only pre-docking shadow. P07711 catalogue annotation is not a
+verified mature Cathepsin L construct or prepared receptor state. Quantity stays
+negative-log10 molar Ki, with null uncertainty, disabled ranking/customer
+execution and no physical energy/residual claim. Existing schema, chemistry
+admission, endpoint handling, lazy imports and canonical HTVS hook are reused.
+All prior registrations and checkpoint bytes remain unchanged.
+
+Native public intake retained 408 target rows, selected 200 with preassigned
+roles 144 fit / 29 calibration / 27 development, and fit 101 exact compatible
+rows from two components. All 200 predictions were frozen before evaluation.
+Supported calibration coverage was 16/29 and development only 4/27. Mean-baseline
+versus Ridge MAE: 0.944608 versus 0.679378 calibration, 1.607480 versus 1.312717
+development. The four supported development rows have no positives at the
+predeclared pKi >= 6 threshold. Development recall/AP and full-request recall
+remain null. NOT_PROMOTED stays attached to the checkpoint. Primary per-compound
+Cathepsin L table attribution, assay construct/conditions and independence beyond
+the supplied metadata remain unverified. Apparent Ki and ambiguous slow-kinetic
+methods were excluded before their respective numeric values were read.
+
+Actual replay through the module and canonical HTVS hook retains 408 requests:
+200 predictions equal the original frozen values exactly; 208 upstream exclusions
+remain with SMILES withheld. Sidecar input cells preserve roles/status/reasons.
+Shadow on/off produces identical next mapping commands. Both invocations stop
+before the first mapping child; no docking or new training/evaluation occurs.
+Independent scalar fingerprint dots agree with all 200 predictions within 1e-10.
+
+New synthetic controls fail on the prior adapter (2 failures; one existing
+positive passes). Dedicated local regression: 264 passed, zero failures/errors,
+one existing optional historical-model replay skip. Actual artifact checks:
+4 passed, zero failures/skips. Initial snapshot/quoted-path collection errors and
+a harness CSV None-versus-empty-string comparison failure are preserved. Only
+the harness was corrected to compare actual serialized cells; predictions were
+already equal. No production validation or protection was relaxed.
+
+Evidence root:
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cathepsinl-shadow-sjvtfqg9`.
+It retains exact source/commands/environment/exits, raw logs, JUnit, full-request
+outputs and source-bound intake dependencies. Single-run load, prediction and
+HTVS-interception costs are recorded separately; they are not p50/p95,
+cold/warm, GPU, full-docking or engine-speedup evidence. No checkpoint, score or
+schema rewrite; no independent-person review, approval receipt, scientific
+qualification or customer promotion is asserted.

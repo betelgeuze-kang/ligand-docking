@@ -241,3 +241,51 @@ def test_unregistered_ki_request_has_no_ic50_keys_or_inferred_quantity(tmp_path,
     assert all(row['prediction_quantity'] is row['predicted_value'] is row['mean_baseline_value'] is None
                for row in result['rows'])
     assert not any('IC50' in key for row in result['rows'] for key in row)
+
+
+CATHEPSIN_L_DIGEST = "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d"
+
+
+def test_cathepsin_l_frozen_binding_does_not_inherit_other_target_or_approval():
+    binding = shadow._REGISTERED_BINDINGDB_V1[CATHEPSIN_L_DIGEST]
+    assert binding["manifest_sha256"] == "0f22a9ae2b093a36ec5692efe5cd975f9da900fadc99208112cdbcb7134a450e"
+    assert binding["target_annotation_sha256"] == "ed5586c054c184e9acfeba06749fcc27b73051fe20c9070a3d8fbfa7192f5058"
+    assert binding["endpoint"] == "Ki"
+    evidence = shadow._CHECKPOINT_EVIDENCE[CATHEPSIN_L_DIGEST]
+    assert evidence["promotion_status"] == "NOT_PROMOTED"
+    assert evidence["supported_development_positive_count"] == 0
+    assert evidence["development_recall_and_average_precision"] is None
+    assert evidence["primary_per_compound_measurements_verified"] is False
+    assert evidence["checkpoint_rehashed_for_new_runtime"] is False
+
+
+def test_cathepsin_l_sidecar_keeps_failed_rows_and_sparse_evidence(tmp_path, monkeypatch):
+    # New synthetic weights, never public evaluation labels.
+    binding = deepcopy(shadow._REGISTERED_BINDINGDB_V1[CATHEPSIN_L_DIGEST])
+    binding["rdkit_version"] = rdBase.rdkitVersion
+    payload = dict(binding, schema_version=shadow.BINDINGDB_SCHEMA,
+                   features=dict(shadow.BINDINGDB_FEATURES), coefficients=[0.] * 1024,
+                   intercept=0., uncertainty_calibrated=False,
+                   product_ranking_enabled=False, customer_execution=False)
+    raw = json.dumps(payload).encode()
+    digest = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setitem(shadow._REGISTERED_BINDINGDB_V1, digest, binding)
+    monkeypatch.setitem(shadow._CHECKPOINT_EVIDENCE, digest,
+                        deepcopy(shadow._CHECKPOINT_EVIDENCE[CATHEPSIN_L_DIGEST]))
+    path = tmp_path / "synthetic-cathepsin-l.json"
+    path.write_bytes(raw)
+    row = _row(target_annotation_sha256=binding["target_annotation_sha256"])
+    rows = [row, dict(row, endpoint="IC50"), dict(row, is_ood="true"), row]
+    rows = [dict(r, is_ood=r.get("is_ood", "")) for r in rows]
+    summary, saved = _sidecar(tmp_path, path, digest, rows)
+    assert (summary["requested_rows"], summary["evaluated_rows"], summary["unsupported_rows"]) == (4, 2, 2)
+    assert [r["predicted_value"] for r in saved["rows"]] == [0., None, None, 0.]
+    _assert_generic(saved["rows"])
+    model = saved["model"]
+    assert binding["target_annotation_sha256"] in model["prediction_scope"]
+    assert saved["prediction_scope"] == model["prediction_scope"]
+    assert model["checkpoint_evidence_observations"]["supported_development_rows"] == 4
+    assert model["checkpoint_evidence_observations"]["requested_development_rows"] == 27
+    assert all(model[k] is False for k in ("customer_execution", "product_ranking_enabled",
+        "scientific_validation", "receptor_or_assay_construct_verified", "physical_energy_prediction"))
+    assert path.read_bytes() == raw

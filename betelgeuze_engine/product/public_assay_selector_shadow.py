@@ -83,7 +83,7 @@ _REGISTERED_CHEMBL_V1 = {
 
 
 # Native BindingDB preassignment registration is compatibility only. The frozen
-# calibration result did not improve its mean baseline; ranking stays disabled.
+# quality and coverage limitations remain attached per checkpoint; ranking stays disabled.
 BINDINGDB_SCHEMA = "public_bindingdb_preassigned_ridge_v1"
 BINDINGDB_FEATURES = dict(CHEMBL_FEATURES)
 # Exact chemistry scope from the manifest pinned inside the checkpoint. It is a
@@ -109,6 +109,23 @@ BINDINGDB_CHEMISTRY_SCOPE = {
     "radical_electrons": 0
 }
 _REGISTERED_BINDINGDB_V1 = {
+    "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'endpoint': 'Ki',
+ 'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                           'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                           'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                           'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                           'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                           'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+ 'manifest_sha256': '0f22a9ae2b093a36ec5692efe5cd975f9da900fadc99208112cdbcb7134a450e',
+ 'mean_baseline': 6.668214640457227,
+ 'ood_status': 'not_assessed',
+ 'physical_energy': False,
+ 'prediction_quantity': 'negative_log10_molar_Ki',
+ 'rdkit_version': '2026.03.6',
+ 'split_plan_sha256': '587e631a8ff9502de54b7ac304a6767fe30b57a8d8dd49dcfb0838f8e078fb78',
+ 'target_annotation_sha256': 'ed5586c054c184e9acfeba06749fcc27b73051fe20c9070a3d8fbfa7192f5058',
+ 'training_protocol_sha256': 'debdb754d1d1282a24715fdfa7276bb76c4c0ec372e5f4783f96e1033457cf07',
+ 'uncertainty': None},
     "d5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3": {
         "endpoint": "IC50",
         "implementation_hashes": {
@@ -181,6 +198,20 @@ _REGISTERED_CHEMBL_V2 = {'c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6
 # Evidence observations are separate from immutable checkpoint payloads. Later
 # identity audits can invalidate independence without rewriting historical weights.
 _CHECKPOINT_EVIDENCE = {
+    "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'evaluation_summary_sha256': '78ffd57fe746822cbd126cfd484677ba93acb97764ea080e3acd22580574d86f',
+ 'promotion_status': 'NOT_PROMOTED',
+ 'calibration_quality': 'lower_mae_than_fitted_mean_on_16_of_29_rows',
+ 'development_quality': 'lower_mae_than_fitted_mean_on_4_of_27_rows',
+ 'supported_calibration_rows': 16,
+ 'requested_calibration_rows': 29,
+ 'supported_development_rows': 4,
+ 'requested_development_rows': 27,
+ 'supported_development_positive_count': 0,
+ 'development_recall_and_average_precision': None,
+ 'primary_per_compound_measurements_verified': False,
+ 'assay_condition_harmonization_verified': False,
+ 'beyond_supplied_context_independence': 'not_established',
+ 'checkpoint_rehashed_for_new_runtime': False},
     'd5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3': {'evaluation_summary_sha256': 'a1be98fd16ca6232555277986c3700a1b4679bc2657437d131d217bf0b043a24',
                                                                           'promotion_status': 'NOT_PROMOTED',
                                                                           'calibration_quality': 'worse_mae_than_fitted_mean_on_16_of_18_rows',
