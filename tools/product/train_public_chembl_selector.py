@@ -28,6 +28,9 @@ FEATURES = {**existing.FEATURES, "target_encoding": "one_catalogue_target_annota
 def load_intake(input_dir, summary_sha256, phase):
     """Reproduce every normalized row from the bound native capture, not cache flags."""
     summary = intake.bound_json({"path": str(input_dir / "summary.json"), "sha256": summary_sha256})
+    if summary.get("schema_version") == intake.SCHEMA_V3:
+        from tools.product import public_chembl_native_intake as native
+        return native.load_intake(input_dir, summary_sha256, phase)
     if (summary.get("schema_version") not in {intake.SCHEMA, intake.SCHEMA_V2} or summary.get("phase") != phase
             or summary.get("implementation_hashes") != intake.implementation_hashes()):
         raise ValueError("fit_intake_schema_or_implementation_mismatch")
@@ -73,6 +76,7 @@ def load_intake(input_dir, summary_sha256, phase):
 def implementation_hashes():
     return {**intake.implementation_hashes(),
             "trainer": common.file_sha(Path(__file__)),
+            "native_intake": common.file_sha(Path(__file__).with_name("public_chembl_native_intake.py")),
             "reused_featurizer_and_metrics": common.file_sha(Path(existing.__file__))}
 
 
@@ -151,6 +155,7 @@ def fit(*, input_dir, summary_sha256, output_dir):
     fit_seconds = time.perf_counter() - start
     mean = float(np.average(observed, weights=weights))
     checkpoint = {
+        **({"intake_source_kind": scope["intake_source_kind"]} if "intake_source_kind" in scope else {}),
         "schema_version": contract["model_schema"], "features": FEATURES, "rdkit_version": rdBase.rdkitVersion,
         "implementation_hashes": implementation_hashes(), "target_annotation_sha256": target,
         "endpoint": contract["endpoint"], "endpoint_subtype": contract["endpoint_subtype"],

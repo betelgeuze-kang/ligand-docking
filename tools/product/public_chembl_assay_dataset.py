@@ -27,6 +27,7 @@ SCHEMA = "public_chembl_assay_development_v1"
 MANIFEST_SCHEMA = "public_chembl_preassigned_metadata_manifest_v1"
 PLAN_SCHEMA = "public_chembl_kinase_ic50_predeclared_split_v1"
 SCHEMA_V2 = "public_chembl_assay_development_v2"
+SCHEMA_V3 = "public_chembl_native_sqlite_development_v3"
 MANIFEST_SCHEMA_V2 = "public_chembl_preassigned_metadata_manifest_v2"
 PLAN_SCHEMA_V2 = "public_chembl_predeclared_split_v2"
 METADATA_FIELDS = {
@@ -53,7 +54,14 @@ NESTED_FIELDS = {
 def endpoint_contract(scope):
     """Only explicitly supported endpoint/subtype pairs select a schema version."""
     endpoint, subtype = scope.get("endpoint"), scope.get("endpoint_subtype")
-    if (endpoint, subtype) == ("IC50", "enzyme_inhibition_IC50"):
+    source_kind = scope.get("intake_source_kind")
+    if source_kind is not None and source_kind != "native_chembl_sqlite_release_v1":
+        raise ValueError("unsupported_chembl_intake_source_kind")
+    if source_kind == "native_chembl_sqlite_release_v1":
+        if (endpoint, subtype) != ("IC50", "enzyme_inhibition_IC50"):
+            raise ValueError("unsupported_native_chembl_endpoint")
+        version = "v3"
+    elif (endpoint, subtype) == ("IC50", "enzyme_inhibition_IC50"):
         version = "v1"
     elif (endpoint, subtype) == ("Ki", "enzyme_inhibition_Ki"):
         version = "v2"
@@ -62,9 +70,11 @@ def endpoint_contract(scope):
     return {
         "endpoint": endpoint, "endpoint_subtype": subtype,
         "prediction_quantity": "negative_log10_molar_" + endpoint,
-        "intake_schema": SCHEMA if version == "v1" else SCHEMA_V2,
-        "manifest_schema": MANIFEST_SCHEMA if version == "v1" else MANIFEST_SCHEMA_V2,
-        "plan_schema": PLAN_SCHEMA if version == "v1" else PLAN_SCHEMA_V2,
+        "intake_schema": {"v1": SCHEMA, "v2": SCHEMA_V2, "v3": SCHEMA_V3}[version],
+        "manifest_schema": {"v1": MANIFEST_SCHEMA, "v2": MANIFEST_SCHEMA_V2,
+                            "v3": "native_chembl_sqlite_fit_intake_manifest_v1"}[version],
+        "plan_schema": {"v1": PLAN_SCHEMA, "v2": PLAN_SCHEMA_V2,
+                        "v3": "native_chembl_ic50_precontent_reservation_v1"}[version],
         "model_schema": "public_chembl_cheap_selector_ridge_" + version,
         "frozen_schema": "public_chembl_fit_frozen_before_evaluation_" + version,
         "evaluation_schema": "public_chembl_frozen_selector_evaluation_" + version,
@@ -364,7 +374,7 @@ def normalized_record(metadata, assignment, scope, graph_node, activity=None, or
     method_supported = reviewed is False and computed is False
     if contract["intake_schema"] == SCHEMA and not method_supported:
         raise ValueError("method_source_scope_mismatch")
-    if contract["intake_schema"] == SCHEMA_V2:
+    if contract["intake_schema"] in {SCHEMA_V2, SCHEMA_V3}:
         method_supported = (method_supported and method.get("endpoint_subtype") == contract["endpoint_subtype"]
                             and method.get("citation_identity_status") == "resolved"
                             and isinstance(method.get("method_description"), str) and bool(method["method_description"].strip()))
@@ -426,7 +436,9 @@ def normalized_record(metadata, assignment, scope, graph_node, activity=None, or
         "target_annotation": target_annotation, "target_annotation_sha256": components.digest(components.canonical(target_annotation)),
         "chemical_identity": deepcopy(identity), "assayed_microstate_verified": False,
         "observation": observation, "admission": admission,
-        "label_access_status": "withheld_by_preassigned_role" if activity is None else "retrieved",
+        "label_access_status": ("withheld_by_source_method" if activity is None and assignment["role"] == "fit"
+                                and contract["intake_schema"] == SCHEMA_V3 else
+                                "withheld_by_preassigned_role" if activity is None else "retrieved"),
         "admission_issues": sorted(set(issues)),
         "eligible_for_point_model": activity is not None and not issues,
         "assay_id": "chembl:assay:" + native["assay_chembl_id"],
