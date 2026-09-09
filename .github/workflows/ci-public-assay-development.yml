@@ -1,0 +1,129 @@
+name: ci-public-assay-development
+
+on:
+  pull_request:
+    paths:
+      - 'tools/product/public_bindingdb_staged_intake.py'
+      - 'tools/product/public_bindingdb_postfreeze_evaluation.py'
+      - 'tests/unit/test_public_bindingdb_postfreeze_evaluation.py'
+      - 'tools/product/train_public_bindingdb_staged_selector.py'
+      - 'tests/unit/test_public_bindingdb_staged_intake.py'
+      - 'tools/product/public_assay_dataset.py'
+      - 'tools/product/public_chembl_measurement.py'
+      - 'tools/product/public_chembl_assay_dataset.py'
+      - 'tools/product/public_chembl_native_intake.py'
+      - 'tools/product/train_public_chembl_selector.py'
+      - 'tests/unit/test_public_chembl_measurement.py'
+      - 'tests/unit/test_public_chembl_staged_intake.py'
+      - 'tests/unit/test_public_chembl_native_intake.py'
+      - 'tools/product/public_assay_components.py'
+      - 'tools/product/build_public_assay_development_dataset.py'
+      - 'tools/product/train_public_assay_selector.py'
+      - 'tools/product/public_assay_structure_links.py'
+      - 'tools/product/residual_evidence.py'
+      - 'tests/unit/test_public_assay_dataset.py'
+      - 'tests/unit/test_public_assay_components.py'
+      - 'tests/unit/test_public_assay_context_cache.py'
+      - 'tests/unit/test_public_assay_chembl_identity.py'
+      - 'tests/unit/test_public_assay_selector.py'
+      - 'tests/unit/test_public_assay_structure_links.py'
+      - '.github/workflows/ci-public-assay-development.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/product/public_bindingdb_staged_intake.py'
+      - 'tools/product/public_bindingdb_postfreeze_evaluation.py'
+      - 'tests/unit/test_public_bindingdb_postfreeze_evaluation.py'
+      - 'tools/product/train_public_bindingdb_staged_selector.py'
+      - 'tests/unit/test_public_bindingdb_staged_intake.py'
+      - 'tools/product/public_assay_dataset.py'
+      - 'tools/product/public_chembl_measurement.py'
+      - 'tools/product/public_chembl_assay_dataset.py'
+      - 'tools/product/public_chembl_native_intake.py'
+      - 'tools/product/train_public_chembl_selector.py'
+      - 'tests/unit/test_public_chembl_measurement.py'
+      - 'tests/unit/test_public_chembl_staged_intake.py'
+      - 'tests/unit/test_public_chembl_native_intake.py'
+      - 'tools/product/public_assay_components.py'
+      - 'tools/product/build_public_assay_development_dataset.py'
+      - 'tools/product/train_public_assay_selector.py'
+      - 'tools/product/public_assay_structure_links.py'
+      - 'tools/product/residual_evidence.py'
+      - 'tests/unit/test_public_assay_dataset.py'
+      - 'tests/unit/test_public_assay_components.py'
+      - 'tests/unit/test_public_assay_context_cache.py'
+      - 'tests/unit/test_public_assay_chembl_identity.py'
+      - 'tests/unit/test_public_assay_selector.py'
+      - 'tests/unit/test_public_assay_structure_links.py'
+      - '.github/workflows/ci-public-assay-development.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-public-assay-development-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-intake-and-learning-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install CPU development dependencies
+        run: python -m pip install pytest==8.3.5 numpy==1.26.4 scipy==1.15.3 scikit-learn==1.7.2 rdkit==2026.3.6 ruff==0.11.13
+      - name: Verify synthetic controls without public downloads or protected data
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ruff check tools/product/public_bindingdb_postfreeze_evaluation.py tests/unit/test_public_bindingdb_postfreeze_evaluation.py tools/product/public_bindingdb_staged_intake.py tools/product/train_public_bindingdb_staged_selector.py tests/unit/test_public_bindingdb_staged_intake.py
+          python -m ruff check tools/product/public_chembl_measurement.py tools/product/public_chembl_assay_dataset.py tools/product/public_chembl_native_intake.py tools/product/train_public_chembl_selector.py tests/unit/test_public_chembl_measurement.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_public_chembl_native_intake.py tools/product/public_assay_components.py tests/unit/test_public_assay_components.py tests/unit/test_public_assay_context_cache.py tests/unit/test_public_assay_chembl_identity.py tools/product/public_assay_dataset.py tools/product/build_public_assay_development_dataset.py tools/product/train_public_assay_selector.py tools/product/public_assay_structure_links.py tests/unit/test_public_assay_dataset.py tests/unit/test_public_assay_selector.py tests/unit/test_public_assay_structure_links.py
+          python -m pytest --confcutdir=tests/unit -W error -vv tests/unit/test_public_bindingdb_postfreeze_evaluation.py tests/unit/test_public_bindingdb_staged_intake.py tests/unit/test_public_chembl_measurement.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_public_chembl_native_intake.py tests/unit/test_public_assay_components.py tests/unit/test_public_assay_context_cache.py tests/unit/test_public_assay_chembl_identity.py tests/unit/test_public_assay_dataset.py tests/unit/test_public_assay_selector.py tests/unit/test_public_assay_structure_links.py --junitxml=public-assay-junit.xml 2>&1 | tee public-assay.log
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: public-assay-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            public-assay.log
+            public-assay-junit.xml
+            tools/product/public_bindingdb_postfreeze_evaluation.py
+            tests/unit/test_public_bindingdb_postfreeze_evaluation.py
+            tools/product/public_bindingdb_staged_intake.py
+            tools/product/train_public_bindingdb_staged_selector.py
+            tests/unit/test_public_bindingdb_staged_intake.py
+            tools/product/public_assay_dataset.py
+            tools/product/residual_evidence.py
+            tools/product/public_chembl_measurement.py
+            tools/product/public_chembl_assay_dataset.py
+            tools/product/public_chembl_native_intake.py
+            tools/product/train_public_chembl_selector.py
+            tests/unit/test_public_chembl_measurement.py
+            tests/unit/test_public_chembl_staged_intake.py
+            tests/unit/test_public_chembl_native_intake.py
+            tools/product/public_assay_components.py
+            tools/product/build_public_assay_development_dataset.py
+            tools/product/train_public_assay_selector.py
+            tools/product/public_assay_structure_links.py
+            tests/unit/test_public_assay_dataset.py
+            tests/unit/test_public_assay_components.py
+            tests/unit/test_public_assay_context_cache.py
+            tests/unit/test_public_assay_chembl_identity.py
+            tests/unit/test_public_assay_selector.py
+            tests/unit/test_public_assay_structure_links.py
+          if-no-files-found: error
+          retention-days: 14
