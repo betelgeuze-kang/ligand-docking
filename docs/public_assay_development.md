@@ -4,6 +4,139 @@ This path is an offline development importer and a target-specific cheap-selecto
 candidate. It does not enable customer execution, docking ranking, physical
 energy correction, calibrated uncertainty, or a new molecular engine.
 
+For new BindingDB learning, use the staged native adapter described below.
+The historical generic trainer filters eligible endpoint rows before assigning
+roles. Its original checkpoints and observations are retained, but it does not
+provide the outcome-independent role assignment of the new staged path.
+
+## Native BindingDB preassignment and observed Factor X pilot, 2026-09-09
+
+`tools.product.public_bindingdb_staged_intake` and
+`tools.product.train_public_bindingdb_staged_selector` reuse the existing
+chemistry, measurement, metadata-component, Morgan-feature and metric primitives.
+The six existing BindingDB/ChEMBL helpers remain byte-identical. This is an
+offline data and learning adapter, not a third molecular engine.
+
+The new manifest binds the native BindingDB archive, original assay mapping and
+descriptions, original metadata context, preassigned role plan, endpoint-specific
+method ledger and chemistry scope. It rejects missing or duplicate source IDs,
+reserved or unknown source policies, cached value/role/provenance changes and
+method-ledger endpoint mismatches. All source-archive graph vertices are checked
+against original line and record IDs before authorized observation rows are
+decoded. Unselected and opposite-phase observation rows are not decoded.
+Original source policy fields stay intact; derived nested rows retain the fixed
+role and evaluation-only markers instead of the historical helper's defaults.
+
+The actual module sequence is:
+
+```sh
+python -m tools.product.public_bindingdb_staged_intake \
+  --manifest MANIFEST --manifest-sha256 MANIFEST_SHA \
+  --phase fit --output-dir FIT_INTAKE
+python -m tools.product.train_public_bindingdb_staged_selector \
+  --input-dir FIT_INTAKE --summary-sha256 FIT_SUMMARY_SHA \
+  --phase fit --output-dir FIT_MODEL
+python -m tools.product.public_bindingdb_staged_intake \
+  --manifest MANIFEST --manifest-sha256 MANIFEST_SHA \
+  --phase evaluation --frozen-fit FIT_MODEL/frozen-fit.json \
+  --frozen-fit-sha256 FROZEN_SHA --output-dir EVALUATION_INTAKE
+python -m tools.product.train_public_bindingdb_staged_selector \
+  --input-dir EVALUATION_INTAKE --summary-sha256 EVALUATION_SUMMARY_SHA \
+  --phase evaluation --output-dir EVALUATION_RESULT
+```
+
+Each output directory must be new. The fit command writes the protocol before
+fitting and freezes the checkpoint and predictions for every selected metadata
+row before evaluation-label intake. Evaluation rederives all saved predictions
+from the checkpoint and metadata before decoding evaluation observations. The
+new checkpoint schema is `public_bindingdb_preassigned_ridge_v1`, with quantity
+`negative_log10_molar_Ki` or `negative_log10_molar_IC50`. No old checkpoint is
+migrated or implicitly accepted by a product loader.
+
+A metadata-only census of the 93,712-row source archive selected P00742, human
+coagulation factor X, by independent component count before endpoint presence or
+values were inspected. Of 1,213 requested target rows, 298 remained blocked by
+the supplied identity context and one was outside the chemistry scope. The
+remaining 914 rows were assigned once to fit/calibration/development test:
+640/137/137 rows in 9/4/5 metadata components. The supplied graph contains
+127,158 metadata vertices; it is an explicitly bound audit universe, not a claim
+of complete similarity or public-database coverage.
+
+Method review retained the original assignments. Thirty-nine development rows
+had a thrombin method inconsistent with the Factor X annotation. Other missing,
+unknown, ambiguous or endpoint-incompatible methods remain visible. The native
+Ki fit phase read only its 640 assigned rows: 517 exact, four censored and 119
+missing observations. After method and source admission, 515 rows in three
+components entered the predeclared Ridge fit (alpha 10). The model and all 914
+metadata predictions were frozen before accessing the 274 evaluation rows.
+
+The target is a catalogue annotation, not a verified active Factor Xa construct.
+The canonical precursor sequence, activation cleavage, post-translational
+modifications and assay-specific cofactors cannot be equated to a prepared
+physical receptor. The label is a database-curated reported experimental Ki;
+primary numerical tables were not independently remeasured or fully verified.
+It is not Kd, an IC50 conversion, potential energy or an energy residual.
+
+| Frozen observed endpoint evaluation | Calibration | Development test |
+|---|---:|---:|
+| Original assigned rows | 137 | 137 |
+| Compatible exact Ki rows / components | 106 / 2 | 90 / 4 |
+| Compatible exact label coverage | 77.37% | 65.69% |
+| Missing / censored observations | 27 / 4 | 39 / 8 |
+| Mean baseline MAE, pKi | 1.03115 | 1.25085 |
+| Morgan Ridge MAE, pKi | 1.64274 | 1.09580 |
+| Supported-row top-20% budget | 22 | 18 |
+| Mean baseline expected positive hits at that budget | 19.72 | 16.00 |
+| Morgan Ridge positive hits at that budget | 17 | 18 |
+
+The model improved the development subset and worsened calibration. At the
+same fixed budget of 28 candidates from each full 137-row role, the model
+selected 11 known positives plus 17 unresolved/out-of-scope labels in calibration,
+and 21 known positives plus seven unresolved/out-of-scope labels in development.
+The constant baseline's tie-expected known-positive counts were 19.42 and 16.35.
+These are conditional observations on known labels, not full-request recall;
+unknown, censored and unsupported labels are not assumed negative. Full-request
+recall remains null. Unique-chemical-state metrics are recorded separately.
+No hyperparameter search, endpoint fallback, post-outcome resplit, refit or
+uncertainty calibration followed this evaluation. This evidence does not support
+ranking promotion or a general improvement claim.
+
+The four actual CPU module invocations returned exit 0 and took 115.7767 s total
+wall including startup, 112.2270 s summed phase CPU, and 1,847,212 KiB maximum
+process peak RSS. The fit phase itself took 29.5312 s including full source
+revalidation; feature generation was 0.0830 s, Ridge fit 0.0110 s and frozen
+914-row inference 0.1505 s. These are single correctness executions on a shared
+host, not p50/p95 or cold/warm benchmarks. No GPU/VRAM, docking recall,
+matched-quality engine speedup or end-to-end candidate-recovery cost was measured.
+
+The final checkpoint SHA-256 is
+`de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85`;
+the frozen-fit artifact SHA-256 is
+`50788721bb36996541ef6daadc2cf58f39dfc322dd0edad32eb3ca2a3b096842`.
+The manifest SHA-256 is
+`1e7d39305219e0454069ca4668376a7936ac3c3f48a5e653cca845d84d7dc618`.
+Data, checkpoint and raw execution artifacts remain local development files.
+
+New synthetic controls reproduce the previous generic defect: changing one
+row from exact to missing, censored or nonfinite moved eight unchanged peer
+roles. Those three intentional old-code failures remain in the evidence. The
+new metadata-first path retains the original roles across those controls. The
+final CI-scope local suite passed 309 cases with no failure, error or skip; Ruff
+passed. Earlier import-command and unused-variable failures are also retained.
+The local environment was Python 3.10.12, NumPy 1.26.4, SciPy 1.12.0,
+scikit-learn 1.7.2, RDKit 2026.3.6, pytest 9.0.2 and Ruff 0.12.4 with one
+BLAS/OpenMP thread. Hosted CI uses its own pinned environment and must be
+reported separately on the current head.
+
+Public-data development, actual model fitting, performance observations,
+scientific validation and customer execution are separate decisions. Only the
+first three have the limited observations above. The sources include BindingDB's
+own literature curation under its source-specific attribution terms; open paper
+access is not an independent grant for all supplementary data or commercial
+uses. No external human reviewer, experimental confirmation or approval receipt
+is asserted. A separately versioned product shadow adapter must be executed
+before this checkpoint can be counted as an integrated product observation.
+
 ## Source and chemistry contract
 
 `python -m tools.product.build_public_assay_development_dataset` consumes an
