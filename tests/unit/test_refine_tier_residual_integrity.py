@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import csv
 import json
-from pathlib import Path
 
 import pytest
 
@@ -276,3 +275,56 @@ def test_whitespace_pose_ids_are_missing_identity(tmp_path, source_pose):
     assert row["refine_tier_join_status"] == "joined"
     original = json.loads(row["source_provenance_json"])["records"][0]["row"]
     assert original["pose_id"] == "   "
+
+
+@pytest.mark.parametrize("value", ["calibration", "development_test", "calibration_dev"])
+@pytest.mark.parametrize("field", ["role", "split", "dataset_split"])
+@pytest.mark.parametrize("location", ["row", "source_provenance_json", "stage3_source_provenance_json"])
+def test_reserved_learning_roles_reach_every_residual_consumer(tmp_path, value, field, location):
+    from tools import train_residual_production_score_model as trainer
+    from tools.product.residual_evidence import source_provenance_json
+    stage = _stage3()
+    if location == "row":
+        stage[field] = value
+    else:
+        stage[location] = source_provenance_json(
+            {field: value}, source_csv="synthetic_original_roles.csv",
+            source_sha256="e" * 64, source_line=2,
+        )
+    row, summary, output = _enrich(tmp_path, [stage])
+    assert row["role"] == "fit" and row["evaluation_only"] == "false"
+    assert row["refine_tier_label"] == "" and summary["refine_tier_label_rows"] == 0
+    assert declared_evaluation_only(row)
+    origins = json.loads(row["source_provenance_json"])["records"]
+    assert any(origin["row"].get(field) == value for origin in origins)
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        trainer._load_rows(output)
+    with pytest.raises(ValueError, match="evaluation_only_training_input"):
+        trainer.try_skip_training(
+            input_csv=str(output), out_checkpoint=str(tmp_path / "never.pt"),
+            out_json=str(tmp_path / "never.json"), force_derivation_json="/dev/null",
+            fingerprint_json=str(tmp_path / "fingerprint.json"), epochs=1, hidden_dim=4,
+            batch_size=2, lr=.001, weight_decay=0, train_ratio=.8, seed=1,
+        )
+    assert not (tmp_path / "never.pt").exists()
+    row.update(reference_binding_kcal_mol=-2, binding_score_composite_v7=-3)
+    source = tmp_path / "direct_stage5_ranking_rows.csv"
+    _write(source, [row])
+    result = base.build_residual_production_supervised_dataset(stage5_glob=str(source), min_rows=1, min_targets=1)
+    assert result["rows"] == []
+    assert result["sources"][0]["rejections"][0]["reason"] == "evaluation_only_row"
+
+
+@pytest.mark.parametrize("value", ["fit", "train", "development_source"])
+def test_nonreserved_source_roles_keep_measured_zero(tmp_path, value):
+    from tools import train_residual_production_score_model as trainer
+    from tools.product.residual_evidence import source_provenance_json
+    origin = source_provenance_json(
+        {"split": value}, source_csv="synthetic_original_roles.csv",
+        source_sha256="e" * 64, source_line=2,
+    )
+    row, summary, output = _enrich(tmp_path, [_stage3(source_provenance_json=origin)])
+    assert float(row["refine_tier_label"]) == 0 and summary["refine_tier_label_rows"] == 1
+    assert not declared_evaluation_only(row)
+    assert float(trainer._load_rows(output)[0]["refine_tier_label"]) == 0
+    assert row.get("delta_force", "") == ""

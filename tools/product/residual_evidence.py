@@ -21,6 +21,7 @@ _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _RESERVED_SPLITS = {
     "holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128",
     "eval", "ood_eval", "id_eval", "near_ood_eval", "far_ood_eval",
+    "calibration", "development_test", "calibration_dev",
 }
 
 
