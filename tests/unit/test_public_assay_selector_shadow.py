@@ -320,3 +320,39 @@ def test_unavailable_checkpoint_does_not_claim_a_target_scope(tmp_path, monkeypa
     assert summary["prediction_scope"] is None
     assert summary["checkpoint_schema_version"] is None
     assert json.loads(output.read_text())["rows"][0]["status"] == "unsupported"
+
+
+@pytest.mark.parametrize("consumer", ["module", "sidecar"])
+def test_expanded_ki_identity_failure_survives_product_output(tmp_path, monkeypatch, consumer):
+    real_digest = "c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b"
+    binding = dict(shadow._REGISTERED_CHEMBL_V2[real_digest], rdkit_version=rdBase.rdkitVersion)
+    payload = dict(binding, schema_version=shadow.CHEMBL_KI_SCHEMA,
+                   features=dict(shadow.CHEMBL_FEATURES), coefficients=[.125] * 1024,
+                   intercept=1., uncertainty_calibrated=False,
+                   product_ranking_enabled=False, customer_execution=False)
+    raw = json.dumps(payload).encode()
+    digest = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setitem(shadow._REGISTERED_CHEMBL_V2, digest, binding)
+    # Synthetic weights exercise the real consumer with the actual evidence observation.
+    monkeypatch.setitem(shadow._CHECKPOINT_EVIDENCE, digest,
+                        dict(shadow._CHECKPOINT_EVIDENCE[real_digest]))
+    path = tmp_path / "synthetic-ki.json"
+    path.write_bytes(raw)
+    row = {"smiles": "CCCCC", "endpoint": "Ki",
+           "endpoint_subtype": "enzyme_inhibition_Ki",
+           "target_annotation_sha256": binding["target_annotation_sha256"]}
+    if consumer == "module":
+        model = shadow.load_public_assay_selector(path, expected_sha256=digest)
+        assert model.predict_rows([row])[0]["status"] == "evaluated"
+        metadata = model.metadata
+    else:
+        _, output, _ = _sidecar(tmp_path, path, digest, [row])
+        metadata = json.loads(output.read_text())["model"]
+    evidence = metadata["checkpoint_evidence_observations"]
+    assert evidence["identity_independence_status"] == "failed_expanded_metadata_dependency_audit"
+    assert evidence["historical_observation_only"] is True
+    assert evidence["new_independent_evaluation_allowed"] is False
+    assert evidence["new_training_from_connected_components_allowed"] is False
+    assert evidence["numeric_evaluation_label_leakage_proven"] is False
+    assert all(metadata[k] is False for k in ("customer_execution", "product_ranking_enabled", "scientific_validation"))
+    assert path.read_bytes() == raw
