@@ -557,3 +557,67 @@ hashes. Intermediate implementation failures and reference-fixture errata are
 retained in the evidence bundle. An accidentally broad collection against the
 partial repository snapshot produced 1,273 collection errors; it was not a
 passing full-repository suite and no protection was removed to pass it.
+
+
+## Explicit method review exclusions
+
+The native staged ChEMBL intake now respects optional `method_eligible` and
+`method_admission_issues` declarations for both IC50 and Ki. If present,
+`method_eligible` must be exactly boolean true and `method_admission_issues`
+must be an empty list before the row can pass the existing method gates. False,
+nonempty or malformed declarations remain exclusions even when endpoint and
+citation descriptions look compatible. Absent legacy fields preserve the older
+contract; they do not bypass any existing citation, method or measurement gate.
+
+Previously these two declarations were copied into output provenance but ignored
+when deciding eligibility. Fresh synthetic controls reproduced 18 failures with
+six positive/legacy controls passing. The correction reuses the existing
+`assay_method_or_primary_document_unresolved` exclusion and measurement-admission
+path. Rejected rows keep their original role, endpoint, raw observation, method
+metadata and identity vertex. The unchanged trainer and cache validator regenerate
+records using that same path; rehashing a cached admission to true cannot restore
+an explicitly excluded assay. Both endpoint profiles have actual fit-consumer
+controls. These are synthetic training tests, not new public-data training.
+
+A replay of the original public ChEMBL Ki fit intake preserves all 4,766 metadata
+requests, 452 fixed assignments (316 fit / 68 calibration / 68 development), 316
+captured fit observations and 224 point-eligible fit rows. The complete records
+and ledger are byte-identical to the archived intake; evaluation values remain
+withheld in that replay. Existing contradictory methods were already excluded
+by other gates. The new guard closes a future re-admission hole rather than
+claiming that an admitted erroneous label or a changed model metric was found.
+
+A post-fit source review retains the same five PMC-linked papers from the
+predeclared 55-document roster, linked to 29 assigned records (3 fit, 1 calibration,
+25 development). Search-indexed article content provides partial source evidence;
+direct article retrieval still returns a browser challenge and no full text or
+commercial permission is fabricated. The 21 FXa Ki values in the 2014 paper's
+Tables 1-2 match the database's document-level multiset, but this does not prove
+compound-number/structure correspondence. A 2024 article's table and methods
+separate current FXa Ki from a cited older IC50. ChEMBL activity 26001575 is stored
+as Ki=323 nM while the indexed article describes that cited value as IC50.
+Crossref's publisher-deposited reference 29 points to
+`10.1016/j.chembiol.2019.09.004`; its original table has not been verified. That row
+was already excluded. It remains an endpoint-conflict candidate needing source
+resolution, without relabeling, new admission, resplitting or refitting.
+
+The 2024 paper describes FXa Ki obtained from IC50 under a Cheng-Prusoff
+competitive-reversible assumption; this is recorded separately from direct
+binding measurements and physical engine energies. Search-indexed article
+licensing and the separately retained ChEMBL database license are distinct.
+No source role, chemical state, missing condition or atom mapping is inferred.
+
+The intake implementation fingerprint changes. Older cached intakes and model
+checkpoints retain their original source fingerprints and archived runtime;
+there is no automatic rehash/migration, refit or product ranking promotion.
+Schema names, score units and raw measurements do not change. This change is
+not evidence of improved molecular prediction or lower screening cost.
+
+Final local CI scope passes 368 tests, zero failures/errors/skips, including all
+342 existing tests and 26 fresh controls. A disk-full local attempt retained
+210 passes, 27 failures and 131 setup errors; its complete log and fixtures
+are preserved. The identical final source passed after moving only that completed
+run's temporary fixtures to the data disk and using a fresh explicit test temp
+directory there. No test or assertion was removed. Three actual-source checks
+verify full intake counts, byte-identical records/ledger/identity context and
+rejection of the archived checkpoint by the changed runtime fingerprint.

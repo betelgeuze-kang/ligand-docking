@@ -368,6 +368,13 @@ def normalized_record(metadata, assignment, scope, graph_node, activity=None, or
         method_supported = (method_supported and method.get("endpoint_subtype") == contract["endpoint_subtype"]
                             and method.get("citation_identity_status") == "resolved"
                             and isinstance(method.get("method_description"), str) and bool(method["method_description"].strip()))
+    # Optional legacy fields may be absent, but explicit review exclusions are
+    # authoritative for both endpoints. Malformed declarations are unresolved.
+    method_supported = (method_supported
+                        and ("method_eligible" not in method or method["method_eligible"] is True)
+                        and ("method_admission_issues" not in method
+                             or (type(method["method_admission_issues"]) is list
+                                 and not method["method_admission_issues"])))
     identity = metadata["chemical_identity"]
     issues = chemistry_issues(identity, scope)
     if not method_supported:

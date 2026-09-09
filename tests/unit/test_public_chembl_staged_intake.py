@@ -414,3 +414,80 @@ def test_frozen_baseline_and_abstention_cannot_be_rewritten_before_evaluation(so
     captures = capture(source, "evaluation", entry)
     with pytest.raises(ValueError, match="frozen_baseline_or_abstention_mismatch"):
         build(source, captures, "evaluation")
+
+
+@pytest.mark.parametrize("fixture_name", ["source", "ki_source"])
+@pytest.mark.parametrize("review", [
+    {"method_eligible": False}, {"method_eligible": None},
+    {"method_eligible": 0}, {"method_eligible": "false"},
+    {"method_admission_issues": ["source_endpoint_conflict"]},
+    {"method_admission_issues": None}, {"method_admission_issues": ""},
+    {"method_admission_issues": {}},
+])
+def test_method_review_exclusion_is_preserved_by_real_intake(request, fixture_name, review):
+    source = request.getfixturevalue(fixture_name)
+    assay = next(a["assay_chembl_id"] for a in source["plan"]["assignments"] if a["role"] == "fit")
+    source["scope"]["methods"][assay].update(review)
+    source["manifest"]["intake_scope"] = dump(source["root"] / "scope.json", source["scope"])
+    source["manifest_entry"] = dump(source["root"] / "manifest.json", source["manifest"])
+    summary = build(source, capture(source))
+    rows = [json.loads(line) for line in (source["root"] / "fit-intake/records.jsonl").read_text().splitlines()]
+    affected = [row for row in rows if row["assay_id"] == "chembl:assay:" + assay]
+    assert len(affected) == 2
+    assert all(not row["eligible_for_point_model"] for row in affected)
+    assert all("assay_method_or_primary_document_unresolved" in row["admission_issues"] for row in affected)
+    assert all(all(row["method_evidence"][k] == v for k, v in review.items()) for row in affected)
+    assert all(row["assigned_role"] == "fit" and row["observation"]["endpoint"] == source["scope"]["endpoint"] for row in affected)
+    assert summary["point_eligible_rows"] == source["plan"]["counts"]["fit"] - 2
+    assert summary["requested_metadata_rows"] == 40
+    assert summary["assigned_role_counts"] == source["plan"]["counts"]
+
+
+@pytest.mark.parametrize("fixture_name", ["source", "ki_source"])
+@pytest.mark.parametrize("review", [{}, {"method_eligible": True}, {"method_eligible": True, "method_admission_issues": []}])
+def test_method_review_positive_and_legacy_absence_preserve_intake(request, fixture_name, review):
+    source = request.getfixturevalue(fixture_name)
+    for method in source["scope"]["methods"].values():
+        method.update(review)
+    source["manifest"]["intake_scope"] = dump(source["root"] / "scope.json", source["scope"])
+    source["manifest_entry"] = dump(source["root"] / "manifest.json", source["manifest"])
+    summary = build(source, capture(source))
+    assert summary["point_eligible_rows"] == source["plan"]["counts"]["fit"]
+
+
+@pytest.mark.parametrize("fixture_name", ["source", "ki_source"])
+def test_method_review_rejection_reaches_actual_fit_consumer(request, fixture_name):
+    source = request.getfixturevalue(fixture_name)
+    assay = next(a["assay_chembl_id"] for a in source["plan"]["assignments"] if a["role"] == "fit")
+    source["scope"]["methods"][assay].update(method_eligible=False, method_admission_issues=["source_endpoint_conflict"])
+    source["manifest"]["intake_scope"] = dump(source["root"] / "scope.json", source["scope"])
+    source["manifest_entry"] = dump(source["root"] / "manifest.json", source["manifest"])
+    build(source, capture(source))
+    directory = source["root"] / "fit-intake"
+    result = trainer.fit(input_dir=directory, summary_sha256=common.file_sha(directory / "summary.json"), output_dir=source["root"] / "fit")
+    assert result["fit_excluded"] == 2
+    assert result["fit_used"] == source["plan"]["counts"]["fit"] - 2
+
+
+@pytest.mark.parametrize("fixture_name", ["source", "ki_source"])
+def test_method_review_rejection_cannot_be_removed_by_rehashing_cache(request, fixture_name):
+    source = request.getfixturevalue(fixture_name)
+    assay = next(a["assay_chembl_id"] for a in source["plan"]["assignments"] if a["role"] == "fit")
+    source["scope"]["methods"][assay].update(method_eligible=False)
+    source["manifest"]["intake_scope"] = dump(source["root"] / "scope.json", source["scope"])
+    source["manifest_entry"] = dump(source["root"] / "manifest.json", source["manifest"])
+    build(source, capture(source))
+    directory = source["root"] / "fit-intake"
+    rows = [json.loads(line) for line in (directory / "records.jsonl").read_text().splitlines()]
+    for row in rows:
+        if row["assay_id"] == "chembl:assay:" + assay and row["assigned_role"] == "fit":
+            row["eligible_for_point_model"] = True
+            row["admission_issues"] = []
+            row["admission"]["issues"] = []
+            row["admission"]["eligible_for_declared_purpose"] = True
+    rewritten = lines(directory / "records.jsonl", rows)
+    summary = json.loads((directory / "summary.json").read_text())
+    summary["records_sha256"] = rewritten["sha256"]
+    bound = dump(directory / "summary.json", summary)
+    with pytest.raises(ValueError, match="fit_intake_cache_does_not_match_native_source"):
+        trainer.load_intake(directory, bound["sha256"], "fit")
