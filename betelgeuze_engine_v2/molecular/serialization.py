@@ -71,7 +71,7 @@ def canonical_json_value(value: Any, *, path: str = "$") -> Any:
             )
             for field in fields(value)
         }
-    if isinstance(value, Mapping):
+    if issubclass(type(value), Mapping):
         normalized: dict[str, Any] = {}
         for key in sorted(value, key=lambda item: str(item)):
             text = str(key)
@@ -227,7 +227,7 @@ def _decode_canonical_value(value: Any, *, path: str = "$") -> Any:
 
 
 def _require_mapping(value: Any, *, path: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
+    if not issubclass(type(value), Mapping):
         raise CanonicalSerializationError(f"expected mapping at {path}")
     return value
 

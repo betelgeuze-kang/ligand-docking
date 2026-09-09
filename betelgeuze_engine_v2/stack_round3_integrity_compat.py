@@ -72,7 +72,7 @@ def _identity_value(value: Any) -> Any:
             field.name: _identity_value(getattr(value, field.name))
             for field in fields(value)
         }
-    if isinstance(value, Mapping):
+    if issubclass(type(value), Mapping):
         return {
             str(key): _identity_value(item)
             for key, item in sorted(value.items(), key=lambda row: str(row[0]))
