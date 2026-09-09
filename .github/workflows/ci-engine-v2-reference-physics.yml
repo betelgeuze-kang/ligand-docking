@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/physics/**"
+      - "betelgeuze_engine/product/reference_pair_lj.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_reference_pair_lj.py"
@@ -27,6 +28,7 @@ on:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/physics/**"
+      - "betelgeuze_engine/product/reference_pair_lj.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_reference_pair_lj.py"
@@ -173,7 +175,7 @@ jobs:
             reference-physics.log
             reference-physics-junit.xml
             reference-physics-source.json
-            betelgeuze_engine_v2/physics/reference_pair_lj.py
+            betelgeuze_engine/product/reference_pair_lj.py
             tests/unit/test_engine_v2_reference_pair_lj.py
             .github/workflows/ci-engine-v2-reference-physics.yml
           if-no-files-found: error

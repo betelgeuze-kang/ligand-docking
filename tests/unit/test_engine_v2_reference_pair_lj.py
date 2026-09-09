@@ -13,7 +13,7 @@ from betelgeuze_engine_v2.physics.reference_parameters import (
     AtomNonbondedParameter, PairScalingParameter, ReferenceForceFieldParameters,
 )
 from betelgeuze_engine_v2.physics.reference_forcefield import evaluate_reference_force_field
-from betelgeuze_engine_v2.physics.reference_pair_lj import (
+from betelgeuze_engine.product.reference_pair_lj import (
     PairLJOverride, ReferencePairLJParameters, evaluate_reference_force_field_with_pair_lj,
 )
 

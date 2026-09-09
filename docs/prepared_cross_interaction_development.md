@@ -642,7 +642,7 @@ installed dependencies, not clean-wheel installation or customer qualification.
 
 ## Explicit pair LJ extension and actual AKT1 component observation
 
-The independently versioned `physics.reference_pair_lj` API wraps the unchanged
+The independently versioned `betelgeuze_engine.product.reference_pair_lj` API wraps the unchanged
 V1 evaluator. It accepts caller-assigned mixed pair sigma/epsilon values, retaining
 V1 exclusions, LJ scaling, charge interactions, energy switching, topology and
 neighbor checks. Overrides on excluded or unknown atoms, duplicates, nonfinite
@@ -653,6 +653,17 @@ the referenced file. The development source workflow separately checks bytes.
 Forces differentiate the same corrected scalar. Scientific/composition approval
 remains false. This API is exercised by an actual development consumer; the
 prepared cross CLI does not yet accept CHARMM or automatically use these overrides.
+
+The draft import previously lived at
+`betelgeuze_engine_v2.physics.reference_pair_lj`. Development callers now import
+`betelgeuze_engine.product.reference_pair_lj`; the numerical implementation,
+parameter schema and fingerprints are unchanged. There is no compatibility module
+in the frozen V2 namespace. This keeps the existing ScorerV1 transitive source
+manifest exact while the separately tested adapter explicitly imports the V2
+primitive. Frozen manifests, protocols and their rejection tests remain unchanged.
+The reference-physics CI watches and hashes the new adapter path. This import
+migration does not promote the adapter into the prepared cross CLI or establish
+scientific or customer execution approval.
 
 A licensed public AKT1 PSF/PDB (Zenodo17187387, CC BY4.0) supplies7761 atoms,
 480 residues,7854 bonds and the original charges/hydrogen coordinates. The

@@ -1,4 +1,4 @@
-"""Explicit pair LJ replacements around the unchanged V1 CPU evaluator.
+"""Development adapter for explicit pair LJ around the unchanged V2 primitive.
 
 This supports source-assigned mixed pair values (for example NBFIX or 1-4 LJ).
 It does not assign atom types, infer exclusions, or reproduce a CHARMM Hamiltonian.
@@ -14,12 +14,12 @@ import re
 
 import torch
 
-from .reference_forcefield import (
+from betelgeuze_engine_v2.physics.reference_forcefield import (
     ReferencePhysicsEvaluation,
     _switch,
     evaluate_reference_force_field,
 )
-from .reference_parameters import ReferenceForceFieldParameters
+from betelgeuze_engine_v2.physics.reference_parameters import ReferenceForceFieldParameters
 
 SCHEMA_ID = "betelgeuze.engine_v2_explicit_pair_lj/1.0.0"
 MAX_OVERRIDES = 200_000
