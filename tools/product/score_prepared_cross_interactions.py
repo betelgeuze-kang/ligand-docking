@@ -53,7 +53,13 @@ def evaluate_request(request: dict) -> dict:
                 raise ValueError("all cross-model and pocket parameters must be explicit")
             from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
             from betelgeuze_engine.product.v2_cross_interaction import evaluate_prepared_cross_interaction
-            receptor, ligand, rp, lp, provenance = load_prepared_gromacs_components(case["prepared_input"])
+            from betelgeuze_engine.product.compiled_gromacs_cross_input import (
+                SCHEMA as COMPILED_SCHEMA, load_compiled_gromacs_cross_particles,
+            )
+            loader = (load_compiled_gromacs_cross_particles
+                      if isinstance(case["prepared_input"], dict) and case["prepared_input"].get("schema_version") == COMPILED_SCHEMA
+                      else load_prepared_gromacs_components)
+            receptor, ligand, rp, lp, provenance = loader(case["prepared_input"])
             row["preparation_provenance"] = provenance
             try:
                 from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry

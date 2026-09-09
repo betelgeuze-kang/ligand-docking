@@ -15,6 +15,41 @@ all six explicit `evaluation` parameters: pocket center/radius, cutoff, switchin
 start, dielectric, and inverse screening length. The command is a development
 consumer; customer capability and qualification flags remain false.
 
+The same CLI also dispatches `prepared_input.schema_version =
+compiled_gromacs_cross_particles_v1` to a compiled-source particle reader. This
+profile reads one local hash-bound standalone `.top` and `.gro` pair. It requires
+explicit receptor/ligand molecule names, exact counts of every excluded molecule,
+and explicit trailing inert virtual-site omissions. Each selected molecule must
+have one copy. It preserves the full topology text, source atom indices, residue
+partition, connectivity, supplied coordinates/charges/parameters, original box,
+and all selected/omitted site counts. A source molecule group is not asserted to
+be a biological chain. Selected particle limits remain 10,000/256 and the full
+GRO inventory is bounded to 99,999 unwrapped sequential serials.
+
+Compiled input fields are `schema_version`, `topology`, `coordinates`,
+`selected_molecules` (receptor/ligand names), `excluded_molecules` (name/count map),
+`omitted_inert_sites` (receptor/ligand lists of source indices), the existing four
+`source_declarations`, and `source_relationship`. File references retain the
+existing absolute `path`, `sha256`, and `source_id` contract. For the published
+waterNES 1LPG input, selections are system1/LIG, exclusions are MOL:1, HOH:16947,
+NA:61, CL:62, and the only omitted selected-molecule site is receptor 4426.
+
+This is a **particle cross-potential input**, not chemical preparation. Chemical
+bond orders and formal-charge observations are unavailable; source adjacency is
+retained separately, canonical chemical bonds remain empty, and canonical formal
+charge default zero is explicitly marked as an unavailable observation rather
+than an assigned atomic charge. Same-state experimental joins remain unverified
+and ineligible. All hydrogens and partial charges used in the calculation come
+from the source files. No missing coordinate or parameter is fabricated.
+
+Selected/global preprocessing is rejected. Only inert `#ifndef FLEXIBLE` water
+bond/constraint branches outside selected molecules can be retained without
+evaluation; they cannot change the particle inventory. Omitted selected sites
+must be explicitly declared, trailing, zero-mass/zero-charge/zero-epsilon dummy
+particles with a supported two-parent virtual-site definition. Other selected
+virtual sites or parameter overrides are unsupported. The source simulation's
+periodic Hamiltonian, solvent and bonded terms are not reproduced.
+
 ## Supported computation
 
 One nonperiodic CPU float64 prepared receptor (1–10,000 atoms) and ligand
