@@ -623,3 +623,90 @@ blocked Python's `platform.platform()` call to system `uname`; its failure is ke
 The corrected harness caches only that host description before applying the same
 restrictions. No model or physics call was mocked. This is offline replay with the
 installed dependencies, not clean-wheel installation or customer qualification.
+
+
+## Explicit pair LJ extension and actual AKT1 component observation
+
+The independently versioned `physics.reference_pair_lj` API wraps the unchanged
+V1 evaluator. It accepts caller-assigned mixed pair sigma/epsilon values, retaining
+V1 exclusions, LJ scaling, charge interactions, energy switching, topology and
+neighbor checks. Overrides on excluded or unknown atoms, duplicates, nonfinite
+values and periodic input are refused. The source digest and sorted overrides
+bind a new parameter fingerprint; existing V1 fingerprints/checkpoints/scores
+are unchanged. Its source digest is a caller declaration, not a verification of
+the referenced file. The development source workflow separately checks bytes.
+Forces differentiate the same corrected scalar. Scientific/composition approval
+remains false. This API is exercised by an actual development consumer; the
+prepared cross CLI does not yet accept CHARMM or automatically use these overrides.
+
+A licensed public AKT1 PSF/PDB (Zenodo17187387, CC BY4.0) supplies7761 atoms,
+480 residues,7854 bonds and the original charges/hydrogen coordinates. The
+July2024 CHARMM archive was pinned at mackerell-lab/charmm36-force-field commit
+283160ad9682f23e92d442d35feba71b2e6baae1 with its MIT notice. Its archive bytes
+also match the MacKerell laboratory's primary download exactly (SHA256
+`a9382b5739c00092d626a074ba75db849e900080092c8560d46a3cf3a1fc85fc`).
+The protein PRM SHA256 is `a1209a63aadbe00beb59566e533cdfa16956707ae6ef589bde0f1b8fca125984`.
+All38 source atom types have parameters;10 types have distinct1-4 values and
+NC2–OC has an NBFIX override. Standard mixing alone is a different parameterization,
+not a numerical failure of the original V1 kernel.
+
+The predeclared development model evaluates only nonperiodic intramolecular LJ
+and Coulomb at10Å cutoff,8Å quintic energy-switch start, dielectric1 and no
+screening. Source bond graph distances1/2 are excluded; distance3 uses source
+1-4 LJ; the explicit NBFIX is retained. This is a newly declared component model,
+not the native NAMD/CHARMM total Hamiltonian or trajectory. Bonded, CMAP,
+solvation, strain, long-range contributions, total potential energy and affinity
+are not evaluated and remain null. The apo/autoinhibited modeled receptor is
+not established as the active construct of the frozen IC50 observations.
+
+The initial1024-neighbor configuration was rejected before energy evaluation by
+V2's fixed256 hard cap. The recorded execution amendment uses128-atom blocks,
+at most256 atoms per off-diagonal projection and exact AABB cutoff pruning,
+without changing caps, atoms or the physical model. The full-source minimum
+separation check runs before tiling.986 tiles evaluated;905 were exactly outside
+the declared cutoff. All7761 atoms and1,071,717 cutoff pairs are retained;
+22,040 pairs are source1-2/1-3 exclusions,20,458 are1-4 pairs and353 use NBFIX.
+The full all-pairs denominator is30,112,680.
+
+An independently written NumPy Rmin energy/analytic-force implementation uses
+separate OpenMM parameter/PSF readers and a SciPy neighbor search. No OpenMM
+System/Context or solver runs. Its source bond exclusions and all cutoff pair
+indices match the V2 consumer exactly. LJ/Coulomb differences are6.82e-13 and
+5.46e-12 kcal/mol; maximum component force difference is3.66e-13 kcal/mol/Å
+against the predefined1e-7 tolerances. Every atom's force vector and actual
+coordinates are saved. Omitting source pair rules changes this component by
+3570.44 kcal/mol and a force component by69.05 kcal/mol/Å; the original V1
+arithmetic independently matches its own generic-mixing reference. These are
+parameter-rule differences, not affinity or cross-score comparisons.
+
+Cost is not competitive yet: one paired old/corrected V2 observation took569.29s
+wall/569.21s CPU, peak1,045,364KiB. Within that paired run, neighbor construction
+was111.30s, original V1 evaluation187.81s and corrected evaluation206.50s;
+source binding, projection, identity and output work are also included in the
+total. Imports are excluded from these inner times. The separate analytic
+reference took5.43s/413,520KiB including its source parsing and comparison work.
+This is n=1 on one CPU host, not a matched end-to-end timing benchmark, p50/p95,
+GPU evidence, speedup or docking recovery result. Repeated neighbor/identity
+work and tile construction need profiling and exact-result-preserving reuse.
+
+Validation:43 local pair-extension/V1 tests and6 separate actual-artifact checks
+passed with0 failures/errors/skips; the unchanged Engine V2 architecture guard
+passes. Tests include independent pair energy/forces through the switch/cutoff,
+zero epsilon versus missing values, charge/scaling preservation, multiple pairs,
+rotation/translation/permutation, batches, finite differences and source failures.
+CI adds the new tests while retaining all existing physics contracts, and uploads
+exact source hashes and JUnit. No protected qualification or model refit occurred.
+
+Local evidence root:
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-akt1-parameter-intake-4hpua2d5`.
+It contains source files/notices, native metadata, plans/amendment, initial
+failures, development consumer and separate reference source, atom/parameter/pair
+ledgers, coordinates/forces, command/exit/environment logs and JUnit. This local
+artifact layout is not a portable customer input format. Frozen experimental
+model quality remains unchanged and NOT_PROMOTED; same-state bound ligand,
+prepared cross/assay joins, total-model physics and candidate recovery/cost
+remain incomplete. No external reviewer or scientific approval is asserted.
+
+Sources: [MacKerell laboratory archive](https://mackerell.umaryland.edu/charmm_ff.shtml),
+[parameter-file semantics](https://academiccharmm.org/documentation/version/c49b1/parmfile),
+[AKT1 source](https://zenodo.org/records/17187387).
