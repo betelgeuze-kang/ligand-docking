@@ -437,3 +437,34 @@ Raw paired samples, exact source/command/environment bindings, JUnit and retaine
 before/after row outputs are included. All customer/promotion flags stay false.
 No checkpoint or score/schema migration occurs; eager import side effects outside
 the listed public exports are not an API guarantee.
+
+
+## Statically verifiable deferred imports
+
+The first deferred-import head `d53edd3d` passed the dedicated262-test scope,
+but the existing external-oracle architecture guard correctly rejected its two
+computed import target expressions (`product_dynamic_import_unresolved`). The
+initializer now uses explicit literal module targets, retaining the same lazy
+resolution and original objects. The guard and all protections remain unchanged.
+A local full architecture scan passes; the same262 tests pass with the existing
+one optional historical replay skip. No checkpoint/schema/score migration occurs.
+The first local scan also identified an omitted existing `.dockerignore` in the
+source snapshot; it was restored byte-for-byte from the tested parent, and the
+full scan was rerun. The missing Ruff executable launch was resolved with the
+already installed Python module. Failed attempts remain in the evidence ledger.
+
+The corrected initializer was measured again against the original eager parent
+`afe3fb24` with the same40-run alternating experiment and unchanged inputs/model.
+Standalone210-row wall p50/p95: 1.407830/1.427418s before,
+0.157547/0.163244s after; CPU p50:
+1.404484 to 0.156903s; peak RSS:
+505024 to 75072KiB. All210 rows,122 predictions and88
+abstentions remain identical. Separate actual artifact checks:4 passed,0 failed
+or skipped. HTVS intercepted before mapping wall p50 was
+1.943749 to 1.912374s. This does not establish full HTVS
+or docking speedup. Earlier timing observations above belong to the earlier
+initializer; current measurements are bound to the corrected initializer hash.
+
+Evidence root: `/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-selector-static-import-d0ox85bl`. Source, full commands, exits, environment,
+raw logs, paired samples, original failure and JUnit are retained. The current
+negative AKT1 quality evidence and disabled ranking/customer execution are unchanged.

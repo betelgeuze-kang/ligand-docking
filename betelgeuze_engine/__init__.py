@@ -32,13 +32,27 @@ __all__ = [
 
 
 def __getattr__(name):
-    module = _EXPORT_MODULES.get(name)
+    module_name = _EXPORT_MODULES.get(name)
+    if module_name == "contracts.result":
+        module = _import_module("betelgeuze_engine.contracts.result")
+    elif module_name == "contracts.state":
+        module = _import_module("betelgeuze_engine.contracts.state")
+    elif module_name == "physics.forcefield":
+        module = _import_module("betelgeuze_engine.physics.forcefield")
+    elif module_name == "residual.guarded_force":
+        module = _import_module("betelgeuze_engine.residual.guarded_force")
+    else:
+        module = None
     if module is not None:
-        value = getattr(_import_module(f"{__name__}.{module}"), name)
+        value = getattr(module, name)
         globals()[name] = value
         return value
-    if name in {"contracts", "physics", "residual"}:
-        return _import_module(f"{__name__}.{name}")
+    if name == "contracts":
+        return _import_module("betelgeuze_engine.contracts")
+    if name == "physics":
+        return _import_module("betelgeuze_engine.physics")
+    if name == "residual":
+        return _import_module("betelgeuze_engine.residual")
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
