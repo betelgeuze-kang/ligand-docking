@@ -109,6 +109,28 @@ BINDINGDB_CHEMISTRY_SCOPE = {
     "radical_electrons": 0
 }
 _REGISTERED_BINDINGDB_V1 = {
+    "d5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3": {
+        "endpoint": "IC50",
+        "implementation_hashes": {
+            "bindingdb_primitives": "a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b",
+            "bound_readers": "69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62",
+            "components": "b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01",
+            "selector_primitives": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+            "staged_intake": "3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e",
+            "staged_trainer": "a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916"
+        },
+        "manifest_sha256": "00b5fc2e017b1f00cb336b5e1747c992b21335ebfbfe88f8c893434f9cecb5c7",
+        "mean_baseline": 5.659657694904753,
+        "ood_status": "not_assessed",
+        "physical_energy": False,
+        "prediction_quantity": "negative_log10_molar_IC50",
+        "rdkit_version": "2026.03.6",
+        "split_plan_sha256": "bf0fffbc1e3d6d2666ed8e265c6638f3886879ef23a233924d72b9b623a88551",
+        "target_annotation_sha256": "b3e2d4ebe653299360781c289413d9b3796b6cb331673c4aaa47dd4ade994a39",
+        "training_protocol_sha256": "1525c6175d7ab6872eeb616fa46a8f8afac3f0bd64e74bfe1f7454405bc847e7",
+        "uncertainty": None
+    }
+,
     "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
         "endpoint": "Ki",
         "implementation_hashes": {
@@ -159,6 +181,16 @@ _REGISTERED_CHEMBL_V2 = {'c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6
 # Evidence observations are separate from immutable checkpoint payloads. Later
 # identity audits can invalidate independence without rewriting historical weights.
 _CHECKPOINT_EVIDENCE = {
+    'd5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3': {'evaluation_summary_sha256': 'a1be98fd16ca6232555277986c3700a1b4679bc2657437d131d217bf0b043a24',
+                                                                          'promotion_status': 'NOT_PROMOTED',
+                                                                          'calibration_quality': 'worse_mae_than_fitted_mean_on_16_of_18_rows',
+                                                                          'development_quality': 'worse_mae_than_fitted_mean_on_5_of_19_rows',
+                                                                          'supported_development_positive_count': 0,
+                                                                          'development_recall_and_average_precision': None,
+                                                                          'primary_per_compound_measurements_verified': False,
+                                                                          'assay_condition_harmonization_verified': False,
+                                                                          'beyond_supplied_context_independence': 'not_established',
+                                                                          'checkpoint_rehashed_for_new_runtime': False},
     "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
         "identity_independence_status": "failed_expanded_metadata_dependency_audit",
         "identity_audit_sha256": "c6a94704724f6b0360ebe4874f35b43e6410d36f944975aa93c04da620968f12",
@@ -219,7 +251,7 @@ def _registration(checkpoint_sha256: str) -> tuple[str, dict[str, Any]]:
     raise SelectorContractError("unregistered_checkpoint_sha256")
 
 
-def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
+def _contract(checkpoint_schema: str | None = None, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
     scopes = {
         "public_assay_cheap_selector_ridge_v1": "BACE1_exact_recorded_state_mixed_assay_conditions_IC50",
         "public_assay_cheap_selector_ridge_v2": "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50",
@@ -227,11 +259,13 @@ def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
     native_chembl = checkpoint_schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA}
     native_bindingdb = checkpoint_schema == BINDINGDB_SCHEMA
     native_annotation = native_chembl or native_bindingdb
-    scopes[BINDINGDB_SCHEMA] = "BindingDB_P00742_catalogue_annotation_mixed_assay_conditions_Ki"
+    scopes[BINDINGDB_SCHEMA] = (None if not native_bindingdb or binding is None else
+        f"BindingDB_catalogue_annotation_{binding['target_annotation_sha256']}_mixed_assay_conditions_{binding['endpoint']}")
     scopes[CHEMBL_KI_SCHEMA] = "CHEMBL244_P00742_catalogue_annotation_mixed_conditions_enzyme_inhibition_Ki"
     scopes[CHEMBL_SCHEMA] = "CHEMBL3038469_catalogue_annotation_mixed_conditions_enzyme_inhibition_IC50"
     return {
         "schema_version": ADAPTER_SCHEMA,
+        "endpoint_semantics_version": "registered_checkpoint_quantity_v2",
         "runtime_adapter_sha256": _sha(Path(__file__).read_bytes()),
         "mode": "shadow", "product_ranking_enabled": False,
         "customer_execution": False, "uncertainty_calibrated": False,
@@ -277,7 +311,7 @@ class PublicAssaySelectorShadow:
         self.required_input_columns = {"smiles", identity, "endpoint"}
         if self._native_chembl:
             self.required_input_columns.add("endpoint_subtype")
-        self.metadata = {**_contract(schema), "checkpoint_sha256": checkpoint_sha256,
+        self.metadata = {**_contract(schema, binding), "checkpoint_sha256": checkpoint_sha256,
                          **{key: payload[key] for key in binding},
                          "features": dict(payload["features"]),
                          "required_input_columns": sorted(self.required_input_columns),
@@ -326,7 +360,7 @@ class PublicAssaySelectorShadow:
     def predict_rows(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         results, fingerprints, admitted = [], [], []
         for index, row in enumerate(rows):
-            result = _row_result(index, row, self._schema)
+            result = _row_result(index, row, self._schema, self.metadata["prediction_quantity"])
             results.append(result)
             try:
                 fingerprints.append(self._fingerprint(row))
@@ -393,7 +427,8 @@ def load_public_assay_selector(path: str | Path, *, expected_sha256: str) -> Pub
     return PublicAssaySelectorShadow(path, expected_sha256)
 
 
-def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | None = None) -> dict[str, Any]:
+def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | None = None,
+                prediction_quantity: str | None = None) -> dict[str, Any]:
     def text(key):
         value = row.get(key)
         return value if isinstance(value, str) else None
@@ -409,7 +444,8 @@ def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | Non
             or (checkpoint_schema is None and row.get("endpoint") == "Ki")):
         del result["predicted_negative_log10_molar_IC50"]
         del result["mean_baseline_negative_log10_molar_IC50"]
-        quantity = "negative_log10_molar_Ki" if checkpoint_schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA} else None
+        quantity = (prediction_quantity if checkpoint_schema == BINDINGDB_SCHEMA else
+                    "negative_log10_molar_Ki" if checkpoint_schema == CHEMBL_KI_SCHEMA else None)
         result.update(prediction_quantity=quantity, predicted_value=None,
                       mean_baseline_value=None)
     return result
@@ -424,9 +460,9 @@ def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_
               "requested_rows": None, "evaluated_rows": 0, "unsupported_rows": None,
               "input_path": ligand_csv, "input_sha256": None, "rows": []}
     try:
-        requested_schema, _ = _registration(checkpoint_sha256)
+        requested_schema, requested_binding = _registration(checkpoint_sha256)
     except SelectorContractError:
-        requested_schema = None
+        requested_schema, requested_binding = None, {}
     protected_paths = [path for path in (ligand_csv, ligand_sdf, docking_request_json, checkpoint) if path]
     try:
         if resume_stage3_only:
@@ -448,20 +484,20 @@ def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_
             result.update(requested_rows=len(rows), unsupported_rows=len(rows))
             try:
                 model = load_public_assay_selector(checkpoint, expected_sha256=checkpoint_sha256)
-                result.update(_contract(model.metadata["checkpoint_schema_version"]))
+                result.update(_contract(model.metadata["checkpoint_schema_version"], requested_binding))
                 result["model"] = model.metadata
                 schema_ok = (len(header) == len(set(header))
                              and model.required_input_columns.issubset(header))
                 valid_indices = [i for i, values in enumerate(cells) if schema_ok and len(values) == len(header)]
                 predictions = model.predict_rows([rows[i] for i in valid_indices])
-                results = [_row_result(i, row, requested_schema) for i, row in enumerate(rows)]
+                results = [_row_result(i, row, requested_schema, requested_binding.get("prediction_quantity")) for i, row in enumerate(rows)]
                 for entry in results:
                     entry["reason"] = "invalid_csv_schema_or_row_width"
                 for index, prediction in zip(valid_indices, predictions):
                     results[index] = {**prediction, "row_index": index}
             except Exception as exc:
                 result["reason"] = f"model_unavailable:{type(exc).__name__}:{exc}"
-                results = [_row_result(i, row, requested_schema) for i, row in enumerate(rows)]
+                results = [_row_result(i, row, requested_schema, requested_binding.get("prediction_quantity")) for i, row in enumerate(rows)]
                 for entry in results:
                     entry["reason"] = result["reason"]
             for entry, values in zip(results, cells):

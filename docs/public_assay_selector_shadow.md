@@ -324,3 +324,73 @@ The real HTVS entrypoint writes the sidecar before an intentionally intercepted
 mapping child; molecular docking and end-to-end candidate selection are not
 executed by that observation. These checks establish runtime compatibility and
 inference cost, not improved predictive quality or whole-engine acceleration.
+
+
+## BindingDB AKT1 IC50 compatibility and observed cost
+
+The v1 BindingDB checkpoint schema can describe multiple endpoints. The former
+consumer assigned `negative_log10_molar_Ki` to every BindingDB row and a Factor Xa
+scope to every BindingDB model. A fresh synthetic IC50 checkpoint reproduced this
+error. Output quantity now comes from the exact registered checkpoint binding;
+BindingDB scope includes the bound target annotation hash and endpoint. Invalid
+rows and unavailable registered model bytes retain the requested model quantity,
+while unknown checkpoints remain refused. The sidecar schema stays v1 and adds
+`endpoint_semantics_version=registered_checkpoint_quantity_v2`; consumers should
+use the separate target annotation hash instead of parsing the old scope string.
+No checkpoint, fit schema, coefficients or trainer is rewritten.
+
+The unchanged AKT1/P31749 checkpoint
+`d5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3`
+is registered for **shadow observations only**. Its producer/manifest/protocol/
+split/target hashes, fitted mean and RDKit version are pinned individually. Its
+post-freeze evaluation summary is bound by
+`a1be98fd16ca6232555277986c3700a1b4679bc2657437d131d217bf0b043a24`.
+The sidecar retains `NOT_PROMOTED`: calibration pIC50 MAE worsened from
+0.470805 to 0.543839 on16/18 rows; development worsened from0.929223 to1.168317
+on5/19 rows. Supported development positives were zero, so recall/AP remain
+undefined. These are database-curated measurements, not independently verified
+primary per-compound tables or harmonized assay conditions. Scores are AI
+predictions, not molecular energies, receptor-state verification or calibrated
+probabilities. Historical Ki checkpoint dependency warnings remain intact.
+
+Actual metadata replay preserved all210 original target rows and source role/
+exclusion columns. The122 previously frozen predictions match the product module
+and HTVS sidecar exactly (maximum absolute difference0). The88 upstream excluded
+rows carry intentionally withheld SMILES, null predictions and the original
+exclusion reasons in their input cells. They are not additional scored candidates
+or assumed inactive molecules. The canonical HTVS entrypoint ran with explicit
+AKT1 catalogue naming and was intercepted before its first ligand-mapping child;
+shadow on/off produced the same mapping command. No mapping, docking, physical
+energy or external solver execution is established by this interception.
+
+On one local CPU host (Python3.10.12, RDKit2026.03.6, NumPy1.26.4,
+single BLAS/OpenMP thread),15 warm repetitions per mode measured the same original
+input prefixes. Requested/evaluated counts were1/1,16/11,122/93,210/122.
+For the complete210 rows, individual inference wall p50/p95 was36.280/36.315ms;
+batch was32.187/32.263ms. Predictions agreed within1e-12 across modes. Process
+peak RSS was505348KiB, a process high-water observation rather than incremental
+selector allocation. Five fresh processes at each size1,122,210 also ran; for210
+rows total process wall p50/p95 was1474.972/1482.706ms and peak RSS505004KiB.
+OS file caches were not flushed. Fresh-process time includes eager package imports
+and process setup; these measurements are not engine acceleration, GPU parity,
+receptor-neighbor caching, docking recovery or end-to-end screening evidence.
+
+Validation:259 passed,0 failures/errors,1 existing optional historical frozen-Ki
+replay skipped because its explicit artifacts were not supplied. Includes16 new
+synthetic IC50 controls. Separately5 actual checks passed with no failures/skips:
+original artifact hashes, independent scalar fingerprint dot products, frozen
+prediction equality, full-request sidecars, and identical intercepted mapping.
+The original semantic control fails as expected against the old consumer. Initial
+local execution errors (wrong module path, incomplete snapshot and cross-schema
+scope construction regression) are preserved; the latter was fixed by applying
+BindingDB-specific scope only to BindingDB schemas. No protection/test was relaxed.
+
+Current local evidence root:
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-akt1-shadow-zklxtbk3`.
+It contains source snapshots/hashes, exact commands and exits, raw logs, JUnit,
+input/sidecar artifacts, independent checks and all warm/fresh-process samples.
+This is a development evidence location, not a portable checkpoint distribution.
+The hosted workflow additionally uploads tested source identities and synthetic
+logs/JUnit. Customer execution and product ranking remain disabled. Prepared
+same-state AKT1 Engine V2 evidence and screening quality/cost improvements remain
+open; no external review or approval receipt is implied.
