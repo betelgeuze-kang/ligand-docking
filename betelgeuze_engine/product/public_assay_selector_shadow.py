@@ -133,6 +133,51 @@ _REGISTERED_BINDINGDB_V1 = {
 }
 
 
+# Ki v2 preserves its frozen producer source, distinct from later intake policy fixes.
+# The strict development evaluation worsened; this enables observations only.
+CHEMBL_KI_SCHEMA = "public_chembl_cheap_selector_ridge_v2"
+_REGISTERED_CHEMBL_V2 = {'c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b': {'endpoint': 'Ki',
+                                                                      'endpoint_subtype': 'enzyme_inhibition_Ki',
+                                                                      'identity_context_sha256': '0d3371c5da43a0f07f02eee43d5327f352f0028a3c82c07d92dbb55bbd030b04',
+                                                                      'implementation_hashes': {'chemical_identity': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                                                                                                'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                                                                                                'measurement': '83987579c318e2ecf5b210003b591606b5a0c0a82bf10010a15dbab955d5426e',
+                                                                                                'normalizer': '7685a2ccfa1d9b6fb23750a01d382f2b0244be026c42c5817e226eded793b62e',
+                                                                                                'reused_featurizer_and_metrics': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                                                                                                'trainer': '9437b41d3de95df8f1ac7576ac9e6e107e92da6fcf2f8c5aeaf0f63a3d0a4ab3'},
+                                                                      'intake_scope_sha256': 'd4fc3754801d263781576db8dd4f2176ce402d507b371b5ed78619b422e503dc',
+                                                                      'mean_baseline': 6.49811679504411,
+                                                                      'ood_status': 'not_assessed',
+                                                                      'physical_energy': False,
+                                                                      'prediction_quantity': 'negative_log10_molar_Ki',
+                                                                      'rdkit_version': '2026.03.6',
+                                                                      'split_plan_sha256': '0f508a826cd363bcb1c2b958c5c0125a307262e7ea32c7afbdb2fa24d0ec2300',
+                                                                      'target_annotation_sha256': 'd2725bf2131adcf8594e3ab8f2a446f4116a17b50ab8c34d799180bebff79351',
+                                                                      'training_protocol_sha256': '1ae8f4dc3bdac10816eccd46646ac5e080e4fb249704aadbe0575cb8e635860c',
+                                                                      'uncertainty': None}}
+
+# Evidence observations are separate from immutable checkpoint payloads. Later
+# identity audits can invalidate independence without rewriting historical weights.
+_CHECKPOINT_EVIDENCE = {
+    "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
+        "identity_independence_status": "failed_expanded_metadata_dependency_audit",
+        "identity_audit_sha256": "c6a94704724f6b0360ebe4874f35b43e6410d36f944975aa93c04da620968f12",
+        "historical_observation_only": True,
+        "new_independent_evaluation_allowed": False,
+        "new_training_from_connected_components_allowed": False,
+        "numeric_evaluation_label_leakage_proven": False,
+    },
+    "c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b": {
+        "identity_independence_status": "checked_within_supplied_preassigned_metadata_graph",
+        "beyond_supplied_context_independence": "not_established",
+        "strict_development_quality": "worse_mae_than_fitted_mean_on_3_of_68_rows",
+        "producer_source_head": "79e3c5fe55b9844a4812df9ce995754d55e10cd3",
+        "archived_source_policy_sha256": "a968c413f33e95b0ec43840a807b520a9d6bf1fd7dbc6f06cd0df0ccd1d1b358",
+        "checkpoint_rehashed_for_new_runtime": False,
+    },
+}
+
+
 class SelectorContractError(ValueError):
     """Input is unavailable or outside the pinned shadow contract."""
 
@@ -160,6 +205,8 @@ def _registration(checkpoint_sha256: str) -> tuple[str, dict[str, Any]]:
             return f"public_assay_cheap_selector_ridge_{version}", registry[checkpoint_sha256]
     if checkpoint_sha256 in _REGISTERED_CHEMBL_V1:
         return CHEMBL_SCHEMA, _REGISTERED_CHEMBL_V1[checkpoint_sha256]
+    if checkpoint_sha256 in _REGISTERED_CHEMBL_V2:
+        return CHEMBL_KI_SCHEMA, _REGISTERED_CHEMBL_V2[checkpoint_sha256]
     if checkpoint_sha256 in _REGISTERED_BINDINGDB_V1:
         return BINDINGDB_SCHEMA, _REGISTERED_BINDINGDB_V1[checkpoint_sha256]
     raise SelectorContractError("unregistered_checkpoint_sha256")
@@ -170,10 +217,11 @@ def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
         "public_assay_cheap_selector_ridge_v1": "BACE1_exact_recorded_state_mixed_assay_conditions_IC50",
         "public_assay_cheap_selector_ridge_v2": "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50",
     }
-    native_chembl = checkpoint_schema == CHEMBL_SCHEMA
+    native_chembl = checkpoint_schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA}
     native_bindingdb = checkpoint_schema == BINDINGDB_SCHEMA
     native_annotation = native_chembl or native_bindingdb
     scopes[BINDINGDB_SCHEMA] = "BindingDB_P00742_catalogue_annotation_mixed_assay_conditions_Ki"
+    scopes[CHEMBL_KI_SCHEMA] = "CHEMBL244_P00742_catalogue_annotation_mixed_conditions_enzyme_inhibition_Ki"
     scopes[CHEMBL_SCHEMA] = "CHEMBL3038469_catalogue_annotation_mixed_conditions_enzyme_inhibition_IC50"
     return {
         "schema_version": ADAPTER_SCHEMA,
@@ -214,8 +262,9 @@ class PublicAssaySelectorShadow:
         schema, binding = _registration(checkpoint_sha256)
         self._schema = schema
         self._native_bindingdb = schema == BINDINGDB_SCHEMA
-        self._native_chembl = schema == CHEMBL_SCHEMA
+        self._native_chembl = schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA}
         self._native_annotation = self._native_bindingdb or self._native_chembl
+        self._generic_quantity = schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA}
         self._mean_baseline = payload.get("mean_baseline") if self._native_annotation else None
         identity = "target_annotation_sha256" if self._native_annotation else "target_state_sha256"
         self.required_input_columns = {"smiles", identity, "endpoint"}
@@ -224,7 +273,8 @@ class PublicAssaySelectorShadow:
         self.metadata = {**_contract(schema), "checkpoint_sha256": checkpoint_sha256,
                          **{key: payload[key] for key in binding},
                          "features": dict(payload["features"]),
-                         "required_input_columns": sorted(self.required_input_columns)}
+                         "required_input_columns": sorted(self.required_input_columns),
+                         "checkpoint_evidence_observations": dict(_CHECKPOINT_EVIDENCE.get(checkpoint_sha256, {}))}
 
     def _fingerprint(self, row: Mapping[str, Any]):
         identity = "target_annotation_sha256" if self._native_annotation else "target_state_sha256"
@@ -284,12 +334,12 @@ class PublicAssaySelectorShadow:
             for index, value in zip(admitted, values):
                 if self._np.isfinite(value):
                     results[index].update(status="evaluated", reason=None)
-                    if self._native_bindingdb:
+                    if self._generic_quantity:
                         results[index].update(predicted_value=float(value),
                                               mean_baseline_value=self._mean_baseline)
                     else:
                         results[index]["predicted_negative_log10_molar_IC50"] = float(value)
-                    if self._native_chembl:
+                    if self._native_chembl and not self._generic_quantity:
                         results[index]["mean_baseline_negative_log10_molar_IC50"] = self._mean_baseline
                 else:
                     results[index]["reason"] = "nonfinite_prediction"
@@ -308,7 +358,7 @@ def _read_validated_payload(path: str | Path, *, expected_sha256: str) -> dict[s
     if not isinstance(payload, dict) or set(payload) != required:
         raise SelectorContractError("checkpoint_schema_keys_mismatch")
     features = (BINDINGDB_FEATURES if schema == BINDINGDB_SCHEMA else
-                CHEMBL_FEATURES if schema == CHEMBL_SCHEMA else FEATURES)
+                CHEMBL_FEATURES if schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA} else FEATURES)
     if payload["schema_version"] != schema or payload["features"] != features:
         raise SelectorContractError("checkpoint_feature_contract_mismatch")
     for key, expected in binding.items():
@@ -317,7 +367,7 @@ def _read_validated_payload(path: str | Path, *, expected_sha256: str) -> dict[s
     for key in ("uncertainty_calibrated", "product_ranking_enabled", "customer_execution"):
         if payload[key] is not False:
             raise SelectorContractError(f"unsupported_checkpoint_capability:{key}")
-    if schema in {CHEMBL_SCHEMA, BINDINGDB_SCHEMA}:
+    if schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA, BINDINGDB_SCHEMA}:
         if (payload["physical_energy"] is not False or payload["uncertainty"] is not None
                 or payload["ood_status"] != "not_assessed" or not _number(payload["mean_baseline"])):
             raise SelectorContractError("unsupported_native_checkpoint_capability")
@@ -348,11 +398,11 @@ def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | Non
             "declared_endpoint": text("endpoint"), "status": "unsupported",
             "reason": None, "predicted_negative_log10_molar_IC50": None,
             "ood_status": "not_assessed", "uncertainty": None}
-    if (checkpoint_schema == BINDINGDB_SCHEMA
+    if (checkpoint_schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA}
             or (checkpoint_schema is None and row.get("endpoint") == "Ki")):
         del result["predicted_negative_log10_molar_IC50"]
         del result["mean_baseline_negative_log10_molar_IC50"]
-        quantity = "negative_log10_molar_Ki" if checkpoint_schema == BINDINGDB_SCHEMA else None
+        quantity = "negative_log10_molar_Ki" if checkpoint_schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA} else None
         result.update(prediction_quantity=quantity, predicted_value=None,
                       mean_baseline_value=None)
     return result

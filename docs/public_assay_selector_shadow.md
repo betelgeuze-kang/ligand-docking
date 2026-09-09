@@ -2,11 +2,86 @@
 
 The canonical HTVS runner can optionally write predictions from the pinned public
 BACE1, CDK2/cyclin A2, native ChEMBL catalogue-annotation, or native BindingDB
-Factor X Ki selector before stage1 ligand mapping. The option defaults to disabled.
+Factor X Ki selector, or native ChEMBL Factor Xa Ki v2 selector before stage1 ligand mapping. The option defaults to disabled.
 It neither selects candidates nor changes mapping commands, ranking, stage2 skip
 routing, scores, or the downstream candidate denominator.
 
+## Native ChEMBL Factor Xa Ki v2 compatibility
+
+The frozen ChEMBL37 CHEMBL244/P00742 checkpoint is explicitly registered as
+`public_chembl_cheap_selector_ridge_v2`, separate from native IC50 v1:
+
+- checkpoint SHA: `c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b`
+- quantity: `negative_log10_molar_Ki`; endpoint/subtype: `Ki` / `enzyme_inhibition_Ki`
+- producer source: `79e3c5fe55b9844a4812df9ce995754d55e10cd3`
+- original source-policy SHA: `a968c413f33e95b0ec43840a807b520a9d6bf1fd7dbc6f06cd0df0ccd1d1b358`
+
+Use the existing HTVS flags with this checkpoint/hash and a CSV containing
+`smiles`, `target_annotation_sha256`, `endpoint=Ki`, and
+`endpoint_subtype=enzyme_inhibition_Ki`. The annotation SHA is the exact value
+in the registered checkpoint, not a P00742 string or prepared receptor identity.
+Ki outputs use `prediction_quantity`, `predicted_value`, `mean_baseline_value`;
+no Ki value is placed in an IC50 field. Missing metadata, unsupported chemistry,
+wrong endpoints, declared OOD and nonfinite inputs retain rows and null values.
+The exact original ChEMBL chemistry scope has one fragment, 5–70 heavy atoms,
+H/C/N/O/F/P/S/Cl/Br/I, no isotope/radical atoms and no declared formal-charge cap.
+Runtime admission does not establish chemical OOD performance.
+
+The producer fit224 observations in10 components from316 preassigned fit rows.
+All452 predictions were frozen before136 evaluation values. Strict calibration
+coverage is20/68 and development3/68. Development MAE worsened from1.00396 to
+1.17684 pKi. Full-request recovery, physical target-state correctness and
+uncertainty calibration remain unestablished. No refit or outcome-based resplit
+was performed for this registration. Later PR511 policy fingerprints differ;
+this adapter preserves the original checkpoint/source binding instead of
+rewriting the checkpoint to look current.
+
+Actual canonical HTVS parser, `run_pipeline` and shadow-hook execution reproduced
+452/452 frozen predictions to max absolute difference1.777e-15. Original CSV
+cells/order,10 repeated ligand-ID rows, and the mapping command matched with
+shadow off/on. Mapping was intercepted immediately after the real hook; no
+mapping subprocess, docking or full engine run occurred. All452 passed runtime
+chemical admission, not the experimental-label admission test. The source
+metadata roster remains4,766 with its exclusions in the separate intake ledger.
+
+A single imported-process hook took0.13194s wall/0.13179s CPU, peak627,280KiB
+for the entire process. A separate fixed CPU profile used5 observations per
+size/mode and no outcome-based input selection:
+
+| CSV rows | Fresh-process p50/p95 wall, s | Warm hook p50/p95 wall, s |
+|---|---:|---:|
+| 32 | 1.7553 / 1.7869 | 0.00961 / 0.00965 |
+| 128 | 1.7566 / 1.7909 | 0.03513 / 0.03521 |
+| 452 | 1.8555 / 1.8813 | 0.12873 / 0.12983 |
+
+Fresh-process wall includes Python/HTVS-context imports, model loading and
+sidecar writing; OS file caches were not flushed. Warm observations follow one
+separate warmup in the same process, still reload the model and recompute all
+features. These scopes must not be divided into an acceleration ratio. Maximum
+fresh-process peak RSS was585,204KiB; every worker succeeded and every prefix
+prediction matched the full452-row reference within1e-12. These are descriptive
+five-sample observations, not stable deployment-tail estimates, GPU evidence,
+matched-quality engine acceleration or end-to-end A–E screening benefit. The
+first aggregate report had a dictionary-key error; the completed worker logs
+were reaggregated without rerunning or selecting measurements.
+
+The original adapter rejected this new version in44 fresh synthetic controls.
+Final local tests include the existing optional real BindingDB metadata replay;
+portable CI omits its private local file paths and reports that expected skip.
+No prior tests, flags or protections are removed. Model weights/assay data remain
+outside Git. Package serving imports no training producer or scikit-learn.
+
 ## Native BindingDB Factor X Ki compatibility
+
+**Historical observation only after the expanded identity audit.** All515
+point-fit rows became linked to evaluation dependencies in the expanded supplied
+graph. Current shadow metadata exposes
+`identity_independence_status=failed_expanded_metadata_dependency_audit`, the
+exact audit SHA, and disables use as new independent evaluation/training evidence.
+This preserves historical arithmetic; it does not prove numerical evaluation
+labels were used in fitting. The old quality numbers below must not be promoted
+as independent performance evidence. Its bytes and compatibility replay remain
+unchanged, and ranking/customer execution stay disabled.
 
 The `public_bindingdb_preassigned_ridge_v1` checkpoint is separately registered:
 
