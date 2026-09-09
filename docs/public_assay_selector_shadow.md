@@ -1,9 +1,72 @@
-# Versioned public IC50 selector shadow
+# Versioned public assay selector shadow
 
 The canonical HTVS runner can optionally write predictions from the pinned public
-BACE1, CDK2/cyclin A2, or native ChEMBL catalogue-annotation selector before stage1 ligand mapping. The option defaults to disabled.
+BACE1, CDK2/cyclin A2, native ChEMBL catalogue-annotation, or native BindingDB
+Factor X Ki selector before stage1 ligand mapping. The option defaults to disabled.
 It neither selects candidates nor changes mapping commands, ranking, stage2 skip
 routing, scores, or the downstream candidate denominator.
+
+## Native BindingDB Factor X Ki compatibility
+
+The `public_bindingdb_preassigned_ridge_v1` checkpoint is separately registered:
+
+- checkpoint SHA: `de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85`
+- target annotation SHA: `9359ee693bcd2a1342fbc39019a015888723cdaa006cf0e11a1b9d9fb9518a5f`
+- endpoint: `Ki`; quantity: `negative_log10_molar_Ki`
+- manifest SHA: `1e7d39305219e0454069ca4668376a7936ac3c3f48a5e653cca845d84d7dc618`
+- protocol SHA: `3ea86001a405f15b305522947e8f4f11128f112b91a340bc78134492db675cd9`
+
+Use the same HTVS options below with this checkpoint path/hash. The input CSV
+requires `smiles`, `target_annotation_sha256` and `endpoint=Ki`; `ligand_id` and
+the original CSV cells are retained. It does not require a ChEMBL endpoint
+subtype. The native BindingDB sidecar uses `prediction_quantity`,
+`predicted_value` and `mean_baseline_value`. Existing IC50 output fields remain
+unchanged for their original checkpoint versions. Ki values are never placed
+in IC50 fields, including registered-model failure and unsupported-row paths.
+
+The registry pins the exact producer/helper hashes, checkpoint bytes, catalogue
+annotation, endpoint, features and the frozen manifest's runtime chemical scope:
+one fragment, 5–70 heavy atoms, H/C/N/O/F/P/S/Cl/Br/I, absolute formal charge at
+most two, no radicals or isotopic atoms. The serving package does not import
+the training modules or reinterpret catalogue identity as an active Factor Xa
+construct, charge assignment or prepared receptor state. Declared OOD, missing
+identity and unsupported chemistry receive null predictions. Admission inside
+these bounds is not a calibrated OOD assessment.
+
+This model was fit once on 515 database-curated reported Ki observations in
+three preassigned components. All914 metadata predictions were frozen before
+evaluation-label access. Development MAE improved from1.25085 to1.09580 pKi,
+but calibration MAE worsened from1.03115 to1.64274. At a fixed28-of137 budget,
+calibration known-positive recovery was11 versus the mean baseline's tie
+expectation19.42, with17 selected labels unresolved/outside scope. Full-request
+recall remains null. Compatibility registration is not an accuracy or ranking
+promotion; customer execution, ranking and calibrated uncertainty remain false.
+
+On 2026-09-09 the actual canonical HTVS parser, `run_pipeline` and shadow hook
+were executed with the frozen model and914 metadata-only CSV rows. All914
+predictions matched the frozen training-side predictions exactly. The input,
+row order, duplicated ligand IDs and downstream mapping command were preserved
+with shadow off/on. Mapping was intentionally intercepted after the hook;
+no mapping subprocess, docking search or end-to-end engine run occurred.
+All914 met runtime chemical admission, which does not mean all914 have usable
+experimental labels or a verified physical receptor state.
+
+The separately timed hook took0.2587s wall/0.2584s CPU, with591,596KiB process
+peak RSS, including checkpoint loading, CSV parsing, molecular features,
+inference, mean baseline and sidecar writing. Imports and downstream mapping
+are excluded. This was one CPU integration execution, not a cold/warm, p50/p95
+or engine-acceleration benchmark.
+
+Local validation passed191 cases including explicit914-row actual-artifact
+replay. Portable CI options passed190 cases with one expected skip because
+the local real checkpoint/manifest are not shipped in Git. The synthetic
+contracts, previous three IC50 suites and canonical HTVS interception remain
+enabled; Ruff passed. The original HTVS runner and previous IC50 tests are
+byte-identical. The optional real-artifact test accepts
+`BETELGEUZE_BINDINGDB_SHADOW_CHECKPOINT` and
+`BETELGEUZE_BINDINGDB_SHADOW_MANIFEST`; its absence must be reported as a skip.
+
+## Original BACE1 IC50 invocation
 
 Example (use the existing immutable checkpoint and its exact byte hash):
 

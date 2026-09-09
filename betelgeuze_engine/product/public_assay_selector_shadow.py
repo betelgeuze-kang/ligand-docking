@@ -82,6 +82,57 @@ _REGISTERED_CHEMBL_V1 = {
 }
 
 
+# Native BindingDB preassignment registration is compatibility only. The frozen
+# calibration result did not improve its mean baseline; ranking stays disabled.
+BINDINGDB_SCHEMA = "public_bindingdb_preassigned_ridge_v1"
+BINDINGDB_FEATURES = dict(CHEMBL_FEATURES)
+# Exact chemistry scope from the manifest pinned inside the checkpoint. It is a
+# runtime admission rule, not a chemical OOD assessment or physical-state claim.
+BINDINGDB_CHEMISTRY_SCOPE = {
+    "elements": [
+        "H",
+        "C",
+        "N",
+        "O",
+        "F",
+        "P",
+        "S",
+        "Cl",
+        "Br",
+        "I"
+    ],
+    "formal_charge_abs_max": 2,
+    "fragment_count": 1,
+    "heavy_atoms_max": 70,
+    "heavy_atoms_min": 5,
+    "isotope_atoms": 0,
+    "radical_electrons": 0
+}
+_REGISTERED_BINDINGDB_V1 = {
+    "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
+        "endpoint": "Ki",
+        "implementation_hashes": {
+            "bindingdb_primitives": "a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b",
+            "bound_readers": "d69204740b5cd296343b3beff8f0959f1e0e6c9cc1ad32512421471259508765",
+            "components": "b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01",
+            "selector_primitives": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+            "staged_intake": "3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e",
+            "staged_trainer": "a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916"
+        },
+        "manifest_sha256": "1e7d39305219e0454069ca4668376a7936ac3c3f48a5e653cca845d84d7dc618",
+        "mean_baseline": 8.453163849459678,
+        "ood_status": "not_assessed",
+        "physical_energy": False,
+        "prediction_quantity": "negative_log10_molar_Ki",
+        "rdkit_version": "2026.03.6",
+        "split_plan_sha256": "7ff5d93367c714d72828bdd497371dac1c981a7905fff3b256ab2b034ba39d2b",
+        "target_annotation_sha256": "9359ee693bcd2a1342fbc39019a015888723cdaa006cf0e11a1b9d9fb9518a5f",
+        "training_protocol_sha256": "3ea86001a405f15b305522947e8f4f11128f112b91a340bc78134492db675cd9",
+        "uncertainty": None
+    }
+}
+
+
 class SelectorContractError(ValueError):
     """Input is unavailable or outside the pinned shadow contract."""
 
@@ -109,6 +160,8 @@ def _registration(checkpoint_sha256: str) -> tuple[str, dict[str, Any]]:
             return f"public_assay_cheap_selector_ridge_{version}", registry[checkpoint_sha256]
     if checkpoint_sha256 in _REGISTERED_CHEMBL_V1:
         return CHEMBL_SCHEMA, _REGISTERED_CHEMBL_V1[checkpoint_sha256]
+    if checkpoint_sha256 in _REGISTERED_BINDINGDB_V1:
+        return BINDINGDB_SCHEMA, _REGISTERED_BINDINGDB_V1[checkpoint_sha256]
     raise SelectorContractError("unregistered_checkpoint_sha256")
 
 
@@ -118,6 +171,9 @@ def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
         "public_assay_cheap_selector_ridge_v2": "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50",
     }
     native_chembl = checkpoint_schema == CHEMBL_SCHEMA
+    native_bindingdb = checkpoint_schema == BINDINGDB_SCHEMA
+    native_annotation = native_chembl or native_bindingdb
+    scopes[BINDINGDB_SCHEMA] = "BindingDB_P00742_catalogue_annotation_mixed_assay_conditions_Ki"
     scopes[CHEMBL_SCHEMA] = "CHEMBL3038469_catalogue_annotation_mixed_conditions_enzyme_inhibition_IC50"
     return {
         "schema_version": ADAPTER_SCHEMA,
@@ -126,19 +182,20 @@ def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
         "customer_execution": False, "uncertainty_calibrated": False,
         "uncertainty": None, "ood_status": "not_assessed",
         "target_identity_basis": None if checkpoint_schema is None else ("caller_declared_catalogue_target_annotation_not_physical_state"
-                                  if native_chembl else "caller_declared_original_assay_record_state"),
+                                  if native_annotation else "caller_declared_original_assay_record_state"),
         "receptor_or_assay_construct_verified": False,
         "checkpoint_schema_version": checkpoint_schema,
         "prediction_scope": scopes.get(checkpoint_schema),
         "evidence_kind": "ai_prediction", "scientific_validation": False,
         "compatibility_registration_only": True,
         "physical_energy_prediction": False,
-        "mean_baseline_evidence_kind": "heuristic" if native_chembl else None,
-        "mean_baseline_definition": "fitted_training_mean" if native_chembl else None,
-        "chemical_scope": None if checkpoint_schema is None else {"heavy_atoms_min": 5, "heavy_atoms_max": 70, "fragments": 1,
+        "mean_baseline_evidence_kind": "heuristic" if native_annotation else None,
+        "mean_baseline_definition": "fitted_training_mean" if native_annotation else None,
+        "chemical_scope": None if checkpoint_schema is None else (dict(BINDINGDB_CHEMISTRY_SCOPE)
+                           if native_bindingdb else {"heavy_atoms_min": 5, "heavy_atoms_max": 70, "fragments": 1,
                            "elements": ["H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I"],
                            "radicals": False, "isotopes": False,
-                           "formal_charge_abs_max": None if native_chembl else 2},
+                           "formal_charge_abs_max": None if native_chembl else 2}),
     }
 
 
@@ -155,23 +212,28 @@ class PublicAssaySelectorShadow:
         self._coefficients = np.asarray(payload["coefficients"], dtype=np.float64)
         self._intercept = float(payload["intercept"])
         schema, binding = _registration(checkpoint_sha256)
+        self._schema = schema
+        self._native_bindingdb = schema == BINDINGDB_SCHEMA
         self._native_chembl = schema == CHEMBL_SCHEMA
-        self._mean_baseline = payload.get("mean_baseline") if self._native_chembl else None
-        self.required_input_columns = ({"smiles", "target_annotation_sha256", "endpoint", "endpoint_subtype"}
-                                       if self._native_chembl else {"smiles", "target_state_sha256", "endpoint"})
+        self._native_annotation = self._native_bindingdb or self._native_chembl
+        self._mean_baseline = payload.get("mean_baseline") if self._native_annotation else None
+        identity = "target_annotation_sha256" if self._native_annotation else "target_state_sha256"
+        self.required_input_columns = {"smiles", identity, "endpoint"}
+        if self._native_chembl:
+            self.required_input_columns.add("endpoint_subtype")
         self.metadata = {**_contract(schema), "checkpoint_sha256": checkpoint_sha256,
                          **{key: payload[key] for key in binding},
                          "features": dict(payload["features"]),
                          "required_input_columns": sorted(self.required_input_columns)}
 
     def _fingerprint(self, row: Mapping[str, Any]):
-        identity = "target_annotation_sha256" if self._native_chembl else "target_state_sha256"
+        identity = "target_annotation_sha256" if self._native_annotation else "target_state_sha256"
         if row.get(identity) != self.metadata[identity]:
-            kind = "target_annotation" if self._native_chembl else "target_state"
+            kind = "target_annotation" if self._native_annotation else "target_state"
             raise SelectorContractError(f"missing_or_mismatched_{kind}")
         if self._native_chembl and row.get("endpoint_subtype") != self.metadata["endpoint_subtype"]:
             raise SelectorContractError("missing_or_mismatched_endpoint_subtype")
-        if row.get("endpoint") != "IC50":
+        if row.get("endpoint") != self.metadata["endpoint"]:
             raise SelectorContractError("missing_or_mismatched_endpoint")
         declared_ood = row.get("is_ood")
         if declared_ood is not None and declared_ood != "":
@@ -191,19 +253,23 @@ class PublicAssaySelectorShadow:
         if mol is None:
             raise SelectorContractError("invalid_smiles")
         atoms = list(mol.GetAtoms())
-        if not 5 <= mol.GetNumHeavyAtoms() <= 70 or len(self._chem.GetMolFrags(mol)) != 1:
+        scope = self.metadata["chemical_scope"]
+        fragments = scope.get("fragment_count", scope.get("fragments"))
+        if (not scope["heavy_atoms_min"] <= mol.GetNumHeavyAtoms() <= scope["heavy_atoms_max"]
+                or len(self._chem.GetMolFrags(mol)) != fragments):
             raise SelectorContractError("outside_pilot_molecule_size_or_multifragment")
-        if (any(atom.GetSymbol() not in {"H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I"}
+        if (any(atom.GetSymbol() not in scope["elements"]
                 or atom.GetNumRadicalElectrons() or atom.GetIsotope() for atom in atoms)):
             raise SelectorContractError("outside_pilot_element_radical_or_isotope_scope")
-        if not self._native_chembl and abs(sum(atom.GetFormalCharge() for atom in atoms)) > 2:
+        charge_limit = scope["formal_charge_abs_max"]
+        if charge_limit is not None and abs(sum(atom.GetFormalCharge() for atom in atoms)) > charge_limit:
             raise SelectorContractError("outside_pilot_formal_charge_scope")
         return self._generator.GetFingerprintAsNumPy(mol)
 
     def predict_rows(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         results, fingerprints, admitted = [], [], []
         for index, row in enumerate(rows):
-            result = _row_result(index, row)
+            result = _row_result(index, row, self._schema)
             results.append(result)
             try:
                 fingerprints.append(self._fingerprint(row))
@@ -217,8 +283,12 @@ class PublicAssaySelectorShadow:
                 values = matrix @ self._coefficients + self._intercept
             for index, value in zip(admitted, values):
                 if self._np.isfinite(value):
-                    results[index].update(status="evaluated", reason=None,
-                                          predicted_negative_log10_molar_IC50=float(value))
+                    results[index].update(status="evaluated", reason=None)
+                    if self._native_bindingdb:
+                        results[index].update(predicted_value=float(value),
+                                              mean_baseline_value=self._mean_baseline)
+                    else:
+                        results[index]["predicted_negative_log10_molar_IC50"] = float(value)
                     if self._native_chembl:
                         results[index]["mean_baseline_negative_log10_molar_IC50"] = self._mean_baseline
                 else:
@@ -237,7 +307,8 @@ def _read_validated_payload(path: str | Path, *, expected_sha256: str) -> dict[s
                                "uncertainty_calibrated", "product_ranking_enabled", "customer_execution"}
     if not isinstance(payload, dict) or set(payload) != required:
         raise SelectorContractError("checkpoint_schema_keys_mismatch")
-    features = CHEMBL_FEATURES if schema == CHEMBL_SCHEMA else FEATURES
+    features = (BINDINGDB_FEATURES if schema == BINDINGDB_SCHEMA else
+                CHEMBL_FEATURES if schema == CHEMBL_SCHEMA else FEATURES)
     if payload["schema_version"] != schema or payload["features"] != features:
         raise SelectorContractError("checkpoint_feature_contract_mismatch")
     for key, expected in binding.items():
@@ -246,10 +317,10 @@ def _read_validated_payload(path: str | Path, *, expected_sha256: str) -> dict[s
     for key in ("uncertainty_calibrated", "product_ranking_enabled", "customer_execution"):
         if payload[key] is not False:
             raise SelectorContractError(f"unsupported_checkpoint_capability:{key}")
-    if schema == CHEMBL_SCHEMA:
+    if schema in {CHEMBL_SCHEMA, BINDINGDB_SCHEMA}:
         if (payload["physical_energy"] is not False or payload["uncertainty"] is not None
                 or payload["ood_status"] != "not_assessed" or not _number(payload["mean_baseline"])):
-            raise SelectorContractError("unsupported_native_chembl_checkpoint_capability")
+            raise SelectorContractError("unsupported_native_checkpoint_capability")
     coef = payload["coefficients"]
     if (not isinstance(coef, list) or len(coef) != 1024
             or not all(_number(value) for value in coef) or not _number(payload["intercept"])):
@@ -265,11 +336,11 @@ def load_public_assay_selector(path: str | Path, *, expected_sha256: str) -> Pub
     return PublicAssaySelectorShadow(path, expected_sha256)
 
 
-def _row_result(index: int, row: Mapping[str, Any]) -> dict[str, Any]:
+def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | None = None) -> dict[str, Any]:
     def text(key):
         value = row.get(key)
         return value if isinstance(value, str) else None
-    return {"row_index": index, "ligand_id": text("ligand_id"), "smiles": text("smiles"),
+    result = {"row_index": index, "ligand_id": text("ligand_id"), "smiles": text("smiles"),
             "declared_target_state_sha256": text("target_state_sha256"),
             "declared_target_annotation_sha256": text("target_annotation_sha256"),
             "declared_endpoint_subtype": text("endpoint_subtype"),
@@ -277,6 +348,14 @@ def _row_result(index: int, row: Mapping[str, Any]) -> dict[str, Any]:
             "declared_endpoint": text("endpoint"), "status": "unsupported",
             "reason": None, "predicted_negative_log10_molar_IC50": None,
             "ood_status": "not_assessed", "uncertainty": None}
+    if (checkpoint_schema == BINDINGDB_SCHEMA
+            or (checkpoint_schema is None and row.get("endpoint") == "Ki")):
+        del result["predicted_negative_log10_molar_IC50"]
+        del result["mean_baseline_negative_log10_molar_IC50"]
+        quantity = "negative_log10_molar_Ki" if checkpoint_schema == BINDINGDB_SCHEMA else None
+        result.update(prediction_quantity=quantity, predicted_value=None,
+                      mean_baseline_value=None)
+    return result
 
 
 def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_json: str,
@@ -287,6 +366,10 @@ def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_
               "input_scope": "original_csv_before_mapping_filters_truncation_and_replicas",
               "requested_rows": None, "evaluated_rows": 0, "unsupported_rows": None,
               "input_path": ligand_csv, "input_sha256": None, "rows": []}
+    try:
+        requested_schema, _ = _registration(checkpoint_sha256)
+    except SelectorContractError:
+        requested_schema = None
     protected_paths = [path for path in (ligand_csv, ligand_sdf, docking_request_json, checkpoint) if path]
     try:
         if resume_stage3_only:
@@ -314,14 +397,14 @@ def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_
                              and model.required_input_columns.issubset(header))
                 valid_indices = [i for i, values in enumerate(cells) if schema_ok and len(values) == len(header)]
                 predictions = model.predict_rows([rows[i] for i in valid_indices])
-                results = [_row_result(i, row) for i, row in enumerate(rows)]
+                results = [_row_result(i, row, requested_schema) for i, row in enumerate(rows)]
                 for entry in results:
                     entry["reason"] = "invalid_csv_schema_or_row_width"
                 for index, prediction in zip(valid_indices, predictions):
                     results[index] = {**prediction, "row_index": index}
             except Exception as exc:
                 result["reason"] = f"model_unavailable:{type(exc).__name__}:{exc}"
-                results = [_row_result(i, row) for i, row in enumerate(rows)]
+                results = [_row_result(i, row, requested_schema) for i, row in enumerate(rows)]
                 for entry in results:
                     entry["reason"] = result["reason"]
             for entry, values in zip(results, cells):
