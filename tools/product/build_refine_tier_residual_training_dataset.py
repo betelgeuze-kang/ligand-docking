@@ -17,7 +17,7 @@ from typing import Any
 from tools.product.residual_evidence import (
     IDENTITY_FIELDS, PROVENANCE_FIELD, REFINE_JOIN_CONTRACT, _sha, declared_evaluation_only, merge_source_provenance,
     first_numeric_observation, require_complete_csv_row, score_reference_rejection,
-    source_provenance_json, validated_csv_fieldnames,
+    source_provenance_json, validated_csv_fieldnames, refine_source_identity_rejection,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -263,6 +263,11 @@ def _apply_refine_meta(row: dict[str, Any], meta: dict[str, Any], join_method: s
             row["refine_tier_join_status"] = "rejected_identity_mismatch:" + key
             return False
     row["refine_tier_identity_status"] = "declared_identity_matched" if identity_complete else "unverified_missing_identity"
+    identity_rejection = refine_source_identity_rejection(row)
+    if identity_rejection:
+        row["refine_tier_identity_status"] = "rejected_source_identity"
+        row["refine_tier_join_status"] = "rejected_" + identity_rejection
+        return False
     if row["refine_tier_evidence_kind"].strip().casefold() in {"experimental", "experimental_label", "ai_prediction", "heuristic"}:
         row["refine_tier_join_status"] = "rejected_incompatible_refine_evidence_kind"
         return False

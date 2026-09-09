@@ -166,6 +166,30 @@ def score_reference_rejection(row: dict[str, Any]) -> str:
     return ""
 
 
+def refine_source_identity_rejection(row: dict[str, Any]) -> str:
+    """Reject conflicting declared state hashes in a refinement's full lineage.
+
+    Missing declarations stay unverified. Matching hashes are declarations,
+    not authenticated chemistry or permission to change the source state.
+    This check is limited to same-state refinement joins and their consumers;
+    general provenance may describe intentionally different source states.
+    """
+    sources = [row, *(record["row"] for record in provenance_records(row))]
+    for field in IDENTITY_FIELDS:
+        values = set()
+        for source in sources:
+            value = source.get(field)
+            if value is None or value == "":
+                continue
+            try:
+                values.add(_sha(value, field))
+            except ValueError:
+                return "invalid_source_identity:" + field
+        if len(values) > 1:
+            return "conflicting_source_identity:" + field
+    return ""
+
+
 def training_source_rejection(row: dict[str, Any]) -> str:
     """One admission policy for materialization, training, and cache reuse."""
     if declared_evaluation_only(row):
@@ -176,6 +200,9 @@ def training_source_rejection(row: dict[str, Any]) -> str:
     if row.get("refine_tier_label_source") == "stage3_refine_tier":
         if row.get("refine_tier_join_contract") != REFINE_JOIN_CONTRACT or not provenance_records(row):
             return "legacy_refine_source_provenance_missing_regenerate_dataset"
+        reason = refine_source_identity_rejection(row)
+        if reason:
+            return reason
     return ""
 
 
