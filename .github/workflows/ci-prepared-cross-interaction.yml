@@ -3,6 +3,13 @@ name: ci-prepared-cross-interaction
 on:
   pull_request:
     paths:
+      - 'betelgeuze_engine/product/des370k_interaction.py'
+      - 'betelgeuze_engine/product/des370k_residual.py'
+      - 'tools/product/run_des370k_residual_development.py'
+      - 'tests/unit/test_des370k_interaction.py'
+      - 'tests/unit/test_des370k_residual.py'
+      - 'tests/unit/test_des370k_development_consumer.py'
+      - 'docs/des370k_interaction_development.md'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/prepared_gromacs_input.py'
       - 'betelgeuze_engine/product/compiled_gromacs_cross_input.py'
@@ -22,6 +29,13 @@ on:
   push:
     branches: [main]
     paths:
+      - 'betelgeuze_engine/product/des370k_interaction.py'
+      - 'betelgeuze_engine/product/des370k_residual.py'
+      - 'tools/product/run_des370k_residual_development.py'
+      - 'tests/unit/test_des370k_interaction.py'
+      - 'tests/unit/test_des370k_residual.py'
+      - 'tests/unit/test_des370k_development_consumer.py'
+      - 'docs/des370k_interaction_development.md'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/prepared_gromacs_input.py'
       - 'betelgeuze_engine/product/compiled_gromacs_cross_input.py'
@@ -77,6 +91,13 @@ jobs:
           python - <<'PY'
           import hashlib, json, os, pathlib, platform, subprocess, sys
           files = [
+              'betelgeuze_engine/product/des370k_interaction.py',
+              'betelgeuze_engine/product/des370k_residual.py',
+              'tools/product/run_des370k_residual_development.py',
+              'tests/unit/test_des370k_interaction.py',
+              'tests/unit/test_des370k_residual.py',
+              'tests/unit/test_des370k_development_consumer.py',
+              'docs/des370k_interaction_development.md',
               'betelgeuze_engine/product/v2_cross_interaction.py',
               'betelgeuze_engine/product/prepared_gromacs_input.py',
               'betelgeuze_engine/product/compiled_gromacs_cross_input.py',
@@ -102,22 +123,22 @@ jobs:
               'github_sha': os.environ['GITHUB_SHA'],
               'cwd': str(pathlib.Path.cwd()), 'python': sys.version, 'platform': platform.platform(),
               'source_sha256': {name: hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() for name in files},
-              'scope': 'synthetic explicit-file parser, unchanged V2 cross kernel and CLI contracts; no public downloads, solver, training, protected holdouts or qualification',
+              'scope': 'synthetic explicit-file parser, unchanged V2 cross kernel, synthetic residual fit and CLI contracts; no public downloads, external solver, real-data training, protected holdouts or qualification',
           }
           pathlib.Path('prepared-cross-source.json').write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
           PY
       - name: Install CPU test dependencies
         run: |
-          python -m pip install pytest==8.3.5 numpy==1.26.4 PyYAML==6.0.2 ruff==0.11.13
+          python -m pip install pytest==8.3.5 numpy==1.26.4 PyYAML==6.0.2 ruff==0.11.13 rdkit==2026.3.6 scikit-learn==1.7.2
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           python -m pip freeze > prepared-cross-dependencies.txt
       - name: Exercise synthetic prepared input, existing V2 kernel and command consumer
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/mmcif_ligand_observation.py tools/product/observe_mmcif_ligand_coordinates.py tests/unit/test_mmcif_ligand_observation.py betelgeuze_engine/product/prepared_source_geometry.py tests/unit/test_prepared_source_geometry.py betelgeuze_engine/product/v2_cross_interaction.py betelgeuze_engine/product/prepared_gromacs_input.py betelgeuze_engine/product/compiled_gromacs_cross_input.py tools/product/score_prepared_cross_interactions.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py 2>&1 | tee prepared-cross-lint.log
+          python -m ruff check --isolated --no-cache betelgeuze_engine/product/des370k_interaction.py betelgeuze_engine/product/des370k_residual.py tools/product/run_des370k_residual_development.py tests/unit/test_des370k_interaction.py tests/unit/test_des370k_residual.py tests/unit/test_des370k_development_consumer.py betelgeuze_engine/product/mmcif_ligand_observation.py tools/product/observe_mmcif_ligand_coordinates.py tests/unit/test_mmcif_ligand_observation.py betelgeuze_engine/product/prepared_source_geometry.py tests/unit/test_prepared_source_geometry.py betelgeuze_engine/product/v2_cross_interaction.py betelgeuze_engine/product/prepared_gromacs_input.py betelgeuze_engine/product/compiled_gromacs_cross_input.py tools/product/score_prepared_cross_interactions.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py 2>&1 | tee prepared-cross-lint.log
           set +e
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_mmcif_ligand_observation.py tests/unit/test_prepared_source_geometry.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py --junitxml=prepared-cross-junit.xml 2>&1 | tee prepared-cross.log
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_mmcif_ligand_observation.py tests/unit/test_prepared_source_geometry.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py tests/unit/test_des370k_interaction.py tests/unit/test_des370k_residual.py tests/unit/test_des370k_development_consumer.py --junitxml=prepared-cross-junit.xml 2>&1 | tee prepared-cross.log
           pytest_status=${PIPESTATUS[0]}
           set -e
           printf '{"pytest_exit_code": %s}\n' "$pytest_status" > prepared-cross-exit.json
@@ -133,6 +154,13 @@ jobs:
             prepared-cross-exit.json
             prepared-cross-source.json
             prepared-cross-dependencies.txt
+            betelgeuze_engine/product/des370k_interaction.py
+            betelgeuze_engine/product/des370k_residual.py
+            tools/product/run_des370k_residual_development.py
+            tests/unit/test_des370k_interaction.py
+            tests/unit/test_des370k_residual.py
+            tests/unit/test_des370k_development_consumer.py
+            docs/des370k_interaction_development.md
             betelgeuze_engine/product/v2_cross_interaction.py
             betelgeuze_engine/product/prepared_gromacs_input.py
             betelgeuze_engine/product/compiled_gromacs_cross_input.py
