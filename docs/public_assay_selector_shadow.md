@@ -394,3 +394,46 @@ The hosted workflow additionally uploads tested source identities and synthetic
 logs/JUnit. Customer execution and product ranking remain disabled. Prepared
 same-state AKT1 Engine V2 evidence and screening quality/cost improvements remain
 open; no external review or approval receipt is implied.
+
+
+## Deferred package exports and selector process cost
+
+Importing the standalone public-assay adapter previously loaded the product
+forcefield, residual/interaction stack and Torch through `betelgeuze_engine`'s
+package initializer. Import profiling attributed about1.02s cumulative import time
+to that package on the observed host. The initializer now loads its10 public
+exports on first access. Each is the original object from its defining module;
+`__all__`, star imports, discovery and pickle identity remain covered. Explicit
+contracts/physics/residual submodule access remains available. Requesting actual
+physics still loads the original physics implementation. No scorer, trainer,
+checkpoint, chemical admission or numeric primitive changes.
+
+A new fresh-process control fails on the previous initializer because metadata-only
+import loads Torch/physics. Three new controls check the absence of those imports,
+unknown-checkpoint refusal without numeric dependencies, every original export's
+identity and star/pickle behavior. The dedicated local workflow has262 passed,
+0 failures/errors and1 pre-existing optional historical artifact skip.
+
+A predeclared paired experiment alternated before/after process order, using the
+unchanged actual AKT1 model and original metadata-prefix sizes1/122/210
+(evaluated1/93/122). Five repetitions per variant/size plus five per variant of
+canonical HTVS interception produced40 successful samples. Full210-row standalone
+selector process wall p50/p95 changed from1.406854/1.425376s to
+0.162748/0.164532s; CPU p50 from1.404540s to0.161467s; maximum process RSS from
+504984KiB to74880KiB. All actual prediction rows, order, endpoint and null
+abstentions matched. Independent actual evidence checks4 passed,0 failures/skips.
+
+The canonical HTVS hook still loads required physics and was deliberately stopped
+before its first mapping child. Its process wall p50 was1.955529s before and
+1.940949s after, with peakRSS581816/573668KiB. This provides no material full-HTVS
+speedup claim. The measured improvement is the standalone selector startup
+boundary, not molecular scoring, neighbor caching, GPU, candidate omission or
+end-to-end screening acceleration. OS page caches were not flushed and the host
+was not exclusively reserved. The negative AKT1 quality result is unchanged.
+
+Evidence root:
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-selector-startup-l99wcec5`.
+Raw paired samples, exact source/command/environment bindings, JUnit and retained
+before/after row outputs are included. All customer/promotion flags stay false.
+No checkpoint or score/schema migration occurs; eager import side effects outside
+the listed public exports are not an API guarantee.

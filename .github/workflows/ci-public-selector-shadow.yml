@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'betelgeuze_engine/product/public_assay_selector_shadow.py'
+      - 'betelgeuze_engine/__init__.py'
       - 'betelgeuze_engine/product/runners/htvs_pipeline.py'
       - 'tests/unit/test_public_assay_selector_shadow.py'
       - 'tests/unit/test_htvs_public_assay_shadow_integration.py'
       - 'tests/unit/test_public_chembl_selector_shadow.py'
       - 'tests/unit/test_public_bindingdb_selector_shadow.py'
       - 'tests/unit/test_public_bindingdb_ic50_selector_shadow.py'
+      - 'tests/unit/test_public_selector_import_boundary.py'
       - 'tests/unit/test_public_chembl_ki_selector_shadow.py'
       - 'docs/public_assay_selector_shadow.md'
       - '.github/workflows/ci-public-selector-shadow.yml'
@@ -17,12 +19,14 @@ on:
     branches: [main]
     paths:
       - 'betelgeuze_engine/product/public_assay_selector_shadow.py'
+      - 'betelgeuze_engine/__init__.py'
       - 'betelgeuze_engine/product/runners/htvs_pipeline.py'
       - 'tests/unit/test_public_assay_selector_shadow.py'
       - 'tests/unit/test_htvs_public_assay_shadow_integration.py'
       - 'tests/unit/test_public_chembl_selector_shadow.py'
       - 'tests/unit/test_public_bindingdb_selector_shadow.py'
       - 'tests/unit/test_public_bindingdb_ic50_selector_shadow.py'
+      - 'tests/unit/test_public_selector_import_boundary.py'
       - 'tests/unit/test_public_chembl_ki_selector_shadow.py'
       - 'docs/public_assay_selector_shadow.md'
       - '.github/workflows/ci-public-selector-shadow.yml'
@@ -66,12 +70,14 @@ jobs:
           import hashlib, json, os, pathlib, platform, subprocess, sys
           files = [
               'betelgeuze_engine/product/public_assay_selector_shadow.py',
+              'betelgeuze_engine/__init__.py',
               'betelgeuze_engine/product/runners/htvs_pipeline.py',
               'tests/unit/test_public_assay_selector_shadow.py',
               'tests/unit/test_htvs_public_assay_shadow_integration.py',
               'tests/unit/test_public_chembl_selector_shadow.py',
               'tests/unit/test_public_bindingdb_selector_shadow.py',
               'tests/unit/test_public_bindingdb_ic50_selector_shadow.py',
+              'tests/unit/test_public_selector_import_boundary.py',
               'tests/unit/test_public_chembl_ki_selector_shadow.py',
               'docs/public_assay_selector_shadow.md',
               '.github/workflows/ci-public-selector-shadow.yml',
@@ -97,9 +103,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/public_assay_selector_shadow.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_htvs_public_assay_shadow_integration.py tests/unit/test_public_chembl_selector_shadow.py tests/unit/test_public_bindingdb_selector_shadow.py tests/unit/test_public_bindingdb_ic50_selector_shadow.py tests/unit/test_public_chembl_ki_selector_shadow.py 2>&1 | tee public-selector-lint.log
+          python -m ruff check --isolated --no-cache betelgeuze_engine/__init__.py betelgeuze_engine/product/public_assay_selector_shadow.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_htvs_public_assay_shadow_integration.py tests/unit/test_public_chembl_selector_shadow.py tests/unit/test_public_bindingdb_selector_shadow.py tests/unit/test_public_bindingdb_ic50_selector_shadow.py tests/unit/test_public_selector_import_boundary.py tests/unit/test_public_chembl_ki_selector_shadow.py 2>&1 | tee public-selector-lint.log
           set +e
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_public_assay_selector_shadow.py tests/unit/test_htvs_public_assay_shadow_integration.py tests/unit/test_public_chembl_selector_shadow.py tests/unit/test_public_bindingdb_selector_shadow.py tests/unit/test_public_bindingdb_ic50_selector_shadow.py tests/unit/test_public_chembl_ki_selector_shadow.py --junitxml=public-selector-junit.xml 2>&1 | tee public-selector.log
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_public_assay_selector_shadow.py tests/unit/test_htvs_public_assay_shadow_integration.py tests/unit/test_public_chembl_selector_shadow.py tests/unit/test_public_bindingdb_selector_shadow.py tests/unit/test_public_bindingdb_ic50_selector_shadow.py tests/unit/test_public_selector_import_boundary.py tests/unit/test_public_chembl_ki_selector_shadow.py --junitxml=public-selector-junit.xml 2>&1 | tee public-selector.log
           pytest_status=${PIPESTATUS[0]}
           set -e
           printf '{"pytest_exit_code": %s}\n' "$pytest_status" > public-selector-exit.json
@@ -116,12 +122,14 @@ jobs:
             public-selector-source.json
             public-selector-dependencies.txt
             betelgeuze_engine/product/public_assay_selector_shadow.py
+            betelgeuze_engine/__init__.py
             betelgeuze_engine/product/runners/htvs_pipeline.py
             tests/unit/test_public_assay_selector_shadow.py
             tests/unit/test_htvs_public_assay_shadow_integration.py
             tests/unit/test_public_chembl_selector_shadow.py
             tests/unit/test_public_bindingdb_selector_shadow.py
             tests/unit/test_public_bindingdb_ic50_selector_shadow.py
+            tests/unit/test_public_selector_import_boundary.py
             tests/unit/test_public_chembl_ki_selector_shadow.py
             docs/public_assay_selector_shadow.md
             .github/workflows/ci-public-selector-shadow.yml
