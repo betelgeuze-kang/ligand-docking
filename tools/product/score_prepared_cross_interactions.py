@@ -2,7 +2,8 @@
 
 Invoke with ``python -m tools.product.score_prepared_cross_interactions``.
 Source files must already be local and hash-bound. This command does not prepare
-molecules, fetch data, load a learned model, or call an external solver.
+molecules, fetch data, or call an external solver. The explicit shadow request
+version can additionally execute the registered public assay predictor.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ import sys
 import time
 
 SCHEMA = "prepared_cross_interaction_request_v1"
+SHADOW_SCHEMA = "prepared_cross_interaction_with_assay_shadow_request_v1"
 
 
 def _strict_object(pairs):
@@ -29,20 +31,31 @@ def _strict_object(pairs):
 
 def evaluate_request(request: dict) -> dict:
     """Retain every requested case, including unsupported or failed cases."""
-    if (not isinstance(request, dict) or set(request) != {"schema_version", "cases"}
-            or request["schema_version"] != SCHEMA or not isinstance(request["cases"], list)
+    shadow_enabled = isinstance(request, dict) and request.get("schema_version") == SHADOW_SCHEMA
+    fields = {"schema_version", "cases"} | ({"assay_selector"} if shadow_enabled else set())
+    if (not isinstance(request, dict) or set(request) != fields
+            or request["schema_version"] not in {SCHEMA, SHADOW_SCHEMA} or not isinstance(request["cases"], list)
             or not 1 <= len(request["cases"]) <= 32):
         raise ValueError("expected 1..32 cases under the prepared cross request contract")
+    shadow_rows, shadow_summary = None, None
+    if shadow_enabled:
+        from betelgeuze_engine.product.prepared_assay_shadow import evaluate_assay_shadow
+        shadow_rows, shadow_summary = evaluate_assay_shadow(request["cases"], request["assay_selector"])
     rows = []
     for index, case in enumerate(request["cases"]):
         started, cpu = time.perf_counter(), time.process_time()
         row = {"request_index": index, "case_id": case.get("case_id") if isinstance(case, dict) and type(case.get("case_id")) is str else None}
+        if shadow_enabled:
+            row["assay_selector_shadow"] = shadow_rows[index]
         row["source_geometry_observation"] = {
             "schema_version": "prepared_source_geometry_observation_v1",
             "status": "unavailable", "reason": "prepared_input_not_loaded", "groups": None,
             "physical_validity_assessed": False, "affects_score_or_admission": False}
         try:
-            if (not isinstance(case, dict) or set(case) != {"case_id", "prepared_input", "evaluation"}
+            case_fields = {"case_id", "prepared_input", "evaluation"}
+            if shadow_enabled and isinstance(case, dict) and "assay_metadata" in case:
+                case_fields.add("assay_metadata")
+            if (not isinstance(case, dict) or set(case) != case_fields
                     or type(case["case_id"]) is not str or not case["case_id"].strip()
                     or not isinstance(case["evaluation"], dict)):
                 raise ValueError("invalid case fields")
@@ -78,11 +91,15 @@ def evaluate_request(request: dict) -> dict:
                        "scope": "case validation, any first-call lazy imports, parsing, hash validation, source geometry observation and evaluation; output excluded"}
         rows.append(row)
     success = sum(row["status"] == "evaluated" for row in rows)
-    return {"schema_version": "prepared_cross_interaction_report_v1", "rows": rows,
+    report = {"schema_version": "prepared_cross_interaction_report_v1", "rows": rows,
             "denominator": {"requested": len(rows), "evaluated": success,
                             "failed": len(rows)-success, "skipped": 0},
             "customer_execution": False, "scientifically_validated": False,
             "external_solver_called": False}
+    if shadow_enabled:
+        report["schema_version"] = "prepared_cross_interaction_with_assay_shadow_report_v1"
+        report["assay_selector_shadow"] = shadow_summary
+    return report
 
 
 def _write_report_json(result: dict, output) -> None:
@@ -125,7 +142,8 @@ def main(argv=None) -> int:
         result = evaluate_request(request)
         if args.request.read_bytes() != raw:
             raise ValueError("request changed during evaluation")
-        exit_code = 0 if result["denominator"]["failed"] == 0 else 2
+        shadow_unsupported = result.get("assay_selector_shadow", {}).get("denominator", {}).get("unsupported", 0)
+        exit_code = 0 if result["denominator"]["failed"] == 0 and shadow_unsupported == 0 else 2
     except Exception as exc:
         result = {"schema_version": "prepared_cross_interaction_report_v1", "status": "invalid_request",
                   "error_type": type(exc).__name__, "reason": str(exc), "denominator": None,

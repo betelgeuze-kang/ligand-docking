@@ -526,3 +526,100 @@ also had a cost field. Persisted outputs confirm only cost/source-hash differenc
 The corrected comparator was exercised on saved complete outputs before the final
 six-process run. Earlier timings are not pooled with the final matched output-disk
 comparison. No physical guard or output field is weakened by these harness fixes.
+
+## Optional experimental-assay selector co-execution
+
+The same `tools.product.score_prepared_cross_interactions` module now accepts
+`prepared_cross_interaction_with_assay_shadow_request_v1`. It executes the
+existing registered public assay selector before the existing prepared V2
+cross calculation. This closes the prepared CLI's model co-execution gap; it
+is not a docking search, BioDiscovery end-to-end run, or physical-energy residual.
+The default v1 request and all its physics remain unchanged.
+
+The new request retains `cases` and adds `assay_selector` with `checkpoint` and
+`checkpoint_sha256`. Each case may contain an `assay_metadata` object. For the
+frozen ChEMBL37 Factor Xa Ki model it contains `smiles`, `endpoint=Ki`,
+`endpoint_subtype=enzyme_inhibition_Ki`, and the model's exact
+`target_annotation_sha256`. The annotation is a catalogue declaration, not
+verification of the prepared receptor or assay construct. All additional source
+metadata, original roles/splits and even conflicting historical declarations are
+preserved verbatim under `input_metadata`; they are not training admissions.
+
+The model adapter and its previous base/v2 tests are reused byte-for-byte from
+PR513 head `2817f1785761118a7d3109704d898fae8c5a8c20`. No registry, checkpoint,
+features, calibration or scores are changed. New module
+`betelgeuze_engine/product/prepared_assay_shadow.py` invokes its existing loader
+and batched `predict_rows`. Neither training code nor a new solver is introduced.
+A separate source fingerprint identifies this integration.
+
+Outputs use `prepared_cross_interaction_with_assay_shadow_report_v1`. Every case
+retains its original request index, including duplicate IDs and physics failures.
+`assay_selector_shadow` is a separate observation: AI pKi, heuristic fit mean,
+uncertainty null, OOD not assessed, original metadata and reasons. No prepared
+chemical-state verification or energy conversion is inferred from a SMILES or
+matching ID. `combined_score` stays null; `residual_training_eligible` stays false.
+The original cross result still exposes the actual evaluated coordinates, units,
+atomic cross forces and unevaluated terms. Model failure cannot suppress a
+physical evaluation, and physical failure cannot erase a completed prediction.
+Separate denominators count all physical cases and shadow evaluated/unsupported/
+not-requested cases. Explicitly requested but unsupported model rows make the
+CLI exit2, as does a physical failure; absent optional metadata is not requested.
+
+### Actual fixed-structure observation, 2026-09-09
+
+The previous three native waterNES inputs and immutable ChEMBL Ki checkpoint
+`c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b`
+were run through the real module without interception or external solvers.
+Three fresh-process pairs used the predeclared order off/on, on/off, off/on.
+Every process requested3 cases, computed2 and retained1 preparation failure
+(1EZQ's original malformed GRO). No cases were skipped or repaired by guessing.
+Every shadow process predicted2 supplied catalogue ligands; 1EZQ had no supplied
+assay metadata and stayed not requested. All6 processes exited2 for the retained
+physical failure. Coordinates, atomic parameters, cross energies/forces, source
+geometry and failure records matched exactly across each pair after excluding
+only their recorded timing fields and the new shadow observation.
+
+- 1LPG catalogue ligand: predicted pKi5.598057095240747. Prepared H count/charge
+  differs from the catalogue representation. The original historical fit role
+  and failed expanded BindingDB identity-independence observation are retained.
+- 1F0S/PR2 catalogue ligand: predicted pKi6.55686292361489. Heavy connectivity and
+  relative handedness have previous source evidence, but prepared bond orders,
+  formal charge and complete receptor/assay-state identity remain unverified.
+  Original BindingDB calibration provenance remains visible and ineligible for fit.
+
+These are AI predictions, not new experimental measurements. No evaluation label
+was joined, no new model was fit and no same-state residual row was obtained.
+The original ChEMBL model was trained on224 exact Ki observations; its earlier
+3-row exact development evaluation worsened versus the mean baseline. Serving it
+here does not reverse that negative result or establish out-of-distribution accuracy.
+
+| Whole fresh CLI process, CPU | Shadow off p50 / p95 | Shadow on p50 / p95 |
+|---|---:|---:|
+| wall seconds, including output |15.6112 /15.7666|16.0585 /16.1144|
+| user + system CPU seconds |15.58 /15.724|15.99 /16.062|
+| peak RSS KiB |748880 /749085.2|727584 /727609.2|
+
+Paired wall overheads were0.3367,0.1084,0.5665 seconds. Each mode has only3
+observations on a shared host with OS caches unflushed; these descriptive tails
+and RSS variation establish no speedup or memory improvement. No GPU, warm
+process, candidate recovery, search/refinement, dynamics or calibrated uncertainty
+was measured. Source and checkpoint bytes were fixed before execution.
+
+Fresh synthetic controls failed7/passed1 on the parent consumer because the
+optional request was unsupported. The completed focused and previous regression
+suite passed516, with0 failures/errors/skips, and Ruff passed. Initial lint found
+three statement-formatting errors, corrected without changing behavior. Actual
+artifact checks additionally compare all paired outputs and independently compute
+the two frozen Morgan/ridge dot products. The first comparison harness mistakenly
+included nested timing fields; its failed log is retained, and only timing fields
+were excluded in the corrected comparison. No physical tolerance was relaxed.
+
+A relocated runtime/input copy reran the actual CLI while network connections,
+child processes and training/solver imports were blocked. After a host-description
+metadata-only setup, no original evidence reads were allowed. Physics and model
+rows matched after excluding only recorded costs and file-location fields;
+verification passed, with the expected CLI exit2 for1EZQ. The first harness attempt
+blocked Python's `platform.platform()` call to system `uname`; its failure is kept.
+The corrected harness caches only that host description before applying the same
+restrictions. No model or physics call was mocked. This is offline replay with the
+installed dependencies, not clean-wheel installation or customer qualification.
