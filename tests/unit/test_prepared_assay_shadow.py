@@ -138,3 +138,22 @@ def test_registered_ki_predictor_and_v2_run_together_without_training(tmp_path, 
     assert checkpoint.read_bytes() == raw
     assert shadow['input_metadata']['source_provenance']['evaluation_only'] is True
     assert shadow['combined_score'] is None and shadow['residual_training_eligible'] is False
+
+
+@pytest.mark.parametrize("partition", ["source_order_v1", "spatial_median_v1"])
+def test_v2_execution_keeps_assay_shadow_separate_from_actual_physics(tmp_path, monkeypatch, partition):
+    seen = fake_selector(monkeypatch)
+    req = request(tmp_path)
+    req["schema_version"] = "prepared_cross_interaction_with_assay_shadow_request_v2"
+    req["cases"][0]["execution"] = {"projection_partition": partition}
+    before = copy.deepcopy(req)
+    result = consumer.evaluate_request(req)
+    assert result["schema_version"] == "prepared_cross_interaction_with_assay_shadow_report_v2"
+    assert req == before and seen == [req["cases"][0]["assay_metadata"]]
+    assert result["denominator"] == {"requested": 1, "evaluated": 1, "failed": 0, "skipped": 0}
+    row = result["rows"][0]
+    _assert_scalar_pair(row["result"])
+    assert row["assay_selector_shadow"]["combined_score"] is None
+    assert row["assay_selector_shadow"]["residual_training_eligible"] is False
+    assert row["assay_selector_shadow"]["prediction"]["predicted_value"] == 0.
+    assert row["result"]["quantities"]["residual"] is None

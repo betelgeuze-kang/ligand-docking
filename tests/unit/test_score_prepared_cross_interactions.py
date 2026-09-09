@@ -570,3 +570,85 @@ def test_report_writer_exclusive_open_keeps_racing_existing_output(monkeypatch, 
     assert not capsys.readouterr().out
     assert request.read_bytes() == before
     assert output.read_bytes() == b"competing evidence\n"
+
+
+@pytest.mark.parametrize("partition", ["source_order_v1", "spatial_median_v1"])
+def test_v2_module_execution_option_preserves_actual_parser_physics_and_failed_denominator(tmp_path, partition):
+    prepared = _prepared(tmp_path / "sources")
+    old = consumer.evaluate_request(_request([_case(prepared)]))["rows"][0]
+    case = _case(prepared)
+    case["execution"] = {"projection_partition": partition}
+    missing = copy.deepcopy(case)
+    del missing["execution"]
+    invalid = copy.deepcopy(case)
+    invalid["execution"]["projection_partition"] = "unknown"
+    request = {"schema_version": "prepared_cross_interaction_request_v2", "cases": [case, missing, invalid]}
+    request_path, output_path = tmp_path / "request-v2.json", tmp_path / "report-v2.json"
+    request_path.write_text(json.dumps(request))
+    process = _run(request_path, output_path, tmp_path)
+    assert process.returncode == 2
+    report = json.loads(output_path.read_text())
+    assert report["schema_version"] == "prepared_cross_interaction_report_v2"
+    assert report["denominator"] == {"requested": 3, "evaluated": 1, "failed": 2, "skipped": 0}
+    assert report["request_sha256"] == hashlib.sha256(request_path.read_bytes()).hexdigest()
+    row = report["rows"][0]
+    assert row["execution"] == case["execution"]
+    assert row["result"]["sources"] == old["result"]["sources"]
+    assert row["result"]["quantities"] == old["result"]["quantities"]
+    _assert_scalar_pair(row["result"])
+    _assert_unqualified(report)
+    assert all(report["rows"][i]["status"] == "failed" for i in (1, 2))
+    assert row["preparation_provenance"]["source_hashes_postflight_verified"] is True
+
+
+@pytest.mark.parametrize("execution", [None, {}, {"projection_partition": None}, {"projection_partition": []},
+                                       {"projection_partition": True}, {"projection_partition": "source_order_v1", "extra": 0}])
+def test_v2_invalid_execution_is_a_failed_case_before_source_loading(tmp_path, execution):
+    case = _case({})
+    case["execution"] = execution
+    report = consumer.evaluate_request({"schema_version": "prepared_cross_interaction_request_v2", "cases": [case]})
+    assert report["denominator"] == {"requested": 1, "evaluated": 0, "failed": 1, "skipped": 0}
+    assert "projection_partition" in report["rows"][0]["reason"]
+    assert "preparation_provenance" not in report["rows"][0]
+
+
+
+def test_v2_module_multiblock_source_files_match_independent_scalar_reference(tmp_path):
+    from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
+    from tests.unit.test_v2_prepared_cross_interaction import _oracle
+
+    prepared = _prepared(tmp_path / "sources")
+    pdb = "".join(f"ATOM  {i+1:5d} {'C1':>4s} {'SYN':>3s} A{i+1:4d}    "
+                  f"{1.2*i:8.3f}{4.:8.3f}{2.:8.3f}{1.:6.2f}{0.:6.2f}          {'C':>2s}  \n"
+                  for i in range(130)) + "END\n"
+    itp = "[ moleculetype ]\nSYN 3\n[ atoms ]\n" + "".join(
+        f"{i+1} C {i+1} SYN C1 {i+1} 0.2 12.011\n" for i in range(130))
+    prepared["protein_pdb"] = _write_source(tmp_path / "sources", "receptor.pdb", pdb)
+    prepared["protein_chains"][0]["molecule_itp"] = _write_source(tmp_path / "sources", "receptor.itp", itp)
+    state = load_prepared_gromacs_components(prepared)[:4]
+    lj, coulomb, rf, lf, pairs = _oracle(*state)
+    cases = []
+    for partition in ("source_order_v1", "spatial_median_v1"):
+        case = _case(prepared)
+        case["execution"] = {"projection_partition": partition}
+        cases.append(case)
+    request_path, output_path = tmp_path / "request.json", tmp_path / "report.json"
+    request_path.write_text(json.dumps({"schema_version": "prepared_cross_interaction_request_v2", "cases": cases}))
+    before = {Path(prepared["protein_pdb"]["path"]): pdb, Path(prepared["protein_chains"][0]["molecule_itp"]["path"]): itp}
+    process = _run(request_path, output_path, tmp_path)
+    assert process.returncode == 0, process.stderr
+    report = json.loads(output_path.read_text())
+    assert report["denominator"] == {"requested": 2, "evaluated": 2, "failed": 0, "skipped": 0}
+    for row in report["rows"]:
+        result = row["result"]
+        quantities = result["quantities"]
+        assert quantities["cross_total_kcal_per_mol"] == pytest.approx(lj + coulomb, rel=2e-12, abs=2e-12)
+        assert result["pair_accounting"]["cross_pair_indices"] == [list(pair) for pair in pairs]
+        for actual, expected in zip(quantities["receptor_cross_forces_kcal_per_mol_angstrom"], rf):
+            assert actual == pytest.approx(expected, rel=2e-11, abs=2e-11)
+        assert quantities["ligand_cross_forces_kcal_per_mol_angstrom"][0] == pytest.approx(lf[0], rel=2e-11, abs=2e-11)
+        assert result["pair_accounting"]["requested_cross_pairs"] == 130
+        _assert_unqualified(result)
+    assert report["rows"][0]["result"]["sources"] == report["rows"][1]["result"]["sources"]
+    assert report["rows"][1]["result"]["pair_accounting"]["projection_partition"]["receptor_block_count"] > 1
+    assert all(path.read_text() == raw for path, raw in before.items())

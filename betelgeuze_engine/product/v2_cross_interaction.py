@@ -116,6 +116,28 @@ def _validate_component_minimum_distance(system: AllAtomSystem, side: str) -> No
         cells.setdefault(key, []).append(index)
 
 
+
+def _spatial_blocks(coordinates):
+    """Partition original indices only; never filter atoms or change their state."""
+    points = coordinates[0].detach().tolist()
+
+    def split(indices):
+        if len(indices) <= TILE_ATOMS_PER_COMPONENT:
+            return [sorted(indices)]
+        spans = [max(points[i][axis] for i in indices) - min(points[i][axis] for i in indices)
+                 for axis in range(3)]
+        axis = max(range(3), key=lambda value: spans[value])
+        ordered = sorted(indices, key=lambda i: (points[i][axis], i))
+        midpoint = len(ordered) // 2
+        return split(ordered[:midpoint]) + split(ordered[midpoint:])
+
+    blocks = split(list(range(len(points))))
+    if (sorted(i for block in blocks for i in block) != list(range(len(points)))
+            or any(not 0 < len(block) <= TILE_ATOMS_PER_COMPONENT for block in blocks)):
+        raise PreparedInteractionError("spatial partition did not preserve complete atom coverage")
+    return blocks
+
+
 def _tile(receptor, ligand, ri, li, rpars, lpars, config):
     # The original complete canonical states remain in the result. A tile has no
     # chemical topology: it evaluates cross pairs only and preserves source maps.
@@ -183,6 +205,7 @@ def evaluate_prepared_cross_interaction(
     pocket_radius_angstrom: float, cutoff_angstrom: float = 10.0,
     switch_start_angstrom: float = 8.0, dielectric: float = 1.0,
     screening_kappa_per_angstrom: float = 0.0,
+    projection_partition: str = "source_order_v1",
 ) -> dict[str, Any]:
     """Evaluate every receptor-ligand pair under the declared switched model.
 
@@ -191,6 +214,9 @@ def evaluate_prepared_cross_interaction(
     Source topology defaults are not merged; cross pairs have full unit scaling.
     """
     start, cpu = time.perf_counter(), time.process_time()
+    if (type(projection_partition) is not str
+            or projection_partition not in {"source_order_v1", "spatial_median_v1"}):
+        raise PreparedInteractionError("unsupported projection_partition")
     fields = {"coordinate_frame_id", "prepared_state_id", "parameter_source_id", "charge_source_id"}
     if (not isinstance(source_declarations, Mapping) or set(source_declarations) != fields
             or any(type(v) is not str or not v.strip() for v in source_declarations.values())):
@@ -238,11 +264,19 @@ def evaluate_prepared_cross_interaction(
                        and config["screening_kappa_per_angstrom"] <= 1e3
                        and all(abs(p["charge_e"]) <= 100.0 and p["sigma_angstrom"] <= 100.0
                                and p["epsilon_kcal_per_mol"] <= 100.0 for p in (*rp, *lp)))
+    # Repartition only inside the same conservative numerical bounds used by
+    # projection compaction. Outside them, preserve the original excluded-term
+    # intermediates and their failure behavior with the original source blocks.
+    spatial_enabled = projection_partition == "spatial_median_v1" and compact_enabled
+    receptor_blocks = (_spatial_blocks(receptor.coordinates) if spatial_enabled else
+        [list(range(i, min(receptor.atom_count, i + TILE_ATOMS_PER_COMPONENT)))
+         for i in range(0, receptor.atom_count, TILE_ATOMS_PER_COMPONENT)])
+    ligand_blocks = (_spatial_blocks(ligand.coordinates) if spatial_enabled else
+        [list(range(i, min(ligand.atom_count, i + TILE_ATOMS_PER_COMPONENT)))
+         for i in range(0, ligand.atom_count, TILE_ATOMS_PER_COMPONENT)])
     with torch.inference_mode(False), torch.enable_grad(), torch.autocast(device_type="cpu",enabled=False):
-        for rstart in range(0,receptor.atom_count,TILE_ATOMS_PER_COMPONENT):
-            ri=list(range(rstart,min(receptor.atom_count,rstart+TILE_ATOMS_PER_COMPONENT)))
-            for lstart in range(0,ligand.atom_count,TILE_ATOMS_PER_COMPONENT):
-                li=list(range(lstart,min(ligand.atom_count,lstart+TILE_ATOMS_PER_COMPONENT)))
+        for ri in receptor_blocks:
+            for li in ligand_blocks:
                 # Exact bounded distance cull, not a candidate omission. Cutoff is
                 # part of the declared physics model; at cutoff the switch is zero.
                 offsets = receptor.coordinates[0,ri,None]-ligand.coordinates[0,None,li]
@@ -282,7 +316,7 @@ def evaluate_prepared_cross_interaction(
     zero_sigma=[{"side":side,"atom_index":r["atom_index"],"source_sigma_angstrom":0.0,
                   "source_epsilon_kcal_per_mol":0.0,"unused_kernel_sigma_angstrom":1.0}
                  for side,rows in (("receptor",rp),("ligand",lp)) for r in rows if r["sigma_angstrom"]==0.0]
-    return {"schema_id":SCHEMA_ID,"status":"evaluated", "source_declarations":dict(source_declarations),
+    result = {"schema_id":SCHEMA_ID,"status":"evaluated", "source_declarations":dict(source_declarations),
         "model":{"id":"existing_v2_switched_cross_lj_screened_coulomb_v1",**config,
                  "mixing":"Lorentz-Berthelot","cross_pair_scaling":1.0,"periodic":False,
                  "source_full_simulation_hamiltonian_reproduced":False,
@@ -320,3 +354,15 @@ def evaluate_prepared_cross_interaction(
         "adapter_source_sha256":hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "uncertainty":None,"uncertainty_calibrated":False,"scientifically_validated":False,
         "customer_execution":False,"external_solver_called":False}
+
+    if projection_partition != "source_order_v1":
+        result["pair_accounting"]["projection_partition"] = {
+            "requested": projection_partition,
+            "effective": "spatial_median_v1" if spatial_enabled else "source_order_v1",
+            "fallback": None if spatial_enabled else "original_source_blocks_preserve_numeric_guards",
+            "receptor_block_count": len(receptor_blocks), "ligand_block_count": len(ligand_blocks),
+            "max_atoms_per_component_block": TILE_ATOMS_PER_COMPONENT,
+            "source_index_blocks_sha256": sha256_canonical({"receptor": receptor_blocks, "ligand": ligand_blocks}),
+            "scope": "mathematical partition only; source state, cross pairs, model and admission unchanged",
+        }
+    return result

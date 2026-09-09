@@ -746,3 +746,127 @@ def test_large_finite_coordinates_use_original_projection_without_new_rejection(
     assert result["pair_accounting"]["projection_compaction"]["fallback"] == "original_full_tiles_preserve_numeric_guards"
     assert result["pair_accounting"]["projection_compaction"]["projected_atom_slots"] == 3
     assert result["sources"]["receptor"]["system_sha256"] == canonical_system_sha256(receptor)
+
+
+# Opt-in partition controls use fresh numerical states, never held-out structures.
+def _partition_state():
+    receptor = _system([[1.2 * i, 0., 0.] for i in range(130)],
+                       [0.1 * (i % 3 - 1) for i in range(130)])
+    ligand = _system([[1.4 * i, 4., 2.] for i in range(70)],
+                     [0.15 * (i % 3 - 1) for i in range(70)])
+    rp, lp = _parameters(receptor), _parameters(ligand)
+    rp[3].update(sigma_angstrom=0., epsilon_kcal_per_mol=0.)
+    return receptor, ligand, rp, lp
+
+
+def test_spatial_partition_multiblock_matches_scalar_oracle_and_preserves_sources():
+    state = _partition_state()
+    original = _evaluate(*state)
+    spatial = _evaluate(*state, projection_partition="spatial_median_v1")
+    for result in (original, spatial):
+        _assert_oracle(result, state)
+        assert result["quantities"]["residual"] is None
+        assert result["scientifically_validated"] is False
+    assert original["sources"] == spatial["sources"]
+    assert original["source_zero_sigma_projection"] == spatial["source_zero_sigma_projection"]
+    assert original["pair_accounting"]["pair_indices_sha256"] == spatial["pair_accounting"]["pair_indices_sha256"]
+    partition = spatial["pair_accounting"]["projection_partition"]
+    assert partition["effective"] == "spatial_median_v1"
+    assert partition["receptor_block_count"] > 1 and partition["ligand_block_count"] > 1
+    assert partition["fallback"] is None
+    assert "projection_partition" not in original["pair_accounting"]
+
+
+def test_spatial_partition_rigid_transform_and_permutation_preserve_pairs_and_forces():
+    state = _partition_state()
+    baseline = _evaluate(*state, projection_partition="spatial_median_v1")
+    angle = 0.417
+    rotation = torch.tensor([[math.cos(angle), -math.sin(angle), 0.],
+                             [math.sin(angle), math.cos(angle), 0.], [0., 0., 1.]], dtype=torch.float64)
+    shift = torch.tensor([2.3, -7.1, 3.7], dtype=torch.float64)
+    # Coprime permutation strides mix source blocks without dropping any atoms.
+    orders = [[(i * 37) % 130 for i in range(130)], [(i * 23) % 70 for i in range(70)]]
+    transformed, parameters = [], []
+    for system, rows, order in zip(state[:2], state[2:], orders):
+        coordinates = (system.coordinates[0] @ rotation.T + shift)[order]
+        transformed.append(_system(coordinates.tolist(), [system.atoms[i].partial_charge_e for i in order]))
+        parameters.append([dict(rows[old], atom_index=new) for new, old in enumerate(order)])
+    changed_state = (*transformed, *parameters)
+    result = _evaluate(*changed_state, projection_partition="spatial_median_v1", pocket_center_angstrom=shift.tolist())
+    _assert_oracle(result, changed_state)
+    original_pairs = set(baseline["pair_accounting"]["cross_pair_indices"])
+    assert {(orders[0][i], orders[1][j]) for i, j in result["pair_accounting"]["cross_pair_indices"]} == original_pairs
+    for side, order in zip(("receptor", "ligand"), orders):
+        field = side + "_cross_forces_kcal_per_mol_angstrom"
+        expected = torch.tensor(baseline["quantities"][field], dtype=torch.float64) @ rotation.T
+        torch.testing.assert_close(torch.tensor(result["quantities"][field], dtype=torch.float64),
+                                   expected[order], rtol=2e-11, atol=2e-11)
+    assert result["quantities"]["cross_total_kcal_per_mol"] == pytest.approx(
+        baseline["quantities"]["cross_total_kcal_per_mol"], rel=2e-12, abs=2e-12)
+
+
+@pytest.mark.parametrize("value", [None, True, 0, [], {}, "spatial", ""])
+def test_spatial_partition_rejects_unknown_or_untyped_option(value):
+    with pytest.raises(adapter.PreparedInteractionError, match="unsupported projection_partition"):
+        _evaluate(*_pair(), projection_partition=value)
+
+
+@pytest.mark.parametrize("parameter", ["charge_e", "sigma_angstrom", "epsilon_kcal_per_mol"])
+def test_spatial_partition_extreme_parameters_preserve_excluded_term_failure(parameter):
+    charges = [0.2, 1e200, 1e200] if parameter == "charge_e" else [0.2] * 3
+    receptor = _system([[0., 0., 0.], [100., 0., 0.], [101., 0., 0.]], charges)
+    ligand = _system([[4., 0., 0.]], [-0.3])
+    rp, lp = _parameters(receptor), _parameters(ligand)
+    if parameter != "charge_e":
+        for row in rp[1:]:
+            row[parameter] = 1e200
+    with pytest.raises(ValueError, match="finite"):
+        _evaluate(receptor, ligand, rp, lp, projection_partition="spatial_median_v1")
+
+
+def test_spatial_partition_fallback_preserves_finite_results_and_full_source_blocks():
+    receptor = _system([[0., 0., 0.], [2e6, 0., 0.]], [0.2, 0.2])
+    ligand = _system([[4., 0., 0.]], [-0.3])
+    state = receptor, ligand, _parameters(receptor), _parameters(ligand)
+    original = _evaluate(*state)
+    spatial = _evaluate(*state, projection_partition="spatial_median_v1")
+    assert spatial["quantities"] == original["quantities"]
+    assert spatial["sources"] == original["sources"]
+    partition = spatial["pair_accounting"]["projection_partition"]
+    assert partition["effective"] == "source_order_v1"
+    assert partition["fallback"] == "original_source_blocks_preserve_numeric_guards"
+
+
+def test_spatial_partition_preserves_far_coordinate_overflow_failure():
+    receptor = _system([[0., 0., 0.], [3e307, 3e307, 3e307], [4e307, 3e307, 3e307]], [0.2] * 3)
+    ligand = _system([[4., 0., 0.]], [-0.3])
+    with pytest.raises(ValueError, match="energy term must be finite"):
+        _evaluate(receptor, ligand, _parameters(receptor), _parameters(ligand), projection_partition="spatial_median_v1")
+
+
+@pytest.mark.parametrize("side", ["receptor", "ligand", "cross"])
+def test_spatial_partition_never_hides_minimum_distance_failure(side):
+    receptor, ligand, rp, lp = _partition_state()
+    if side == "cross":
+        coordinates = ligand.coordinates.clone()
+        coordinates[0, 69] = receptor.coordinates[0, 129] + torch.tensor([0.1, 0., 0.])
+        ligand = replace(ligand, coordinates=coordinates)
+    else:
+        system = receptor if side == "receptor" else ligand
+        coordinates = system.coordinates.clone()
+        coordinates[0, -1] = coordinates[0, 0] + torch.tensor([0.1, 0., 0.])
+        if side == "receptor":
+            receptor = replace(system, coordinates=coordinates)
+        else:
+            ligand = replace(system, coordinates=coordinates)
+    for partition in ("source_order_v1", "spatial_median_v1"):
+        error = ReferencePhysicsApplicabilityError if side == "cross" else adapter.PreparedInteractionError
+        with pytest.raises(error, match="minimum_pair_distance"):
+            _evaluate(receptor, ligand, rp, lp, projection_partition=partition, pocket_radius_angstrom=200.)
+
+
+@pytest.mark.parametrize("distance", [math.nextafter(8., 0.), 8., math.nextafter(8., math.inf),
+                                      math.nextafter(10., 0.), 10., math.nextafter(10., math.inf)])
+def test_spatial_partition_cutoff_and_switch_boundaries_match_oracle(distance):
+    state = _pair(distance)
+    _assert_oracle(_evaluate(*state, projection_partition="spatial_median_v1"), state)

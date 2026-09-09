@@ -710,3 +710,62 @@ remain incomplete. No external reviewer or scientific approval is asserted.
 Sources: [MacKerell laboratory archive](https://mackerell.umaryland.edu/charmm_ff.shtml),
 [parameter-file semantics](https://academiccharmm.org/documentation/version/c49b1/parmfile),
 [AKT1 source](https://zenodo.org/records/17187387).
+
+
+## Opt-in spatial projection through the prepared product consumer
+
+The existing cross adapter can now partition original receptor and ligand atom
+indices by recursive widest-axis median splits, bounded to64 atoms per component
+block. It still calls the same V2 cross kernel. No atom, candidate, source state,
+parameter, cutoff pair or physical term is removed by this option. The complete
+source minimum-distance and mutation guards, conservative cube compaction,
+source-index force scatter, exact pair accounting and finite accumulation checks
+are retained. Outside the existing compaction numerical bounds it uses the
+original source-order blocks, including their excluded-term failure behavior.
+
+Existing `prepared_cross_interaction_request_v1` and assay-shadow v1 requests
+retain their original default order and result fields. New opt-in requests use
+`prepared_cross_interaction_request_v2` or
+`prepared_cross_interaction_with_assay_shadow_request_v2`. Each v2 case requires
+`"execution": {"projection_partition": "source_order_v1"}` or
+`"execution": {"projection_partition": "spatial_median_v1"}` alongside the
+unchanged explicit evaluation parameters. Invalid or missing execution options
+remain failed cases in the full denominator. The corresponding report envelope
+is v2; spatial results additionally record requested/effective partition, any
+numeric fallback, block counts and the original-index block SHA-256. No model,
+checkpoint, physical score, source coordinate or frozen protocol migration occurs.
+AI predictions remain separate shadow observations with no combined score or
+same-state residual claim. Customer execution and scientific validation remain false.
+
+On exact parent56a789d373d927894aeb7a6d36dd2ea95be57497, new option/CLI/shadow
+controls fail4 while the original actual-parser CLI positive control passes1.
+The implemented focused consumer regression passes552 with0 failures/errors/skips;
+Ruff passes. New controls include130-by70 synthetic particles, independent scalar
+energy and analytic forces, rotation/translation/permutation, explicit zero
+parameters, cutoff/switch boundaries, unchanged near-pair and extreme-value
+failures, and actual multiblock PDB/ITP/GRO/SDF-to-module execution. These are
+synthetic numerical and integration results, not experimental chemistry evidence.
+The initial local run passed261 and failed1 because a new test expected the wrong
+exception class for the existing kernel's correct near-pair rejection; the test
+now expects that existing typed exception. No guard or tolerance was relaxed.
+
+Renewed public thrombin execution was deferred: the current154607-node metadata
+context plus the source-declared measurement, calculation-study and PDB citations
+connects all11 queried candidates to a124923-node component with1320 reserved
+nodes, independently checked by breadth-first traversal. This deliberately
+conservative shared-literature dependency is not proof of experimental label
+leakage or direct derivation from each cited calculation. No public coordinates,
+labels or checkpoint were newly used in this audit, and no blocked case was
+removed to report a favorable denominator:0 admitted /11 queried. Query nodes
+and witness paths are retained separately from the unchanged role context.
+Therefore this product option has no new real-structure speedup, recovery or
+memory claim. The separate apo AKT1 intrareceptor benchmark is not a product
+cross-interaction benchmark. Broader frozen scorer-source CI incompatibility
+introduced before this change remains unresolved; no guard is weakened here.
+
+Evidence snapshot:
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-product-spatial-partition-_38e3rae`.
+It retains the source-bound commands, environment, initial failed logs, parent
+reproduction and full-regression raw logs/JUnit, CLI request/source/output files,
+and metadata-only admission audit. This change is an opt-in development path;
+quality-cost superiority and customer qualification remain unmeasured.

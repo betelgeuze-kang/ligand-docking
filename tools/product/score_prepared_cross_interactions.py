@@ -18,6 +18,8 @@ import time
 
 SCHEMA = "prepared_cross_interaction_request_v1"
 SHADOW_SCHEMA = "prepared_cross_interaction_with_assay_shadow_request_v1"
+SCHEMA_V2 = "prepared_cross_interaction_request_v2"
+SHADOW_SCHEMA_V2 = "prepared_cross_interaction_with_assay_shadow_request_v2"
 
 
 def _strict_object(pairs):
@@ -31,10 +33,11 @@ def _strict_object(pairs):
 
 def evaluate_request(request: dict) -> dict:
     """Retain every requested case, including unsupported or failed cases."""
-    shadow_enabled = isinstance(request, dict) and request.get("schema_version") == SHADOW_SCHEMA
+    shadow_enabled = isinstance(request, dict) and request.get("schema_version") in {SHADOW_SCHEMA, SHADOW_SCHEMA_V2}
+    version_two = isinstance(request, dict) and request.get("schema_version") in {SCHEMA_V2, SHADOW_SCHEMA_V2}
     fields = {"schema_version", "cases"} | ({"assay_selector"} if shadow_enabled else set())
     if (not isinstance(request, dict) or set(request) != fields
-            or request["schema_version"] not in {SCHEMA, SHADOW_SCHEMA} or not isinstance(request["cases"], list)
+            or request["schema_version"] not in {SCHEMA, SHADOW_SCHEMA, SCHEMA_V2, SHADOW_SCHEMA_V2} or not isinstance(request["cases"], list)
             or not 1 <= len(request["cases"]) <= 32):
         raise ValueError("expected 1..32 cases under the prepared cross request contract")
     shadow_rows, shadow_summary = None, None
@@ -52,13 +55,22 @@ def evaluate_request(request: dict) -> dict:
             "status": "unavailable", "reason": "prepared_input_not_loaded", "groups": None,
             "physical_validity_assessed": False, "affects_score_or_admission": False}
         try:
-            case_fields = {"case_id", "prepared_input", "evaluation"}
+            case_fields = {"case_id", "prepared_input", "evaluation"} | ({"execution"} if version_two else set())
             if shadow_enabled and isinstance(case, dict) and "assay_metadata" in case:
                 case_fields.add("assay_metadata")
             if (not isinstance(case, dict) or set(case) != case_fields
                     or type(case["case_id"]) is not str or not case["case_id"].strip()
                     or not isinstance(case["evaluation"], dict)):
                 raise ValueError("invalid case fields")
+            execution_options = {}
+            if version_two:
+                execution = case["execution"]
+                if (not isinstance(execution, dict) or set(execution) != {"projection_partition"}
+                        or type(execution["projection_partition"]) is not str
+                        or execution["projection_partition"] not in {"source_order_v1", "spatial_median_v1"}):
+                    raise ValueError("explicit supported projection_partition required in v2 execution")
+                execution_options = dict(execution)
+                row["execution"] = dict(execution)
             evaluation = case["evaluation"]
             required = {"pocket_center_angstrom", "pocket_radius_angstrom", "cutoff_angstrom",
                         "switch_start_angstrom", "dielectric", "screening_kappa_per_angstrom"}
@@ -82,7 +94,7 @@ def evaluate_request(request: dict) -> dict:
                     reason="source_geometry_observation_failed", error_type=type(exc).__name__, detail=str(exc))
             result = evaluate_prepared_cross_interaction(
                 receptor, ligand, rp, lp,
-                source_declarations=case["prepared_input"]["source_declarations"], **evaluation)
+                source_declarations=case["prepared_input"]["source_declarations"], **evaluation, **execution_options)
             row.update(status="evaluated", result=result)
         except Exception as exc:
             row.update(status="failed", error_type=type(exc).__name__, reason=str(exc))
@@ -96,8 +108,11 @@ def evaluate_request(request: dict) -> dict:
                             "failed": len(rows)-success, "skipped": 0},
             "customer_execution": False, "scientifically_validated": False,
             "external_solver_called": False}
+    if version_two:
+        report["schema_version"] = "prepared_cross_interaction_report_v2"
     if shadow_enabled:
-        report["schema_version"] = "prepared_cross_interaction_with_assay_shadow_report_v1"
+        report["schema_version"] = ("prepared_cross_interaction_with_assay_shadow_report_v2" if version_two
+                                    else "prepared_cross_interaction_with_assay_shadow_report_v1")
         report["assay_selector_shadow"] = shadow_summary
     return report
 
