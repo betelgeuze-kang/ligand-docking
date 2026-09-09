@@ -15,7 +15,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from tools.product.residual_evidence import (
-    declared_evaluation_only, require_complete_csv_row, validated_csv_fieldnames,
+    training_source_rejection, require_complete_csv_row, validated_csv_fieldnames,
 )
 
 from tools.builder_json_utils import (
@@ -201,8 +201,11 @@ def _require_development_rows(rows: list[dict[str, Any]]) -> None:
     holdouts or authenticate the upstream data producer.
     """
     for index, row in enumerate(rows):
-        if declared_evaluation_only(row):
-            raise ValueError(f"evaluation_only_training_input: row {index + 1}")
+        reason = training_source_rejection(row)
+        if reason:
+            if reason == "evaluation_only_row":
+                reason = "evaluation_only_training_input"
+            raise ValueError(f"{reason}: row {index + 1}")
 
 
 def _feature_value(row: dict[str, Any], field: str, *, required: bool) -> tuple[float, float]:
@@ -364,7 +367,21 @@ def train_residual_production_score_model(
             raise ValueError(f"{name} must be a positive integer")
     if not math.isfinite(lr) or lr <= 0 or not math.isfinite(weight_decay) or weight_decay < 0:
         raise ValueError("lr must be positive and weight_decay nonnegative, both finite")
+    fingerprint_args = {
+        "input_csv": input_csv,
+        "force_derivation_json": force_derivation_json,
+        "epochs": epochs,
+        "hidden_dim": hidden_dim,
+        "batch_size": batch_size,
+        "lr": lr,
+        "weight_decay": weight_decay,
+        "train_ratio": train_ratio,
+        "seed": seed,
+    }
+    train_fingerprint = build_train_fingerprint(**fingerprint_args)
     rows = _load_rows(input_csv)
+    if build_train_fingerprint(**fingerprint_args) != train_fingerprint:
+        raise ValueError("training_inputs_changed_during_load")
     if len(rows) < 2:
         raise RuntimeError("need at least two rows for score-model training")
     train_idx, val_idx = _split_indices(rows, seed=seed, train_ratio=train_ratio)
@@ -498,8 +515,14 @@ def train_residual_production_score_model(
         learned_output_fields.append(PRODUCTION_FORCE_FIELD)
         missing_production_output_fields = [field for field in missing_production_output_fields if field != PRODUCTION_FORCE_FIELD]
     production_checkpoint_ready = False  # force and calibrated uncertainty are not implemented here
+    # Bind both outputs to the inputs actually admitted by this call. Do not
+    # publish a checkpoint if those inputs changed while training was running.
+    if build_train_fingerprint(**fingerprint_args) != train_fingerprint:
+        raise ValueError("training_inputs_changed_during_training")
     evidence = {
         "trainer_contract_version": TRAINER_CONTRACT_VERSION,
+        "train_fingerprint": train_fingerprint,
+        "train_fingerprint_digest": train_fingerprint["digest"],
         "split_policy": "ligand_id_grouped_v1",
         "feature_stage": "post_refinement_rescoring",
         "role_features_used": False,
@@ -669,13 +692,14 @@ def try_skip_training(
             and payload.get("production_checkpoint_ready") is False
             and payload.get("delta_force_head_trained") is False
             and payload.get("uncertainty_calibrated") is False
+            and payload.get("train_fingerprint") == fingerprint
+            and payload.get("train_fingerprint_digest") == fingerprint["digest"]
             and payload.get("checkpoint_sha256") == hashlib.sha256(checkpoint_path.read_bytes()).hexdigest()
         ):
             skipped = dict(payload)
             skipped["training_skipped"] = True
             skipped["training_executed"] = False
             skipped["training_skip_reason"] = "inputs_unchanged"
-            skipped["train_fingerprint_digest"] = fingerprint["digest"]
             return skipped
     return None
 
@@ -787,17 +811,7 @@ def main(argv: list[str] | None = None) -> None:
         )
         write_train_fingerprint(
             args.train_fingerprint_json,
-            build_train_fingerprint(
-                input_csv=args.input_csv,
-                force_derivation_json=args.force_derivation_json,
-                epochs=args.epochs,
-                hidden_dim=args.hidden_dim,
-                batch_size=args.batch_size,
-                lr=args.lr,
-                weight_decay=args.weight_decay,
-                train_ratio=args.train_ratio,
-                seed=args.seed,
-            ),
+            payload["train_fingerprint"],
         )
     _write_json(args.out_json, payload)
     _write_markdown(args.out_md, payload)

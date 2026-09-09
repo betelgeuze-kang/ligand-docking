@@ -8,10 +8,16 @@ on:
       - 'tools/product/builder_json_utils.py'
       - 'tools/product/stage2_skip_router.py'
       - 'tools/product/run_refine_tier_residual_training_chain.py'
+      - 'tools/product/build_refine_tier_residual_training_dataset.py'
+      - 'tests/unit/test_refine_tier_residual_integrity.py'
+      - 'tests/unit/test_refine_origin_identity.py'
+      - 'tests/unit/test_residual_assay_boundary.py'
+      - 'tests/unit/test_run_refine_tier_residual_training_chain.py'
       - 'tests/unit/test_csv_bom_whitespace.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
       - 'tests/unit/test_residual_input_review_followups.py'
+      - 'tests/unit/test_residual_training_cache_binding.py'
       - 'tools/product/build_residual_production_supervised_dataset.py'
       - 'tools/product/residual_evidence.py'
       - 'tools/builder_table_utils.py'
@@ -27,10 +33,16 @@ on:
       - 'tools/product/builder_json_utils.py'
       - 'tools/product/stage2_skip_router.py'
       - 'tools/product/run_refine_tier_residual_training_chain.py'
+      - 'tools/product/build_refine_tier_residual_training_dataset.py'
+      - 'tests/unit/test_refine_tier_residual_integrity.py'
+      - 'tests/unit/test_refine_origin_identity.py'
+      - 'tests/unit/test_residual_assay_boundary.py'
+      - 'tests/unit/test_run_refine_tier_residual_training_chain.py'
       - 'tests/unit/test_csv_bom_whitespace.py'
       - 'tests/unit/test_train_residual_production_score_model.py'
       - 'tests/unit/test_residual_training_integrity.py'
       - 'tests/unit/test_residual_input_review_followups.py'
+      - 'tests/unit/test_residual_training_cache_binding.py'
       - 'tools/product/build_residual_production_supervised_dataset.py'
       - 'tools/product/residual_evidence.py'
       - 'tools/builder_table_utils.py'
@@ -54,6 +66,7 @@ jobs:
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
       PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       CUDA_VISIBLE_DEVICES: ''
@@ -78,14 +91,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m compileall -q tools/train_residual_production_score_model.py tools/product/stage2_skip_router.py tools/product/run_refine_tier_residual_training_chain.py
+          python -m compileall -q tools/train_residual_production_score_model.py tools/product/stage2_skip_router.py tools/product/run_refine_tier_residual_training_chain.py tools/product/build_refine_tier_residual_training_dataset.py
           python -m pytest --confcutdir=tests/unit -W error -vv \
             tests/unit/test_train_residual_production_score_model.py \
             tests/unit/test_residual_training_integrity.py \
             tests/unit/test_residual_input_review_followups.py \
+            tests/unit/test_residual_training_cache_binding.py \
             tests/unit/test_csv_bom_whitespace.py \
             tests/unit/test_build_residual_production_supervised_dataset.py \
             tests/unit/test_residual_evidence_pairs.py \
+            tests/unit/test_refine_tier_residual_integrity.py \
+            tests/unit/test_refine_origin_identity.py \
+            tests/unit/test_residual_assay_boundary.py \
+            tests/unit/test_run_refine_tier_residual_training_chain.py \
             --junitxml=ai-evidence-junit.xml 2>&1 | tee ai-evidence.log
       - name: Preserve exact test evidence
         if: always()
@@ -98,6 +116,11 @@ jobs:
             tools/product/build_residual_production_supervised_dataset.py
             tools/product/residual_evidence.py
             tools/product/run_refine_tier_residual_training_chain.py
+            tools/product/build_refine_tier_residual_training_dataset.py
+            tests/unit/test_refine_tier_residual_integrity.py
+            tests/unit/test_refine_origin_identity.py
+            tests/unit/test_residual_assay_boundary.py
+            tests/unit/test_run_refine_tier_residual_training_chain.py
             tools/builder_table_utils.py
             tools/product/builder_table_utils.py
             tests/unit/test_build_residual_production_supervised_dataset.py
@@ -107,6 +130,7 @@ jobs:
             tests/unit/test_train_residual_production_score_model.py
             tests/unit/test_residual_training_integrity.py
             tests/unit/test_residual_input_review_followups.py
+            tests/unit/test_residual_training_cache_binding.py
             tests/unit/test_csv_bom_whitespace.py
           if-no-files-found: error
           retention-days: 7

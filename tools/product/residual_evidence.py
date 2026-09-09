@@ -21,10 +21,16 @@ _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _RESERVED_SPLITS = {
     "holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128",
     "eval", "ood_eval", "id_eval", "near_ood_eval", "far_ood_eval",
+    "calibration", "development_test", "calibration_dev",
 }
 
 
-_POLICY_COLUMNS = {"role", "split", "dataset_split", "evaluation_only"}
+POLICY_FIELDS = ("role", "split", "dataset_split", "evaluation_only")
+PROVENANCE_FIELD = "source_provenance_json"
+PROVENANCE_FIELDS = (PROVENANCE_FIELD, "stage3_source_provenance_json")
+PROVENANCE_SCHEMA = "residual_source_provenance_v1"
+REFINE_JOIN_CONTRACT = "residual_refine_join_v2"
+_POLICY_COLUMNS = {*POLICY_FIELDS, *PROVENANCE_FIELDS}
 
 
 def validated_csv_fieldnames(fieldnames: list[str] | None) -> list[str]:
@@ -62,12 +68,161 @@ def require_complete_csv_row(row: dict[str, Any]) -> None:
         raise ValueError("csv_row_width_mismatch")
 
 
+def _parse_provenance_records(raw: Any) -> list[dict[str, Any]]:
+    """Read one flattened declaration; malformed provenance is not safe input."""
+    if raw is None or raw == "":
+        return []
+    try:
+        if not isinstance(raw, str):
+            raise ValueError("provenance_must_be_json_text")
+        payload = json.loads(raw, object_pairs_hook=_strict_object)
+        if not isinstance(payload, dict) or payload.get("schema_version") != PROVENANCE_SCHEMA:
+            raise ValueError("unsupported_provenance_schema")
+        records = payload.get("records")
+        if not isinstance(records, list) or not records:
+            raise ValueError("missing_provenance_records")
+        for record in records:
+            if not isinstance(record, dict) or set(record) != {"source_csv", "source_sha256", "source_line", "row"}:
+                raise ValueError("invalid_provenance_record")
+            if not isinstance(record["source_csv"], str) or not record["source_csv"]:
+                raise ValueError("missing_provenance_source")
+            _sha(record["source_sha256"], "source_sha256")
+            if type(record["source_line"]) is not int or record["source_line"] < 2:
+                raise ValueError("invalid_provenance_source_line")
+            if not isinstance(record["row"], dict) or any(str(key).strip().casefold() in PROVENANCE_FIELDS for key in record["row"]):
+                raise ValueError("nested_or_invalid_provenance_row")
+        json.dumps(payload, allow_nan=False)
+        return records
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise ValueError(f"invalid_source_provenance:{exc}") from exc
+
+
+def provenance_records(row: dict[str, Any]) -> list[dict[str, Any]]:
+    # Also validate the older auxiliary field on direct/cached input. Canonical
+    # records include it on newly generated rows; identical origins occur once.
+    records = []
+    seen = set()
+    for field in PROVENANCE_FIELDS:
+        for record in _parse_provenance_records(row.get(field)):
+            key = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            if key not in seen:
+                seen.add(key)
+                records.append(record)
+    return records
+
+
+def source_provenance_json(row: dict[str, Any], *, source_csv: str, source_sha256: str, source_line: int) -> str:
+    records = list(provenance_records(row))
+    records.append({"source_csv": source_csv, "source_sha256": source_sha256,
+                    "source_line": source_line,
+                    "row": {key: value for key, value in row.items() if key not in PROVENANCE_FIELDS}})
+    result = json.dumps({"schema_version": PROVENANCE_SCHEMA, "records": records},
+                        sort_keys=True, separators=(",", ":"), allow_nan=False)
+    provenance_records({PROVENANCE_FIELD: result})
+    return result
+
+
+def merge_source_provenance(*rows: dict[str, Any]) -> str:
+    records = [record for row in rows for record in provenance_records(row)]
+    combined = json.dumps({"schema_version": PROVENANCE_SCHEMA, "records": records},
+                          sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return json.dumps({"schema_version": PROVENANCE_SCHEMA,
+                       "records": provenance_records({PROVENANCE_FIELD: combined})},
+                      sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _declared_exclusion(row: dict[str, Any]) -> bool:
+    for key, value in row.items():
+        name = str(key).strip().casefold()
+        text = str(value).strip().casefold()
+        if name == "evaluation_only" and text in {"true", "1", "yes", "on"}:
+            return True
+        if name in {"role", "split", "dataset_split"} and text in _RESERVED_SPLITS:
+            return True
+    return False
+
+
 def declared_evaluation_only(row: dict[str, Any]) -> bool:
-    """Honor explicit training exclusion; cannot detect undeclared holdouts."""
-    if str(row.get("evaluation_only", "")).strip().lower() in {"true", "1"}:
-        return True
-    return any(str(row.get(key, "")).strip().lower() in _RESERVED_SPLITS
-               for key in ("role", "split", "dataset_split"))
+    """Honor exclusions from every joined source; cannot detect undeclared holdouts."""
+    records = provenance_records(row)
+    return _declared_exclusion(row) or any(_declared_exclusion(record["row"]) for record in records)
+
+
+def score_reference_rejection(row: dict[str, Any]) -> str:
+    """Do not subtract a declared assay/physical endpoint from a composite score."""
+    assay_endpoints = {"ic50", "ki", "kd", "ec50"}
+    incompatible = {"potential_energy", "experimental_label", "experimental", *assay_endpoints,
+                    *("p" + endpoint for endpoint in assay_endpoints),
+                    *("negative_log10_molar_" + endpoint for endpoint in assay_endpoints)}
+    declarations = {"reference_label_kind", "reference_quantity", "reference_evidence_kind",
+                    "label_evidence_kind", "evidence_kind", "endpoint", "declared_endpoint"}
+    sources = [row, *(record["row"] for record in provenance_records(row))]
+    for source in sources:
+        # Generic assay exports need not use residual-specific column names.
+        # Inspect every original declaration, including conflicting aliases.
+        for key, value in source.items():
+            if (str(key).strip().casefold() in declarations
+                    and str(value).strip().casefold() in incompatible):
+                return "incompatible_score_reference_semantics"
+    return ""
+
+
+def refine_source_identity_rejection(row: dict[str, Any]) -> str:
+    """Reject conflicting declared state hashes in a refinement's full lineage.
+
+    Missing declarations stay unverified. Matching hashes are declarations,
+    not authenticated chemistry or permission to change the source state.
+    This check is limited to same-state refinement joins and their consumers;
+    general provenance may describe intentionally different source states.
+    """
+    sources = [row, *(record["row"] for record in provenance_records(row))]
+    for field in IDENTITY_FIELDS:
+        values = set()
+        for source in sources:
+            value = source.get(field)
+            if value is None or value == "":
+                continue
+            try:
+                values.add(_sha(value, field))
+            except ValueError:
+                return "invalid_source_identity:" + field
+        if len(values) > 1:
+            return "conflicting_source_identity:" + field
+    return ""
+
+
+def training_source_rejection(row: dict[str, Any]) -> str:
+    """One admission policy for materialization, training, and cache reuse."""
+    if declared_evaluation_only(row):
+        return "evaluation_only_row"
+    reason = score_reference_rejection(row)
+    if reason:
+        return reason
+    if row.get("refine_tier_label_source") == "stage3_refine_tier":
+        if row.get("refine_tier_join_contract") != REFINE_JOIN_CONTRACT or not provenance_records(row):
+            return "legacy_refine_source_provenance_missing_regenerate_dataset"
+        reason = refine_source_identity_rejection(row)
+        if reason:
+            return reason
+    return ""
+
+
+def first_numeric_observation(row: dict[str, Any], columns: tuple[str, ...] | list[str]) -> tuple[float | None, str, str]:
+    """Fallback only for absent values; observed zero and invalid values are distinct."""
+    for column in columns:
+        value = row.get(column)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            continue
+        try:
+            if isinstance(value, bool):
+                raise ValueError("boolean_observation")
+            number = float(value)
+            if not math.isfinite(number):
+                raise ValueError("nonfinite_observation")
+        except (TypeError, ValueError, OverflowError):
+            return None, column, "invalid"
+        return number, column, "observed"
+    return None, "", "missing"
 
 
 def _strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
