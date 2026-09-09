@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import torch
 
