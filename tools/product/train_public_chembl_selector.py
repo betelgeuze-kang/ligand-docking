@@ -28,12 +28,14 @@ FEATURES = {**existing.FEATURES, "target_encoding": "one_catalogue_target_annota
 def load_intake(input_dir, summary_sha256, phase):
     """Reproduce every normalized row from the bound native capture, not cache flags."""
     summary = intake.bound_json({"path": str(input_dir / "summary.json"), "sha256": summary_sha256})
-    if (summary.get("schema_version") != intake.SCHEMA or summary.get("phase") != phase
+    if (summary.get("schema_version") not in {intake.SCHEMA, intake.SCHEMA_V2} or summary.get("phase") != phase
             or summary.get("implementation_hashes") != intake.implementation_hashes()):
         raise ValueError("fit_intake_schema_or_implementation_mismatch")
     rows = intake.bound_jsonl({"path": str(input_dir / "records.jsonl"), "sha256": summary["records_sha256"]})
     manifest, plan, scope, indexed, context, graph = intake.load_metadata(
         summary["manifest_path"], summary["manifest_sha256"])
+    if summary["schema_version"] != intake.endpoint_contract(scope)["intake_schema"]:
+        raise ValueError("fit_intake_endpoint_schema_mismatch")
     _, values, origins = intake.read_captures(summary["capture_manifest_path"], summary["capture_manifest_sha256"],
                                             manifest, plan, scope, indexed, phase)
     expected_rows, expected_ledger, expected_context = intake.derive_outputs(plan, scope, indexed, context, graph, values, origins)
@@ -74,14 +76,20 @@ def implementation_hashes():
             "reused_featurizer_and_metrics": common.file_sha(Path(existing.__file__))}
 
 
-def predict_checkpoint(path, expected_sha, smiles, target_annotation_sha256):
+def predict_checkpoint(path, expected_sha, smiles, target_annotation_sha256, *, endpoint="IC50"):
     payload = intake.bound_json({"path": str(path), "sha256": expected_sha})
-    if (payload.get("schema_version") != MODEL_SCHEMA or payload.get("features") != FEATURES
+    try:
+        contract = intake.endpoint_contract(payload)
+    except ValueError as exc:
+        raise ValueError("incompatible_chembl_selector_checkpoint") from exc
+    if (payload.get("schema_version") != contract["model_schema"] or payload.get("features") != FEATURES
+            or payload.get("endpoint") != endpoint or payload.get("physical_energy") is not False
             or payload.get("rdkit_version") != rdBase.rdkitVersion
             or payload.get("target_annotation_sha256") != target_annotation_sha256
             or payload.get("implementation_hashes") != implementation_hashes()
-            or payload.get("prediction_quantity") != "negative_log10_molar_IC50"
+            or payload.get("prediction_quantity") != contract["prediction_quantity"]
             or payload.get("product_ranking_enabled") is not False
+            or payload.get("customer_execution") is not False
             or payload.get("uncertainty_calibrated") is not False):
         raise ValueError("incompatible_chembl_selector_checkpoint")
     weights = np.asarray(payload["coefficients"], dtype=np.float64)
@@ -99,6 +107,7 @@ def fit(*, input_dir, summary_sha256, output_dir):
     wall, cpu = time.perf_counter(), time.process_time()
     source_implementations = implementation_hashes()
     summary, plan, scope, rows = load_intake(input_dir, summary_sha256, "fit")
+    contract = intake.endpoint_contract(scope)
     selected = [row for row in rows if row["assigned_role"] == "fit" and row["eligible_for_point_model"]]
     if len(selected) < 5 or len({row["component_id"] for row in selected}) < 2:
         raise ValueError("insufficient_supported_fit_rows_or_components")
@@ -109,18 +118,18 @@ def fit(*, input_dir, summary_sha256, output_dir):
     if scope["positive_threshold_negative_log10_molar"] != 6.0 or scope["top_fraction"] != 0.2:
         raise ValueError("unsupported_predeclared_metric_protocol")
     protocol = {
-        "schema_version": MODEL_SCHEMA, "declared_at_utc": datetime.now(timezone.utc).isoformat(),
+        "schema_version": contract["model_schema"], "declared_at_utc": datetime.now(timezone.utc).isoformat(),
         "intake_summary_sha256": summary_sha256, "input_dir": str(input_dir),
         "split_plan_sha256": summary["split_plan_sha256"], "intake_scope_sha256": summary["intake_scope_sha256"],
         "implementation_hashes": implementation_hashes(), "target_annotation_sha256": target,
         "target_annotation": rows[0]["target_annotation"], "features": FEATURES,
-        "prediction_quantity": "negative_log10_molar_IC50", "ridge_alpha": 10.0,
+        "prediction_quantity": contract["prediction_quantity"], "ridge_alpha": 10.0,
         "seed": plan["seed"], "hyperparameter_search": False,
         "fit_record_ids": [row["record_id"] for row in selected],
         "assignments": plan["assignments"], "resplit_after_exclusions": False,
         "positive_threshold_negative_log10_molar": 6.0, "top_fraction": 0.2,
         "fit_replicate_weighting": "inverse_count_per_source_assay_and_canonical_isomeric_structure",
-        "prediction_scope": "database standardized structures; mixed reported kinase assay conditions; catalogue target admission only",
+        "prediction_scope": "database standardized structures; mixed reported " + contract["endpoint"] + " assay conditions; catalogue target admission only",
         "uncertainty_calibration_planned": False,
         "calibration_role_use": "reserved diagnostic evaluation only; no calibrated uncertainty claim",
         "scientific_validation": False, "customer_execution": False,
@@ -142,10 +151,10 @@ def fit(*, input_dir, summary_sha256, output_dir):
     fit_seconds = time.perf_counter() - start
     mean = float(np.average(observed, weights=weights))
     checkpoint = {
-        "schema_version": MODEL_SCHEMA, "features": FEATURES, "rdkit_version": rdBase.rdkitVersion,
+        "schema_version": contract["model_schema"], "features": FEATURES, "rdkit_version": rdBase.rdkitVersion,
         "implementation_hashes": implementation_hashes(), "target_annotation_sha256": target,
-        "endpoint": "IC50", "endpoint_subtype": "enzyme_inhibition_IC50",
-        "prediction_quantity": "negative_log10_molar_IC50", "physical_energy": False,
+        "endpoint": contract["endpoint"], "endpoint_subtype": contract["endpoint_subtype"],
+        "prediction_quantity": contract["prediction_quantity"], "physical_energy": False,
         "coefficients": model.coef_.tolist(), "intercept": float(model.intercept_),
         "training_protocol_sha256": common.file_sha(protocol_path),
         "split_plan_sha256": summary["split_plan_sha256"], "intake_scope_sha256": summary["intake_scope_sha256"],
@@ -164,7 +173,7 @@ def fit(*, input_dir, summary_sha256, output_dir):
         prediction = None
         if not chemical_failures:
             smiles = [row["chemical_identity"]["canonical_isomeric_smiles"]]
-            value = predict_checkpoint(checkpoint_path, checkpoint_sha, smiles, target)
+            value = predict_checkpoint(checkpoint_path, checkpoint_sha, smiles, target, endpoint=contract["endpoint"])
             expected = model.predict(existing.features(smiles))
             if not np.allclose(value, expected, atol=1e-12, rtol=1e-12):
                 raise ValueError("serialized_chembl_prediction_mismatch")
@@ -172,14 +181,14 @@ def fit(*, input_dir, summary_sha256, output_dir):
         predictions.append({"record_id": row["record_id"], "activity_id": row["activity_id"],
                             "assigned_role": row["assigned_role"], "component_id": row["component_id"],
                             "predicted": prediction, "mean_baseline": mean,
-                            "prediction_quantity": "negative_log10_molar_IC50",
+                            "prediction_quantity": contract["prediction_quantity"],
                             "status": "abstained" if chemical_failures else "predicted",
                             "reason": chemical_failures, "observed_label_included": False})
     prediction_seconds = time.perf_counter() - start
     prediction_path = output_dir / "predictions-before-evaluation-labels.jsonl"
     prediction_path.write_text("".join(common.json_text(row) + "\n" for row in predictions))
     frozen = {
-        "schema_version": "public_chembl_fit_frozen_before_evaluation_v1",
+        "schema_version": contract["frozen_schema"],
         "frozen_at_utc": datetime.now(timezone.utc).isoformat(), "training_executed": True,
         "split_plan_sha256": summary["split_plan_sha256"], "intake_scope_sha256": summary["intake_scope_sha256"],
         "checkpoint": {"path": str(checkpoint_path), "sha256": checkpoint_sha},
@@ -219,6 +228,7 @@ def evaluate(*, input_dir, summary_sha256, frozen_fit_path, frozen_fit_sha256, o
     wall, cpu = time.perf_counter(), time.process_time()
     source_implementations = implementation_hashes()
     summary, plan, scope, rows = load_intake(input_dir, summary_sha256, "evaluation")
+    contract = intake.endpoint_contract(scope)
     frozen = intake.bound_json({"path": str(frozen_fit_path), "sha256": frozen_fit_sha256})
     capture = intake.bound_json({"path": summary["capture_manifest_path"], "sha256": summary["capture_manifest_sha256"]})
     if (capture["frozen_fit"]["sha256"] != frozen_fit_sha256
@@ -236,7 +246,8 @@ def evaluate(*, input_dir, summary_sha256, frozen_fit_path, frozen_fit_sha256, o
             # Saved checkpoint inference is checked independently of observed labels.
             if prediction["predicted"] is not None:
                 recomputed = predict_checkpoint(Path(frozen["checkpoint"]["path"]), frozen["checkpoint"]["sha256"],
-                                                [row["chemical_identity"]["canonical_isomeric_smiles"]], row["target_annotation_sha256"])
+                                                [row["chemical_identity"]["canonical_isomeric_smiles"]], row["target_annotation_sha256"],
+                                                endpoint=contract["endpoint"])
                 if not np.isclose(recomputed[0], prediction["predicted"], rtol=1e-12, atol=1e-12):
                     raise ValueError("frozen_prediction_checkpoint_mismatch")
             ledger.append({"activity_id": row["activity_id"], "record_id": row["record_id"], "role": role,
@@ -257,7 +268,7 @@ def evaluate(*, input_dir, summary_sha256, frozen_fit_path, frozen_fit_sha256, o
             "exclusion_counts": dict(Counter(issue for row in requested for issue in row["admission_issues"])),
             "full_requested_recall": None,
             "full_requested_recall_reason": "unsupported_missing_censored_labels_not_assumed_negative",
-            "observed_metrics_scope": "exact supported reported enzyme IC50; excludes unsupported labels from numeric quality only",
+            "observed_metrics_scope": "exact supported reported enzyme " + contract["endpoint"] + "; excludes unsupported labels from numeric quality only",
         }
         if supported:
             result.update(mean_baseline=existing.metrics(y, mean, 6.0), morgan_ridge=existing.metrics(y, pred, 6.0),
@@ -272,7 +283,7 @@ def evaluate(*, input_dir, summary_sha256, frozen_fit_path, frozen_fit_sha256, o
     output_dir.mkdir(parents=True)
     (output_dir / "evaluation-ledger.jsonl").write_text("".join(common.json_text(row) + "\n" for row in ledger))
     report = {
-        "schema_version": "public_chembl_frozen_selector_evaluation_v1", "frozen_fit_sha256": frozen_fit_sha256,
+        "schema_version": contract["evaluation_schema"], "frozen_fit_sha256": frozen_fit_sha256,
         "input_summary_sha256": summary_sha256, "implementation_hashes": implementation_hashes(),
         "requested_metadata_rows": summary["requested_metadata_rows"], "metadata_selected_rows": len(rows),
         "split_plan_sha256": summary["split_plan_sha256"], "intake_scope_sha256": summary["intake_scope_sha256"],

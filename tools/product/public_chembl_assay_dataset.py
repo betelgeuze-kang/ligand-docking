@@ -25,6 +25,9 @@ from tools.product import train_public_assay_selector as selector
 SCHEMA = "public_chembl_assay_development_v1"
 MANIFEST_SCHEMA = "public_chembl_preassigned_metadata_manifest_v1"
 PLAN_SCHEMA = "public_chembl_kinase_ic50_predeclared_split_v1"
+SCHEMA_V2 = "public_chembl_assay_development_v2"
+MANIFEST_SCHEMA_V2 = "public_chembl_preassigned_metadata_manifest_v2"
+PLAN_SCHEMA_V2 = "public_chembl_predeclared_split_v2"
 METADATA_FIELDS = {
     "activity_id", "assay_chembl_id", "document_chembl_id", "molecule_chembl_id",
     "target_chembl_id", "canonical_smiles", "standard_type", "src_id", "record_id", "type",
@@ -44,6 +47,27 @@ NESTED_FIELDS = {
     "ChEMBL molecule metadata": {"molecule_chembl_id", "molecule_hierarchy"},
     "ChEMBL source metadata": {"src_comment", "src_description", "src_id", "src_short_name", "src_url"},
 }
+
+
+def endpoint_contract(scope):
+    """Only explicitly supported endpoint/subtype pairs select a schema version."""
+    endpoint, subtype = scope.get("endpoint"), scope.get("endpoint_subtype")
+    if (endpoint, subtype) == ("IC50", "enzyme_inhibition_IC50"):
+        version = "v1"
+    elif (endpoint, subtype) == ("Ki", "enzyme_inhibition_Ki"):
+        version = "v2"
+    else:
+        raise ValueError("unsupported_chembl_development_scope")
+    return {
+        "endpoint": endpoint, "endpoint_subtype": subtype,
+        "prediction_quantity": "negative_log10_molar_" + endpoint,
+        "intake_schema": SCHEMA if version == "v1" else SCHEMA_V2,
+        "manifest_schema": MANIFEST_SCHEMA if version == "v1" else MANIFEST_SCHEMA_V2,
+        "plan_schema": PLAN_SCHEMA if version == "v1" else PLAN_SCHEMA_V2,
+        "model_schema": "public_chembl_cheap_selector_ridge_" + version,
+        "frozen_schema": "public_chembl_fit_frozen_before_evaluation_" + version,
+        "evaluation_schema": "public_chembl_frozen_selector_evaluation_" + version,
+    }
 
 
 def metadata_fields_only(value, allowed, *, policy=True):
@@ -132,12 +156,19 @@ def implementation_hashes():
 def load_metadata(manifest_path, expected_sha):
     """Verify all supplied identities and preassigned roles before reading labels."""
     manifest = bound_json({"path": str(manifest_path), "sha256": expected_sha})
-    if manifest.get("schema_version") != MANIFEST_SCHEMA:
+    if manifest.get("schema_version") not in {MANIFEST_SCHEMA, MANIFEST_SCHEMA_V2}:
         raise ValueError("unsupported_chembl_metadata_manifest")
     plan = bound_json(manifest["split_plan"])
     scope = bound_json(manifest["intake_scope"])
-    if plan.get("schema_version") != PLAN_SCHEMA or set(plan["counts"]) != ROLES:
+    contract = endpoint_contract(scope)
+    if (plan.get("schema_version") != contract["plan_schema"] or set(plan["counts"]) != ROLES
+            or manifest["schema_version"] != contract["manifest_schema"]):
         raise ValueError("unsupported_predeclared_plan")
+    if contract["plan_schema"] == PLAN_SCHEMA_V2 and any(plan.get(key) != value for key, value in {
+        "endpoint": contract["endpoint"], "prediction_quantity": contract["prediction_quantity"],
+        "target_annotation": scope.get("target_annotation"),
+    }.items()):
+        raise ValueError("plan_endpoint_contract_mismatch")
     if (scope.get("split_plan_sha256") != manifest["split_plan"]["sha256"]
             or plan.get("input_full_context_sha256") != manifest["identity_context"]["sha256"]
             or plan.get("input_normalized_metadata_sha256") != manifest["normalized_metadata"]["sha256"]
@@ -145,8 +176,6 @@ def load_metadata(manifest_path, expected_sha):
             or plan.get("component_implementation_sha256") != implementation_hashes()["components"]):
         raise ValueError("plan_metadata_binding_mismatch")
     if (scope.get("evidence_scope") != "database_curated_reported_experiment_development"
-            or scope.get("endpoint") != "IC50"
-            or scope.get("endpoint_subtype") != "enzyme_inhibition_IC50"
             or scope.get("physical_target_state_verified") is not False
             or scope.get("resplit_after_exclusions") is not False):
         raise ValueError("unsupported_chembl_development_scope")
@@ -204,6 +233,7 @@ def load_metadata(manifest_path, expected_sha):
 
 def read_captures(capture_path, expected_sha, manifest, plan, scope, indexed, phase):
     """Reject extra/duplicate/missing API occurrences and metadata changes."""
+    contract = endpoint_contract(scope)
     capture = bound_json({"path": str(capture_path), "sha256": expected_sha})
     if (capture.get("schema_version") != "chembl_activity_capture_manifest_v1"
             or capture.get("phase") != phase
@@ -220,7 +250,7 @@ def read_captures(capture_path, expected_sha, manifest, plan, scope, indexed, ph
         if "frozen_fit" not in capture:
             raise ValueError("frozen_fit_required_before_evaluation_capture")
         frozen = bound_json(capture["frozen_fit"])
-        if (frozen.get("schema_version") != "public_chembl_fit_frozen_before_evaluation_v1"
+        if (frozen.get("schema_version") != contract["frozen_schema"]
                 or frozen.get("training_executed") is not True or frozen.get("evaluation_values_read") != 0
                 or frozen.get("split_plan_sha256") != manifest["split_plan"]["sha256"]
                 or frozen.get("intake_scope_sha256") != manifest["intake_scope"]["sha256"]):
@@ -246,7 +276,7 @@ def read_captures(capture_path, expected_sha, manifest, plan, scope, indexed, ph
             if (prediction["reason"] != reasons or prediction["status"] != ("abstained" if reasons else "predicted")
                     or prediction["mean_baseline"] != checkpoint["mean_baseline"]
                     or prediction["record_id"] != indexed[aid]["record_id"]
-                    or prediction["prediction_quantity"] != "negative_log10_molar_IC50"):
+                    or prediction["prediction_quantity"] != contract["prediction_quantity"]):
                 raise ValueError("frozen_baseline_or_abstention_mismatch")
             if reasons:
                 if prediction["predicted"] is not None:
@@ -255,7 +285,7 @@ def read_captures(capture_path, expected_sha, manifest, plan, scope, indexed, ph
                 from tools.product.train_public_chembl_selector import predict_checkpoint
                 value = predict_checkpoint(Path(frozen["checkpoint"]["path"]), frozen["checkpoint"]["sha256"],
                                            [indexed[aid]["chemical_identity"]["canonical_isomeric_smiles"]],
-                                           checkpoint["target_annotation_sha256"])[0]
+                                           checkpoint["target_annotation_sha256"], endpoint=contract["endpoint"])[0]
                 if (type(prediction["predicted"]) not in (int, float)
                         or not math.isclose(value, prediction["predicted"], rel_tol=1e-12, abs_tol=1e-12)):
                     raise ValueError("frozen_prediction_checkpoint_mismatch")
@@ -320,23 +350,36 @@ def chemistry_issues(identity, scope):
 
 def normalized_record(metadata, assignment, scope, graph_node, activity=None, origin=None):
     """Preserve the native JSON and identity projection as distinct provenance."""
+    contract = endpoint_contract(scope)
     native = metadata["source_provenance"]["row"]["ChEMBL activity metadata"]
     if native["target_chembl_id"] != scope["target_annotation"] or native["standard_type"] != scope["endpoint"]:
         raise ValueError("native_activity_outside_declared_target_endpoint")
     method = scope["methods"][native["assay_chembl_id"]]
-    if (method["document_chembl_id"] != native["document_chembl_id"]
-            or method["bibliographic_metadata"]["review_article_indexed"] is not False
-            or method["computed_or_QSAR_label_language_observed"] is not False):
+    if method["document_chembl_id"] != native["document_chembl_id"]:
         raise ValueError("method_source_scope_mismatch")
+    reviewed = method.get("bibliographic_metadata", {}).get("review_article_indexed")
+    computed = method.get("computed_or_QSAR_label_language_observed")
+    method_supported = reviewed is False and computed is False
+    if contract["intake_schema"] == SCHEMA and not method_supported:
+        raise ValueError("method_source_scope_mismatch")
+    if contract["intake_schema"] == SCHEMA_V2:
+        method_supported = (method_supported and method.get("endpoint_subtype") == contract["endpoint_subtype"]
+                            and method.get("citation_identity_status") == "resolved"
+                            and isinstance(method.get("method_description"), str) and bool(method["method_description"].strip()))
     identity = metadata["chemical_identity"]
     issues = chemistry_issues(identity, scope)
+    if not method_supported:
+        issues.append("assay_method_or_primary_document_unresolved")
     observation = measurement.normalize_measurement(activity) if activity is not None else None
     profile = {
-        "evidence_kind": "experimental_label", "evidence_basis": "curated_reported_experiment",
+        "evidence_kind": "experimental_label" if computed is False else "unknown",
+        "evidence_basis": "curated_reported_experiment" if method_supported else "unresolved_or_incompatible_source",
         "evidence_scope": scope["evidence_scope"], "source_id": native["src_id"],
-        "primary_source_status": "not_independently_verified", "document_kind": "research_article",
-        "citation_identity_status": "resolved", "assay_method_evidence_status": "curated_description_bound",
-        "endpoint_subtype": scope["endpoint_subtype"], "requested_endpoint_subtype": scope["endpoint_subtype"],
+        "primary_source_status": "not_independently_verified", "document_kind": "research_article" if reviewed is False else "review" if reviewed is True else "unresolved",
+        "citation_identity_status": "resolved" if contract["intake_schema"] == SCHEMA else method.get("citation_identity_status"),
+        "assay_method_evidence_status": "curated_description_bound" if method_supported else "unresolved",
+        "endpoint_subtype": scope["endpoint_subtype"] if method_supported else method.get("endpoint_subtype"),
+        "requested_endpoint_subtype": scope["endpoint_subtype"],
         "target_state_status": "catalogue_annotation_only", "source_license": scope["source_database_license"],
         "raw_metadata": deepcopy(metadata["source_provenance"]["row"]),
         "source_policy_declarations": components.policy_declarations(metadata),
@@ -363,11 +406,11 @@ def normalized_record(metadata, assignment, scope, graph_node, activity=None, or
     target_annotation = {"chembl_target_id": native["target_chembl_id"], "scope": scope["target_scope"],
                          "physical_state_verified": False, "endpoint_subtype": scope["endpoint_subtype"]}
     return {
-        "schema_version": SCHEMA, "record_id": metadata["record_id"], "activity_id": native["activity_id"],
+        "schema_version": contract["intake_schema"], "record_id": metadata["record_id"], "activity_id": native["activity_id"],
         "ligand_id": metadata["ligand_id"], "identity_context_node_id": metadata["identity_context_node_id"],
         "component_id": assignment["component_id"], "assigned_role": assignment["role"],
         "assignment": deepcopy(assignment), "source_policy_declarations": components.policy_declarations(metadata),
-        "evidence_kind": "experimental_label", "evidence_basis": "curated_reported_experiment",
+        "evidence_kind": profile["evidence_kind"], "evidence_basis": profile["evidence_basis"],
         "primary_source_status": "not_independently_verified", "source_license": scope["source_database_license"],
         "native_activity": deepcopy(activity), "native_activity_origin": deepcopy(origin),
         "identity_metadata_projection": deepcopy(metadata), "method_evidence": deepcopy(method),
@@ -438,7 +481,7 @@ def run(*, manifest_path, manifest_sha256, capture_path, capture_sha256, phase, 
     for name, data in (("records.jsonl", rows), ("ledger.jsonl", ledger), ("identity-context.jsonl", updated_context)):
         (output_dir / name).write_text("".join(bindingdb.json_text(item) + "\n" for item in data))
     summary = {
-        "schema_version": SCHEMA, "phase": phase, "manifest_path": str(manifest_path),
+        "schema_version": endpoint_contract(scope)["intake_schema"], "phase": phase, "manifest_path": str(manifest_path),
         "manifest_sha256": manifest_sha256, "capture_manifest_path": str(capture_path),
         "capture_manifest_sha256": capture_sha256, "split_plan_sha256": manifest["split_plan"]["sha256"],
         "intake_scope_sha256": manifest["intake_scope"]["sha256"], "implementation_hashes": implementation_hashes(),

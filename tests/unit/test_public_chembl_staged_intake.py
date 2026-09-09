@@ -157,6 +157,131 @@ def test_actual_intake_and_staged_consumer(source):
     assert sum(item["requested_preassigned_rows"] for item in evaluated["evaluations"].values()) == trained["evaluation_label_rows_unread"]
 
 
+@pytest.fixture
+def ki_source(source):
+    """Fresh synthetic Ki projection; original IC50 controls stay unchanged."""
+    for row in source["rows"]:
+        native = row["source_provenance"]["row"]["ChEMBL activity metadata"]
+        native.update(standard_type="Ki", type="Ki", target_chembl_id="CHEMBL244")
+    source["scope"].update(endpoint="Ki", endpoint_subtype="enzyme_inhibition_Ki", target_annotation="CHEMBL244")
+    for method in source["scope"]["methods"].values():
+        method["endpoint_subtype"] = "enzyme_inhibition_Ki"
+        method["citation_identity_status"] = "resolved"
+    source["plan"].update(schema_version="public_chembl_predeclared_split_v2", endpoint="Ki",
+                          prediction_quantity="negative_log10_molar_Ki", target_annotation="CHEMBL244")
+    metadata = lines(source["root"] / "metadata.jsonl", source["rows"])
+    source["plan"]["input_normalized_metadata_sha256"] = metadata["sha256"]
+    plan = dump(source["root"] / "plan.json", source["plan"])
+    source["scope"]["split_plan_sha256"] = plan["sha256"]
+    source["manifest"].update(schema_version="public_chembl_preassigned_metadata_manifest_v2",
+                              split_plan=plan, normalized_metadata=metadata,
+                              intake_scope=dump(source["root"] / "scope.json", source["scope"]))
+    source["manifest_entry"] = dump(source["root"] / "manifest.json", source["manifest"])
+    return source
+
+
+def test_ki_native_staged_fit_and_evaluation_preserve_endpoint(ki_source):
+    source = ki_source
+    summary = build(source, capture(source))
+    assert summary["schema_version"] == "public_chembl_assay_development_v2"
+    fit_dir = source["root"] / "fit-intake"
+    trained = trainer.fit(input_dir=fit_dir, summary_sha256=common.file_sha(fit_dir / "summary.json"),
+                          output_dir=source["root"] / "fit")
+    checkpoint_path = source["root"] / "fit/selector.json"
+    checkpoint = json.loads(checkpoint_path.read_text())
+    assert checkpoint["schema_version"] == "public_chembl_cheap_selector_ridge_v2"
+    assert checkpoint["endpoint"] == "Ki" and checkpoint["endpoint_subtype"] == "enzyme_inhibition_Ki"
+    assert checkpoint["prediction_quantity"] == trained["prediction_quantity"] == "negative_log10_molar_Ki"
+    assert not checkpoint["physical_energy"] and not checkpoint["product_ranking_enabled"]
+    frozen_path = source["root"] / "fit/frozen-fit.json"
+    frozen = {"path": str(frozen_path), "sha256": common.file_sha(frozen_path)}
+    assert json.loads(frozen_path.read_text())["schema_version"] == "public_chembl_fit_frozen_before_evaluation_v2"
+    build(source, capture(source, "evaluation", frozen), "evaluation")
+    evaluation_dir = source["root"] / "evaluation-intake"
+    result = trainer.evaluate(input_dir=evaluation_dir, summary_sha256=common.file_sha(evaluation_dir / "summary.json"),
+                              frozen_fit_path=frozen_path, frozen_fit_sha256=frozen["sha256"],
+                              output_dir=source["root"] / "evaluation")
+    assert result["schema_version"] == "public_chembl_frozen_selector_evaluation_v2"
+    assert all("Ki" in v["observed_metrics_scope"] and "IC50" not in v["observed_metrics_scope"]
+               for v in result["evaluations"].values())
+
+
+@pytest.mark.parametrize("field,value", [("schema_version", "public_chembl_cheap_selector_ridge_v1"),
+                                        ("endpoint", "IC50"), ("endpoint_subtype", "enzyme_inhibition_IC50"),
+                                        ("prediction_quantity", "negative_log10_molar_IC50"),
+                                        ("physical_energy", True)])
+def test_ki_checkpoint_endpoint_tampering_rejected(ki_source, field, value):
+    build(ki_source, capture(ki_source))
+    directory = ki_source["root"] / "fit-intake"
+    trainer.fit(input_dir=directory, summary_sha256=common.file_sha(directory / "summary.json"),
+                output_dir=ki_source["root"] / "fit")
+    path = ki_source["root"] / "fit/selector.json"
+    checkpoint = json.loads(path.read_text())
+    checkpoint[field] = value
+    entry = dump(path, checkpoint)
+    with pytest.raises(ValueError, match="incompatible_chembl_selector_checkpoint"):
+        trainer.predict_checkpoint(path, entry["sha256"], ["CCCCC"], checkpoint["target_annotation_sha256"], endpoint="Ki")
+
+
+@pytest.mark.parametrize("field,value", [("endpoint", "IC50"), ("prediction_quantity", "negative_log10_molar_IC50"),
+                                        ("target_annotation", "CHEMBL3038469")])
+def test_ki_plan_endpoint_binding_rejected_before_values(ki_source, field, value):
+    ki_source["plan"][field] = value
+    manifest = deepcopy(ki_source["manifest"])
+    manifest["split_plan"] = dump(ki_source["root"] / "plan.json", ki_source["plan"])
+    ki_source["scope"]["split_plan_sha256"] = manifest["split_plan"]["sha256"]
+    manifest["intake_scope"] = dump(ki_source["root"] / "scope.json", ki_source["scope"])
+    entry = dump(ki_source["root"] / "manifest.json", manifest)
+    with pytest.raises(ValueError, match="plan_endpoint_contract_mismatch"):
+        intake.load_metadata(entry["path"], entry["sha256"])
+
+
+@pytest.mark.parametrize("value,relation,status", [("0", "=", "nonpositive"), ("100", ">", "censored"), (None, "=", "missing")])
+def test_ki_unsupported_measurements_keep_original_values_and_roles(ki_source, value, relation, status):
+    test_unsupported_labels_remain_in_ledger_and_roles(ki_source, value, relation, status)
+
+
+def test_ki_evaluation_requires_freeze_and_rehashed_cache_remains_guarded(ki_source):
+    test_evaluation_capture_requires_frozen_fit(ki_source)
+    test_rehashed_cache_cannot_change_training_label(ki_source)
+
+
+@pytest.mark.parametrize("change", [
+    {"bibliographic_metadata": {"review_article_indexed": None}},
+    {"bibliographic_metadata": {"review_article_indexed": True}},
+    {"computed_or_QSAR_label_language_observed": True},
+    {"computed_or_QSAR_label_language_observed": None},
+    {"endpoint_subtype": "enzyme_inhibition_IC50"},
+    {"method_description": None},
+    {"citation_identity_status": "unresolved"},
+])
+def test_ki_unresolved_methods_are_exclusions_without_relabel_or_resplit(ki_source, change):
+    assay = next(a["assay_chembl_id"] for a in ki_source["plan"]["assignments"] if a["role"] == "fit")
+    ki_source["scope"]["methods"][assay].update(change)
+    ki_source["manifest"]["intake_scope"] = dump(ki_source["root"] / "scope.json", ki_source["scope"])
+    ki_source["manifest_entry"] = dump(ki_source["root"] / "manifest.json", ki_source["manifest"])
+    summary = build(ki_source, capture(ki_source))
+    rows = [json.loads(line) for line in (ki_source["root"] / "fit-intake/records.jsonl").read_text().splitlines()]
+    affected = [row for row in rows if row["assay_id"] == "chembl:assay:" + assay]
+    assert affected and all(not row["eligible_for_point_model"] and row["assigned_role"] == "fit" for row in affected)
+    assert all("assay_method_or_primary_document_unresolved" in row["admission_issues"] for row in affected)
+    if "computed_or_QSAR_label_language_observed" in change:
+        assert all(row["evidence_kind"] == "unknown" for row in affected)
+    assert summary["requested_metadata_rows"] == 40
+    assert summary["assigned_role_counts"] == ki_source["plan"]["counts"]
+
+
+def test_legacy_checkpoint_consumer_cannot_silently_read_ki(ki_source):
+    build(ki_source, capture(ki_source))
+    directory = ki_source["root"] / "fit-intake"
+    trainer.fit(input_dir=directory, summary_sha256=common.file_sha(directory / "summary.json"),
+                output_dir=ki_source["root"] / "fit")
+    path = ki_source["root"] / "fit/selector.json"
+    checkpoint = json.loads(path.read_text())
+    with pytest.raises(ValueError, match="incompatible_chembl_selector_checkpoint"):
+        trainer.predict_checkpoint(path, common.file_sha(path), ["CCCCC"], checkpoint["target_annotation_sha256"])
+
+
 @pytest.mark.parametrize("field,value,reason", [
     ("target_chembl_id", "CHEMBL9", "activity_metadata_changed_after_split"),
     ("canonical_smiles", "CCCCC", "activity_metadata_changed_after_split"),
