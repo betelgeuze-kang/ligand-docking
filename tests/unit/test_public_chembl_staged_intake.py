@@ -282,6 +282,17 @@ def test_legacy_checkpoint_consumer_cannot_silently_read_ki(ki_source):
         trainer.predict_checkpoint(path, common.file_sha(path), ["CCCCC"], checkpoint["target_annotation_sha256"])
 
 
+def test_source_policy_dependency_change_invalidates_cached_intake(ki_source, monkeypatch):
+    build(ki_source, capture(ki_source))
+    directory = ki_source["root"] / "fit-intake"
+    old_sha = common.file_sha
+    expected_summary_sha = old_sha(directory / "summary.json")
+    policy_path = Path(intake.source_policy.__file__)
+    monkeypatch.setattr(common, "file_sha", lambda path: "f" * 64 if Path(path) == policy_path else old_sha(path))
+    with pytest.raises(ValueError, match="fit_intake_schema_or_implementation_mismatch"):
+        trainer.load_intake(directory, expected_summary_sha, "fit")
+
+
 @pytest.mark.parametrize("field,value,reason", [
     ("target_chembl_id", "CHEMBL9", "activity_metadata_changed_after_split"),
     ("canonical_smiles", "CCCCC", "activity_metadata_changed_after_split"),

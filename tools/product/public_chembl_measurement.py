@@ -286,16 +286,18 @@ def _roles(metadata):
     reserved, unknown = reservation_status(declarations)
     categories = set()
     for declaration in declarations:
-        if declared_evaluation_only(declaration):
-            categories.add("evaluation_only")
         for key, value in declaration.items():
-            if key.strip().casefold() == "evaluation_only" or value is None:
+            if value is None:
                 continue
             normalized = str(value).strip().casefold()
-            if normalized in {"fit", "train", "training"}:
+            # A named development evaluation role is itself fit-restricted.
+            # Do not count that same declaration again as a conflicting role.
+            if key.strip().casefold() != "evaluation_only" and normalized in {"fit", "train", "training"}:
                 categories.add("fit")
-            elif normalized in {"calibration", "development_test", "calibration_dev"}:
+            elif key.strip().casefold() != "evaluation_only" and normalized in {"calibration", "development_test", "calibration_dev"}:
                 categories.add(normalized)
+            elif declared_evaluation_only({key: value}):
+                categories.add("evaluation_only")
     return declarations, reserved, unknown, categories
 
 

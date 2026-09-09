@@ -235,7 +235,7 @@ def test_all_original_evaluation_declarations_survive_and_exclude(documents, car
     assert observed["target"]["status"] == "not_evaluated"
 
 
-@pytest.mark.parametrize("split", ["fit", "calibration", "development", None])
+@pytest.mark.parametrize("split", ["fit", "calibration", "development_test", "calibration_dev", "development", None])
 def test_external_development_splits_are_preserved_without_fit_promotion(documents, split):
     request = _request(documents)
     assignment = {"record_id": documents[1]["record_id"], "split": split, "group": "synthetic_group"}
@@ -246,6 +246,25 @@ def test_external_development_splits_are_preserved_without_fit_promotion(documen
     assert observed["status"] == "identity_link_only"
     assert observed["source"]["external_split"] == (None if split is None else assignment)
     assert result["training_admitted"] is False
+
+
+@pytest.mark.parametrize("carrier", ["raw", "normalized", "flattened"])
+def test_named_development_role_does_not_override_explicit_evaluation_only(documents, carrier):
+    row = documents[1]
+    if carrier == "raw":
+        _refresh_raw(row, evaluation_only="true")
+    elif carrier == "normalized":
+        row["evaluation_only"] = True
+    else:
+        row["source_provenance_json"] = source_provenance_json(
+            {"split": "test"}, source_csv="fresh-explicit-evaluation.csv", source_sha256="d" * 64, source_line=2)
+    request = _request(documents)
+    request["split_assignments"] = _save(documents[0] / "split.json", {
+        "records_sha256": request["records"]["sha256"],
+        "assignments": [{"record_id": row["record_id"], "split": "calibration"}]})
+    observed = _edge(request)
+    assert observed["status"] == "excluded" and observed["source"]["protected_evaluation_declared"]
+    assert observed["target"]["status"] == "not_evaluated"
 
 
 def test_split_rebound_to_other_normalized_pool_rejected(documents):

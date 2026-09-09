@@ -97,6 +97,7 @@ jobs:
             tools/product/train_public_bindingdb_staged_selector.py
             tests/unit/test_public_bindingdb_staged_intake.py
             tools/product/public_assay_dataset.py
+            tools/product/residual_evidence.py
             tools/product/public_chembl_measurement.py
             tools/product/public_chembl_assay_dataset.py
             tools/product/train_public_chembl_selector.py

@@ -21,6 +21,7 @@ from tools.product.public_assay_dataset import (
     json_text, require_sha, target_accessions, target_schema_rejection, target_state_identity,
 )
 from tools.product.residual_evidence import POLICY_FIELDS, declared_evaluation_only, provenance_records
+from tools.product.public_assay_components import RESERVED
 
 SCHEMA = "public_assay_structure_identity_links_v1"
 _EDGE_FIELDS = {"record_id", "pdb_id", "entry", "polymers", "nonpolymers", "components"}
@@ -174,6 +175,11 @@ def _source_projection(row, line, split):
         "declared_ccd_ids": _ids(raw.get("Ligand HET ID in PDB", "")),
         "declarations": declarations,
         "evaluation_only_declared": any(declared_evaluation_only(original) for original in originals),
+        "protected_evaluation_declared": any(
+            declared_evaluation_only({key: value})
+            for declaration in declarations for key, value in declaration["values"].items()
+            if key.strip().casefold() == "evaluation_only" or str(value).strip().casefold() not in RESERVED
+        ),
         "external_split": None if split is None else {
             **{key: _optional_text(split[key]) for key in ("record_id", "group", "group_id") if key in split},
             **_declarations(split)},
@@ -343,7 +349,9 @@ def build_identity_links(*, records: dict, edges: list[dict], split_assignments:
             row, line = selected[rid]
             raw, projection = _source_projection(row, line, assignments.get(rid))
             result["source"] = projection
-            if projection["evaluation_only_declared"]:
+            # Read-only identity linkage may preserve named development roles.
+            # Explicit evaluation-only/protected declarations still stop it.
+            if projection["protected_evaluation_declared"]:
                 result.update(status="excluded", reason="evaluation_only_source")
                 continue
             if (row.get("schema_version") != ASSAY_SCHEMA or row.get("evidence_kind") != "experimental_label"

@@ -21,6 +21,7 @@ from tools.product import public_assay_components as components
 from tools.product import public_assay_dataset as bindingdb
 from tools.product import public_chembl_measurement as measurement
 from tools.product import train_public_assay_selector as selector
+from tools.product import residual_evidence as source_policy
 
 SCHEMA = "public_chembl_assay_development_v1"
 MANIFEST_SCHEMA = "public_chembl_preassigned_metadata_manifest_v1"
@@ -150,6 +151,7 @@ def implementation_hashes():
         "measurement": bindingdb.file_sha(Path(measurement.__file__)),
         "chemical_identity": bindingdb.file_sha(Path(bindingdb.__file__)),
         "components": bindingdb.file_sha(Path(components.__file__)),
+        "source_policy": bindingdb.file_sha(Path(source_policy.__file__)),
     }
 
 

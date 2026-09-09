@@ -81,6 +81,28 @@ def test_original_roles_and_explicit_purpose_are_distinct(original, assigned, pu
     assert out["training_admitted"] is False
 
 
+@pytest.mark.parametrize("role", ["calibration", "development_test", "calibration_dev"])
+def test_named_reserved_role_is_one_category_and_never_fit_eligible(role):
+    from tools.product.public_chembl_measurement import _roles
+    metadata = deepcopy(PROFILE)
+    metadata["raw_metadata"]["role"] = role
+    metadata["assigned_role"] = role
+    _, reserved, unknown, categories = _roles(metadata)
+    assert reserved and not unknown and categories == {role}
+    metadata["assigned_role"] = "fit"
+    assert not admission(metadata, "fit")["eligible_for_declared_purpose"]
+
+
+@pytest.mark.parametrize("declaration", [{"evaluation_only": True}, {"dataset_split": "test"}, {"split": "far_ood_eval"}])
+def test_explicit_protected_source_is_not_erased_by_named_calibration_role(declaration):
+    from tools.product.public_chembl_measurement import _roles
+    metadata = deepcopy(PROFILE)
+    metadata["raw_metadata"].update(role="calibration", **declaration)
+    _, reserved, _, categories = _roles(metadata)
+    assert reserved and "evaluation_only" in categories
+    assert not admission(metadata, "fit")["eligible_for_declared_purpose"]
+
+
 @pytest.mark.parametrize("payload", [
     '{"value": 1, "value": 2}', '{"outer":{"role":"fit","role":"calibration"}}',
     '{"value": NaN}', '{"value": Infinity}', '{"value": -Infinity}',
