@@ -439,3 +439,90 @@ or existing prepared-report migration. The dedicated prepared-cross workflow
 includes fresh synthetic observation controls; actual public sources and their
 local Gemmi cross-check are retained in the development evidence bundle and are
 not downloaded by CI. No external solver or model fitting is added.
+
+
+## Source metadata projection and actual fixed-pose comparison
+
+The cross adapter keeps complete source metadata in the validated parent states
+and returned canonical sources. Its temporary mathematical pair projections now
+carry only source-side and source-atom maps. Copying each raw source atom record
+into every tile previously repeated metadata hashing inside the unchanged V2
+kernel. All full parent integrity guards and tile kernel guards remain active;
+coordinates, parameters, element/charge fields, neighbor construction and physics
+are unchanged. This is neither neighbor caching nor fewer evaluated candidates.
+
+A fresh synthetic source-payload control fails on parent `71413af9`; its positive
+scalar energy/force control passes after this change. A second control mutates a
+nested source atom metadata tensor during evaluation and confirms that the
+original integrity guard still rejects it. The complete dedicated local scope
+passes 428 tests, zero failures/errors/skips. An earlier command labelled
+`full-ci` omitted `--full` and ran only two tests; the retained `full-scope`
+command and JUnit are the actual 428-test evidence. No earlier test is weakened.
+
+The predeclared public-source comparison retains all three MIT-licensed
+MobleyLab/waterNES prepared inputs from commit
+`c7f6eed8e75520a181a028e914848f432aca7fd3`: 1LPG, 1EZQ and 1F0S.
+For each, the fixed candidate roster contains the original pose and six rigid
+translations of plus/minus 0.25 Angstrom along each Cartesian axis. There are
+21 requested poses: 14 evaluated and seven preparation failures. The original
+malformed 1EZQ GRO input remains a typed failure; it is neither repaired nor
+removed from the denominator. No candidate is fitted or selected using scores.
+
+The independently written scalar pair expressions and V2 evaluate the same
+nonperiodic switched cross LJ/Coulomb model, states, charges, parameters and
+coordinates. At the predeclared 1e-8 absolute tolerance, all 14 outputs match:
+maximum energy error 9.38e-13 kcal/mol and maximum atom force component error
+4.69e-13 kcal/mol/Angstrom. Ordered cross pairs and rankings agree. A saved-output
+verification corrects an initial driver tuple-versus-list comparison error without
+rerunning physics; both the failed driver log and corrected JUnit are retained.
+Candidate adapter outputs also exactly preserve all 14 baseline quantities,
+pair inventories, canonical source states and reported model/pocket declarations.
+
+The original input poses rank second of seven for 1LPG and fourth for 1F0S.
+Thus even this local probe does not establish original-pose recovery. It is not
+symmetry-aware RMSD, chemical pose validity, affinity or a screening benchmark.
+Same-model residual differences are numerical noise; this comparison supplies
+zero eligible scientific residual-training rows. Strain, solvation and affinity
+remain unevaluated, and no experimental Ki state join or new learning occurs.
+
+For preloaded prepared states, five interleaved A/B repeats per source preserve
+all 30 slots (20 evaluated, ten preparation failures). CPU float64 uses one
+Torch/BLAS thread on a shared host. 1LPG evaluator wall p50/p95 decreases from
+5.8132/6.9252 to 4.8742/4.9705 seconds; 1F0S decreases from 4.0467/4.0922 to
+3.4533/3.5689 seconds. CPU p50 changes from 5.8122 to 4.8739 seconds and from
+4.0465 to 3.4530 seconds respectively. Outputs and candidate count are unchanged.
+The approximately 15-16 percent median reduction applies only to these two
+prepared evaluations. Same-process cumulative RSS cannot attribute memory use
+between variants. No GPU, true batch API, end-to-end screening, pose/hit recovery,
+calibrated uncertainty, dynamics or customer qualification is established.
+
+Report schemas and score units do not change. The adapter source fingerprint
+changes; archived outputs keep their original fingerprint. No model checkpoint
+is migrated, rehashed or trained by this optimization.
+
+
+Fresh-process complete CLI comparison (three paired repeats, AB/BA/AB) includes
+imports, all three input/hash checks, source geometry, evaluation and compact
+JSON output. Both variants write to the same secondary disk; OS page caches are
+not flushed, and neither source snapshot has Python bytecode caches. The 18
+requested source slots retain 12 evaluations and six preparation failures; all
+six commands return the expected partial-failure exit code 2. Complete outputs
+agree except explicitly measured costs and the changed adapter source hash.
+
+| Whole CLI metric | Parent A | Candidate B |
+| --- | --- | --- |
+| Wall p50 / p95, s | 18.3642 / 18.5081 | 16.9675 / 16.9882 |
+| Child CPU p50 / p95, s | 18.3443 / 18.4669 | 16.9481 / 16.9664 |
+| Whole-child peak RSS p50 / p95, KiB | 807,196 / 807,415.6 | 807,684 / 826,252.8 |
+
+The whole-CLI wall median is 7.6 percent lower on these inputs. Memory does not
+improve; three repeats are insufficient for deployment tail claims. This is the
+fixed-input scoring CLI, not end-to-end docking, selection or active recovery.
+GPU/VRAM and full cold-storage effects are unmeasured.
+
+Two earlier CLI harness attempts are retained separately: the first comparator
+forgot source-geometry timing fields; its replacement assumed failed observations
+also had a cost field. Persisted outputs confirm only cost/source-hash differences.
+The corrected comparator was exercised on saved complete outputs before the final
+six-process run. Earlier timings are not pooled with the final matched output-disk
+comparison. No physical guard or output field is weakened by these harness fixes.

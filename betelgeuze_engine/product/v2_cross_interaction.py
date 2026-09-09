@@ -121,9 +121,11 @@ def _tile(receptor, ligand, ri, li, rpars, lpars, config):
     # chemical topology: it evaluates cross pairs only and preserves source maps.
     selected = [(receptor, i, rpars[i], "receptor") for i in ri]
     selected += [(ligand, i, lpars[i], "ligand") for i in li]
+    # Source metadata remains in the complete validated parent states/result.
+    # Pair-only projections need source maps, not copies of raw source records.
+    # Full parent integrity guards still execute before and after every evaluation.
     atoms = tuple(replace(system.atoms[i], index=j, residue_index=j,
-                          metadata={**dict(system.atoms[i].metadata),
-                                    "projection_source_side": side, "projection_source_atom": i})
+                          metadata={"projection_source_side": side, "projection_source_atom": i})
                   for j, (system, i, _, side) in enumerate(selected))
     coordinates = torch.cat((receptor.coordinates[:, ri], ligand.coordinates[:, li]), dim=1).clone()
     system = AllAtomSystem(
