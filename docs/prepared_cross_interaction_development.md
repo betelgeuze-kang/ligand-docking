@@ -353,3 +353,54 @@ pass 56 tests; two saved-output audits and six reference arithmetic controls are
 reported separately. These are internal automated checks, not external human
 review, scientific validation or customer approval. No new model is trained and
 no checkpoint or physical-score migration occurs in this change.
+
+
+## Deposited mmCIF ligand coordinate observations
+
+`python -m tools.product.observe_mmcif_ligand_coordinates --request request.json --output report.json`
+adds a separate offline, source-bound observation consumer. This does not replace
+or weaken prepared-state admission in `score_prepared_cross_interactions`.
+Request schema `mmcif_ligand_observation_request_v1` contains 1–32 cases with
+`case_id`, an absolute local `source: {path, sha256}`, `selection`, and caller
+`provenance`. Selection explicitly supplies `entry_id`, `label_asym_id`,
+`component_id`, `auth_seq_id`, and string `model_number`. Provenance, including
+original role/split/evaluation-only declarations, is retained as declared and
+cannot grant training admission. Duplicate case IDs fail every duplicate.
+
+The adapter reuses the V2 CIF lexer/block parser, canonical `Bond` carrier,
+controlled bond-order vocabulary and compact radius graph. It checks source
+entry, entity, asym and nonpolymer instance mappings; preserves source atom
+order/IDs and coordinates; joins the entry's component atom/bond tables; and
+records absent atom coordinates. Multiline descriptive names and unused extra
+table fields remain bound by the original file hash, without becoming identity
+keys. The older strict topology parser and its exact-header restrictions are
+unchanged. Missing atom-site and component charges remain separately null; the
+adapter deliberately does not instantiate an `Atom` with a default zero charge
+or construct an unprepared `AllAtomSystem`.
+
+The output reports source bond lengths and all unique selected-ligand pairs at
+an inclusive 1 Å radius. This is a geometric observation, not a calibrated clash
+criterion. Capacity overflow produces an unavailable geometry result with null
+pairs/count. Missing hydrogens, heavy atoms and charges, measured zero occupancy,
+and unknown occupancy have separate counts. Alternate locations, ambiguous or
+duplicate identities, nonfinite coordinates and conflicting declarations fail
+without repairing or choosing a last row. Coordinates describe the explicitly
+selected asymmetric-unit instance; no assembly/symmetry transform, alternate
+model choice, receptor preparation or intercomponent bond inference is applied.
+
+Eight post-observation public Factor Xa development structures were exercised
+through the actual module consumer. Their 273 supplied ligand heavy-atom
+coordinates and 298 observed-coordinate bonds were compared with a separately
+implemented Gemmi parser and scalar Euclidean-distance calculation. All eight
+have complete heavy-atom coordinate coverage against their own component tables,
+but lack ligand hydrogen coordinates and atom-level charge declarations. This
+establishes source correspondence only. Potential energy, atomic forces and
+partial charges remain null; all-atom readiness, assay-state equivalence,
+training/scientific/customer admission remain false. These crystallographic
+coordinates are not predocking cheap-selector features.
+
+The observation report is a new v1 schema and requires no checkpoint, score-unit
+or existing prepared-report migration. The dedicated prepared-cross workflow
+includes fresh synthetic observation controls; actual public sources and their
+local Gemmi cross-check are retained in the development evidence bundle and are
+not downloaded by CI. No external solver or model fitting is added.

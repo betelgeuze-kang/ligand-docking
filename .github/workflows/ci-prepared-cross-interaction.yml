@@ -6,6 +6,9 @@ on:
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/prepared_gromacs_input.py'
       - 'betelgeuze_engine/product/prepared_source_geometry.py'
+      - 'betelgeuze_engine/product/mmcif_ligand_observation.py'
+      - 'tools/product/observe_mmcif_ligand_coordinates.py'
+      - 'tests/unit/test_mmcif_ligand_observation.py'
       - 'tools/product/score_prepared_cross_interactions.py'
       - 'tests/unit/test_v2_prepared_cross_interaction.py'
       - 'tests/unit/test_prepared_gromacs_input.py'
@@ -19,6 +22,9 @@ on:
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/prepared_gromacs_input.py'
       - 'betelgeuze_engine/product/prepared_source_geometry.py'
+      - 'betelgeuze_engine/product/mmcif_ligand_observation.py'
+      - 'tools/product/observe_mmcif_ligand_coordinates.py'
+      - 'tests/unit/test_mmcif_ligand_observation.py'
       - 'tools/product/score_prepared_cross_interactions.py'
       - 'tests/unit/test_v2_prepared_cross_interaction.py'
       - 'tests/unit/test_prepared_gromacs_input.py'
@@ -68,6 +74,9 @@ jobs:
               'betelgeuze_engine/product/v2_cross_interaction.py',
               'betelgeuze_engine/product/prepared_gromacs_input.py',
               'betelgeuze_engine/product/prepared_source_geometry.py',
+              'betelgeuze_engine/product/mmcif_ligand_observation.py',
+              'tools/product/observe_mmcif_ligand_coordinates.py',
+              'tests/unit/test_mmcif_ligand_observation.py',
               'tools/product/score_prepared_cross_interactions.py',
               'tests/unit/test_v2_prepared_cross_interaction.py',
               'tests/unit/test_prepared_gromacs_input.py',
@@ -97,9 +106,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/prepared_source_geometry.py tests/unit/test_prepared_source_geometry.py betelgeuze_engine/product/v2_cross_interaction.py betelgeuze_engine/product/prepared_gromacs_input.py tools/product/score_prepared_cross_interactions.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_score_prepared_cross_interactions.py 2>&1 | tee prepared-cross-lint.log
+          python -m ruff check --isolated --no-cache betelgeuze_engine/product/mmcif_ligand_observation.py tools/product/observe_mmcif_ligand_coordinates.py tests/unit/test_mmcif_ligand_observation.py betelgeuze_engine/product/prepared_source_geometry.py tests/unit/test_prepared_source_geometry.py betelgeuze_engine/product/v2_cross_interaction.py betelgeuze_engine/product/prepared_gromacs_input.py tools/product/score_prepared_cross_interactions.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_score_prepared_cross_interactions.py 2>&1 | tee prepared-cross-lint.log
           set +e
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_prepared_source_geometry.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_score_prepared_cross_interactions.py --junitxml=prepared-cross-junit.xml 2>&1 | tee prepared-cross.log
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_mmcif_ligand_observation.py tests/unit/test_prepared_source_geometry.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_score_prepared_cross_interactions.py --junitxml=prepared-cross-junit.xml 2>&1 | tee prepared-cross.log
           pytest_status=${PIPESTATUS[0]}
           set -e
           printf '{"pytest_exit_code": %s}\n' "$pytest_status" > prepared-cross-exit.json
@@ -118,6 +127,9 @@ jobs:
             betelgeuze_engine/product/v2_cross_interaction.py
             betelgeuze_engine/product/prepared_gromacs_input.py
             betelgeuze_engine/product/prepared_source_geometry.py
+            betelgeuze_engine/product/mmcif_ligand_observation.py
+            tools/product/observe_mmcif_ligand_coordinates.py
+            tests/unit/test_mmcif_ligand_observation.py
             tools/product/score_prepared_cross_interactions.py
             tests/unit/test_v2_prepared_cross_interaction.py
             tests/unit/test_prepared_gromacs_input.py
