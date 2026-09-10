@@ -41,11 +41,11 @@ ACTIVITY_FIELDS = METADATA_FIELDS | {
 }
 ROLES = {"fit", "calibration", "development_test"}
 ROW_FIELDS = {"record_id", "ligand_id", "identity_context_node_id", "chemical_identity", "source_provenance"}
-RAW_FIELDS = {"Article DOI", "PMID", "ChEMBL Assay ID", "ChEMBL Document ID", "ChEMBL Parent Molecule ID",
+RAW_FIELDS = {"Article DOI", "PMID", "ChEMBL Assay ID", "ChEMBL Document ID", "ChEMBL Parent Molecule ID", "ChEMBL Patent ID",
               "ChEMBL activity metadata", "ChEMBL document metadata", "ChEMBL molecule metadata",
               "ChEMBL source metadata", "Ligand SMILES", "Ligand InChI Key"}
 NESTED_FIELDS = {
-    "ChEMBL document metadata": {"doc_type", "document_chembl_id", "doi", "journal", "pubmed_id", "src_id", "title", "year"},
+    "ChEMBL document metadata": {"doc_type", "document_chembl_id", "doi", "journal", "pubmed_id", "src_id", "title", "year", "patent_id"},
     "ChEMBL molecule metadata": {"molecule_chembl_id", "molecule_hierarchy"},
     "ChEMBL source metadata": {"src_comment", "src_description", "src_id", "src_short_name", "src_url"},
 }
@@ -121,6 +121,10 @@ def validate_metadata_row(row):
     document = raw.get("ChEMBL document metadata", {})
     if document and document["document_chembl_id"] != native["document_chembl_id"]:
         raise ValueError("native_activity_document_projection_mismatch")
+    if ("ChEMBL Patent ID" in raw and components.patent_publication(raw["ChEMBL Patent ID"])
+            != components.patent_publication(document.get("patent_id"))):
+        raise ValueError("native_activity_patent_projection_mismatch")
+    components.document_keys(raw)
     if molecule and molecule["molecule_chembl_id"] != native["molecule_chembl_id"]:
         raise ValueError("native_activity_molecule_projection_mismatch")
     if molecule.get("molecule_hierarchy") is not None:

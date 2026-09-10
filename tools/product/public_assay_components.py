@@ -5,6 +5,8 @@ every molecule or protected dataset. Rejected rows remain graph vertices.
 Optional ChEMBL document and parent molecule source IDs add existing key kinds;
 they do not imply chemical-state equivalence or change existing node schemas.
 An explicit ChEMBL assay ID uses a v2 node with a distinct source_assay key.
+Native patent publication identifiers add document keys. Existing hashed
+contexts must be rebuilt from native metadata to claim patent coverage.
 """
 from __future__ import annotations
 
@@ -60,6 +62,30 @@ def _optional_chembl_id(raw, field, error):
     return value
 
 
+def patent_publication(value):
+    """Normalize explicit US utility grants; never infer kinds or families.
+
+    The initial scope is seven/eight digit US B1/B2 grant publications, with
+    optional spaces/hyphens between country, number and kind. A leading zero
+    may pad a seven digit grant to eight digits. Unsupported nonempty values
+    fail closed instead of silently losing a possible reservation connection.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("invalid_patent_publication")
+    value = value.strip().upper()
+    if not value:
+        return None
+    match = re.fullmatch(r"US[ -]?([0-9]{7,8})[ -]?(B[12])", value)
+    if match is None:
+        raise ValueError("unsupported_patent_publication")
+    number = str(int(match[1]))
+    if len(number) not in {7, 8}:
+        raise ValueError("unsupported_patent_publication")
+    return "US" + number + match[2]
+
+
 def document_keys(raw):
     doi = raw.get("Article DOI", "") or ""
     pmid = raw.get("PMID", "") or ""
@@ -71,8 +97,17 @@ def document_keys(raw):
             doi = doi[len(prefix):].strip()
             break
     document = _optional_chembl_id(raw, "ChEMBL Document ID", "invalid_chembl_document_id")
+    native_document = raw.get("ChEMBL document metadata", {})
+    if not isinstance(native_document, dict):
+        raise ValueError("invalid_native_document_metadata")
+    patents = {patent_publication(value) for value in (
+        raw.get("Patent Number"), raw.get("ChEMBL Patent ID"), native_document.get("patent_id"))}
+    patents.discard(None)
+    if len(patents) > 1:
+        raise ValueError("conflicting_patent_publications")
     return ((["doi:"+doi] if doi else []) + (["pmid:"+pmid.strip()] if pmid.strip() else [])
-            + (["chembl:document:"+document] if document is not None else []))
+            + (["chembl:document:"+document] if document is not None else [])
+            + ["patent:"+patent for patent in sorted(patents)])
 
 
 def policy_declarations(row):

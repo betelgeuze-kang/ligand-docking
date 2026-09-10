@@ -9,6 +9,50 @@ The historical generic trainer filters eligible endpoint rows before assigning
 roles. Its original checkpoints and observations are retained, but it does not
 provide the outcome-independent role assignment of the new staged path.
 
+## Native patent publication identity, 2026-09-10
+
+The shared component builder now reads BindingDB `Patent Number`, ChEMBL native
+document metadata `patent_id`, and an optional `ChEMBL Patent ID` projection.
+For example, `US-8552005-B2` and `US8552005B2` contribute the same hashed
+`document` key. The ChEMBL metadata consumer requires a flattened patent ID to
+match its native document. Original strings, policy declarations and source
+records are retained; publication identity is not chemical-state equivalence.
+
+Initial support is explicit US utility grant publication identifiers with
+seven/eight digit numbers and B1/B2 kinds, allowing one space or hyphen between
+country, number and kind, and eight-digit zero padding of seven-digit numbers.
+Country and kind are required. Unsupported nonempty values, multiple identifiers,
+wrong types and conflicting source projections raise an error instead of
+silently discarding a possible reservation link. This is deliberately not a
+worldwide patent parser, existence validator or inferred patent-family map.
+B1/B2 are distinct publication kinds in the [USPTO table](https://www.uspto.gov/patents/search/authority-files/uspto-kind-codes).
+
+The existing BindingDB metadata projection already preserved `Patent Number`;
+its staged intake and the existing trainer now inherit these keys through the
+shared builder. A synthetic reserved counterpart blocks intake before the native
+archive is opened and blocks the trainer before observations are iterated.
+Source 37/PATENT scientific admission remains unresolved and unchanged. Identity
+support does not authorize activity-label access, training or customer use.
+
+Migration is explicit: node v1/v2 field shapes and the `document` key kind remain
+unchanged, but patent-bearing node keys and connected components can change.
+Rebuild new contexts from all native metadata, preserving previous role
+declarations and rejected vertices, and recheck native coverage before new
+preassignment. Refreshing only a checksum is not a valid migration. Existing
+hash-bound split plans and producer-bound checkpoints must retain their frozen
+runtime; this change does not rewrite, re-register or retrain them. Old hashed
+contexts alone cannot establish patent coverage. The older SQLite export path
+does not gain patent support from this change.
+
+Against the previous source, the initial 24 synthetic controls produced 20
+failures and four passes. The completed public intake/training/cache regression
+run passed 430 tests (including 27 new patent controls), with zero failures or
+skips. A separate metadata-only integration used 16 actual ChEMBL assays from
+15 patents plus 15 explicitly synthetic reservation counterparts: zero of the
+16 connected before, all 16 connected after. This does not verify actual
+BindingDB counterpart records or full protected-context coverage. No new
+activity values, training, quality gain or engine speedup were measured.
+
 ## Native BindingDB preassignment and observed Factor X pilot, 2026-09-09
 
 `tools.product.public_bindingdb_staged_intake` and
