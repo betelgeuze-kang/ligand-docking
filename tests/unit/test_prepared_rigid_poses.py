@@ -337,3 +337,135 @@ def test_module_cli_returns_partial_failure_and_no_external_solver(tmp_path):
     }
     assert not decoded["external_solver_called"]
     assert hashlib.sha256(input_path.read_bytes()).hexdigest() == before
+
+
+def test_geometry_preserves_source_zero_and_observes_transformed_overlap(tmp_path):
+    request = _request(tmp_path)
+    request["poses"][1] = _pose("overlap", -4)
+    report = consumer.evaluate_request(request)
+    original = report["preparation"]["source_geometry_observation"]
+    assert original["status"] == "observed"
+    assert original["coordinate_origin"] == "supplied_preparation_unchanged"
+    assert original["groups"]["cross"]["pair_count_within_radius"] == 0
+    first, second = report["rows"]
+    assert (
+        first["pose_geometry_observation"]["groups"]["cross"][
+            "pair_count_within_radius"
+        ]
+        == 0
+    )
+    observed = second["pose_geometry_observation"]
+    assert observed["groups"]["cross"]["pair_count_within_radius"] == 1
+    assert (
+        observed["coordinate_origin"]
+        == "computed_rigid_transform_of_supplied_preparation"
+    )
+    assert observed["groups"]["cross"]["closest_pairs"][0]["distance_angstrom"] == 0
+    assert (
+        not observed["physical_validity_assessed"]
+        and not observed["affects_score_or_admission"]
+    )
+    assert second["status"] == "failed" and "result" not in second
+    assert first["status"] == "evaluated"
+    _assert_scalar_pair(first["result"])
+
+
+def test_geometry_short_internal_source_pair_remains_visible_in_real_consumer(
+    tmp_path, monkeypatch
+):
+    from tests.unit.test_v2_prepared_cross_interaction import _system, _parameters
+
+    request = _request(tmp_path)
+    receptor = _system([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]], [0.2, 0.2])
+    ligand = _system([[4.0, 0.0, 0.0]], [-0.3])
+    provenance = {
+        "sources": {},
+        "original_topologies": {
+            name: {"sections": {"bonds": []}}
+            for name in ("protein_chain_0", "protein_chain_1", "ligand_itp")
+        },
+        "receptor_source_bond_adjacency": [],
+        "ligand_source_bond_adjacency": [],
+    }
+    monkeypatch.setattr(
+        poses,
+        "load_prepared_gromacs_components",
+        lambda _: (
+            receptor,
+            ligand,
+            _parameters(receptor),
+            _parameters(ligand),
+            provenance,
+        ),
+    )
+    result = consumer.evaluate_request(request)
+    assert result["denominator"]["evaluated"] == 2
+    observations = [result["preparation"]["source_geometry_observation"]] + [
+        r["pose_geometry_observation"] for r in result["rows"]
+    ]
+    for observation in observations:
+        group = observation["groups"]["receptor"]
+        assert (
+            group["pair_count_within_radius"]
+            == group["non_direct_bond_pair_count"]
+            == 1
+        )
+        assert group["closest_non_direct_bond_pairs"][0]["distance_angstrom"] == 0.5
+        assert not observation["physical_validity_assessed"]
+
+
+def test_geometry_unavailable_diagnostic_does_not_become_zero_or_skip_physics(
+    tmp_path, monkeypatch
+):
+    from betelgeuze_engine.product import prepared_source_geometry as geometry
+
+    def unavailable(*args):
+        raise RuntimeError("synthetic observer unavailable")
+
+    monkeypatch.setattr(geometry, "observe_prepared_source_geometry", unavailable)
+    result = consumer.evaluate_request(_request(tmp_path))
+    assert result["denominator"]["evaluated"] == 2
+    observations = [result["preparation"]["source_geometry_observation"]] + [
+        r["pose_geometry_observation"] for r in result["rows"]
+    ]
+    for observation in observations:
+        assert observation["status"] == "unavailable" and observation["groups"] is None
+        assert observation["error_type"] == "RuntimeError"
+        assert "synthetic observer unavailable" in observation["detail"]
+        assert not observation["affects_score_or_admission"]
+    _assert_scalar_pair(result["rows"][0]["result"])
+
+
+def test_geometry_missing_pose_is_explicitly_unavailable(tmp_path):
+    request = _request(tmp_path)
+    request["poses"][0]["translation_angstrom"] = [True, 0, 0]
+    report = consumer.evaluate_request(request)
+    missing = report["rows"][0]["pose_geometry_observation"]
+    assert missing["status"] == "unavailable" and missing["groups"] is None
+    assert missing["reason"] == "pose_not_constructed"
+    assert report["rows"][1]["pose_geometry_observation"]["status"] == "observed"
+
+
+def test_geometry_observer_mutation_cannot_reseal_source_or_reach_physics(
+    tmp_path, monkeypatch
+):
+    from betelgeuze_engine.product import prepared_source_geometry as geometry
+
+    original = geometry.observe_prepared_source_geometry
+    calls = []
+
+    def changed(receptor, ligand, provenance):
+        observed = original(receptor, ligand, provenance)
+        receptor.coordinates.add_(1.0)
+        return observed
+
+    def unexpected(*args, **kwargs):
+        calls.append(True)
+        raise AssertionError("physics reached after source mutation")
+
+    monkeypatch.setattr(geometry, "observe_prepared_source_geometry", changed)
+    monkeypatch.setattr(poses, "evaluate_prepared_cross_interaction", unexpected)
+    result = consumer.evaluate_request(_request(tmp_path))
+    assert result["denominator"]["failed"] == 2
+    assert calls == []
+    assert all("result" not in row for row in result["rows"])

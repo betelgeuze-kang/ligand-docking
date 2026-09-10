@@ -90,6 +90,41 @@ def _verify_sources(provenance):
         _read_source(ref, label, {})
 
 
+def _unavailable_geometry(reason, origin=None):
+    return {
+        "schema_version": "prepared_source_geometry_observation_v1",
+        "status": "unavailable",
+        "reason": reason,
+        "groups": None,
+        "coordinate_origin": origin,
+        "physical_validity_assessed": False,
+        "affects_score_or_admission": False,
+    }
+
+
+def _geometry(receptor, ligand, provenance, origin):
+    started, cpu = time.perf_counter(), time.process_time()
+    try:
+        from betelgeuze_engine.product.prepared_source_geometry import (
+            observe_prepared_source_geometry,
+        )
+
+        observation = observe_prepared_source_geometry(receptor, ligand, provenance)
+        observation["coordinate_origin"] = origin
+        return observation
+    except Exception as exc:
+        observation = _unavailable_geometry(
+            "source_geometry_observation_failed", origin
+        )
+        observation.update(error_type=type(exc).__name__, detail=str(exc))
+        observation["cost"] = {
+            "wall_seconds": time.perf_counter() - started,
+            "cpu_seconds": time.process_time() - cpu,
+            "scope": "failed geometry observation attempt",
+        }
+        return observation
+
+
 def evaluate_rigid_pose_request(request: dict) -> dict:
     """Retain one ledger row per pose; no docking search or active ranking."""
     if (
@@ -126,6 +161,7 @@ def evaluate_rigid_pose_request(request: dict) -> dict:
             "status": "failed",
             "evaluated_ligand_coordinates_angstrom": None,
             "evaluation_completed": False,
+            "pose_geometry_observation": _unavailable_geometry("pose_not_constructed"),
         }
         try:
             rotation, translation = _transform(pose)
@@ -182,7 +218,12 @@ def evaluate_rigid_pose_request(request: dict) -> dict:
                     "source_ligand_coordinates_angstrom": ligand.coordinates[
                         0
                     ].tolist(),
+                    "source_geometry_observation": _geometry(
+                        receptor, ligand, provenance, "supplied_preparation_unchanged"
+                    ),
                 }
+            AllAtomSystem.assert_integrity(receptor)
+            AllAtomSystem.assert_integrity(ligand)
             center = ligand.coordinates.mean(dim=1, keepdim=True)
             if torch.equal(rotation, torch.eye(3, dtype=torch.float64)):
                 coordinates = ligand.coordinates + translation
@@ -219,6 +260,15 @@ def evaluate_rigid_pose_request(request: dict) -> dict:
                     },
                 ),
             )
+            row["pose_geometry_observation"] = _geometry(
+                receptor,
+                candidate,
+                provenance,
+                "computed_rigid_transform_of_supplied_preparation",
+            )
+            AllAtomSystem.assert_integrity(receptor)
+            AllAtomSystem.assert_integrity(ligand)
+            AllAtomSystem.assert_integrity(candidate)
             declarations = dict(request["prepared_input"]["source_declarations"])
             declarations["prepared_state_id"] = (
                 "derived-rigid-pose:" + pose_id + ":" + parent
@@ -244,7 +294,7 @@ def evaluate_rigid_pose_request(request: dict) -> dict:
         row["cost"] = {
             "wall_seconds": time.perf_counter() - started,
             "cpu_seconds": time.process_time() - cpu,
-            "scope": "pose validation, any preparation, source checks, transform and fresh cross evaluation; output excluded",
+            "scope": "pose validation, any preparation, source checks, source and pose geometry observations, transform and fresh cross evaluation; output excluded",
         }
         rows.append(row)
     success = sum(r["status"] == "evaluated" for r in rows)

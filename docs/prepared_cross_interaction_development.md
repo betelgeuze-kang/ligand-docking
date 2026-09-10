@@ -845,3 +845,25 @@ reuse hits, source rechecks and per-pose work; command output/startup costs stil
 require whole-process measurement. Same-quality cost claims require comparing
 identical candidates, all coordinates/parameters/forces/neighbors and failures
 under both preparation modes, including whole-process wall/CPU and peak memory.
+
+
+### Original and transformed geometry diagnostics in rigid batches
+
+The rigid-pose consumer preserves the existing bounded one-angstrom source
+geometry observer. `preparation.source_geometry_observation` records the
+original supplied receptor/ligand coordinates once, with coordinate origin
+`supplied_preparation_unchanged`. Each constructed candidate has its own
+`pose_geometry_observation`, marked
+`computed_rigid_transform_of_supplied_preparation`, including candidates that
+subsequently fail the cross evaluator. Its cross contacts describe that pose,
+not the original coordinates. Source-internal short separations remain visible.
+
+The observer uses existing V2 neighbor primitives and supplied direct bond
+adjacency; it neither repairs the source nor authorizes, rejects or rescores a
+state. A short separation is an observation, not calibrated chemical validity.
+Unavailable diagnostics and unconstructed poses retain null groups and an
+explicit reason. Observer exceptions do not become zero counts or suppress the
+physical evaluation; any canonical mutation still fails integrity before scoring.
+All source/pose observation costs are included in whole-request cost and marked
+in per-pose scopes. Additive diagnostic fields retain request/report v1; there is
+no checkpoint, energy definition, persistent-cache or frozen protocol migration.
