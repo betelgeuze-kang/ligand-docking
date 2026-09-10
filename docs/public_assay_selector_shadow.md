@@ -545,3 +545,32 @@ The product integration is metadata-only shadow replay. Upstream-unselected rows
 retain null predictions; enabling shadow does not change the mapping command.
 An integration run stopped before the first mapping child demonstrates this hook,
 not full docking, engine speedup, pose recovery or an AI ranking improvement.
+
+
+## 5-HT6 reported-Ki development checkpoint
+
+Checkpoint `818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea`
+is registered for shadow compatibility only (`NOT_PROMOTED`). It uses the existing
+BindingDB staged producer and predicts `negative_log10_molar_Ki` for the P50406
+catalogue annotation, without asserting a prepared receptor or common assay state.
+
+The metadata-first cohort retains 254 requested rows: 108 assigned and 146 excluded.
+The frozen split is fit 84, calibration 11 and development 13. The fixed Morgan/Ridge
+model fits 76 exact Ki values in two connected components; eight censored fit values
+are retained but excluded from point fitting. Calibration has 11 exact observations;
+development has 12 exact and one censored observation. All 23 exact evaluation
+observations meet the predeclared pKi >= 6 active threshold. Thus AP=1 for both the
+model and fitted-mean baseline does not demonstrate useful active/inactive separation.
+
+On the fixed development predictions, MAE is 0.74223 versus mean-baseline 0.92456;
+calibration MAE is 0.39500 versus 0.47745. Source-assay strata differ: development
+assay 3139_1 (10 exact rows) improves 0.92530 to 0.68862, whereas assay 8135_1
+(two exact of three requested) worsens 0.92087 to 1.01029. These small heterogeneous
+observations do not establish generalization, calibrated uncertainty, retrieval
+improvement, docking quality, energy/force accuracy or customer readiness. Primary
+per-compound measurement/structure correspondence is not yet verified.
+
+Only the exact checkpoint binding and observational evidence are added. Existing
+schema, coefficients, score semantics, feature production and rejection checks remain
+unchanged. The checkpoint is externally supplied; the source distribution does not
+bundle its weights or dataset. Product ranking and customer execution stay disabled.

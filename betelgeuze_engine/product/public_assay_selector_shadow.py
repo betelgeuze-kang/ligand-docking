@@ -109,6 +109,24 @@ BINDINGDB_CHEMISTRY_SCOPE = {
     "radical_electrons": 0
 }
 _REGISTERED_BINDINGDB_V1 = {
+    # 5-HT6 reported Ki pilot; exact-byte compatibility, no ranking promotion.
+    '818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea': {'endpoint': 'Ki',
+                                                                      'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                                                                                                'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                                                                                                'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                                                                                                'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                                                                                                'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                                                                                                'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+                                                                      'manifest_sha256': '0acc8786b0bfe60b828595c835550b5d88a3c000273baab4c285d12715976517',
+                                                                      'mean_baseline': 7.535706307733418,
+                                                                      'ood_status': 'not_assessed',
+                                                                      'physical_energy': False,
+                                                                      'prediction_quantity': 'negative_log10_molar_Ki',
+                                                                      'rdkit_version': '2026.03.6',
+                                                                      'split_plan_sha256': '5f1eec4efdc89aa8c2fa99c47b5e4c2030fef034b0290521a2a96cacb0decc98',
+                                                                      'target_annotation_sha256': '09b5a4b9bd8437045099306faee937f0b1f08971373e7a8e4a56167b597ac296',
+                                                                      'training_protocol_sha256': '480d964b3efdbcec4f38ba866cc4d6754cea4f740fad334ba35a5ecae1e1cef1',
+                                                                      'uncertainty': None},
     # VEGFR2 biochemical IC50 development model; compatibility only, NOT_PROMOTED.
     '1255488791dd517bf12c261bb376c1e778def7bab1cb30e242ad427b3c4cb066': {'endpoint': 'IC50',
      'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
@@ -216,6 +234,24 @@ _REGISTERED_CHEMBL_V2 = {'c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6
 # Evidence observations are separate from immutable checkpoint payloads. Later
 # identity audits can invalidate independence without rewriting historical weights.
 _CHECKPOINT_EVIDENCE = {
+    '818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea': {'all_exact_evaluation_rows_positive_at_declared_threshold': True,
+                                                                      'assay_condition_harmonization_verified': False,
+                                                                      'beyond_supplied_context_independence': 'not_established',
+                                                                      'calibration_mae_mean_baseline': 0.47745304617587114,
+                                                                      'calibration_mae_morgan_ridge': 0.39500236444227793,
+                                                                      'checkpoint_rehashed_for_new_runtime': False,
+                                                                      'development_mae_mean_baseline': 0.9245623971209685,
+                                                                      'development_mae_morgan_ridge': 0.7422282556254062,
+                                                                      'evaluation_summary_sha256': 'e4b442716269b25866f82bdea7a77f7f83d1ac213269c730271cb0ee737e43bf',
+                                                                      'primary_per_compound_measurements_verified': False,
+                                                                      'promotion_status': 'NOT_PROMOTED',
+                                                                      'requested_calibration_rows': 11,
+                                                                      'requested_development_rows': 13,
+                                                                      'retrieval_improvement_demonstrated': False,
+                                                                      'supported_calibration_rows': 11,
+                                                                      'supported_development_negative_count': 0,
+                                                                      'supported_development_positive_count': 12,
+                                                                      'supported_development_rows': 12},
     "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'evaluation_summary_sha256': '78ffd57fe746822cbd126cfd484677ba93acb97764ea080e3acd22580574d86f',
  'promotion_status': 'NOT_PROMOTED',
  'calibration_quality': 'lower_mae_than_fitted_mean_on_16_of_29_rows',
