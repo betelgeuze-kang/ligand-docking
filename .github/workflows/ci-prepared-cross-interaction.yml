@@ -3,6 +3,8 @@ name: ci-prepared-cross-interaction
 on:
   pull_request:
     paths:
+      - 'betelgeuze_engine/product/prepared_rigid_poses.py'
+      - 'tests/unit/test_prepared_rigid_poses.py'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/prepared_gromacs_input.py'
       - 'betelgeuze_engine/product/compiled_gromacs_cross_input.py'
@@ -26,6 +28,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'betelgeuze_engine/product/prepared_rigid_poses.py'
+      - 'tests/unit/test_prepared_rigid_poses.py'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/prepared_gromacs_input.py'
       - 'betelgeuze_engine/product/compiled_gromacs_cross_input.py'
@@ -85,6 +89,8 @@ jobs:
           python - <<'PY'
           import hashlib, json, os, pathlib, platform, subprocess, sys
           files = [
+              'betelgeuze_engine/product/prepared_rigid_poses.py',
+              'tests/unit/test_prepared_rigid_poses.py',
               'betelgeuze_engine/product/v2_cross_interaction.py',
               'betelgeuze_engine/product/prepared_gromacs_input.py',
               'betelgeuze_engine/product/compiled_gromacs_cross_input.py',
@@ -127,9 +133,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/mmcif_ligand_observation.py tools/product/observe_mmcif_ligand_coordinates.py tests/unit/test_mmcif_ligand_observation.py betelgeuze_engine/product/prepared_source_geometry.py tests/unit/test_prepared_source_geometry.py betelgeuze_engine/product/v2_cross_interaction.py betelgeuze_engine/product/prepared_gromacs_input.py betelgeuze_engine/product/compiled_gromacs_cross_input.py tools/product/score_prepared_cross_interactions.py betelgeuze_engine/product/prepared_assay_shadow.py betelgeuze_engine/product/public_assay_selector_shadow.py tests/unit/test_prepared_assay_shadow.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py 2>&1 | tee prepared-cross-lint.log
+          python -m ruff check --isolated --no-cache betelgeuze_engine/product/prepared_rigid_poses.py tests/unit/test_prepared_rigid_poses.py betelgeuze_engine/product/mmcif_ligand_observation.py tools/product/observe_mmcif_ligand_coordinates.py tests/unit/test_mmcif_ligand_observation.py betelgeuze_engine/product/prepared_source_geometry.py tests/unit/test_prepared_source_geometry.py betelgeuze_engine/product/v2_cross_interaction.py betelgeuze_engine/product/prepared_gromacs_input.py betelgeuze_engine/product/compiled_gromacs_cross_input.py tools/product/score_prepared_cross_interactions.py betelgeuze_engine/product/prepared_assay_shadow.py betelgeuze_engine/product/public_assay_selector_shadow.py tests/unit/test_prepared_assay_shadow.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py 2>&1 | tee prepared-cross-lint.log
           set +e
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_mmcif_ligand_observation.py tests/unit/test_prepared_source_geometry.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py tests/unit/test_prepared_assay_shadow.py tests/unit/test_public_assay_selector_shadow.py --junitxml=prepared-cross-junit.xml 2>&1 | tee prepared-cross.log
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_prepared_rigid_poses.py tests/unit/test_mmcif_ligand_observation.py tests/unit/test_prepared_source_geometry.py tests/unit/test_v2_prepared_cross_interaction.py tests/unit/test_v2_cross_projection_metadata.py tests/unit/test_prepared_gromacs_input.py tests/unit/test_compiled_gromacs_cross_input.py tests/unit/test_score_prepared_cross_interactions.py tests/unit/test_prepared_assay_shadow.py tests/unit/test_public_assay_selector_shadow.py --junitxml=prepared-cross-junit.xml 2>&1 | tee prepared-cross.log
           pytest_status=${PIPESTATUS[0]}
           set -e
           printf '{"pytest_exit_code": %s}\n' "$pytest_status" > prepared-cross-exit.json
@@ -145,6 +151,8 @@ jobs:
             prepared-cross-exit.json
             prepared-cross-source.json
             prepared-cross-dependencies.txt
+            betelgeuze_engine/product/prepared_rigid_poses.py
+            tests/unit/test_prepared_rigid_poses.py
             betelgeuze_engine/product/v2_cross_interaction.py
             betelgeuze_engine/product/prepared_gromacs_input.py
             betelgeuze_engine/product/compiled_gromacs_cross_input.py

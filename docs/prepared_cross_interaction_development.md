@@ -795,3 +795,53 @@ It retains the source-bound commands, environment, initial failed logs, parent
 reproduction and full-regression raw logs/JUnit, CLI request/source/output files,
 and metadata-only admission audit. This change is an opt-in development path;
 quality-cost superiority and customer qualification remain unmeasured.
+
+
+## Explicit rigid ligand pose batches
+
+The same `tools.product.score_prepared_cross_interactions` command also accepts
+`prepared_rigid_pose_cross_request_v1`. Its exact top-level fields are
+`schema_version`, `prepared_input`, `evaluation`, `execution` and `poses`.
+`prepared_input` uses the existing prepared GROMACS component loader; compiled
+particle requests and assay shadow are not part of this new request version.
+All six existing pocket/cross-model evaluation fields remain explicit.
+
+`execution` requires `projection_partition` (`source_order_v1` or
+`spatial_median_v1`) and `preparation_reuse` (`request` or `none`). The request
+contains1..32 poses. Each pose has exactly `pose_id`, `rotation_matrix` (3x3)
+and `translation_angstrom` (length3). Rotations act about the supplied ligand's
+all-atom centroid: `(coordinates - centroid) @ rotation.T + centroid + translation`.
+An identity rotation uses direct translation to avoid unnecessary subtract/add
+roundoff. Matrix orthonormality and determinant+1 must hold within1e-10 in float64;
+reflection, scale, shear, nonfinite values and boolean coordinates are refused.
+The receptor, atom order, bonds, stereo annotations, source charges and parameters
+are retained. This transforms existing hydrogen coordinates without adding them.
+The generated pose and its parent identity are explicitly marked computational.
+
+`request` reuses a successful canonical preparation only within this request;
+`none` parses it afresh for every valid pose definition. Both modes recheck every
+source file before/after successful scoring using the original loader's exact
+byte/hash policy. Canonical mutation checks execute before transformation and
+after evaluation, and the scorer receives private parameter copies. Every pose
+receives a fresh evaluation by the existing product adapter/V2 primitive; no
+energy, atomic-force or neighbor result is reused. This is preparation reuse,
+not a new numerical kernel, docking search, refinement or AI ranking policy.
+
+The report is `prepared_rigid_pose_cross_report_v1`. Shared preparation provenance
+and source coordinates are retained once, and each row includes the actually
+submitted ligand coordinates, derivation, result or failure, and cost. The
+receptor coordinates are common to all poses. Invalid transforms and duplicate
+IDs fail individually (all duplicates fail); no last-row selection is used.
+Failed poses remain in the requested denominator. A post-evaluation source or
+state change sets failure with `evaluation_completed=true`, retains submitted
+coordinates, and withholds the untrusted score result. Unavailable quantities
+remain unavailable; explicit zero parameters still produce evaluated zero.
+
+Existing v1/v2 prepared/shadow requests and score/checkpoint schemas are unchanged.
+The new request does not infer a prepared state from SMILES, assign receptor
+charges, create hydrogens, claim affinity/calibration, or make an existing assay
+checkpoint a pose rescorer. Reported cost separates preparation attempts/loads,
+reuse hits, source rechecks and per-pose work; command output/startup costs still
+require whole-process measurement. Same-quality cost claims require comparing
+identical candidates, all coordinates/parameters/forces/neighbors and failures
+under both preparation modes, including whole-process wall/CPU and peak memory.

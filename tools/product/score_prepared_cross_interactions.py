@@ -33,6 +33,9 @@ def _strict_object(pairs):
 
 def evaluate_request(request: dict) -> dict:
     """Retain every requested case, including unsupported or failed cases."""
+    if type(request) is dict and request.get("schema_version") == "prepared_rigid_pose_cross_request_v1":
+        from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
+        return evaluate_rigid_pose_request(request)
     shadow_enabled = isinstance(request, dict) and request.get("schema_version") in {SHADOW_SCHEMA, SHADOW_SCHEMA_V2}
     version_two = isinstance(request, dict) and request.get("schema_version") in {SCHEMA_V2, SHADOW_SCHEMA_V2}
     fields = {"schema_version", "cases"} | ({"assay_selector"} if shadow_enabled else set())
