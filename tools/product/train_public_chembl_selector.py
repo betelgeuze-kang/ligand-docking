@@ -28,6 +28,9 @@ FEATURES = {**existing.FEATURES, "target_encoding": "one_catalogue_target_annota
 def load_intake(input_dir, summary_sha256, phase):
     """Reproduce every normalized row from the bound native capture, not cache flags."""
     summary = intake.bound_json({"path": str(input_dir / "summary.json"), "sha256": summary_sha256})
+    if summary.get("schema_version") == intake.SCHEMA_V4:
+        from tools.product import public_chembl_receptor_intake as receptor
+        return receptor.load_intake(input_dir, summary_sha256, phase)
     if summary.get("schema_version") == intake.SCHEMA_V3:
         from tools.product import public_chembl_native_intake as native
         return native.load_intake(input_dir, summary_sha256, phase)
@@ -75,6 +78,8 @@ def load_intake(input_dir, summary_sha256, phase):
 
 def implementation_hashes():
     return {**intake.implementation_hashes(),
+            "receptor_intake": common.file_sha(Path(__file__).with_name("public_chembl_receptor_intake.py")),
+            "receptor_primary_reader": common.file_sha(Path(__file__).with_name("public_chembl_primary_correspondence.py")),
             "trainer": common.file_sha(Path(__file__)),
             "native_intake": common.file_sha(Path(__file__).with_name("public_chembl_native_intake.py")),
             "reused_featurizer_and_metrics": common.file_sha(Path(existing.__file__))}
@@ -131,8 +136,11 @@ def fit(*, input_dir, summary_sha256, output_dir):
         "seed": plan["seed"], "hyperparameter_search": False,
         "fit_record_ids": [row["record_id"] for row in selected],
         "assignments": plan["assignments"], "resplit_after_exclusions": False,
+        **({"preassigned_role_sources": plan["preassigned_role_sources"]} if "preassigned_role_sources" in plan else {}),
         "positive_threshold_negative_log10_molar": 6.0, "top_fraction": 0.2,
-        "fit_replicate_weighting": "inverse_count_per_source_assay_and_canonical_isomeric_structure",
+        "fit_replicate_weighting": ("inverse_count_per_connected_source_component_and_canonical_isomeric_structure"
+                                    if contract["intake_schema"] == intake.SCHEMA_V4 else
+                                    "inverse_count_per_source_assay_and_canonical_isomeric_structure"),
         "prediction_scope": "database standardized structures; mixed reported " + contract["endpoint"] + " assay conditions; catalogue target admission only",
         "uncertainty_calibration_planned": False,
         "calibration_role_use": "reserved diagnostic evaluation only; no calibrated uncertainty claim",
@@ -147,7 +155,8 @@ def fit(*, input_dir, summary_sha256, output_dir):
     observed = np.asarray([row["observation"]["negative_log10_molar"] for row in selected], dtype=np.float64)
     if not np.isfinite(observed).all():
         raise ValueError("nonfinite_supported_fit_label")
-    keys = [(row["assay_id"], row["chemical_identity"]["canonical_isomeric_smiles_sha256"]) for row in selected]
+    keys = [(row["component_id"] if contract["intake_schema"] == intake.SCHEMA_V4 else row["assay_id"],
+             row["chemical_identity"]["canonical_isomeric_smiles_sha256"]) for row in selected]
     repetitions = Counter(keys)
     weights = np.asarray([1.0 / repetitions[key] for key in keys])
     start = time.perf_counter()
@@ -175,6 +184,8 @@ def fit(*, input_dir, summary_sha256, output_dir):
     for row in rows:
         # Point-label eligibility is never used to select evaluation predictions.
         chemical_failures = [issue for issue in row["admission_issues"] if issue.startswith("chemical_")]
+        if contract["intake_schema"] == intake.SCHEMA_V4:
+            chemical_failures = row["prediction_issues"]
         prediction = None
         if not chemical_failures:
             smiles = [row["chemical_identity"]["canonical_isomeric_smiles"]]

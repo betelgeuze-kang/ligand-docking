@@ -275,7 +275,7 @@ def normalize_measurement(activity: dict) -> dict:
 
 def _roles(metadata):
     # Share the established policy for missing/unknown/reserved declarations.
-    from tools.product.public_assay_components import policy_declarations, reservation_status
+    from tools.product.public_assay_components import POLICY_FIELDS, policy_declarations, reservation_status
     from tools.product.residual_evidence import declared_evaluation_only
 
     declarations = policy_declarations(metadata)
@@ -283,6 +283,20 @@ def _roles(metadata):
     if not isinstance(raw, dict):
         raise ValueError("invalid_raw_metadata")
     declarations.extend(policy_declarations(raw))
+    # Joined source declarations may be nested below arbitrary evidence keys.
+    # Inspect them before admission rather than trusting a flattened cache.
+    def visit(value):
+        if isinstance(value, dict):
+            declaration = {k: v for k, v in value.items() if k.strip().casefold() in POLICY_FIELDS}
+            if declaration:
+                declarations.append(declaration)
+            for nested in value.values():
+                visit(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                visit(nested)
+    for value in metadata.values():
+        visit(value)
     reserved, unknown = reservation_status(declarations)
     categories = set()
     for declaration in declarations:
@@ -301,7 +315,7 @@ def _roles(metadata):
     return declarations, reserved, unknown, categories
 
 
-def admission(metadata: dict, purpose: str = "normalization_only") -> dict:
+def admission(metadata: dict, purpose: str = "normalization_only", *, source_profile="literature_only_v1") -> dict:
     """Assess one declared purpose without assigning a role or approving training.
 
     The explicit database-curated development scope permits unverified primary
@@ -312,18 +326,31 @@ def admission(metadata: dict, purpose: str = "normalization_only") -> dict:
         raise ValueError("admission_metadata_not_object")
     if purpose not in {"normalization_only", "split_assignment", "fit", "evaluation", "calibration", "development_test"}:
         raise ValueError("unsupported_admission_purpose")
+    if not isinstance(source_profile, str) or source_profile not in {"literature_only_v1", "chembl_receptor_research_v4"}:
+        raise ValueError("unsupported_source_admission_profile")
     issues = []
     db_scope = metadata.get("evidence_scope") == DB_CURATED_SCOPE
+    receptor = source_profile == "chembl_receptor_research_v4"
+    if receptor and (not db_scope or metadata.get("endpoint_subtype") != "receptor_radioligand_binding_Ki"):
+        issues.append("unsupported_receptor_research_scope")
     if metadata.get("evidence_kind") != "experimental_label":
         issues.append("not_experimental_label")
     if db_scope:
         source_id = metadata.get("source_id", metadata.get("src_id"))
-        if (type(source_id) is not int or source_id != 1 or
+        if (type(source_id) is not int or source_id not in ({1, 37} if receptor else {1}) or
                 ("source_id" in metadata and "src_id" in metadata and
                  (type(metadata["src_id"]) is not int or metadata["source_id"] != metadata["src_id"]))):
             issues.append("database_curated_literature_source_unresolved")
-        if metadata.get("document_kind") != "research_article":
+        expected_kind = "patent" if receptor and source_id == 37 else "research_article"
+        if metadata.get("document_kind") != expected_kind:
             issues.append("primary_document_kind_unresolved_or_secondary")
+        if receptor and source_id == 37:
+            if metadata.get("native_patent_identity_matches") is not True:
+                issues.append("native_patent_identity_unresolved")
+            if metadata.get("primary_point_correspondence") != "unique_native_name_and_numeric_match":
+                issues.append("primary_point_correspondence_unresolved")
+            if metadata.get("primary_internal_conflicts") != []:
+                issues.append("primary_internal_conflict_or_unresolved")
         if metadata.get("citation_identity_status") != "resolved":
             issues.append("citation_identity_unresolved")
         if metadata.get("assay_method_evidence_status") != "curated_description_bound":
@@ -397,6 +424,7 @@ def admission(metadata: dict, purpose: str = "normalization_only") -> dict:
         if categories and categories != {purpose}:
             issues.append("source_role_conflict")
     return {"schema_version": ADMISSION_SCHEMA, "source_metadata": deepcopy(metadata),
+            **({"source_admission_profile": source_profile} if receptor else {}),
             "purpose": purpose, "eligible_for_declared_purpose": not issues,
             "issues": list(dict.fromkeys(issues)), "source_role_declarations": deepcopy(declarations),
             "must_preserve_source_role_declarations": True, "must_preserve_identity_vertex": True,

@@ -28,6 +28,7 @@ MANIFEST_SCHEMA = "public_chembl_preassigned_metadata_manifest_v1"
 PLAN_SCHEMA = "public_chembl_kinase_ic50_predeclared_split_v1"
 SCHEMA_V2 = "public_chembl_assay_development_v2"
 SCHEMA_V3 = "public_chembl_native_sqlite_development_v3"
+SCHEMA_V4 = "public_chembl_receptor_development_v4"
 MANIFEST_SCHEMA_V2 = "public_chembl_preassigned_metadata_manifest_v2"
 PLAN_SCHEMA_V2 = "public_chembl_predeclared_split_v2"
 METADATA_FIELDS = {
@@ -55,9 +56,13 @@ def endpoint_contract(scope):
     """Only explicitly supported endpoint/subtype pairs select a schema version."""
     endpoint, subtype = scope.get("endpoint"), scope.get("endpoint_subtype")
     source_kind = scope.get("intake_source_kind")
-    if source_kind is not None and source_kind != "native_chembl_sqlite_release_v1":
+    if source_kind is not None and (not isinstance(source_kind, str) or source_kind not in {"native_chembl_sqlite_release_v1", "native_chembl_receptor_research_v4"}):
         raise ValueError("unsupported_chembl_intake_source_kind")
-    if source_kind == "native_chembl_sqlite_release_v1":
+    if source_kind == "native_chembl_receptor_research_v4":
+        if (endpoint, subtype) != ("Ki", "receptor_radioligand_binding_Ki"):
+            raise ValueError("unsupported_receptor_research_endpoint")
+        version = "v4"
+    elif source_kind == "native_chembl_sqlite_release_v1":
         if (endpoint, subtype) != ("IC50", "enzyme_inhibition_IC50"):
             raise ValueError("unsupported_native_chembl_endpoint")
         version = "v3"
@@ -70,11 +75,11 @@ def endpoint_contract(scope):
     return {
         "endpoint": endpoint, "endpoint_subtype": subtype,
         "prediction_quantity": "negative_log10_molar_" + endpoint,
-        "intake_schema": {"v1": SCHEMA, "v2": SCHEMA_V2, "v3": SCHEMA_V3}[version],
+        "intake_schema": {"v1": SCHEMA, "v2": SCHEMA_V2, "v3": SCHEMA_V3, "v4": SCHEMA_V4}[version],
         "manifest_schema": {"v1": MANIFEST_SCHEMA, "v2": MANIFEST_SCHEMA_V2,
-                            "v3": "native_chembl_sqlite_fit_intake_manifest_v1"}[version],
+                            "v3": "native_chembl_sqlite_fit_intake_manifest_v1", "v4": "public_chembl_receptor_intake_manifest_v4"}[version],
         "plan_schema": {"v1": PLAN_SCHEMA, "v2": PLAN_SCHEMA_V2,
-                        "v3": "native_chembl_ic50_precontent_reservation_v1"}[version],
+                        "v3": "native_chembl_ic50_precontent_reservation_v1", "v4": "public_chembl_receptor_preassigned_roles_v4"}[version],
         "model_schema": "public_chembl_cheap_selector_ridge_" + version,
         "frozen_schema": "public_chembl_fit_frozen_before_evaluation_" + version,
         "evaluation_schema": "public_chembl_frozen_selector_evaluation_" + version,
