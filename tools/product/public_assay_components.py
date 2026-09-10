@@ -62,14 +62,19 @@ def _optional_chembl_id(raw, field, error):
     return value
 
 
-def patent_publication(value):
+def patent_publication(value, *, version=1):
     """Normalize explicit US utility grants; never infer kinds or families.
 
     The initial scope is seven/eight digit US B1/B2 grant publications, with
     optional spaces/hyphens between country, number and kind. A leading zero
     may pad a seven digit grant to eight digits. Unsupported nonempty values
     fail closed instead of silently losing a possible reservation connection.
+    Explicit version 2 also supports US YYYY/NNNNNNN A1/A2/A9, modern
+    WO YYYY/NNNNNN A1, and seven-digit EP A1 publications. It keeps sequence
+    leading zeros and never aliases applications to grants or patent families.
     """
+    if type(version) is not int or version not in {1, 2}:
+        raise ValueError("unsupported_patent_identity_version")
     if value is None:
         return None
     if not isinstance(value, str):
@@ -79,6 +84,16 @@ def patent_publication(value):
         return None
     match = re.fullmatch(r"US[ -]?([0-9]{7,8})[ -]?(B[12])", value)
     if match is None:
+        if version == 2:
+            for country, digits, kinds, first_year in (
+                    ("US", 7, "A[129]", 2001), ("WO", 6, "A1", 2004)):
+                extended = re.fullmatch(country + r"[ -]?([0-9]{4})[ /-]?([0-9]{"
+                                        + str(digits) + r"})[ -]?(" + kinds + ")", value)
+                if extended is not None and int(extended[1]) >= first_year:
+                    return country + extended[1] + extended[2] + extended[3]
+            extended = re.fullmatch(r"EP[ -]?([0-9]{7})[ -]?(A1)", value)
+            if extended is not None and int(extended[1]) > 0:
+                return "EP" + extended[1] + extended[2]
         raise ValueError("unsupported_patent_publication")
     number = str(int(match[1]))
     if len(number) not in {7, 8}:
@@ -86,7 +101,7 @@ def patent_publication(value):
     return "US" + number + match[2]
 
 
-def document_keys(raw):
+def document_keys(raw, *, patent_version=1):
     doi = raw.get("Article DOI", "") or ""
     pmid = raw.get("PMID", "") or ""
     if not isinstance(doi, str) or not isinstance(pmid, str):
@@ -100,7 +115,7 @@ def document_keys(raw):
     native_document = raw.get("ChEMBL document metadata", {})
     if not isinstance(native_document, dict):
         raise ValueError("invalid_native_document_metadata")
-    patents = {patent_publication(value) for value in (
+    patents = {patent_publication(value, version=patent_version) for value in (
         raw.get("Patent Number"), raw.get("ChEMBL Patent ID"), native_document.get("patent_id"))}
     patents.discard(None)
     if len(patents) > 1:
@@ -153,8 +168,8 @@ def reservation_status(declarations):
 
 
 def node_from_raw(raw, identity, *, node_id, record_id, ligand_id, origin=None,
-                  extra_declarations=(), protected=False):
-    tokens = [("document", key) for key in document_keys(raw)]
+                  extra_declarations=(), protected=False, patent_version=1):
+    tokens = [("document", key) for key in document_keys(raw, patent_version=patent_version)]
     assay = _optional_chembl_id(raw, "ChEMBL Assay ID", "invalid_chembl_assay_id")
     if assay is not None:
         tokens.append(("source_assay", "chembl:assay:"+assay))
@@ -181,7 +196,7 @@ def node_from_raw(raw, identity, *, node_id, record_id, ligand_id, origin=None,
             "keys": sorted({(kind, digest(value)) for kind, value in tokens if value}),
             "policy_declarations": declarations, "protected": bool(protected),
             "chemical_identity_available": identity is not None,
-            "document_identity_available": bool(document_keys(raw)),
+            "document_identity_available": bool(document_keys(raw, patent_version=patent_version)),
             "source": dict(origin or {})}
 
 

@@ -53,6 +53,43 @@ skips. A separate metadata-only integration used 16 actual ChEMBL assays from
 BindingDB counterpart records or full protected-context coverage. No new
 activity values, training, quality gain or engine speedup were measured.
 
+### Explicit publication identity version 2
+
+The full native metadata audit subsequently found 95 patent documents among
+2,390 document IDs. Fifteen used application-publication formats outside the
+initial grant-only scope. `patent_publication(..., version=2)`,
+`document_keys(..., patent_version=2)` and
+`node_from_raw(..., patent_version=2)` now provide explicit metadata-adapter
+support for US YYYY/NNNNNNN A1/A2/A9 (2001 onward), modern WO YYYY/NNNNNN A1
+(2004 onward), and seven-digit EP A1 publications, alongside version 1 grants.
+Sequence leading zeros and kind codes are preserved. These are format checks,
+not document-existence or family-equivalence checks. The formats follow
+[USPTO publication numbering](https://www.uspto.gov/patents/apply/applying-online/publication-number),
+[WIPO section 404](https://www.wipo.int/es/web/pct-system/texts/ai/s404), and the
+[EPO kind-code documentation](https://register.epo.org/help?lng=en&topic=kindcodes).
+
+Default version 1 behavior and all existing rejection controls remain in place.
+The generic normalized-row/training admission does not opt into version 2
+implicitly. An explicit metadata adapter records the version and producer hash;
+node field shapes and the existing hashed document-key kind remain unchanged.
+This is not a model/checkpoint migration or broader scientific source admission.
+
+The metadata audit retained all 164,631 old nodes exactly and appended 2,390
+native document nodes and 874 native activity-identity nodes. The candidate
+167,895-node graph is separate from the active frozen role context. Independent
+BFS matched all six candidate components. Of 874 metadata rows, 634 connected
+to reserved or unknown-policy components. Endpoints remain separate: 522 Ki,
+110 IC50, 121 kon and 121 k_off. No activity values were requested. One row
+had no source chemical structure and remains in the denominator.
+
+Of 227 currently unblocked Ki rows, 10 connect to previous metadata. The 217
+without previous-context connections occupy just two components (216 and one
+row). They are unassigned metadata candidates, not admitted independent measured
+training data. Native origins for 631 old vertices and patent-family coverage
+remain unresolved. The active pointer, original checkpoints and roles are
+unchanged. Regression: 459 passed, plus three separate native-metadata checks;
+no failures/skips, new fit, quality improvement or engine-cost claim.
+
 ## Native BindingDB preassignment and observed Factor X pilot, 2026-09-09
 
 `tools.product.public_bindingdb_staged_intake` and
