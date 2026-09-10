@@ -77,6 +77,9 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            betelgeuze_engine
+            betelgeuze_ai_md
+            core
             tools/check_engine_v2_architecture.py
             .github/workflows/ci-engine-v2-reference-physics.yml
             tests/unit/test_engine_v2_reference_constrained_minimization.py
@@ -116,7 +119,8 @@ jobs:
         run: |
           python - <<'PYCODE'
           import hashlib, json, os, pathlib, platform, subprocess, sys
-          files = sorted(pathlib.Path('betelgeuze_engine_v2').rglob('*.py'))
+          roots = ('betelgeuze_engine_v2', 'betelgeuze_engine', 'betelgeuze_ai_md', 'core')
+          files = sorted(p for root in roots for p in pathlib.Path(root).rglob('*.py'))
           files += sorted(pathlib.Path('tests/unit').glob('test_engine_v2_reference*.py'))
           files += [pathlib.Path('.github/workflows/ci-engine-v2-reference-physics.yml'),
                     pathlib.Path('tests/unit/test_engine_v2_orchestrator_contract.py'),
