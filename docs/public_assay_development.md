@@ -702,3 +702,39 @@ run's temporary fixtures to the data disk and using a fresh explicit test temp
 directory there. No test or assertion was removed. Three actual-source checks
 verify full intake counts, byte-identical records/ledger/identity context and
 rejection of the archived checkpoint by the changed runtime fingerprint.
+# Primary patent example correspondence
+
+`tools.product.public_chembl_primary_correspondence` reads the human 5HT6 Ki
+table in the Google Patents HTML mirror of US9067949B2 and audits fit-only
+ChEMBL source-37 activities against native compound records. It reuses the
+existing policy declarations and loss-aware measurement normalizer. Callers
+must bind the raw bytes and verify prospective roles against the current full
+identity graph before invoking the reader; this helper does not establish
+global data independence or authorize source admission.
+
+The reader rejects duplicate identities and reserved/unknown nested source
+roles. It preserves every observation, source assignment, compound alias and
+printed table value. Group value agreement uses multiplicities and never pairs
+individual activities to examples by value or order. A one-to-many native
+record remains ambiguous even if the group's values agree. Numeric agreement
+does not prove units or chemical state: the source's literal `nm` remains
+different from database `nM`, and no stereochemistry or protonation is invented.
+Every returned row keeps `eligible_for_point_model=false` and
+`scientific_admission=false`; the existing literature-only source policy and
+minimum-two-fit-components trainer requirement are unchanged.
+
+The development capture contains 216 activities in 201 native records. All
+group numeric multisets agree; 192 have unique name/value correspondence, and
+24 belong to nine merged groups. Example 82 describes resolved enantiomers;
+82a/82b table values are 56/0.15, while their shared native record also includes
+81a and supplies the same unspecified-stereo SMILES to the existing Morgan
+featurizer. These are source/representation limitations, not evidence of model
+accuracy or a newly trained model. This capture remains one prospective fit
+component; three rows in another patent remain reserved without decoded labels.
+
+Run the synthetic regression with
+`python -m pytest tests/unit/test_public_chembl_primary_correspondence.py`.
+The corresponding development bundle also replays the hash-bound native JSON,
+rebuilds the full role graph before value decoding, compares the HTML table
+with a separate parser, and invokes the actual existing Morgan featurizer.
+No checkpoint, score, customer route, or scientific capability is migrated.
