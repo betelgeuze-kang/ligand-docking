@@ -5,13 +5,9 @@ this adapter does not verify a receptor, an assay construct, or chemical OOD.
 """
 from __future__ import annotations
 
-import csv
 import hashlib
-import io
 import json
 import math
-import os
-import tempfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -442,7 +438,15 @@ class PublicAssaySelectorShadow:
             raise SelectorContractError("outside_pilot_formal_charge_scope")
         return self._generator.GetFingerprintAsNumPy(mol)
 
-    def predict_rows(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    def iter_prediction_rows(self, rows, *, chunk_size: int = 256):
+        from .public_assay_streaming import iter_prediction_rows
+        return iter_prediction_rows(self, rows, chunk_size=chunk_size)
+
+    def predict_rows(self, rows: Sequence[Mapping[str, Any]], *, chunk_size: int = 256) -> list[dict[str, Any]]:
+        """Compatibility list API; fingerprint/matrix memory is chunk-bounded."""
+        return list(self.iter_prediction_rows(rows, chunk_size=chunk_size))
+
+    def _predict_batch(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         results, fingerprints, admitted = [], [], []
         for index, row in enumerate(rows):
             result = _row_result(index, row, self._schema, self.metadata["prediction_quantity"])
@@ -538,78 +542,11 @@ def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | Non
 
 def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_json: str,
                            resume_stage3_only: bool, checkpoint: str, checkpoint_sha256: str,
-                           output_json: str) -> dict[str, Any]:
-    """Read original CSV rows and write a sidecar; never return a selection/ranking."""
-    result = {**_contract(), "status": "not_evaluated", "reason": None,
-              "input_scope": "original_csv_before_mapping_filters_truncation_and_replicas",
-              "requested_rows": None, "evaluated_rows": 0, "unsupported_rows": None,
-              "input_path": ligand_csv, "input_sha256": None, "rows": []}
-    try:
-        requested_schema, requested_binding = _registration(checkpoint_sha256)
-    except SelectorContractError:
-        requested_schema, requested_binding = None, {}
-    protected_paths = [path for path in (ligand_csv, ligand_sdf, docking_request_json, checkpoint) if path]
-    try:
-        if resume_stage3_only:
-            result["reason"] = "resume_has_no_pre_docking_input_evaluation"
-        elif docking_request_json and Path(docking_request_json).exists():
-            result.update(reason="unsupported_input_type:docking_request_json",
-                          input_path=docking_request_json,
-                          input_scope="unmodified_docking_request_not_enumerated")
-        elif not ligand_csv:
-            result.update(reason="unsupported_input_type:sdf_or_unspecified", input_path=ligand_sdf,
-                          input_scope="unmodified_non_csv_input_not_enumerated")
-        else:
-            raw = Path(ligand_csv).read_bytes()
-            result["input_sha256"] = _sha(raw)
-            records = list(csv.reader(io.StringIO(raw.decode("utf-8-sig"), newline=""), strict=True))
-            header, cells = (records[0], records[1:]) if records else ([], [])
-            result["input_header"] = header
-            rows = [dict(zip(header, values)) for values in cells]
-            result.update(requested_rows=len(rows), unsupported_rows=len(rows))
-            try:
-                model = load_public_assay_selector(checkpoint, expected_sha256=checkpoint_sha256)
-                result.update(_contract(model.metadata["checkpoint_schema_version"], requested_binding))
-                result["model"] = model.metadata
-                schema_ok = (len(header) == len(set(header))
-                             and model.required_input_columns.issubset(header))
-                valid_indices = [i for i, values in enumerate(cells) if schema_ok and len(values) == len(header)]
-                predictions = model.predict_rows([rows[i] for i in valid_indices])
-                results = [_row_result(i, row, requested_schema, requested_binding.get("prediction_quantity")) for i, row in enumerate(rows)]
-                for entry in results:
-                    entry["reason"] = "invalid_csv_schema_or_row_width"
-                for index, prediction in zip(valid_indices, predictions):
-                    results[index] = {**prediction, "row_index": index}
-            except Exception as exc:
-                result["reason"] = f"model_unavailable:{type(exc).__name__}:{exc}"
-                results = [_row_result(i, row, requested_schema, requested_binding.get("prediction_quantity")) for i, row in enumerate(rows)]
-                for entry in results:
-                    entry["reason"] = result["reason"]
-            for entry, values in zip(results, cells):
-                entry["input_cells"] = values
-            evaluated = sum(entry["status"] == "evaluated" for entry in results)
-            result.update(status="completed", rows=results, evaluated_rows=evaluated,
-                          unsupported_rows=len(rows) - evaluated)
-    except Exception as exc:
-        result["reason"] = f"input_unavailable:{type(exc).__name__}:{exc}"
-    destination = Path(output_json)
-    temporary = None
-    try:
-        for path in protected_paths:
-            source = Path(path)
-            if (destination.resolve() == source.resolve()
-                    or (destination.exists() and source.exists() and os.path.samefile(destination, source))):
-                raise SelectorContractError("sidecar_aliases_input_or_checkpoint")
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=destination.parent,
-                                         prefix=destination.name + ".", delete=False) as stream:
-            temporary = Path(stream.name)
-            json.dump(result, stream, sort_keys=True, indent=2, allow_nan=False)
-            stream.write("\n")
-        os.replace(temporary, destination)
-        result.update(sidecar_status="written", sidecar_json=str(destination))
-    except Exception as exc:
-        result.update(sidecar_status="failed", sidecar_error=f"{type(exc).__name__}:{exc}")
-    finally:
-        if temporary is not None and temporary.exists():
-            temporary.unlink()
-    return {key: value for key, value in result.items() if key not in {"rows", "input_header"}}
+                           output_json: str, chunk_size: int = 256) -> dict[str, Any]:
+    """Same sidecar contract, with bounded input, inference and output memory."""
+    from .public_assay_streaming import run_pre_docking_shadow as stream_shadow
+    return stream_shadow(
+        ligand_csv=ligand_csv, ligand_sdf=ligand_sdf,
+        docking_request_json=docking_request_json, resume_stage3_only=resume_stage3_only,
+        checkpoint=checkpoint, checkpoint_sha256=checkpoint_sha256,
+        output_json=output_json, chunk_size=chunk_size)
