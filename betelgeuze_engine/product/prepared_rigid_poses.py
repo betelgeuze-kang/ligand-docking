@@ -125,7 +125,17 @@ def _geometry(receptor, ligand, provenance, origin):
         return observation
 
 
-def evaluate_rigid_pose_request(request: dict) -> dict:
+def evaluate_rigid_pose_request(request: dict, *, checkpoint_dir=None, resume=False) -> dict:
+    """Optional durable local completion; no checkpoint means original behavior."""
+    if checkpoint_dir is not None:
+        from .prepared_pose_journal import evaluate_with_journal
+        return evaluate_with_journal(request, checkpoint_dir, resume=resume)
+    if resume:
+        raise ValueError("resume_requires_checkpoint_directory")
+    return _evaluate_rigid_pose_request(request)
+
+
+def _evaluate_rigid_pose_request(request: dict, *, journal=None) -> dict:
     """Retain one ledger row per pose; no docking search or active ranking."""
     if (
         type(request) is not dict
@@ -139,16 +149,21 @@ def evaluate_rigid_pose_request(request: dict) -> dict:
             "expected 1..32 poses under the explicit prepared rigid pose contract"
         )
     request = copy.deepcopy(request)
-    rows, shared, cached = [], None, None
+    rows, shared, cached = [], (copy.deepcopy(journal.shared) if journal is not None else None), None
     preparation_attempts, preparations, reuse_hits, rechecks = 0, 0, 0, 0
     preparation_wall = 0.0
-    execution_declaration = None
+    execution_declaration = copy.deepcopy(journal.execution) if journal is not None else None
     ids = Counter(
         p.get("pose_id")
         for p in request["poses"]
         if type(p) is dict and type(p.get("pose_id")) is str
     )
     for index, pose in enumerate(request["poses"]):
+        if journal is not None:
+            restored = journal.restore(index)
+            if restored is not None:
+                rows.append(restored)
+                continue
         started, cpu = time.perf_counter(), time.process_time()
         pose_id = (
             pose.get("pose_id")
@@ -297,6 +312,8 @@ def evaluate_rigid_pose_request(request: dict) -> dict:
             "scope": "pose validation, any preparation, source checks, source and pose geometry observations, transform and fresh cross evaluation; output excluded",
         }
         rows.append(row)
+        if journal is not None:
+            journal.commit(row, shared, execution_declaration)
     success = sum(r["status"] == "evaluated" for r in rows)
     return {
         "schema_version": "prepared_rigid_pose_cross_report_v1",
