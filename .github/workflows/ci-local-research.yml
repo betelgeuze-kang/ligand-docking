@@ -1,0 +1,83 @@
+name: ci-local-research
+on:
+  pull_request:
+    paths:
+      - 'betelgeuze_engine/product/**'
+      - 'betelgeuze_engine_v2/**'
+      - 'tools/product/score_prepared_cross_interactions.py'
+      - 'tests/unit/test_local_research_workflow.py'
+      - 'tests/unit/test_prepared_pose_resume.py'
+      - 'tests/unit/test_public_assay_selector_shadow.py'
+      - '.github/workflows/ci-local-research.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'betelgeuze_engine/product/**'
+      - 'tests/unit/test_local_research_workflow.py'
+      - '.github/workflows/ci-local-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-local-research-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  local-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      CUDA_VISIBLE_DEVICES: ''
+      HIP_VISIBLE_DEVICES: ''
+      ROCR_VISIBLE_DEVICES: ''
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.11'
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install pytest==8.3.5 numpy==1.26.4 rdkit==2026.3.6 ruff==0.11.13
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Preserve exact development source and environment
+        run: |
+          git rev-parse HEAD > checkout.txt
+          git rev-parse 'HEAD^{tree}' >> checkout.txt
+          python -m pip freeze > dependencies.txt
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess, tarfile
+          tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          prefixes = ('betelgeuze_engine/', 'betelgeuze_engine_v2/', 'betelgeuze_product/', 'core/', 'tests/unit/', 'tools/')
+          files = [p for p in tracked if p.endswith('.py') and p.startswith(prefixes)]
+          manifest = {p: hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for p in files}
+          pathlib.Path('source-sha256.json').write_text(json.dumps(manifest, sort_keys=True, indent=2)+'\n')
+          with tarfile.open('test-source.tar.gz', 'w:gz') as bundle:
+              for path in files:
+                  bundle.add(path, recursive=False)
+          PY
+      - name: Lint and exercise real consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ruff check --isolated --no-cache betelgeuze_engine/product/local_research_workflow.py betelgeuze_engine/product/rocm_diagnostic.py betelgeuze_engine/product/public_assay_streaming.py tests/unit/test_local_research_workflow.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_local_research_workflow.py tests/unit/test_prepared_pose_resume.py tests/unit/test_prepared_rigid_poses.py tests/unit/test_public_assay_selector_shadow.py --junitxml=local-research.xml 2>&1 | tee local-research.log
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: local-research-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            local-research.xml
+            local-research.log
+            checkout.txt
+            dependencies.txt
+            source-sha256.json
+            test-source.tar.gz
+          if-no-files-found: error
+          retention-days: 7
