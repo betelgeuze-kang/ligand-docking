@@ -31,11 +31,13 @@ def _strict_object(pairs):
     return result
 
 
-def evaluate_request(request: dict) -> dict:
+def evaluate_request(request: dict, *, checkpoint_dir=None, resume=False) -> dict:
     """Retain every requested case, including unsupported or failed cases."""
     if type(request) is dict and request.get("schema_version") == "prepared_rigid_pose_cross_request_v1":
         from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
-        return evaluate_rigid_pose_request(request)
+        return evaluate_rigid_pose_request(request, checkpoint_dir=checkpoint_dir, resume=resume)
+    if checkpoint_dir is not None or resume:
+        raise ValueError("checkpoint_supported_only_for_explicit_rigid_pose_request")
     shadow_enabled = isinstance(request, dict) and request.get("schema_version") in {SHADOW_SCHEMA, SHADOW_SCHEMA_V2}
     version_two = isinstance(request, dict) and request.get("schema_version") in {SCHEMA_V2, SHADOW_SCHEMA_V2}
     fields = {"schema_version", "cases"} | ({"assay_selector"} if shadow_enabled else set())
@@ -147,7 +149,16 @@ def main(argv=None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--output-format", choices=("pretty", "compact"), default="pretty",
                         help="JSON representation only; compact preserves every field and encodes one case at a time")
+    parser.add_argument("--checkpoint-dir", type=Path,
+                        help="New private directory for durable per-pose completion (Linux only)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Resume a matching checkpoint; committed failures are not retried")
     args = parser.parse_args(argv)
+    if args.resume and args.checkpoint_dir is None:
+        parser.error("--resume requires --checkpoint-dir")
+    if args.checkpoint_dir is not None:
+        if args.output.resolve().is_relative_to(args.checkpoint_dir.resolve()):
+            parser.error("output must not be inside the checkpoint directory")
     if args.output.exists() or args.output.is_symlink():
         parser.error("output must be a new path; existing evidence and source files are preserved")
     started, cpu = time.perf_counter(), time.process_time()
@@ -157,7 +168,10 @@ def main(argv=None) -> int:
         request_sha = hashlib.sha256(raw).hexdigest()
         request = json.loads(raw, object_pairs_hook=_strict_object,
                              parse_constant=lambda value: (_ for _ in ()).throw(ValueError(f"nonfinite JSON: {value}")))
-        result = evaluate_request(request)
+        if args.checkpoint_dir is not None:
+            result = evaluate_request(request, checkpoint_dir=args.checkpoint_dir, resume=args.resume)
+        else:
+            result = evaluate_request(request)
         if args.request.read_bytes() != raw:
             raise ValueError("request changed during evaluation")
         shadow_unsupported = result.get("assay_selector_shadow", {}).get("denominator", {}).get("unsupported", 0)
