@@ -1,0 +1,53 @@
+{
+  "affected_original_ki_activity_ids": [
+    7951466,
+    7951467,
+    13914330,
+    13914332,
+    13914334
+  ],
+  "bridge_evidence": "independently traversed metadata key paths from every affected original fit node to an original calibration/development node; no evaluation numeric label leakage asserted",
+  "checkpoint_sha256": "c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b",
+  "context_before_gzip_sha256": "c5fd7f6e17d10dfa96a03f6aecc3b58be91ca8634a497d2945795b1e419a92a1",
+  "customer_execution": false,
+  "expanded_component_roles": [
+    "calibration",
+    "development_test",
+    "fit"
+  ],
+  "full_new_metadata_universe_complete": false,
+  "historical_observation_only": true,
+  "independent_external_reviewer": null,
+  "limitations": [
+    "Only the supplied, incomplete expanded metadata graph was audited. Missing metadata can reveal additional connections.",
+    "Native target annotations and molecular connectivity/scaffold/source identities do not verify a shared physical or assayed state.",
+    "Weights and old measurements remain unchanged for historical reproducibility. No role reassignment or refit.",
+    "No protected qualification execution or external validation receipt."
+  ],
+  "missing_records": 1930,
+  "new_fit": 0,
+  "new_independent_evaluation_allowed": false,
+  "new_numeric_activity_values": 0,
+  "new_training_from_connected_components_allowed": false,
+  "numeric_evaluation_label_leakage_proven": false,
+  "observation": "failed_expanded_metadata_dependency_audit",
+  "original_assigned_fit_rows_newly_connected_to_reserved": 7,
+  "original_exact_fit_rows": 224,
+  "original_exact_fit_rows_newly_connected_to_reserved": 5,
+  "product_ranking_enabled": false,
+  "requested_records": 3930,
+  "retrieved_records": 2000,
+  "schema_version": "public_assay_checkpoint_identity_observation_v1",
+  "source": "ChEMBL_37 CHEMBL244 IC50 metadata only",
+  "source_hashes": {
+    "activity-metadata-final.jsonl": "82b551ebccba94ce766a408b0376d558e7561203c3d4d7f9fe9545d632f5671b",
+    "actual-junit.xml": "ad8cc7f507f2e055da179b6b1ed9c162b95925a5f318c7f96b09325ce7f37085",
+    "bridge-witnesses.json": "2beb7f66bbb8829469f0751357a07c65b99494444af06144c06cc0b01fabd255",
+    "graph-plan-before-computation.json": "eff85d394cdef21bea5ce3e19ed328b9faf7654595368043ad5baac419899ab8",
+    "ic50-partial-identity-nodes.jsonl": "15e87f7002a44873de4d1b8cb599d359da2f6348d298f8f3a0ded50304efbbe5",
+    "metadata-origins-final.jsonl": "d915f1545b74aeb0ad7a34688fe9ab849b9005f7f01129989e485dddc18fb305",
+    "partial-graph-summary.json": "bdb9b391cb559f8bcf0bceb61ee3bf7a3a5df324401e23fee0cf3128d14bbf56",
+    "prior-ki-split-partial-audit.jsonl": "70240fee018b0f4003c4848e715c1c67791d405e9721d5e8462970401c41af24",
+    "test_partial_graph.py": "1765e76f3e14d3a2cee4677d5e2fe2c9edcb7d67c185425a245f059b33ad5019"
+  }
+}
