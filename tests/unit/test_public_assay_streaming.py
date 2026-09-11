@@ -95,7 +95,7 @@ def test_real_sidecar_preserves_rows_multiline_bom_and_bad_width(tmp_path, monke
     assert payload["customer_execution"] is payload["product_ranking_enabled"] is False
 
 
-@pytest.mark.parametrize("bad_suffix", ['"unterminated', 'x' * (streaming.MAX_RECORD_CHARS + 2), ','.join(['x'] * 257)])
+@pytest.mark.parametrize("bad_suffix", ['"unterminated', 'x' * (streaming.MAX_RECORD_CHARS + 2), ','.join(['x'] * 257)], ids=["unterminated_quote", "oversized_record", "excess_columns"])
 def test_late_invalid_record_never_publishes_successful_prefix(tmp_path, monkeypatch, bad_suffix):
     checkpoint, digest = _checkpoint(tmp_path, monkeypatch)
     source = tmp_path / "bad.csv"
