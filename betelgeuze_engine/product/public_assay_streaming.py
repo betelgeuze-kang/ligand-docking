@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import inspect
 import json
 import os
 from pathlib import Path
@@ -117,6 +118,22 @@ def _check_destination(destination, protected):
             raise ValueError("sidecar_aliases_input_or_checkpoint")
 
 
+def _optional_context_call(function, args, context):
+    """Use the owning API shape without catching errors raised by its body.
+
+    Live #514 has the original fixed-endpoint helpers; #513 adds an explicit
+    registry context argument for newer endpoints. Registrations and quantity
+    semantics remain owned by that module, never inferred from user columns.
+    """
+    signature = inspect.signature(function)
+    try:
+        signature.bind(*args, context)
+    except TypeError:
+        signature.bind(*args)
+        return function(*args)
+    return function(*args, context)
+
+
 class _PredictionFailure(Exception):
     pass
 
@@ -136,7 +153,7 @@ def _spool_rows(snapshot, spool, model, schema, binding, load_error, chunk_size)
             entries, indices, admitted = [], [], []
             for index, cells in batch:
                 row = dict(zip(header, cells))
-                entry = owner._row_result(index, row, schema, binding.get("prediction_quantity"))
+                entry = _optional_context_call(owner._row_result, (index, row, schema), binding.get("prediction_quantity"))
                 entry["reason"] = load_error or "invalid_csv_schema_or_row_width"
                 entry["input_cells"] = cells
                 entries.append(entry)
@@ -211,7 +228,7 @@ def run_pre_docking_shadow(*, ligand_csv, ligand_sdf, docking_request_json,
                     model, load_error = None, None
                     try:
                         model = owner.load_public_assay_selector(checkpoint, expected_sha256=checkpoint_sha256)
-                        result.update(owner._contract(model.metadata["checkpoint_schema_version"], binding))
+                        result.update(_optional_context_call(owner._contract, (model.metadata["checkpoint_schema_version"],), binding))
                         result["model"] = model.metadata
                     except Exception as exc:
                         load_error = f"model_unavailable:{type(exc).__name__}:{exc}"

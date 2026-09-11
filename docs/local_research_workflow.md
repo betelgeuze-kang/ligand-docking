@@ -6,8 +6,9 @@ scientific meanings. Supplied rigid poses are evaluated; no new docking search,
 MD, force-model training, ranking change or execution qualification is created.
 
 Use the live prepared-development stack. The streaming implementation is reused
-from #516 with only its already-bounded list call made compatible with both live
-selector list APIs. No registry, frozen weights or V2 source is changed.
+from #516 with its already-bounded list call and optional context helpers made compatible
+with both live selector APIs. The owner still determines endpoint semantics;
+errors raised by a helper body are not retried under another signature. No registry, frozen weights or V2 source is changed.
 
 ## Request
 
@@ -26,10 +27,10 @@ model or unsupported catalogue row preserves independent physical results and
 returns a partial result (exit 2), not a successful AI qualification.
 
 ```sh
-python -m betelgeuze_engine.product.local_research_workflow --diagnose-only
-python -m betelgeuze_engine.product.local_research_workflow --diagnose-only --probe-rocm
-python -m betelgeuze_engine.product.local_research_workflow --request request.json --run-dir /private/new-run
-python -m betelgeuze_engine.product.local_research_workflow --request request.json --run-dir /private/new-run --resume
+python -m betelgeuze_product.local_research_workflow --diagnose-only
+python -m betelgeuze_product.local_research_workflow --diagnose-only --probe-rocm
+python -m betelgeuze_product.local_research_workflow --request request.json --run-dir /private/new-run
+python -m betelgeuze_product.local_research_workflow --request request.json --run-dir /private/new-run --resume
 ```
 
 Run storage must be a new private directory for the first invocation. Resumes
@@ -58,3 +59,27 @@ Tests use fresh synthetic molecules and synthetic checkpoint registration only
 inside test fixtures. Hosted CPU CI checks real calculations, interrupted and
 completed resume, separate shadow failures, input changes and unavailable GPU
 handling. Actual AMD/native provider and MD qualification remain separate work.
+
+## Guarantees and explicit limits
+
+The standalone CLI lives in `betelgeuze_product`, whose initializer is lightweight.
+Metadata-only diagnostics do not import the engine, Torch, NumPy or RDKit. The
+physics stage loads the owning calculation code only when explicitly requested.
+All writes are anchored to the open private run directory: renaming/replacing its
+external path during execution does not redirect results. A persisted physics
+intent prevents a deleted earlier journal from silently becoming a new run.
+An incomplete journal initialization fails closed and requires a new run.
+
+The initial hosted implementation ran 151 tests successfully and failed two new
+checks: mismatched helper signatures between the live selector branches, and a
+comparison that incorrectly required independently measured runtimes to match.
+The adapter now chooses the declared helper signature without masking body errors;
+regressions retain all physical values/provenance exactly and compare time fields
+only as nonnegative observations with the same stated scope. Full-row equality
+is still required when restoring the SAME persisted result.
+
+The HTML report has an escaped small table of supplied poses and their separate
+cross energies, with links to complete local JSON artifacts. It contains no script,
+external assets, uploads or merged assay/physical score. Do not serve private run
+folders publicly. Directory ownership/hashes protect local integrity, not an
+independent scientific signature or hostile same-user modifications.

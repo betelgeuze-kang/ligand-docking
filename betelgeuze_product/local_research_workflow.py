@@ -116,7 +116,7 @@ def _atomic(path: Path, text: str) -> None:
         if path.is_symlink():
             raise ValueError("artifact_symlink_rejected")
         os.replace(tmp, path)
-        dfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        dfd = os.open(str(path.parent) + "/.", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             os.fsync(dfd)
         finally:
@@ -136,6 +136,14 @@ def _html_report(report: dict) -> str:
                 "<p>Status: " + esc(report["status"]) + "</p>",
                 "<p>Requested backend: " + esc(report["backend_requested"]) +
                 "; executed physics backend: " + esc(report["backend_executed"]) + "</p>"]
+    sections.append("<h2>Supplied pose results</h2><table><tr><th>Index</th><th>Pose</th><th>Status</th><th>Cross energy (kcal/mol)</th></tr>")
+    for row in report.get("physics", {}).get("poses", []):
+        sections.append("<tr>" + "".join("<td>" + esc(row.get(key)) + "</td>" for key in (
+            "request_index", "pose_id", "status", "cross_energy_kcal_per_mol")) + "</tr>")
+    sections.append("</table>")
+    for name in ("physics.json", "assay-shadow.json"):
+        if any(item.get("name") == name for item in report.get("artifacts", {}).values()):
+            sections.append('<p><a href="' + name + '">' + name + '</a></p>')
     for key in ("physics", "assay_shadow", "cost", "artifacts"):
         sections.extend(["<h2>" + esc(key) + "</h2><pre>",
                          esc(json.dumps(report.get(key), indent=2, allow_nan=False)), "</pre>"])
@@ -148,7 +156,7 @@ def _artifact(path: Path) -> dict:
 
 
 def _shadow_status(selector: dict, output: Path) -> dict:
-    from .public_assay_streaming import run_pre_docking_shadow
+    from betelgeuze_engine.product.public_assay_streaming import run_pre_docking_shadow
     # A missing or changed shadow model must not prevent independent physics.
     if _hash_file(Path(selector["ligand_csv"])) != selector["input_sha256"]:
         raise ValueError("shadow_input_digest_mismatch")
@@ -198,6 +206,9 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
         if not stat.S_ISREG(lock_stat.st_mode) or lock_stat.st_nlink != 1:
             raise ValueError("invalid_workflow_lock")
         fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # Pin every later write and nested journal to the already opened directory.
+        # Same-user path rename/replacement must not redirect an active run.
+        run_dir = Path(f"/proc/self/fd/{directory_fd}")
         binding = {"request": snapshot,
                    "workflow_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
         contract = run_dir / "request.json"
@@ -260,15 +271,32 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
             try:
                 from tools.product.score_prepared_cross_interactions import evaluate_request, _write_report_json
                 journal = run_dir / "physics-checkpoint"
+                intent = run_dir / "physics-intent.json"
+                journal_resume = False
+                if intent.exists() or intent.is_symlink():
+                    if not resume or _hash_file(intent) != hashlib.sha256(b'{"backend":"cpu"}\n').hexdigest():
+                        raise ValueError("invalid_physics_resume_intent")
+                    if not journal.is_dir() or journal.is_symlink():
+                        raise ValueError("previous_physics_journal_missing")
+                    journal_resume = True
+                else:
+                    if journal.exists() or journal.is_symlink():
+                        raise ValueError("orphan_physics_journal")
+                    _atomic(intent, '{"backend":"cpu"}\n')
                 result = evaluate_request(snapshot["prepared_request"], checkpoint_dir=journal,
-                                          resume=resume and journal.exists())
+                                          resume=journal_resume)
                 completion = result["resume_observation"]
                 new_rows = result["rows"][completion["restored_rows"]:]
                 report["backend_executed"] = ("cpu" if any(
                     row.get("evaluation_completed") is True for row in new_rows) else None)
                 report["physics"] = {"status": "completed", "denominator": result["denominator"],
                                       "result_backend": "cpu", "resume_observation": completion,
-                                      "preparation_observation": result.get("preparation_observation")}
+                                      "preparation_observation": result.get("preparation_observation"),
+                                      "poses": [{"request_index": row["request_index"],
+                                                 "pose_id": row.get("case_id"), "status": row["status"],
+                                                 "cross_energy_kcal_per_mol": row.get("result", {}).get("quantities", {}).get("cross_total_kcal_per_mol"),
+                                                 "coordinate_count": len(row.get("evaluated_ligand_coordinates_angstrom") or [])}
+                                                for row in result["rows"]]}
                 # The existing bounded-row JSON encoder preserves all numerical
                 # outputs. Never put large assay rows into the summary report.
                 output = attempt / "physics.json"
