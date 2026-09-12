@@ -20,7 +20,7 @@ import sys
 import time
 from typing import Any
 
-from .rocm_diagnostic import diagnose_rocm
+from .rocm_diagnostic import diagnose_rocm_isolated as diagnose_rocm
 
 SCHEMA = "local_research_workflow_request_v1"
 MAX_REQUEST_BYTES = 1024 * 1024
@@ -322,8 +322,12 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
             peak_rss_unit="KiB" if sys.platform.startswith("linux") else "platform_native",
             peak_rss_scope="process_lifetime_high_water_not_stage_or_gpu_memory",
             timing_scope="workflow_call_through_artifact_hashes_excludes_final_report_and_process_startup")
-        _atomic(attempt / "report.json", _json(report) + "\n")
+        # Publish HTML first, then finalize its digest in the small JSON receipt.
+        # Interrupted publication leaves a non-final report, not false success.
+        report["artifact_integrity_policy"] = "referenced_artifacts_including_html_sha256_v1"
         _atomic(attempt / "report.html", _html_report(report))
+        report["artifacts"]["html"] = _artifact(attempt / "report.html")
+        _atomic(attempt / "report.json", _json(report) + "\n")
         return report
     finally:
         if lock_fd is not None:
@@ -337,8 +341,19 @@ def main(argv=None) -> int:
     parser.add_argument("--run-dir", type=Path)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--diagnose-only", action="store_true")
+    parser.add_argument("--verify-run", action="store_true", help="Read-only verification; no calculation or journal access")
+    parser.add_argument("--attempt", type=int, help="Attempt to verify (default: latest)")
     parser.add_argument("--probe-rocm", action="store_true")
     args = parser.parse_args(argv)
+    if args.verify_run:
+        if args.run_dir is None or args.request or args.resume or args.diagnose_only or args.probe_rocm:
+            parser.error("verify-run requires only run-dir and optional attempt")
+        from .local_research_verify import verify_run
+        report = verify_run(args.run_dir, attempt=args.attempt)
+        print(_json(report))
+        return report["exit_code"]
+    if args.attempt is not None:
+        parser.error("attempt is only valid with verify-run")
     if args.diagnose_only:
         if args.request or args.run_dir or args.resume:
             parser.error("diagnose-only does not accept a research request")
