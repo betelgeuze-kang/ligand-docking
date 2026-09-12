@@ -23,6 +23,7 @@ from betelgeuze_engine.product.prepared_gromacs_input import (
 from betelgeuze_engine.product.v2_cross_interaction import (
     evaluate_prepared_cross_interaction,
 )
+from betelgeuze_engine.product.prepared_validation import prepared_validation_scope
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
 
 SCHEMA = "prepared_rigid_pose_cross_request_v1"
@@ -127,12 +128,13 @@ def _geometry(receptor, ligand, provenance, origin):
 
 def evaluate_rigid_pose_request(request: dict, *, checkpoint_dir=None, resume=False) -> dict:
     """Optional durable local completion; no checkpoint means original behavior."""
-    if checkpoint_dir is not None:
-        from .prepared_pose_journal import evaluate_with_journal
-        return evaluate_with_journal(request, checkpoint_dir, resume=resume)
-    if resume:
-        raise ValueError("resume_requires_checkpoint_directory")
-    return _evaluate_rigid_pose_request(request)
+    with prepared_validation_scope():
+        if checkpoint_dir is not None:
+            from .prepared_pose_journal import evaluate_with_journal
+            return evaluate_with_journal(request, checkpoint_dir, resume=resume)
+        if resume:
+            raise ValueError("resume_requires_checkpoint_directory")
+        return _evaluate_rigid_pose_request(request)
 
 
 def _evaluate_rigid_pose_request(request: dict, *, journal=None) -> dict:

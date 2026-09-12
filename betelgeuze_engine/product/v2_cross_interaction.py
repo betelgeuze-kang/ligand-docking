@@ -20,8 +20,9 @@ from betelgeuze_engine_v2.geometry import RadiusGraphConfig, build_compact_radiu
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem, Chain, Residue, StructureProvenance,
     canonical_coordinates_sha256, canonical_system_document,
-    canonical_topology_sha256, require_valid_all_atom_system,
+    canonical_topology_sha256,
 )
+from betelgeuze_engine.product.prepared_validation import require_valid_prepared_system
 from betelgeuze_engine_v2.molecular.serialization import canonical_json_value, sha256_canonical
 from betelgeuze_engine_v2.geometry.neighbors import (
     _cell_key, _neighbor_cell_keys, _minimum_image_squared_distance,
@@ -55,7 +56,7 @@ def _finite(value: Any, label: str, minimum: float | None = None) -> float:
 def _component(system: AllAtomSystem, rows: Sequence[Mapping[str, Any]], limit: int, side: str):
     if type(system) is not AllAtomSystem or not 1 <= system.atom_count <= limit:
         raise PreparedInteractionError(f"{side} requires a bounded canonical AllAtomSystem")
-    validation = require_valid_all_atom_system(system)
+    validation = require_valid_prepared_system(system)
     if (system.cell is not None or system.coordinates.dtype != torch.float64
             or system.coordinates.device.type != "cpu"
             or tuple(system.coordinates.shape) != (1, system.atom_count, 3)):

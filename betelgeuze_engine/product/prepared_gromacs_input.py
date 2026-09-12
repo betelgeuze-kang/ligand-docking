@@ -19,7 +19,7 @@ import torch
 from betelgeuze_engine_v2.io import parse_pdb, parse_sdf_v2000
 from betelgeuze_engine_v2.molecular.models import AllAtomSystem, element_for_atomic_number
 from betelgeuze_engine_v2.molecular.serialization import canonical_system_sha256
-from betelgeuze_engine_v2.molecular.validation import require_valid_all_atom_system
+from betelgeuze_engine.product.prepared_validation import require_valid_prepared_system
 
 
 SCHEMA_VERSION = "prepared_gromacs_components_v1"
@@ -357,7 +357,7 @@ def _bound_system(system: AllAtomSystem, atoms: list, source_hashes: list[str], 
                          metadata={**system.provenance.metadata, "prepared_source_sha256": source_hashes,
                                    "state_declarations": declarations, "declarations_verified": False,
                                    "hydrogen_coordinate_origin": "published_computational_preparation_not_experimental"}))
-    require_valid_all_atom_system(result)
+    require_valid_prepared_system(result)
     return result
 
 

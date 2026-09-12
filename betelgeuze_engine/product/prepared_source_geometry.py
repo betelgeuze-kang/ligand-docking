@@ -16,7 +16,8 @@ import torch
 from betelgeuze_engine_v2.geometry.neighbors import (
     NeighborOverflowError, RadiusGraphConfig, build_compact_radius_graph,
 )
-from betelgeuze_engine_v2.molecular import AllAtomSystem, require_valid_all_atom_system
+from betelgeuze_engine_v2.molecular import AllAtomSystem
+from betelgeuze_engine.product.prepared_validation import require_valid_prepared_system
 
 SCHEMA = "prepared_source_geometry_observation_v1"
 SEARCH_RADIUS_ANGSTROM = 1.0
@@ -108,7 +109,7 @@ def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSys
                     or system.coordinates.device.type != "cpu"
                     or tuple(system.coordinates.shape) != (1, system.atom_count, 3)):
                 raise ValueError("source geometry requires one nonperiodic CPU float64 frame")
-            identities[side] = require_valid_all_atom_system(system).system_sha256
+            identities[side] = require_valid_prepared_system(system).system_sha256
             bonds[side], availability = _bond_context(preparation_provenance, side, system)
             groups[side] = {"source_atom_count": system.atom_count,
                             "possible_unique_pairs": system.atom_count * (system.atom_count - 1) // 2,
