@@ -143,6 +143,26 @@ def chemical_identity(smiles: str) -> dict:
     if mol is None or mol.GetNumAtoms() == 0:
         raise ValueError("invalid_smiles")
     canonical = Chem.MolToSmiles(mol, canonical=True, isomericSmiles=True)
+    unresolved_groups = [
+        group for group in mol.GetStereoGroups()
+        if group.GetGroupType() != Chem.StereoGroupType.STEREO_ABSOLUTE
+    ]
+    enhanced = {}
+    if unresolved_groups:
+        params = Chem.SmilesWriteParams()
+        params.canonical = True
+        params.doIsomericSmiles = True
+        canonical = Chem.MolToCXSmiles(mol, params, Chem.CXSmilesFields.CX_ENHANCEDSTEREO)
+        enhanced = {
+            "unresolved_stereochemistry": True,
+            "enhanced_stereo_groups": [
+                {"type": str(group.GetGroupType()),
+                 "atom_indices": [atom.GetIdx() for atom in group.GetAtoms()]}
+                for group in unresolved_groups
+            ],
+            "enhanced_stereo_atom_index_basis": "parsed_input_smiles_zero_based",
+            "canonicalization": "rdkit_canonical_CXSMILES_enhanced_stereo_no_salt_or_state_change",
+        }
     no_stereo = Chem.Mol(mol)
     Chem.RemoveStereochemistry(no_stereo)
     connectivity = Chem.MolToSmiles(no_stereo, canonical=True, isomericSmiles=True)
@@ -168,6 +188,7 @@ def chemical_identity(smiles: str) -> dict:
         ),
         "canonicalization": "rdkit_MolFromSmiles_MolToSmiles_isomeric_true_no_salt_or_state_change",
         "rdkit_version": rdBase.rdkitVersion,
+        **enhanced,
     }
 
 
@@ -403,6 +424,8 @@ def normalize_record(
         or identity["isotope_atoms"]
     ):
         problems.append("outside_pilot_element_radical_or_isotope_scope")
+    if identity.get("unresolved_stereochemistry"):
+        problems.append("unresolved_enhanced_stereochemistry")
     if abs(identity["formal_charge"]) > 2:
         problems.append("outside_pilot_formal_charge_scope")
     return {

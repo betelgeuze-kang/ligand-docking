@@ -52,6 +52,9 @@ def features(smiles: list[str]) -> np.ndarray:
         mol = Chem.MolFromSmiles(text)
         if mol is None:
             raise ValueError("invalid_inference_smiles")
+        if any(group.GetGroupType() != Chem.StereoGroupType.STEREO_ABSOLUTE
+               for group in mol.GetStereoGroups()):
+            raise ValueError("unresolved_enhanced_stereochemistry")
         matrix.append(generator.GetFingerprintAsNumPy(mol))
     return np.asarray(matrix, dtype=np.float64).reshape(len(smiles), 1024)
 
@@ -120,6 +123,8 @@ def cohort(
             reason = "evaluation_only_source"
         elif graph[components.normalized_node(row)["node_id"]]["blocked"]:
             reason = "reserved_identity_component"
+        elif row["chemical_identity"].get("unresolved_stereochemistry"):
+            reason = "unresolved_enhanced_stereochemistry"
         elif not row["eligible_for_split_assignment"] or row["admission_issues"]:
             reason = "intake_admission_failed"
         if not reason:

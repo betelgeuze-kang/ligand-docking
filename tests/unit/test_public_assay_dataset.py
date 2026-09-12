@@ -402,3 +402,55 @@ def test_actual_cli_publishes_hash_bound_bundle_and_keeps_existing_output(tmp_pa
     with pytest.raises(ValueError, match="output_already_exists"):
         main(argv)
     assert (output / "summary.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("group", ["&1", "o1"])
+def test_enhanced_stereo_preserved_and_not_admitted(tmp_path, group):
+    from rdkit import Chem
+    from tools.product import train_public_assay_selector as trainer
+    from tools.product import public_chembl_assay_dataset as chembl
+
+    ordinary = "CC[C@H](O)c1ccccc1"
+    text = ordinary + f" |{group}:2|"
+    fixed = mod.chemical_identity(ordinary)
+    identity = mod.chemical_identity(text)
+    assert identity["canonical_isomeric_smiles_sha256"] != fixed["canonical_isomeric_smiles_sha256"]
+    assert identity["unresolved_stereochemistry"] is True
+    assert Chem.MolFromSmiles(identity["canonical_isomeric_smiles"]).GetStereoGroups()
+    for key in ("connectivity_smiles_sha256", "scaffold_group", "rdkit_inchikey"):
+        assert identity[key] == fixed[key]
+    records, _, _ = mod.build_dataset(**inputs(tmp_path, [source_row(**{"Ligand SMILES": text})]))
+    row = records[0]
+    assert row["source_provenance"]["row"]["Ligand SMILES"] == text
+    assert not row["eligible_for_split_assignment"]
+    assert "unresolved_enhanced_stereochemistry" in row["admission_issues"]
+    scope = {"chemistry_scope": {"heavy_atoms_min": 5, "heavy_atoms_max": 70,
+        "fragment_count": 1, "elements": ["C", "O"], "radical_electrons": 0, "isotope_atoms": 0}}
+    assert "unresolved_enhanced_stereochemistry" in chembl.chemistry_issues(identity, scope)
+    with pytest.raises(ValueError, match="unresolved_enhanced_stereochemistry"):
+        trainer.features([text])
+
+
+def test_absolute_stereo_preserves_existing_identity_and_features():
+    from tools.product import train_public_assay_selector as trainer
+    text = "CC[C@H](O)c1ccccc1"
+    assert mod.chemical_identity(text) == mod.chemical_identity(text + " |a:2|")
+    assert (trainer.features([text]) == trainer.features([text + " |a:2|"])).all()
+
+
+def test_unresolved_identity_rejected_before_observations(tmp_path):
+    from tools.product import train_public_assay_selector as trainer
+
+    class ForbiddenObservations:
+        def __iter__(self):
+            raise AssertionError("observations read before chemistry admission")
+
+    records, _, _ = mod.build_dataset(**inputs(tmp_path))
+    row = records[0]
+    row["chemical_identity"]["unresolved_stereochemistry"] = True
+    row["eligible_for_split_assignment"] = True
+    row["admission_issues"] = []
+    row["observations"] = ForbiddenObservations()
+    accepted, ledger = trainer.cohort(records, row["target_state_sha256"], "Ki")
+    assert accepted == []
+    assert ledger[0]["reason"] == "unresolved_enhanced_stereochemistry"

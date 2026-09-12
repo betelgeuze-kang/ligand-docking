@@ -359,6 +359,8 @@ def read_captures(capture_path, expected_sha, manifest, plan, scope, indexed, ph
 def chemistry_issues(identity, scope):
     chemistry = scope["chemistry_scope"]
     issues = []
+    if identity.get("unresolved_stereochemistry"):
+        issues.append("unresolved_enhanced_stereochemistry")
     if not chemistry["heavy_atoms_min"] <= identity["heavy_atom_count"] <= chemistry["heavy_atoms_max"]:
         issues.append("chemical_size_outside_scope")
     if (identity["fragment_count"] != chemistry["fragment_count"]
