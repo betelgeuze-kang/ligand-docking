@@ -128,6 +128,24 @@ def _atomic(path: Path, text: str) -> None:
             tmp.unlink()
 
 
+def _cross_geometry_observation(row: dict) -> dict:
+    """Carry bounded pose observations into the summary without grading validity."""
+    observation = row.get("pose_geometry_observation") or {}
+    cross = (observation.get("groups") or {}).get("cross") or {}
+    observed = observation.get("status") == "observed"
+    closest = cross.get("closest_pairs") or []
+    return {
+        "status": observation.get("status", "unavailable"),
+        "reason": observation.get("reason"),
+        "search_radius_angstrom": observation.get("search_radius_angstrom"),
+        "pair_count_within_radius": cross.get("pair_count_within_radius") if observed else None,
+        "closest_distance_angstrom": (
+            min(pair["distance_angstrom"] for pair in closest) if observed and closest else None),
+        "physical_validity_assessed": observation.get("physical_validity_assessed", False),
+        "affects_score_or_admission": observation.get("affects_score_or_admission", False),
+    }
+
+
 def _html_report(report: dict) -> str:
     def esc(value):
         return html.escape(str(value), quote=True)
@@ -138,11 +156,19 @@ def _html_report(report: dict) -> str:
                 "<p>Status: " + esc(report["status"]) + "</p>",
                 "<p>Requested backend: " + esc(report["backend_requested"]) +
                 "; executed physics backend: " + esc(report["backend_executed"]) + "</p>"]
-    sections.append("<h2>Supplied pose results</h2><table><tr><th>Index</th><th>Pose</th><th>Status</th><th>Cross energy (kcal/mol)</th></tr>")
+    sections.append("<h2>Supplied pose results</h2><table><tr><th>Index</th><th>Pose</th><th>Status</th><th>Cross energy (kcal/mol)</th><th>Observation radius (Å)</th><th>Cross pairs within observation radius</th><th>Closest observed cross distance (Å)</th></tr>")
     for row in report.get("physics", {}).get("poses", []):
-        sections.append("<tr>" + "".join("<td>" + esc(row.get(key)) + "</td>" for key in (
-            "request_index", "pose_id", "status", "cross_energy_kcal_per_mol")) + "</tr>")
-    sections.append("</table>")
+        observation = row.get("cross_geometry_observation") or {}
+        count = observation.get("pair_count_within_radius")
+        distance = observation.get("closest_distance_angstrom")
+        cells = [row.get(key) for key in (
+            "request_index", "pose_id", "status", "cross_energy_kcal_per_mol")]
+        cells.extend([observation.get("search_radius_angstrom", "unavailable"),
+                      count if count is not None else "unavailable",
+                      distance if distance is not None else (
+                          "none observed" if count == 0 else "unavailable")])
+        sections.append("<tr>" + "".join("<td>" + esc(value) + "</td>" for value in cells) + "</tr>")
+    sections.append("</table><p>Short cross separations are observations. Numerical completion does not establish pose validity or training eligibility.</p>")
     for name in ("physics.json", "assay-shadow.json"):
         if any(item.get("name") == name for item in report.get("artifacts", {}).values()):
             sections.append('<p><a href="' + name + '">' + name + '</a></p>')
@@ -305,6 +331,7 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
                                       "poses": [{"request_index": row["request_index"],
                                                  "pose_id": row.get("case_id"), "status": row["status"],
                                                  "evaluation_completed": row.get("evaluation_completed") is True,
+                                                 "cross_geometry_observation": _cross_geometry_observation(row),
                                                  "cross_energy_kcal_per_mol": row.get("result", {}).get("quantities", {}).get("cross_total_kcal_per_mol"),
                                                  "coordinate_count": len(row.get("evaluated_ligand_coordinates_angstrom") or [])}
                                                 for row in result["rows"]]}

@@ -426,3 +426,56 @@ def test_compatibility_dispatch_does_not_hide_function_body_typeerror():
     with pytest.raises(TypeError, match="body failure"):
         _optional_context_call(broken, (2,), "context")
     assert len(calls) == 3
+
+
+def test_short_contact_observations_reach_summary_html_and_resume(tmp_path):
+    from tests.unit.test_prepared_rigid_poses import _pose
+    r = request(tmp_path)
+    r["prepared_request"]["poses"] = [
+        _pose("short", -3.5), _pose("separated", 0.0), _pose("overlap", -4.0)]
+    run = tmp_path / "observed-run"
+    report = workflow.run_workflow(r, run_dir=run)
+    raw = physics(run, 1)
+    assert report["physics"]["denominator"] == dict(requested=3, evaluated=2, failed=1, skipped=0)
+    for row, original in zip(report["physics"]["poses"], raw["rows"]):
+        observation = row["cross_geometry_observation"]
+        cross = original["pose_geometry_observation"]["groups"]["cross"]
+        assert observation["pair_count_within_radius"] == cross["pair_count_within_radius"]
+        assert observation["physical_validity_assessed"] is False
+        assert observation["affects_score_or_admission"] is False
+    short, separated, overlap = report["physics"]["poses"]
+    assert short["cross_geometry_observation"]["pair_count_within_radius"] == 1
+    assert short["cross_geometry_observation"]["closest_distance_angstrom"] == 0.5
+    assert short["status"] == "evaluated"  # Observation does not change numerical admission.
+    assert separated["cross_geometry_observation"]["pair_count_within_radius"] == 0
+    assert separated["cross_geometry_observation"]["closest_distance_angstrom"] is None
+    assert overlap["status"] == "failed"
+    html = (run / "attempt-000001" / "report.html").read_text()
+    assert "Cross pairs within observation radius" in html
+    assert "Closest observed cross distance" in html
+    assert "0.5" in html
+    resumed = workflow.run_workflow(r, run_dir=run, resume=True)
+    assert [x["cross_geometry_observation"] for x in resumed["physics"]["poses"]] == [
+        x["cross_geometry_observation"] for x in report["physics"]["poses"]]
+
+
+def test_unavailable_geometry_is_not_reported_as_measured_zero(tmp_path, monkeypatch):
+    from betelgeuze_engine.product import prepared_source_geometry
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("fresh synthetic observation failure")
+    monkeypatch.setattr(prepared_source_geometry, "observe_prepared_source_geometry", unavailable)
+    report = workflow.run_workflow(request(tmp_path), run_dir=tmp_path / "unavailable-run")
+    assert report["physics"]["denominator"]["evaluated"] == 2
+    for row in report["physics"]["poses"]:
+        obs = row["cross_geometry_observation"]
+        assert obs["status"] == "unavailable"
+        assert obs["pair_count_within_radius"] is None
+        assert obs["closest_distance_angstrom"] is None
+        assert obs["reason"] == "source_geometry_observation_failed"
+
+
+def test_missing_historical_pose_observation_stays_unavailable():
+    obs = workflow._cross_geometry_observation({"status": "evaluated"})
+    assert obs["status"] == "unavailable"
+    assert obs["pair_count_within_radius"] is None
+    assert obs["closest_distance_angstrom"] is None

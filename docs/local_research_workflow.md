@@ -83,3 +83,17 @@ cross energies, with links to complete local JSON artifacts. It contains no scri
 external assets, uploads or merged assay/physical score. Do not serve private run
 folders publicly. Directory ownership/hashes protect local integrity, not an
 independent scientific signature or hostile same-user modifications.
+
+## Per-pose cross geometry observations
+
+The summary and HTML expose each pose's existing cross observation radius, pair
+count and closest observed distance. Measured zero pairs remains zero; missing
+or failed observations remain unavailable. These bounded observations do not
+change energy, forces, admission, execution status or training eligibility. A
+completed calculation is not evidence of a physically valid pose. Full atom
+identities and geometric observations remain in `physics.json`.
+
+`cross_geometry_observation` is an additive summary field. No checkpoint or
+score schema is migrated. Existing workflow source-hash resume checks remain:
+use the original source for existing runs, or a new run directory with this
+source. Missing historical observations are not reconstructed as measured zero.
