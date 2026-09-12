@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/physics/**"
+      - "betelgeuze_engine/product/reference_pair_lj.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
+      - "tests/unit/test_engine_v2_reference_pair_lj.py"
       - "tests/unit/test_engine_v2_reference_diagnostics.py"
       - "tests/unit/test_engine_v2_reference_forcefield_v2.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
@@ -26,8 +28,10 @@ on:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/physics/**"
+      - "betelgeuze_engine/product/reference_pair_lj.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
+      - "tests/unit/test_engine_v2_reference_pair_lj.py"
       - "tests/unit/test_engine_v2_reference_diagnostics.py"
       - "tests/unit/test_engine_v2_reference_forcefield_v2.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
@@ -73,9 +77,14 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            betelgeuze_engine
+            betelgeuze_ai_md
+            core
             tools/check_engine_v2_architecture.py
+            .github/workflows/ci-engine-v2-reference-physics.yml
             tests/unit/test_engine_v2_reference_constrained_minimization.py
             tests/unit/test_engine_v2_reference_physics.py
+            tests/unit/test_engine_v2_reference_pair_lj.py
             tests/unit/test_engine_v2_reference_diagnostics.py
             tests/unit/test_engine_v2_reference_forcefield_v2.py
             tests/unit/test_engine_v2_reference_minimization.py
@@ -105,6 +114,29 @@ jobs:
           python -m pip install pytest==8.3.5 cryptography==46.0.5 numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
+      - name: Record exact source identity
+        shell: bash
+        run: |
+          python - <<'PYCODE'
+          import hashlib, json, os, pathlib, platform, subprocess, sys
+          roots = ('betelgeuze_engine_v2', 'betelgeuze_engine', 'betelgeuze_ai_md', 'core')
+          files = sorted(p for root in roots for p in pathlib.Path(root).rglob('*.py'))
+          files += sorted(pathlib.Path('tests/unit').glob('test_engine_v2_reference*.py'))
+          files += [pathlib.Path('.github/workflows/ci-engine-v2-reference-physics.yml'),
+                    pathlib.Path('tests/unit/test_engine_v2_orchestrator_contract.py'),
+                    pathlib.Path('tools/check_engine_v2_architecture.py')]
+          event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          payload = {
+              'checkout_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'pull_request_head_sha': event.get('pull_request', {}).get('head', {}).get('sha'),
+              'python': sys.version, 'platform': platform.platform(),
+              'source_sha256': {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+              'scope': 'synthetic contracts only; no public structure acquisition, fitting, protected qualification or customer execution',
+          }
+          pathlib.Path('reference-physics-source.json').write_text(json.dumps(payload, indent=2) + '\n')
+          PYCODE
+
       - name: Compile and enforce architecture boundary
         run: |
           python -m compileall -q betelgeuze_engine_v2
@@ -114,7 +146,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python -m pytest -vv -x \
+          python -m pytest -vv -x --junitxml=reference-physics-junit.xml \
             tests/unit/test_engine_v2_orchestrator_contract.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_diagnostics.py \
@@ -132,6 +164,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
+            tests/unit/test_engine_v2_reference_pair_lj.py \
             tests/unit/test_engine_v2_reference_solvation.py > reference-physics.log 2>&1
           status=$?
           cat reference-physics.log
@@ -142,6 +175,12 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: reference-physics-py${{ matrix.python-version }}-${{ github.run_id }}
-          path: reference-physics.log
+          path: |
+            reference-physics.log
+            reference-physics-junit.xml
+            reference-physics-source.json
+            betelgeuze_engine/product/reference_pair_lj.py
+            tests/unit/test_engine_v2_reference_pair_lj.py
+            .github/workflows/ci-engine-v2-reference-physics.yml
           if-no-files-found: error
           retention-days: 7
