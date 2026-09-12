@@ -189,6 +189,17 @@ def method_supported(method, activity, document):
     if not isinstance(method.get("description"), str):
         return False
     text = method["description"].casefold()
+    # Catalogue IDs do not erase an explicit conflicting receptor in the
+    # source method. This is a bounded contradiction check, not NLP validation.
+    receptor_mentions = {
+        number + subtype
+        for number, subtype in re.findall(
+            r"(?<![a-z0-9])5\s*[-‐‑–—]?\s*ht\s*[-‐‑–—]?\s*([1-7])\s*([a-f])?(?![a-z0-9])",
+            text,
+        )
+    }
+    if activity["target_chembl_id"] == "CHEMBL3371" and receptor_mentions - {"6"}:
+        return False
     return (
         method.get("assay_chembl_id") == activity["assay_chembl_id"]
         and method.get("document_chembl_id")
