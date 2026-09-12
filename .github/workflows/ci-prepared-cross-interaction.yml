@@ -185,6 +185,7 @@ jobs:
             tools/product/observe_mmcif_ligand_coordinates.py
             tests/unit/test_mmcif_ligand_observation.py
             tools/product/score_prepared_cross_interactions.py
+            tools/product/verify_prepared_cross_numerics.py
             betelgeuze_product/json_output.py
             betelgeuze_engine/product/prepared_assay_shadow.py
             betelgeuze_engine/product/public_assay_selector_shadow.py
@@ -196,7 +197,9 @@ jobs:
             tests/unit/test_compiled_gromacs_cross_input.py
             tests/unit/test_prepared_source_geometry.py
             tests/unit/test_score_prepared_cross_interactions.py
+            tests/unit/test_prepared_cross_numeric_check.py
             docs/prepared_cross_interaction_development.md
+            docs/prepared_cross_numeric_check.md
             .github/workflows/ci-prepared-cross-interaction.yml
           if-no-files-found: error
           include-hidden-files: true
