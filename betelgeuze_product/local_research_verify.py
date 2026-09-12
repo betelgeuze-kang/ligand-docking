@@ -143,13 +143,15 @@ def verify_run(run_dir: Path, *, attempt: int | None = None) -> dict[str, Any]:
     it is never relabelled a successful calculation. Interrupted latest attempts
     are reported incomplete instead of silently choosing an older success.
     """
-    from .local_research_workflow import MAX_REQUEST_BYTES, _decode, _json, _snapshot_request
+    from .local_research_workflow import (MAX_REQUEST_BYTES, PUBLICATION_POLICY, COMPLETION_SCHEMA,
+                                          _decode, _json, _snapshot_request)
 
     result: dict[str, Any] = {
         "schema_version": "local_research_verification_v1", "status": "invalid", "exit_code": 2,
         "scope": "local_receipt_integrity_not_authentication_or_scientific_validation",
         "source_authenticated": False, "scientifically_validated": False, "resume_authorized": False,
         "execution_performed": False, "artifacts_verified": [], "html_verified": False,
+        "summary_receipt_verified": False,
     }
     root_fd = lock_fd = attempt_fd = None
     try:
@@ -165,7 +167,7 @@ def verify_run(run_dir: Path, *, attempt: int | None = None) -> dict[str, Any]:
             _require(bool(ids) and max(ids) <= 10000, "no_valid_attempt")
             attempt = max(ids)
         result["attempt"] = attempt
-        raw, _ = _read_or_hash(root_fd, "request.json", limit=MAX_REQUEST_BYTES)
+        raw, binding_hash = _read_or_hash(root_fd, "request.json", limit=MAX_REQUEST_BYTES)
         binding = _decode(raw)
         _require(type(binding) is dict and set(binding) == {"request", "workflow_source_sha256"}
                  and _digest(binding.get("workflow_source_sha256")), "invalid_request_binding")
@@ -181,6 +183,32 @@ def verify_run(run_dir: Path, *, attempt: int | None = None) -> dict[str, Any]:
         if report.get("status") == "running":
             result.update(status="incomplete", reason="attempt_not_finalized")
             return result
+        publication = report.get("publication_policy")
+        _require(publication in (None, PUBLICATION_POLICY), "unknown_publication_policy")
+        if publication == PUBLICATION_POLICY:
+            try:
+                completion_raw, completion_hash = _read_or_hash(attempt_fd, "complete.json", limit=4096)
+            except FileNotFoundError:
+                result.update(status="incomplete", reason="missing_final_completion_receipt")
+                return result
+            completion = _decode(completion_raw)
+            _require(type(completion) is dict and set(completion) == {
+                         "schema_version", "attempt", "report_sha256", "request_binding_sha256"}
+                     and completion["schema_version"] == COMPLETION_SCHEMA
+                     and type(completion["attempt"]) is int and completion["attempt"] == attempt
+                     and completion["report_sha256"] == report_hash
+                     and completion["request_binding_sha256"] == binding_hash,
+                     "completion_receipt_mismatch")
+            result["summary_receipt_verified"] = True
+        else:
+            # Legacy attempts never had this marker. Do not silently accept a
+            # damaged modern report whose publication field disappeared.
+            try:
+                os.stat("complete.json", dir_fd=attempt_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                raise _Invalid("completion_marker_without_publication_policy")
         _check_summary(report, request)
         artifacts = report.get("artifacts")
         _require(type(artifacts) is dict and set(artifacts).issubset(ARTIFACT_NAMES), "invalid_artifact_inventory")
@@ -200,6 +228,9 @@ def verify_run(run_dir: Path, *, attempt: int | None = None) -> dict[str, Any]:
         # Detect replaced receipts too; readers retain the same opened run directory.
         _, again = _read_or_hash(attempt_fd, "report.json", limit=MAX_REPORT_BYTES)
         _require(again == report_hash, "report_changed_during_verification")
+        if publication == PUBLICATION_POLICY:
+            _, again = _read_or_hash(attempt_fd, "complete.json", limit=4096)
+            _require(again == completion_hash, "completion_changed_during_verification")
         raw, _ = _read_or_hash(root_fd, "request.json", limit=MAX_REQUEST_BYTES)
         _require(_decode(raw) == binding, "request_changed_during_verification")
         result.update(status="intact", exit_code=0, workflow_status=report["status"],

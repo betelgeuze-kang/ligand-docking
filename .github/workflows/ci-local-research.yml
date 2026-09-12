@@ -7,6 +7,8 @@ on:
       - 'betelgeuze_product/rocm_diagnostic.py'
       - 'betelgeuze_product/local_research_verify.py'
       - 'tests/unit/test_local_research_delivery.py'
+      - 'betelgeuze_product/native_backend_diagnostic.py'
+      - 'tests/unit/test_local_research_native_boundary.py'
       - 'betelgeuze_engine_v2/**'
       - 'tools/product/score_prepared_cross_interactions.py'
       - 'tests/unit/test_local_research_workflow.py'
@@ -21,6 +23,8 @@ on:
       - 'betelgeuze_product/rocm_diagnostic.py'
       - 'betelgeuze_product/local_research_verify.py'
       - 'tests/unit/test_local_research_delivery.py'
+      - 'betelgeuze_product/native_backend_diagnostic.py'
+      - 'tests/unit/test_local_research_native_boundary.py'
       - 'tests/unit/test_local_research_workflow.py'
       - '.github/workflows/ci-local-research.yml'
   workflow_dispatch:
@@ -74,8 +78,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check --isolated --no-cache betelgeuze_product/local_research_workflow.py betelgeuze_product/rocm_diagnostic.py betelgeuze_product/local_research_verify.py tests/unit/test_local_research_delivery.py betelgeuze_engine/product/public_assay_streaming.py tests/unit/test_local_research_workflow.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_local_research_workflow.py tests/unit/test_prepared_pose_resume.py tests/unit/test_prepared_rigid_poses.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_local_research_delivery.py tests/unit/test_github_workflow_trust_boundaries.py --junitxml=local-research.xml 2>&1 | tee local-research.log
+          python -m ruff check --isolated --no-cache betelgeuze_product/local_research_workflow.py betelgeuze_product/rocm_diagnostic.py betelgeuze_product/local_research_verify.py tests/unit/test_local_research_delivery.py betelgeuze_engine/product/public_assay_streaming.py tests/unit/test_local_research_workflow.py betelgeuze_product/native_backend_diagnostic.py tests/unit/test_local_research_native_boundary.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_local_research_workflow.py tests/unit/test_prepared_pose_resume.py tests/unit/test_prepared_rigid_poses.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_local_research_delivery.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_local_research_native_boundary.py --junitxml=local-research.xml 2>&1 | tee local-research.log
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
