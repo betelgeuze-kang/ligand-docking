@@ -5,9 +5,11 @@ children exercise process handling only and never count as AMD qualification.
 """
 from __future__ import annotations
 
+import copy
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -367,3 +369,186 @@ def test_probe_cancel_cleanup_does_not_swallow_cancellation(monkeypatch):
     with pytest.raises(KeyboardInterrupt):
         rocm.diagnose_rocm_isolated(probe=True)
     assert calls == [child.pid] and child.calls == 2
+
+
+# Cost and completion-summary regressions; synthetic end-to-end fixtures.
+@pytest.fixture(scope="module")
+def saved(tmp_path_factory):
+    root = tmp_path_factory.mktemp("accounting-real")
+    r = request(root)
+    run = root / "run"
+    fresh = workflow.run_workflow(r, run_dir=run)
+    resumed = workflow.run_workflow(r, run_dir=run, resume=True)
+    return r, run, fresh, resumed
+
+
+@pytest.mark.parametrize("field", ["wall_seconds", "cpu_seconds", "assay_stage_wall_seconds", "physics_and_output_wall_seconds"])
+@pytest.mark.parametrize("value", [-1., True, "1", math.inf, math.nan])
+def test_impossible_cost_is_not_a_valid_saved_summary(saved, field, value):
+    request_value, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report["cost"][field] = value
+    with pytest.raises(ValueError):
+        verifier._check_summary(report, request_value)
+
+
+@pytest.mark.parametrize("key,value", [("peak_rss", -1), ("peak_rss", True), ("peak_rss", 1.5),
+                                      ("peak_rss_scope", "gpu_vram"), ("peak_rss_unit", "seconds"),
+                                      ("timing_scope", "whole_process_including_startup")])
+def test_memory_and_timing_scope_cannot_be_relabelled(saved, key, value):
+    r, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report["cost"][key] = value
+    with pytest.raises(ValueError):
+        verifier._check_summary(report, r)
+
+
+@pytest.mark.parametrize("key,value", [("restored_rows", 500), ("newly_completed_rows", True),
+                                      ("completed_rows", 0), ("attempt", 0),
+                                      ("terminal_failures_retried", True),
+                                      ("previous_row_costs_preserved", False)])
+def test_inconsistent_resume_accounting_is_rejected(saved, key, value):
+    r, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report["physics"]["resume_observation"][key] = value
+    with pytest.raises(ValueError):
+        verifier._check_summary(report, r)
+
+
+@pytest.mark.parametrize("key,value", [("pose_id", "different-candidate"), ("request_index", False),
+                                      ("coordinate_count", -1), ("coordinate_count", True),
+                                      ("cross_energy_kcal_per_mol", None),
+                                      ("cross_energy_kcal_per_mol", math.nan),
+                                      ("cross_energy_kcal_per_mol", True)])
+def test_pose_identity_and_observed_value_contract(saved, key, value):
+    r, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report["physics"]["poses"][0][key] = value
+    with pytest.raises(ValueError):
+        verifier._check_summary(report, r)
+
+
+def test_restored_results_are_not_new_cpu_execution(saved):
+    r, _, _, resumed = saved
+    report = copy.deepcopy(resumed)
+    report["backend_executed"] = "cpu"
+    with pytest.raises(ValueError):
+        verifier._check_summary(report, r)
+
+
+def test_worker_cpu_time_may_exceed_wall_time_and_zero_energy_is_observed(saved):
+    r, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report["cost"]["cpu_seconds"] = report["cost"]["wall_seconds"] * 8
+    report["physics"]["poses"][0]["cross_energy_kcal_per_mol"] = 0.0
+    verifier._check_summary(report, r)
+
+
+@pytest.mark.parametrize("field", ["resume_requested", "supplied_pose_count", "exit_code"])
+def test_booleans_and_wrong_types_are_not_execution_counts(saved, field):
+    r, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report[field] = 0 if field == "resume_requested" else False
+    with pytest.raises(ValueError):
+        verifier._check_summary(report, r)
+
+
+def test_fresh_and_resumed_reports_remain_read_only_verifiable(saved):
+    _, run, fresh, resumed = saved
+    for attempt, report in ((1, fresh), (2, resumed)):
+        observed = verifier.verify_run(run, attempt=attempt)
+        assert observed["status"] == "intact", observed
+        assert report["physics"]["poses"][0]["evaluation_completed"] is True
+    assert fresh["backend_executed"] == "cpu"
+    assert resumed["backend_executed"] is None
+
+
+@pytest.mark.parametrize("current_receipt", [False, True])
+def test_persisted_negative_cost_is_rejected_without_loading_an_engine(saved, tmp_path, monkeypatch, current_receipt):
+    import shutil
+    _, original, fresh, _ = saved
+    destination = tmp_path / "run"
+    destination.mkdir(mode=0o700)
+    shutil.copy2(original / "request.json", destination / "request.json")
+    shutil.copy2(original / ".workflow.lock", destination / ".workflow.lock")
+    shutil.copytree(original / "attempt-000001", destination / "attempt-000001")
+    path = destination / "attempt-000001/report.json"
+    report = copy.deepcopy(fresh)
+    report["cost"]["wall_seconds"] = -1.
+    path.write_text(json.dumps(report))
+    if current_receipt:
+        # Synthetic copied fixture only: test semantic validation even when a
+        # local writer has finalized self-consistent digests for invalid data.
+        # Never rewrite production receipts or the source-bound resume journal.
+        marker = path.with_name("complete.json")
+        completion = json.loads(marker.read_text())
+        completion["report_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        marker.write_text(json.dumps(completion))
+    from tools.product import score_prepared_cross_interactions as evaluator
+    monkeypatch.setattr(evaluator, "evaluate_request", lambda *a, **k: pytest.fail("verification executed physics"))
+    checked = verifier.verify_run(destination)
+    assert checked["status"] == "invalid"
+    assert checked["reason"] == ("invalid_cost_observation" if current_receipt else "completion_receipt_mismatch")
+    assert checked["summary_receipt_verified"] is current_receipt
+    assert str(tmp_path) not in json.dumps(checked)
+
+
+def test_legacy_reports_keep_their_original_observation_scope(saved):
+    r, _, fresh, _ = saved
+    report = copy.deepcopy(fresh)
+    report.pop("summary_contract_version", None)
+    for row in report["physics"]["poses"]:
+        row.pop("evaluation_completed", None)
+    verifier._check_summary(report, r)
+
+
+def test_binding_capacity_includes_newline_and_rejects_before_directory_creation(tmp_path, monkeypatch):
+    import hashlib
+    r = request(tmp_path)
+    snapshot = workflow._snapshot_request(r)
+    binding = {"request": snapshot, "workflow_source_sha256": hashlib.sha256(Path(workflow.__file__).read_bytes()).hexdigest()}
+    monkeypatch.setattr(workflow, "MAX_REQUEST_BYTES", len(workflow._json(binding).encode()))
+    run = tmp_path / "run"
+    with pytest.raises(ValueError, match="workflow_request_exceeds_capacity"):
+        workflow.run_workflow(r, run_dir=run)
+    assert not run.exists()
+
+
+def test_binding_exact_capacity_can_be_read_again(tmp_path, monkeypatch):
+    import hashlib
+    r = request(tmp_path)
+    r["backend"] = "hip_safe"  # blocked metadata-only request, never invokes GPU
+    binding = {"request": workflow._snapshot_request(r),
+               "workflow_source_sha256": hashlib.sha256(Path(workflow.__file__).read_bytes()).hexdigest()}
+    monkeypatch.setattr(workflow, "MAX_REQUEST_BYTES", len(workflow._json(binding).encode()) + 1)
+    run = tmp_path / "run"
+    workflow.run_workflow(r, run_dir=run)
+    assert verifier.verify_run(run)["status"] == "intact"
+    workflow.run_workflow(r, run_dir=run, resume=True)
+    assert verifier.verify_run(run)["status"] == "intact"
+
+
+@pytest.mark.parametrize("field", ["pose_id", "completed_rows", "evaluation_completed"])
+def test_inconsistent_consumer_result_is_not_finalized(tmp_path, monkeypatch, field):
+    from tools.product import score_prepared_cross_interactions as evaluator
+    real = evaluator.evaluate_request
+
+    def inconsistent(*args, **kwargs):
+        result = real(*args, **kwargs)
+        if field == "pose_id":
+            result["rows"][0]["case_id"] = "other-candidate"
+        elif field == "completed_rows":
+            result["resume_observation"]["completed_rows"] += 1
+        else:
+            result["rows"][0]["evaluation_completed"] = False
+        return result
+
+    monkeypatch.setattr(evaluator, "evaluate_request", inconsistent)
+    run = tmp_path / "run"
+    with pytest.raises(ValueError):
+        workflow.run_workflow(request(tmp_path), run_dir=run)
+    assert not (run / "attempt-000001/complete.json").exists()
+    # Interrupted/invalid publication never becomes a valid successful run.
+    observed = verifier.verify_run(run)
+    assert observed["status"] == "incomplete", observed
+    assert observed["summary_receipt_verified"] is False
