@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import hashlib
+import math
 import os
 from pathlib import Path
 import re
@@ -84,8 +85,82 @@ def _read_or_hash(directory_fd, name, *, limit=None, expected=None):
     return bytes(data) if data is not None else None, observed
 
 
+SUMMARY_CONTRACT = "local_research_cost_and_work_observation_v2"
+
+
+def _finite_number(value):
+    return type(value) in (int, float) and math.isfinite(value)
+
+
+def _check_cost(cost: dict, *, cpu_request: bool) -> None:
+    """Check measurement types/scope, not their authenticity or performance."""
+    _require(type(cost) is dict, "invalid_cost_summary")
+    times = {"wall_seconds", "cpu_seconds"}
+    if cpu_request:
+        times.update({"assay_stage_wall_seconds", "physics_and_output_wall_seconds"})
+    for key in times:
+        _require(_finite_number(cost.get(key)) and cost[key] >= 0, "invalid_cost_observation")
+    # CPU time may exceed wall time with parallel execution. Process peak RSS
+    # is NOT per-stage or GPU memory and must never be relabelled as either.
+    _require(_count(cost.get("peak_rss")), "invalid_cost_memory")
+    _require(cost.get("peak_rss_unit") in ("KiB", "platform_native")
+             and cost.get("peak_rss_scope") == "process_lifetime_high_water_not_stage_or_gpu_memory"
+             and cost.get("timing_scope") == (
+                 "workflow_call_through_artifact_hashes_excludes_final_report_and_process_startup"),
+             "invalid_cost_scope")
+
+
+def _check_completed_work(report: dict, request: dict, poses: list[dict], requested: int) -> None:
+    completion = report["physics"].get("resume_observation")
+    _require(type(completion) is dict
+             and completion.get("schema_version") == "prepared_rigid_pose_completion_journal_v1",
+             "invalid_completion_observation")
+    for key in ("restored_rows", "newly_completed_rows", "completed_rows", "attempt"):
+        _require(_count(completion.get(key)), "invalid_completion_count")
+    restored, new = completion["restored_rows"], completion["newly_completed_rows"]
+    _require(completion["attempt"] >= 1 and restored + new == completion["completed_rows"] == requested,
+             "completion_count_mismatch")
+    _require(report["resume_requested"] or restored == 0, "fresh_run_claims_restored_rows")
+    _require(_digest(completion.get("contract_sha256"))
+             and completion.get("current_preparation_observations_scope") == "this_invocation_only"
+             and completion.get("local_integrity_only_not_source_authentication") is True
+             and completion.get("previous_row_costs_preserved") is True
+             and completion.get("terminal_failures_retried") is False, "invalid_completion_scope")
+    version = report.get("summary_contract_version")
+    for index, row in enumerate(poses):
+        declared = request["prepared_request"]["poses"][index]
+        expected_id = (declared.get("pose_id") if type(declared) is dict
+                       and type(declared.get("pose_id")) is str else None)
+        _require(type(row.get("request_index")) is int and row["request_index"] == index
+                 and row.get("pose_id") == expected_id, "pose_identity_mismatch")
+        _require(_count(row.get("coordinate_count")), "invalid_coordinate_count")
+        if row["status"] == "evaluated":
+            _require(row["coordinate_count"] > 0 and _finite_number(row.get("cross_energy_kcal_per_mol")),
+                     "invalid_observed_pose_energy")
+        else:
+            _require(row.get("cross_energy_kcal_per_mol") is None, "unobserved_pose_has_energy")
+        if version == SUMMARY_CONTRACT:
+            _require(type(row.get("evaluation_completed")) is bool, "missing_execution_observation")
+            _require(row["status"] != "evaluated" or row["evaluation_completed"],
+                     "evaluated_pose_without_execution")
+    if version == SUMMARY_CONTRACT:
+        # A kernel may finish but a later source-integrity check may fail. That
+        # remains failed physics, while still recording that CPU work happened.
+        expected_backend = "cpu" if any(row["evaluation_completed"] for row in poses[restored:]) else None
+        _require(report["backend_executed"] == expected_backend, "new_execution_backend_mismatch")
+    elif new == 0:
+        # Old reports lack per-pose execution flags. Fully restored work is still
+        # known not to execute a new physical calculation in this invocation.
+        _require(report["backend_executed"] is None, "restored_work_claims_new_execution")
+
+
 def _check_summary(report: dict, request: dict) -> None:
     _require(report.get("schema_version") == "local_research_workflow_report_v1", "unknown_report_schema")
+    _require(report.get("summary_contract_version") in (None, SUMMARY_CONTRACT), "unknown_summary_contract")
+    _require(type(report.get("resume_requested")) is bool
+             and _count(report.get("supplied_pose_count"))
+             and type(report.get("exit_code")) is int, "invalid_execution_summary_types")
+    _check_cost(report.get("cost"), cpu_request=request["backend"] == "cpu")
     _require(report.get("backend_requested") == request["backend"], "backend_request_mismatch")
     _require(report.get("backend_executed") in (None, "cpu"), "unsupported_executed_backend")
     _require(report.get("supplied_pose_count") == len(request["prepared_request"]["poses"]), "pose_count_mismatch")
@@ -116,6 +191,7 @@ def _check_summary(report: dict, request: dict) -> None:
         for key in ("evaluated", "failed", "skipped"):
             _require(sum(row.get("status") == key for row in poses) == den[key], "pose_status_mismatch")
         _require(physics.get("result_backend") == "cpu", "physics_backend_mismatch")
+        _check_completed_work(report, request, poses, den["requested"])
         good_physics = den["failed"] == den["skipped"] == 0
     else:
         _require(physics.get("denominator") is None, "failed_physics_has_denominator")

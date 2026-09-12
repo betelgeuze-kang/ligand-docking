@@ -188,6 +188,13 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
     if type(resume) is not bool or type(probe_rocm) is not bool:
         raise ValueError("execution_flags_must_be_boolean")
     snapshot = _snapshot_request(request)
+    binding = {"request": snapshot,
+               "workflow_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    binding_text = _json(binding) + "\n"
+    # Count the exact persisted bytes (including the newline) before creating
+    # paths. Every accepted binding must fit the resume/verifier reader cap.
+    if len(binding_text.encode("utf-8")) > MAX_REQUEST_BYTES:
+        raise ValueError("workflow_request_exceeds_capacity")
     run_dir = Path(run_dir).absolute()
     for path in [*_input_refs(snapshot["prepared_request"]),
                  *([snapshot["assay_shadow"][k] for k in ("ligand_csv", "checkpoint")]
@@ -211,8 +218,6 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
         # Pin every later write and nested journal to the already opened directory.
         # Same-user path rename/replacement must not redirect an active run.
         run_dir = Path(f"/proc/self/fd/{directory_fd}")
-        binding = {"request": snapshot,
-                   "workflow_source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
         contract = run_dir / "request.json"
         if resume:
             fd = os.open(contract, os.O_RDONLY | os.O_NOFOLLOW)
@@ -223,10 +228,7 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
             if len(previous) > MAX_REQUEST_BYTES or _decode(previous) != binding:
                 raise ValueError("workflow_resume_contract_mismatch")
         else:
-            text = _json(binding)
-            if len(text.encode()) > MAX_REQUEST_BYTES:
-                raise ValueError("workflow_request_exceeds_capacity")
-            _atomic(contract, text + "\n")
+            _atomic(contract, binding_text)
         # Create-only attempt directories preserve incomplete and completed runs.
         index = 1
         while True:
@@ -240,6 +242,7 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
                     raise ValueError("too_many_workflow_attempts")
         report = {
             "schema_version": "local_research_workflow_report_v1", "status": "running",
+            "summary_contract_version": "local_research_cost_and_work_observation_v2",
             "attempt": index, "backend_requested": snapshot["backend"],
             "backend_executed": None, "resume_requested": resume,
             "request_sha256": hashlib.sha256(_json(snapshot).encode()).hexdigest(),
@@ -296,6 +299,7 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
                                       "preparation_observation": result.get("preparation_observation"),
                                       "poses": [{"request_index": row["request_index"],
                                                  "pose_id": row.get("case_id"), "status": row["status"],
+                                                 "evaluation_completed": row.get("evaluation_completed") is True,
                                                  "cross_energy_kcal_per_mol": row.get("result", {}).get("quantities", {}).get("cross_total_kcal_per_mol"),
                                                  "coordinate_count": len(row.get("evaluated_ligand_coordinates_angstrom") or [])}
                                                 for row in result["rows"]]}
@@ -311,7 +315,8 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
                 report["physics"] = {"status": "failed", "error_type": type(exc).__name__, "denominator": None}
             report["cost"]["physics_and_output_wall_seconds"] = time.perf_counter() - tick
             good_physics = (report["physics"]["status"] == "completed"
-                            and report["physics"]["denominator"]["failed"] == 0)
+                            and report["physics"]["denominator"]["failed"] == 0
+                            and report["physics"]["denominator"]["skipped"] == 0)
             shadow = report["assay_shadow"]
             good_shadow = (shadow["status"] == "disabled" or
                            (shadow.get("status") == "completed" and shadow.get("sidecar_status") == "written"
@@ -324,6 +329,10 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
             peak_rss_unit="KiB" if sys.platform.startswith("linux") else "platform_native",
             peak_rss_scope="process_lifetime_high_water_not_stage_or_gpu_memory",
             timing_scope="workflow_call_through_artifact_hashes_excludes_final_report_and_process_startup")
+        from .local_research_verify import _check_summary
+        # Writer and offline verifier agree on what counts as completed work.
+        # An inconsistent result stays non-final instead of publishing success.
+        _check_summary(report, snapshot)
         # Publish HTML first, then finalize its digest in the small JSON receipt.
         # Interrupted publication leaves a non-final report, not false success.
         report["artifact_integrity_policy"] = "referenced_artifacts_including_html_sha256_v1"
