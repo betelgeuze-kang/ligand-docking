@@ -148,3 +148,19 @@ environment. `pip check`, separate-process execution, two-row restoration and
 receipt verification passed. Package versions, wheel SHA-256 and installed module
 paths are preserved in the local evidence. Hosted execution of the new CI step
 remains unverified until that workflow runs.
+
+## Integrated assay development checkout
+
+The integrated research branch includes the existing provenance-preserving assay
+intake and selector-training tools alongside the prepared CPU consumer. These
+`tools.product` commands are development tools run from the checkout; they are
+not wheel entry points and are not needed to resume an installed physics run.
+Install `.[research,assay-development]` from the checkout after installing CPU
+Torch as above. The `assay-development` extra supplies the SciPy/scikit-learn
+versions used by the assay workflow, including Ridge fitting and ranking metrics.
+
+Source/parent/assay reservations, enhanced stereo abstention, native method
+review, and physical/assay state matching remain owned by their existing modules.
+Integrating the code does not admit any public data, reassign evaluation sources,
+register a checkpoint, or promote a model. Production/physical qualification is
+not inferred from the combined synthetic test suite.
