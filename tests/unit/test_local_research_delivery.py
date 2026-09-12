@@ -570,6 +570,7 @@ class NoDeveloperTools(importlib.abc.MetaPathFinder):
         if fullname == "tools" or fullname.startswith("tools."):
             raise ModuleNotFoundError("developer tools are not installed")
 
+sys.path.insert(0, sys.argv[3])
 sys.meta_path.insert(0, NoDeveloperTools())
 from betelgeuze_product.local_research_workflow import run_workflow
 from betelgeuze_product.local_research_verify import verify_run
@@ -585,6 +586,8 @@ assert verify_run(run)["status"] == "intact"
 assert not any(name == "tools" or name.startswith("tools.") for name in sys.modules)
 '''
     result = subprocess.run([sys.executable, "-B", "-c", code, str(request_path),
-                             str(tmp_path / "installed-run")],
-                            cwd=tmp_path, capture_output=True, text=True, timeout=60)
+                             str(tmp_path / "installed-run"),
+                             str(Path(workflow.__file__).resolve().parents[1])],
+                            cwd=tmp_path, capture_output=True, text=True, timeout=60,
+                            env=dict(os.environ, PYTHONPATH=""))
     assert result.returncode == 0, result.stdout + result.stderr
