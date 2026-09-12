@@ -243,9 +243,14 @@ def run_pre_docking_shadow(*, ligand_csv, ligand_sdf, docking_request_json,
                             snapshot, spool, None, schema, binding, load_error, chunk_size)
                     if _copy_source(ligand_csv) != result["input_sha256"]:
                         raise ValueError("csv_source_changed_during_prediction")
-                    result.update(status="completed", reason=load_error, input_header=header,
-                                  requested_rows=requested, evaluated_rows=evaluated,
-                                  unsupported_rows=requested - evaluated)
+                    # An intact source containing no data rows was read, but
+                    # no candidate was evaluated. Keep the known zero counts
+                    # distinct from unreadable input (unknown counts), and do
+                    # not let a header-only file turn into successful inference.
+                    result.update(status="completed" if requested else "not_evaluated",
+                                  reason=load_error or ("no_csv_data_rows" if not requested else None),
+                                  input_header=header, requested_rows=requested,
+                                  evaluated_rows=evaluated, unsupported_rows=requested - evaluated)
         except Exception as exc:
             spool.seek(0)
             spool.truncate()

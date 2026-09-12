@@ -203,6 +203,7 @@ def _check_summary(report: dict, request: dict) -> None:
         counts = [shadow.get(k) for k in ("requested_rows", "evaluated_rows", "unsupported_rows")]
         _require(all(_count(n) for n in counts) and counts[0] == counts[1] + counts[2],
                  "shadow_denominator_mismatch")
+        _require(counts[0] > 0, "empty_completed_shadow")
     good_shadow = (shadow.get("status") == "disabled" or
                    (shadow.get("status") == "completed" and shadow.get("sidecar_status") == "written"
                     and shadow.get("unsupported_rows") == 0))
