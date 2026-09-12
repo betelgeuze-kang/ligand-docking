@@ -107,8 +107,8 @@ same writer. Running a built wheel therefore does not require the checkout-only
 CPU evaluation, completed resume and offline report verification in a new process.
 
 Torch, NumPy and RDKit must be available in the selected interpreter for this
-research path. The root wheel's current base dependency list does not provision
-Torch or RDKit. A wheel built with `--no-deps` is not a complete offline research
+research path. The `research` extra provisions the tested Torch and RDKit
+versions; the base install does not require these optional runtimes. A wheel built with `--no-deps` is not a complete offline research
 distribution. Start a new run when moving from checkout to installed sources:
 checkpoint source binding intentionally rejects an implementation change.
 
@@ -120,3 +120,31 @@ An additional candidate run explicitly excluded the optional native extension;
 all imported project modules came from the installed wheel. This is an installed
 CPU consumer check, not a clean-machine dependency installation, hosted CI result,
 scientific validation, or native/GPU qualification.
+
+For a CPU installation into a new virtual environment, install the CPU Torch
+wheel first, then the product wheel's research extra. This avoids resolving a
+GPU Torch distribution from the general package index:
+
+```sh
+python3 -m venv /absolute/new-research-env
+/absolute/new-research-env/bin/python -I -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+/absolute/new-research-env/bin/python -I -m pip install '/absolute/wheels/betelgeuze_md_product-0.1.0-py3-none-any.whl[research]'
+/absolute/new-research-env/bin/python -I -m pip check
+```
+
+`tools/product/verify_installed_local_research.py` runs with that interpreter's
+`-I` flag and a supplied fresh synthetic two-pose request. It rejects project or
+numerical imports outside the virtual environment, verifies CPU Torch, launches
+separate installed CLI processes for execution/resume/verification, and checks
+that both original rows are restored exactly. It preserves commands, stdout,
+stderr, package versions, module paths and the request digest in a new evidence
+directory. CI now includes this same clean-environment wheel check. The script
+itself is developer tooling and is not required by the installed product.
+
+A subsequent local clean-environment check on 2026-09-13 installed all base
+requirements plus `research` in a virtual environment with system site packages
+disabled. Torch 2.6.0+cpu, RDKit 2026.03.6 and NumPy 1.26.4 were loaded from that
+environment. `pip check`, separate-process execution, two-row restoration and
+receipt verification passed. Package versions, wheel SHA-256 and installed module
+paths are preserved in the local evidence. Hosted execution of the new CI step
+remains unverified until that workflow runs.
