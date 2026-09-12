@@ -132,8 +132,8 @@ def test_changed_request_is_not_a_resume(tmp_path, field):
 def test_prepared_hip_request_never_silently_runs_cpu(tmp_path, monkeypatch, backend):
     r = request(tmp_path)
     r["backend"] = backend
-    from tools.product import score_prepared_cross_interactions as evaluator
-    monkeypatch.setattr(evaluator, "evaluate_request", lambda *a, **k: pytest.fail("CPU fallback"))
+    from betelgeuze_engine.product import prepared_rigid_poses as evaluator
+    monkeypatch.setattr(evaluator, "evaluate_rigid_pose_request", lambda *a, **k: pytest.fail("CPU fallback"))
     result = workflow.run_workflow(r, run_dir=tmp_path / "run")
     assert result["status"] == "blocked_backend" and result["backend_executed"] is None
     assert result["physics"]["status"] == "not_run"
@@ -350,12 +350,12 @@ def test_changed_physical_source_is_rejected_without_retrying_saved_results(tmp_
 
 def test_missing_previous_journal_is_not_a_silent_new_run(tmp_path, monkeypatch):
     import shutil
-    from tools.product import score_prepared_cross_interactions as evaluator
+    from betelgeuze_engine.product import prepared_rigid_poses as evaluator
     r = request(tmp_path)
     run = tmp_path / "run"
     workflow.run_workflow(r, run_dir=run)
     shutil.rmtree(run / "physics-checkpoint")
-    monkeypatch.setattr(evaluator, "evaluate_request", lambda *a, **k: pytest.fail("missing checkpoint was recomputed"))
+    monkeypatch.setattr(evaluator, "evaluate_rigid_pose_request", lambda *a, **k: pytest.fail("missing checkpoint was recomputed"))
     result = workflow.run_workflow(r, run_dir=run, resume=True)
     assert result["exit_code"] == 2
     assert result["physics"]["status"] == "failed"

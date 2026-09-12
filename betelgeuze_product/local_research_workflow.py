@@ -305,7 +305,8 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
             report["cost"]["assay_stage_wall_seconds"] = time.perf_counter() - tick
             tick = time.perf_counter()
             try:
-                from tools.product.score_prepared_cross_interactions import evaluate_request, _write_report_json
+                from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request as evaluate_request
+                from .json_output import write_report_json as _write_report_json
                 journal = run_dir / "physics-checkpoint"
                 intent = run_dir / "physics-intent.json"
                 journal_resume = False

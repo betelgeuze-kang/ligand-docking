@@ -97,3 +97,26 @@ identities and geometric observations remain in `physics.json`.
 score schema is migrated. Existing workflow source-hash resume checks remain:
 use the original source for existing runs, or a new run directory with this
 source. Missing historical observations are not reconstructed as measured zero.
+
+## Installed CPU workflow
+
+The workflow calls the packaged rigid-pose evaluator directly. The compact JSON
+writer lives in `betelgeuze_product.json_output`; the developer CLI imports the
+same writer. Running a built wheel therefore does not require the checkout-only
+`tools` namespace. The no-developer-tools regression performs actual synthetic
+CPU evaluation, completed resume and offline report verification in a new process.
+
+Torch, NumPy and RDKit must be available in the selected interpreter for this
+research path. The root wheel's current base dependency list does not provision
+Torch or RDKit. A wheel built with `--no-deps` is not a complete offline research
+distribution. Start a new run when moving from checkout to installed sources:
+checkpoint source binding intentionally rejects an implementation change.
+
+Local evidence on 2026-09-13 compared wheels built from the development baseline
+and this change. With the same pre-existing numerical dependencies, the baseline
+failed with `ModuleNotFoundError`; the candidate completed two fresh synthetic
+poses, restored both without recomputation, and verified HTML/JSON receipts.
+An additional candidate run explicitly excluded the optional native extension;
+all imported project modules came from the installed wheel. This is an installed
+CPU consumer check, not a clean-machine dependency installation, hosted CI result,
+scientific validation, or native/GPU qualification.

@@ -89,8 +89,8 @@ def test_mutated_artifacts_are_rejected_with_no_recalculation(tmp_path, monkeypa
     else:
         raw = path.read_bytes()
         path.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])  # same size, so hash is checked
-    from tools.product import score_prepared_cross_interactions as consumer
-    monkeypatch.setattr(consumer, "evaluate_request", lambda *a, **k: pytest.fail("verifier computed physics"))
+    from betelgeuze_engine.product import prepared_rigid_poses as consumer
+    monkeypatch.setattr(consumer, "evaluate_rigid_pose_request", lambda *a, **k: pytest.fail("verifier computed physics"))
     changed = _digests(run)
     result = verifier.verify_run(run)
     assert result["status"] == "invalid", result
@@ -163,8 +163,8 @@ def test_latest_interrupted_attempt_not_replaced_by_older_success(tmp_path, monk
         raise KeyboardInterrupt
     monkeypatch.setattr(workflow, "_shadow_status", interrupt)
     # Same request binding is required; interrupt the evaluator on a resume.
-    from tools.product import score_prepared_cross_interactions as consumer
-    monkeypatch.setattr(consumer, "evaluate_request", interrupt)
+    from betelgeuze_engine.product import prepared_rigid_poses as consumer
+    monkeypatch.setattr(consumer, "evaluate_rigid_pose_request", interrupt)
     with pytest.raises(KeyboardInterrupt):
         workflow.run_workflow(r, run_dir=run, resume=True)
     latest = verifier.verify_run(run)
@@ -484,8 +484,8 @@ def test_persisted_negative_cost_is_rejected_without_loading_an_engine(saved, tm
         completion = json.loads(marker.read_text())
         completion["report_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         marker.write_text(json.dumps(completion))
-    from tools.product import score_prepared_cross_interactions as evaluator
-    monkeypatch.setattr(evaluator, "evaluate_request", lambda *a, **k: pytest.fail("verification executed physics"))
+    from betelgeuze_engine.product import prepared_rigid_poses as evaluator
+    monkeypatch.setattr(evaluator, "evaluate_rigid_pose_request", lambda *a, **k: pytest.fail("verification executed physics"))
     checked = verifier.verify_run(destination)
     assert checked["status"] == "invalid"
     assert checked["reason"] == ("invalid_cost_observation" if current_receipt else "completion_receipt_mismatch")
@@ -530,8 +530,8 @@ def test_binding_exact_capacity_can_be_read_again(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("field", ["pose_id", "completed_rows", "evaluation_completed"])
 def test_inconsistent_consumer_result_is_not_finalized(tmp_path, monkeypatch, field):
-    from tools.product import score_prepared_cross_interactions as evaluator
-    real = evaluator.evaluate_request
+    from betelgeuze_engine.product import prepared_rigid_poses as evaluator
+    real = evaluator.evaluate_rigid_pose_request
 
     def inconsistent(*args, **kwargs):
         result = real(*args, **kwargs)
@@ -543,7 +543,7 @@ def test_inconsistent_consumer_result_is_not_finalized(tmp_path, monkeypatch, fi
             result["rows"][0]["evaluation_completed"] = False
         return result
 
-    monkeypatch.setattr(evaluator, "evaluate_request", inconsistent)
+    monkeypatch.setattr(evaluator, "evaluate_rigid_pose_request", inconsistent)
     run = tmp_path / "run"
     with pytest.raises(ValueError):
         workflow.run_workflow(request(tmp_path), run_dir=run)
@@ -552,3 +552,39 @@ def test_inconsistent_consumer_result_is_not_finalized(tmp_path, monkeypatch, fi
     observed = verifier.verify_run(run)
     assert observed["status"] == "incomplete", observed
     assert observed["summary_receipt_verified"] is False
+
+
+def test_workflow_does_not_require_checkout_tools_package(tmp_path):
+    """The installed CPU path must work when developer tooling is absent."""
+    r = request(tmp_path)
+    request_path = tmp_path / "installed-request.json"
+    _write_json(request_path, r)
+    code = r'''
+import importlib.abc
+import json
+from pathlib import Path
+import sys
+
+class NoDeveloperTools(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "tools" or fullname.startswith("tools."):
+            raise ModuleNotFoundError("developer tools are not installed")
+
+sys.meta_path.insert(0, NoDeveloperTools())
+from betelgeuze_product.local_research_workflow import run_workflow
+from betelgeuze_product.local_research_verify import verify_run
+request = json.loads(Path(sys.argv[1]).read_text())
+run = Path(sys.argv[2])
+first = run_workflow(request, run_dir=run)
+assert first["exit_code"] == 0, first
+second = run_workflow(request, run_dir=run, resume=True)
+assert second["exit_code"] == 0, second
+assert second["physics"]["resume_observation"]["restored_rows"] == 2
+assert second["backend_executed"] is None
+assert verify_run(run)["status"] == "intact"
+assert not any(name == "tools" or name.startswith("tools.") for name in sys.modules)
+'''
+    result = subprocess.run([sys.executable, "-B", "-c", code, str(request_path),
+                             str(tmp_path / "installed-run")],
+                            cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr

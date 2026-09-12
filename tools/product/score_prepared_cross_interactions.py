@@ -16,6 +16,8 @@ import resource
 import sys
 import time
 
+from betelgeuze_product.json_output import write_report_json as _write_report_json
+
 SCHEMA = "prepared_cross_interaction_request_v1"
 SHADOW_SCHEMA = "prepared_cross_interaction_with_assay_shadow_request_v1"
 SCHEMA_V2 = "prepared_cross_interaction_request_v2"
@@ -120,27 +122,6 @@ def evaluate_request(request: dict, *, checkpoint_dir=None, resume=False) -> dic
                                     else "prepared_cross_interaction_with_assay_shadow_report_v1")
         report["assay_selector_shadow"] = shadow_summary
     return report
-
-
-def _write_report_json(result: dict, output) -> None:
-    """Keep the full JSON payload while encoding at most one case at a time."""
-    options = {"sort_keys": True, "separators": (",", ":"), "allow_nan": False}
-    output.write("{")
-    for index, key in enumerate(sorted(result)):
-        if index:
-            output.write(",")
-        output.write(json.dumps(key) + ":")
-        value = result[key]
-        if key == "rows" and isinstance(value, list):
-            output.write("[")
-            for row_index, row in enumerate(value):
-                if row_index:
-                    output.write(",")
-                output.write(json.dumps(row, **options))
-            output.write("]")
-        else:
-            output.write(json.dumps(value, **options))
-    output.write("}\n")
 
 
 def main(argv=None) -> int:
