@@ -173,8 +173,13 @@ def _shadow_status(selector: dict, output: Path) -> dict:
         raise ValueError("shadow_checkpoint_changed")
     if result.get("input_sha256") != selector["input_sha256"]:
         raise ValueError("shadow_input_changed")
-    return {key: result.get(key) for key in (
+    summary = {key: result.get(key) for key in (
         "status", "requested_rows", "evaluated_rows", "unsupported_rows", "sidecar_status")}
+    # Only forward a fixed diagnostic code. Other producer reasons may contain
+    # private source paths or exception details and stay out of this summary.
+    if result.get("reason") == "no_csv_data_rows":
+        summary["reason"] = "no_csv_data_rows"
+    return summary
 
 
 def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
