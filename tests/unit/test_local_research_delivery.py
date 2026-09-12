@@ -177,9 +177,12 @@ def test_backward_report_without_html_digest_is_explicitly_unverified(tmp_path):
     data = json.loads(path.read_text())
     del data["artifacts"]["html"]
     del data["artifact_integrity_policy"]
+    del data["publication_policy"]
+    (run / "attempt-000001/complete.json").unlink()
     _write_json(path, data)
     checked = verifier.verify_run(run)
     assert checked["status"] == "intact" and checked["html_verified"] is False
+    assert checked["summary_receipt_verified"] is False
 
 
 @pytest.mark.parametrize("attempt", [True, 0, -1, 10001, "1"])

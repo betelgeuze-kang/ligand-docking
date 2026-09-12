@@ -24,6 +24,8 @@ from .rocm_diagnostic import diagnose_rocm_isolated as diagnose_rocm
 
 SCHEMA = "local_research_workflow_request_v1"
 MAX_REQUEST_BYTES = 1024 * 1024
+PUBLICATION_POLICY = "final_report_digest_v1"
+COMPLETION_SCHEMA = "local_research_attempt_completion_v1"
 
 
 def _json(value: Any) -> str:
@@ -325,9 +327,17 @@ def run_workflow(request: dict, *, run_dir: Path, resume: bool = False,
         # Publish HTML first, then finalize its digest in the small JSON receipt.
         # Interrupted publication leaves a non-final report, not false success.
         report["artifact_integrity_policy"] = "referenced_artifacts_including_html_sha256_v1"
+        report["publication_policy"] = PUBLICATION_POLICY
         _atomic(attempt / "report.html", _html_report(report))
         report["artifacts"]["html"] = _artifact(attempt / "report.html")
         _atomic(attempt / "report.json", _json(report) + "\n")
+        # Last commit point binds even the small report's numeric summaries and
+        # source binding. It detects local corruption, not hostile-owner forgery.
+        # An interruption before this create-only marker is not finalized.
+        completion = {"schema_version": COMPLETION_SCHEMA, "attempt": index,
+                      "report_sha256": _hash_file(attempt / "report.json"),
+                      "request_binding_sha256": _hash_file(contract)}
+        _atomic(attempt / "complete.json", _json(completion) + "\n")
         return report
     finally:
         if lock_fd is not None:
@@ -344,7 +354,33 @@ def main(argv=None) -> int:
     parser.add_argument("--verify-run", action="store_true", help="Read-only verification; no calculation or journal access")
     parser.add_argument("--attempt", type=int, help="Attempt to verify (default: latest)")
     parser.add_argument("--probe-rocm", action="store_true")
+    parser.add_argument("--diagnose-native", action="store_true",
+                        help="Isolated, explicitly supplied test-only native fixed64 request; not prepared physics")
+    parser.add_argument("--native-request", type=Path)
+    parser.add_argument("--native-sha256")
+    parser.add_argument("--native-backend", choices=("cpp_cpu_reference", "rust_cpu", "hip_safe", "hip_fast"))
+    parser.add_argument("--native-device", type=int)
+    parser.add_argument("--native-timeout", type=float)
     args = parser.parse_args(argv)
+    native_options = (args.native_request, args.native_sha256, args.native_backend,
+                      args.native_device, args.native_timeout)
+    if args.diagnose_native:
+        if (args.request or args.run_dir or args.resume or args.diagnose_only or args.probe_rocm
+                or args.verify_run or args.attempt is not None
+                or any(v is None for v in native_options[:3])):
+            parser.error("diagnose-native requires native-request, native-sha256, native-backend only with optional native-device/timeout")
+        from .native_backend_diagnostic import observe_native_request
+        try:
+            report = observe_native_request(args.native_request, expected_sha256=args.native_sha256,
+                                            backend=args.native_backend,
+                                            device_ordinal=0 if args.native_device is None else args.native_device,
+                                            timeout_seconds=30.0 if args.native_timeout is None else args.native_timeout)
+        except Exception as exc:
+            report = {"status": "invalid_options", "error_type": type(exc).__name__, "exit_code": 2}
+        print(_json(report))
+        return report["exit_code"]
+    if any(v is not None for v in native_options):
+        parser.error("native options require diagnose-native")
     if args.verify_run:
         if args.run_dir is None or args.request or args.resume or args.diagnose_only or args.probe_rocm:
             parser.error("verify-run requires only run-dir and optional attempt")
