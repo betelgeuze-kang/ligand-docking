@@ -95,3 +95,12 @@ they do not execute a GPU. The real isolated child in CPU CI confirms that a
 missing compiled provider is rejected, not replaced by Python or CPU work.
 Actual AMD/native execution, numeric parity, MD, public benchmarks, model training
 and customer qualification require separate authorized environments and evidence.
+
+## Worker crash handling
+
+The Linux native diagnostic worker sets its own dumpability to zero and verifies
+that setting before loading/executing native code. This complements RLIMIT_CORE,
+which does not suppress a piped host crash collector. Setup failure stops the
+worker; the parent keeps its existing deadline, reaping and no-fallback policy.
+No host core_pattern or parent-process dumpability is changed. The abort test
+still executes SIGABRT and requires its negative signal return code.

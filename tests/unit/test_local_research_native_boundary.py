@@ -147,7 +147,7 @@ def test_isolated_worker_failure_keeps_no_fallback(tmp_path, monkeypatch, kind):
     if kind == 'timeout':
         code = 'import time;time.sleep(20)'
     elif kind == 'abort':
-        code = 'import os,resource;resource.setrlimit(resource.RLIMIT_CORE,(0,0));os.abort()'
+        code = 'import os;from betelgeuze_product.native_backend_diagnostic import _disable_core_dumps;_disable_core_dumps();os.abort()'
     elif kind == 'malformed':
         code = "import os,sys;os.write(int(sys.argv[2]),b'not-json')"
     elif kind == 'overlong':
@@ -165,6 +165,7 @@ def test_isolated_worker_failure_keeps_no_fallback(tmp_path, monkeypatch, kind):
         assert result['status'] == 'native_probe_timeout'
     elif kind == 'abort':
         assert result['status'] == 'native_probe_process_failed'
+        assert result['process_returncode'] == -signal.SIGABRT
     else:
         assert result['status'] == 'native_probe_failed'
 
@@ -291,3 +292,34 @@ def test_native_subprocess_timeout_kills_descendants(tmp_path, monkeypatch):
     else:
         os.kill(pid, signal.SIGKILL)
         pytest.fail('diagnostic descendant remained alive')
+
+
+def test_actual_worker_disables_dump_before_native_execution(tmp_path, monkeypatch):
+    path, _, digest = _source(tmp_path)
+    code = (
+        'import os,sys;from betelgeuze_product import native_backend_diagnostic as n;'
+        'n._execute=lambda *args:os.abort();'
+        'sys.exit(n._worker_main([sys.argv[1],sys.argv[2],"hip_safe","0"]))')
+    _stub(monkeypatch, code)
+    result = native.observe_native_request(path, expected_sha256=digest, backend='hip_safe', timeout_seconds=0.3)
+    assert result['status'] == 'native_probe_process_failed'
+    assert result['process_returncode'] == -signal.SIGABRT
+    assert result['cleanup'] == 'child_reaped'
+    assert result['backend_observed'] is None
+    assert result['native_pipeline_completed'] is False
+
+
+def test_dump_setup_failure_prevents_native_execution(tmp_path, monkeypatch):
+    path, _, digest = _source(tmp_path)
+    marker = tmp_path / 'unexpected-native-entry'
+    code = (
+        'import sys;from pathlib import Path;from betelgeuze_product import native_backend_diagnostic as n;'
+        'n._disable_core_dumps=lambda:(_ for _ in ()).throw(OSError("synthetic setup failure"));'
+        f'n._execute=lambda *args:Path({str(marker)!r}).write_text("entered");'
+        'sys.exit(n._worker_main([sys.argv[1],sys.argv[2],"hip_safe","0"]))')
+    _stub(monkeypatch, code)
+    result = native.observe_native_request(path, expected_sha256=digest, backend='hip_safe', timeout_seconds=0.3)
+    assert not marker.exists()
+    assert result['status'] == 'native_probe_process_failed'
+    assert result['cleanup'] == 'child_reaped'
+    assert result['native_pipeline_completed'] is False

@@ -265,6 +265,25 @@ def main(argv=None) -> int:
     return result["exit_code"]
 
 
+def _disable_core_dumps() -> None:
+    """Disable dumps in this Linux worker, including piped crash collectors."""
+    import ctypes
+    import resource
+
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    # RLIMIT_CORE alone is ignored for a piped core_pattern. Set only this
+    # process's dumpability; the parent and host crash configuration are untouched.
+    libc = ctypes.CDLL(None, use_errno=True)
+    prctl = libc.prctl
+    prctl.argtypes = [ctypes.c_int, ctypes.c_ulong, ctypes.c_ulong,
+                     ctypes.c_ulong, ctypes.c_ulong]
+    prctl.restype = ctypes.c_int
+    if prctl(4, 0, 0, 0, 0) != 0:  # PR_SET_DUMPABLE
+        raise OSError(ctypes.get_errno(), "worker_dumpability_setup_failed")
+    if prctl(3, 0, 0, 0, 0) != 0:  # PR_GET_DUMPABLE
+        raise RuntimeError("worker_dumpability_not_disabled")
+
+
 def _worker_main(argv):
     import resource
     if len(argv) != 4:
@@ -273,7 +292,7 @@ def _worker_main(argv):
     backend, device = argv[2], int(argv[3])
     if input_fd < 3 or receipt_fd < 3 or input_fd == receipt_fd or backend not in BACKENDS or not 0 <= device < 64:
         return 2
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    _disable_core_dumps()
     resource.setrlimit(resource.RLIMIT_FSIZE, (MAX_RECEIPT_BYTES, MAX_RECEIPT_BYTES))
     with os.fdopen(input_fd, "rb") as source:
         raw = source.read(MAX_REQUEST_BYTES + 1)
