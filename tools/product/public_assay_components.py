@@ -4,7 +4,7 @@ Coverage is the explicitly supplied metadata universe, not an assertion about
 every molecule or protected dataset. Rejected rows remain graph vertices.
 Optional ChEMBL document and parent molecule source IDs add existing key kinds;
 they do not imply chemical-state equivalence or change existing node schemas.
-An explicit ChEMBL assay ID uses a v2 node with a distinct source_assay key.
+Explicit ChEMBL or PubChem assay IDs use v2 nodes with namespaced source_assay keys.
 Native patent publication identifiers add document keys. Existing hashed
 contexts must be rebuilt from native metadata to claim patent coverage.
 """
@@ -173,6 +173,14 @@ def node_from_raw(raw, identity, *, node_id, record_id, ligand_id, origin=None,
     assay = _optional_chembl_id(raw, "ChEMBL Assay ID", "invalid_chembl_assay_id")
     if assay is not None:
         tokens.append(("source_assay", "chembl:assay:"+assay))
+    pubchem_aid = raw.get("PubChem AID")
+    if pubchem_aid is not None:
+        if type(pubchem_aid) is int:
+            pubchem_aid = str(pubchem_aid)
+        if (not isinstance(pubchem_aid, str) or
+                re.fullmatch(r"[1-9][0-9]*", pubchem_aid) is None):
+            raise ValueError("invalid_pubchem_assay_id")
+        tokens.append(("source_assay", "pubchem:assay:" + pubchem_aid))
     if record_id and not record_id.endswith(":"):
         tokens.append(("record", record_id))
     if ligand_id:
@@ -191,7 +199,7 @@ def node_from_raw(raw, identity, *, node_id, record_id, ligand_id, origin=None,
             tokens.append(("inchikey_connectivity", key[:14]))
     declarations = policy_declarations(raw) + list(extra_declarations)
     reservation_status(declarations)
-    return {"schema_version": SCHEMA_V2 if assay is not None else SCHEMA,
+    return {"schema_version": SCHEMA_V2 if assay is not None or pubchem_aid is not None else SCHEMA,
             "node_id": node_id, "record_id": record_id,
             "keys": sorted({(kind, digest(value)) for kind, value in tokens if value}),
             "policy_declarations": declarations, "protected": bool(protected),
