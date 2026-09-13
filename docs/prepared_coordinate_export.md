@@ -51,6 +51,14 @@ the export request, report and prepared-input manifest are written. Downstream
 scoring therefore receives the written state, not the higher-precision supplied
 arrays. The original arrays are retained in `export-request.json` for audit.
 
+Validation uses the exact sorted-key JSON representation emitted in
+`prepared-input.json`. The returned prepared document uses that same ordering.
+Consequently, changing the insertion order of otherwise identical upstream
+evidence dictionaries does not change exported system hashes, and the report's
+hashes match re-reading the manifest. Caller input dictionaries are not mutated.
+This correction is at the writer boundary; the legacy derivation reader and
+the meaning of previously stored prepared-input files are unchanged.
+
 The completed output contains `derived.pdb`, `derived.sdf`, `derived.gro`,
 `export-request.json`, `export-report.json` and `prepared-input.json`. Passing
 this software contract does not establish acceptable geometry, force-field

@@ -1,6 +1,7 @@
 """Source-preserving serialization and consumer checks with synthetic inputs."""
 import copy
 import hashlib
+from itertools import permutations
 import json
 from pathlib import Path
 
@@ -145,3 +146,41 @@ def test_cli_success_and_duplicate_json_rejection(tmp_path, capsys):
     assert exporter.main(["--request", str(path), "--output-dir", str(tmp_path / "other")]) == 2
     assert "duplicate" in json.loads(capsys.readouterr().out)["reason"]
     assert not (tmp_path / "other").exists()
+
+
+def _distinct_method_evidence(request):
+    for label, ref in request["upstream_method"]["evidence"].items():
+        path = Path(ref["path"])
+        path.write_text("synthetic distinct evidence: " + label)
+        ref["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+@pytest.mark.parametrize("version", [1, 2, 3])
+@pytest.mark.parametrize("order", list(permutations(["method", "execution", "model"])))
+def test_text_export_hashes_match_emitted_manifest_for_all_evidence_orders(tmp_path, version, order):
+    request = make_request(tmp_path, version)
+    _distinct_method_evidence(request)
+    refs = request["upstream_method"]["evidence"]
+    request["upstream_method"]["evidence"] = {key: refs[key] for key in order}
+    before = copy.deepcopy(request)
+    result = exporter.export_prepared_coordinates(request, tmp_path / "result")
+    manifest = json.loads((tmp_path / "result/prepared-input.json").read_text())
+    loaded = load_prepared_gromacs_components(manifest)
+    assert request == before
+    assert list(request["upstream_method"]["evidence"]) == list(order)
+    for side in ["receptor", "ligand"]:
+        assert loaded[4][side + "_system_sha256"] == result[side + "_system_sha256"]
+    # The returned document and the bytes emitted to disk use the same order.
+    assert list(result["prepared_input"]["coordinate_derivation"]["evidence"]) == sorted(order)
+
+
+def test_equivalent_text_export_request_orders_share_system_identity(tmp_path):
+    request = make_request(tmp_path)
+    _distinct_method_evidence(request)
+    refs = request["upstream_method"]["evidence"]
+    identities = []
+    for i, order in enumerate(permutations(refs)):
+        request["upstream_method"]["evidence"] = {key: refs[key] for key in order}
+        result = exporter.export_prepared_coordinates(request, tmp_path / str(i))
+        identities.append((result["export_request_sha256"], result["receptor_system_sha256"], result["ligand_system_sha256"]))
+    assert len(set(identities)) == 1

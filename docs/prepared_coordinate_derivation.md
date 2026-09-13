@@ -82,3 +82,12 @@ legacy parent profiles, actual CPU consumer failures/denominators, and completed
 resume with transitive parent/method/output mutation rejection. They execute no
 minimization and use no experimental activity values or protected evaluation
 data. Original scientific and numerical failures remain separate evidence.
+
+For newly exported text-coordinate inputs, the coordinate exporter validates
+the same sorted-key JSON representation it writes and returns. Use its
+`prepared-input.json` as the replay artifact. The legacy reader retains its
+historical source-list ordering behavior for directly supplied in-memory
+dictionaries; its behavior is not changed by the writer correction. A report
+created with an earlier writer should be checked against its emitted manifest
+before relying on its system hashes. The newer binary64 coordinate-array
+profile has its own explicit source-order invariance contract.

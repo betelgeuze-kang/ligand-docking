@@ -162,6 +162,9 @@ def export_prepared_coordinates(request, output_dir):
     prepared = {"schema_version": DERIVED_SCHEMA, "parent_input": parent_request,
                 "derived_coordinates": sources, "source_declarations": request["source_declarations"],
                 "coordinate_derivation": record}
+    # The legacy reader retains insertion-ordered source metadata. Validate
+    # exactly the sorted JSON representation that will be emitted below.
+    prepared = json.loads(_json_bytes(prepared), object_pairs_hook=_object)
     receptor, ligand, _, _, provenance = load_prepared_gromacs_components(prepared)
     _require(receptor.coordinates[0].tolist() == rounded["protein_pdb"], "receptor coordinate roundtrip mismatch")
     _require(ligand.coordinates[0].tolist() == rounded["ligand_sdf"], "ligand coordinate roundtrip mismatch")
