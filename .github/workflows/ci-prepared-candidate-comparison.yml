@@ -1,0 +1,104 @@
+name: ci-prepared-candidate-comparison
+
+on:
+  pull_request:
+    paths:
+      - 'tools/product/compare_prepared_candidate_policies.py'
+      - 'tools/product/diagnose_prepared_cross_numerics.py'
+      - 'tools/product/public_chembl*.py'
+      - 'tools/product/train_public*selector.py'
+      - 'tools/product/public_assay*.py'
+      - 'tools/product/verify_prepared_cross_numerics.py'
+      - 'betelgeuze_engine/product/prepared*.py'
+      - 'betelgeuze_engine/product/v2_cross_interaction.py'
+      - 'betelgeuze_engine_v2/**'
+      - 'tests/unit/test_public_chembl_staged_intake.py'
+      - 'tests/unit/test_prepared_rigid_poses.py'
+      - 'tests/unit/test_score_prepared_cross_interactions.py'
+      - 'tests/unit/test_prepared_candidate_comparison.py'
+      - 'tests/unit/test_prepared_cross_force_diagnostic.py'
+      - 'docs/prepared_candidate_comparison.md'
+      - 'docs/prepared_cross_force_diagnostic.md'
+      - '.github/workflows/ci-prepared-candidate-comparison.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/product/compare_prepared_candidate_policies.py'
+      - 'tools/product/diagnose_prepared_cross_numerics.py'
+      - 'tools/product/public_chembl*.py'
+      - 'tools/product/train_public*selector.py'
+      - 'tools/product/public_assay*.py'
+      - 'tools/product/verify_prepared_cross_numerics.py'
+      - 'betelgeuze_engine/product/prepared*.py'
+      - 'betelgeuze_engine/product/v2_cross_interaction.py'
+      - 'betelgeuze_engine_v2/**'
+      - 'tests/unit/test_public_chembl_staged_intake.py'
+      - 'tests/unit/test_prepared_rigid_poses.py'
+      - 'tests/unit/test_score_prepared_cross_interactions.py'
+      - 'tests/unit/test_prepared_candidate_comparison.py'
+      - 'tests/unit/test_prepared_cross_force_diagnostic.py'
+      - 'docs/prepared_candidate_comparison.md'
+      - 'docs/prepared_cross_force_diagnostic.md'
+      - '.github/workflows/ci-prepared-candidate-comparison.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-cpu-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      CUDA_VISIBLE_DEVICES: ''
+      HIP_VISIBLE_DEVICES: ''
+      ROCR_VISIBLE_DEVICES: ''
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Install CPU test dependencies
+        run: |
+          python -m pip install pytest==8.3.5 numpy==1.26.4 scipy==1.15.3 scikit-learn==1.7.2 rdkit==2026.3.6 ruff==0.12.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Record checkout and source identities
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess, sys
+          root = pathlib.Path.cwd()
+          files = sorted(list(root.glob('tools/product/*.py')) + list(root.glob('tests/unit/test_prepared*py')))
+          data = {'head': subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+                  'python':sys.version, 'source_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+                  'scope':'synthetic CPU arithmetic and policy contracts; no public downloads or scientific qualification'}
+          pathlib.Path('candidate-comparison-source.json').write_text(json.dumps(data,indent=2)+'\n')
+          PY
+      - name: Lint and test
+        run: |
+          python -m ruff check --isolated --no-cache tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py --junitxml=candidate-comparison-junit.xml
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: candidate-comparison-cpu-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate-comparison-source.json
+            candidate-comparison-junit.xml
+            tools/product/compare_prepared_candidate_policies.py
+            tools/product/diagnose_prepared_cross_numerics.py
+            tests/unit/test_prepared_candidate_comparison.py
+            tests/unit/test_prepared_cross_force_diagnostic.py
+            docs/prepared_candidate_comparison.md
+            docs/prepared_cross_force_diagnostic.md
+            .github/workflows/ci-prepared-candidate-comparison.yml
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
