@@ -412,6 +412,9 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
     are checked again after parsing. The frame and chemical state are caller
     assertions; this function does no registration or chemical preparation.
     """
+    if type(request) is dict and request.get("schema_version") == "prepared_gromacs_coordinate_derivation_v1":
+        from betelgeuze_engine.product.prepared_coordinate_derivation import load_derived_prepared_gromacs_components
+        return load_derived_prepared_gromacs_components(request)
     _keys(request, {"schema_version", "protein_pdb", "protein_chains", "protein_atomtypes", "protein_defaults",
                     "ligand_sdf", "ligand_gro", "ligand_itp", "ligand_atomtypes", "ligand_defaults",
                     "ligand_atomtype_name_mapping", "ligand_residue_name_mapping", "naming_convention",
