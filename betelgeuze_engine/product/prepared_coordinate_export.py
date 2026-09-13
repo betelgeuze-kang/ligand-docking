@@ -79,14 +79,8 @@ def _json_bytes(value):
     return (json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
 
 
-def export_prepared_coordinates(request, output_dir):
-    """Write a new output directory and emit its request only after roundtrip checks.
-
-    Coordinates are explicit Angstrom arrays in parent atom order. No rotation,
-    fitting, interpolation, normalization, missing-atom generation or solver is
-    performed. Existing directories are never overwritten; a failed late check
-    can leave diagnostic files without a completed prepared-input manifest.
-    """
+def _validated_request(request):
+    """Validate shared coordinate-array input before either output format writes."""
     _keys(request, {"schema_version", "parent_input", "source_declarations", "coordinates_angstrom",
                     "upstream_method"}, "coordinate export request")
     _require(request["schema_version"] == SCHEMA, "unsupported coordinate export schema")
@@ -117,6 +111,19 @@ def export_prepared_coordinates(request, output_dir):
     _keys(method["evidence"], {"method", "execution", "model"}, "upstream evidence")
     for label, ref in method["evidence"].items():
         _require(bool(_read_source(ref, label, {})), "nonempty upstream evidence required")
+    return input_hash, request, parent, coordinates, method
+
+
+def export_prepared_coordinates(request, output_dir):
+    """Write a new output directory and emit its request only after roundtrip checks.
+
+    Coordinates are explicit Angstrom arrays in parent atom order. No rotation,
+    fitting, interpolation, normalization, missing-atom generation or solver is
+    performed. Existing directories are never overwritten; a failed late check
+    can leave diagnostic files without a completed prepared-input manifest.
+    """
+    input_hash, request, parent, coordinates, method = _validated_request(request)
+    parent_request = request["parent_input"]
     rendered, rounded, rounding = {}, {}, {}
     for key, side, system in [("protein_pdb", "receptor", parent[0]),
                                ("ligand_sdf", "ligand", parent[1]),
