@@ -12,6 +12,7 @@ import fcntl
 import hashlib
 import html
 import json
+import math
 import os
 from pathlib import Path
 import stat
@@ -44,13 +45,16 @@ def _read(path):
             raise ValueError('input_changed_or_exceeds_capacity')
     return raw
 
-def _bound(ref):
+def _bound_bytes(ref):
     if type(ref) is not dict or set(ref) != {'path', 'sha256'}:
         raise ValueError('exact_bound_file_required')
     raw = _read(ref['path'])
     if hashlib.sha256(raw).hexdigest() != ref['sha256']:
         raise ValueError('input_sha256_mismatch')
-    return _decode(raw)
+    return raw
+
+def _bound(ref):
+    return _decode(_bound_bytes(ref))
 
 def _parameters(document):
     from betelgeuze_engine_v2.physics import reference_parameters as p
@@ -94,8 +98,14 @@ def _load(request):
     return (system, _parameters(_bound(request['parameters'])), config)
 
 def _check_inputs(request):
+    """Recheck exact bytes after _load's strict semantic admission.
+
+    Re-read and hash each entire bounded file with the same identity checks.
+    Matching bytes cannot gain new JSON semantics; decoding them again is
+    redundant. No stat-only cache, relaxed parser or skipped file read is used.
+    """
     for key in ('system', 'parameters'):
-        _bound(request[key])
+        _bound_bytes(request[key])
 
 @contextmanager
 def _directory(path, *, resume):
@@ -178,6 +188,61 @@ def _evaluate(system, parameters, config):
     value = evaluate_reference_force_field(system, neighbors, parameters)
     return {'energy_kcal_per_mol': value.term.energy[0].item(), 'forces_kcal_per_mol_angstrom': value.term.forces.tolist()}
 
+_PHASE_NAMES = ('input_load', 'source_recheck', 'solver', 'result_recheck', 'checkpoint_write')
+
+def _phase_costs():
+    return {
+        'schema_version': 'reference_minimization_phase_costs_v1',
+        'scope': 'this_invocation_instrumented_substeps_only',
+        # Solver algorithm evaluations are not a count of all physical calls.
+        'force_evaluation_count_observed': False,
+        'phases': {name: {'calls': 0, 'wall_seconds': 0.0, 'cpu_seconds': 0.0}
+                   for name in _PHASE_NAMES},
+    }
+
+@contextmanager
+def _measure_phase(costs, name):
+    wall, cpu = time.perf_counter(), time.process_time()
+    try:
+        yield
+    finally:
+        phase = costs['phases'][name]
+        phase['calls'] += 1
+        phase['wall_seconds'] += time.perf_counter() - wall
+        phase['cpu_seconds'] += time.process_time() - cpu
+
+def _validate_phase_costs(invocation):
+    """Validate optional new observations; historical reports stay readable."""
+    if 'phase_costs' not in invocation:
+        return
+    value = invocation['phase_costs']
+    if (type(value) is not dict or set(value) != set(_phase_costs())
+            or value['schema_version'] != 'reference_minimization_phase_costs_v1'
+            or value['scope'] != 'this_invocation_instrumented_substeps_only'
+            or value['force_evaluation_count_observed'] is not False
+            or type(value['phases']) is not dict or set(value['phases']) != set(_PHASE_NAMES)):
+        raise ValueError('invalid_minimization_phase_costs')
+    calls = invocation.get('solver_calls')
+    if type(calls) is not int or calls < 0:
+        raise ValueError('invalid_minimization_phase_costs_calls')
+    expected = dict.fromkeys(_PHASE_NAMES, calls)
+    expected.update(input_load=1, source_recheck=2 * calls + 1)
+    for name, phase in value['phases'].items():
+        if (type(phase) is not dict or set(phase) != {'calls', 'wall_seconds', 'cpu_seconds'}
+                or type(phase['calls']) is not int or phase['calls'] != expected[name]):
+            raise ValueError('inconsistent_minimization_phase_costs_calls')
+        for clock in ('wall_seconds', 'cpu_seconds'):
+            duration = phase[clock]
+            try:
+                finite = type(duration) in (int, float) and math.isfinite(duration)
+            except OverflowError:
+                finite = False
+            if not finite or duration < 0 or (phase['calls'] == 0 and duration != 0):
+                raise ValueError('invalid_minimization_phase_costs_time')
+    # CPU time can exceed wall time on multithreaded numerical libraries.
+    # These phases deliberately do not purport to cover startup, restore,
+    # history archiving, runtime fingerprints or final report publication.
+
 def run_minimization(request, run_dir, *, resume=False, stop_after=None):
     """Resume original solver budgets; checkpointed does not mean converged.
 
@@ -195,7 +260,9 @@ def run_minimization(request, run_dir, *, resume=False, stop_after=None):
     request = _decode(_json(request))
     if len((_json(request) + '\n').encode()) > MAX_BYTES:
         raise ValueError('request_capacity_exceeded')
-    system, parameters, config = _load(request)
+    costs = _phase_costs()
+    with _measure_phase(costs, 'input_load'):
+        system, parameters, config = _load(request)
     if stop_after is not None and (type(stop_after) is not int or not 0 <= stop_after <= config.max_iterations):
         raise ValueError('invalid_absolute_pause_iteration')
     physical_source = _decode(canonical_system_json_bytes(system))
@@ -235,30 +302,37 @@ def run_minimization(request, run_dir, *, resume=False, stop_after=None):
                 target = min(config.max_iterations, accepted + request['checkpoint_every'])
                 if stop_after is not None:
                     target = min(target, stop_after)
-                _check_inputs(request)
-                value = minimize_reference_force_field(system, parameters, config, checkpoint=checkpoint, pause_after_accepted_iterations=target)
+                with _measure_phase(costs, 'source_recheck'):
+                    _check_inputs(request)
+                with _measure_phase(costs, 'solver'):
+                    value = minimize_reference_force_field(system, parameters, config, checkpoint=checkpoint, pause_after_accepted_iterations=target)
                 calls += 1
-                document = _decode(canonical_system_json_bytes(value.system))
-                reloaded = all_atom_system_from_canonical_json(_json(document))
-                if not torch.equal(value.system.coordinates.view(torch.int64), reloaded.coordinates.view(torch.int64)):
-                    raise ValueError('minimized_coordinate_roundtrip_failed')
-                evaluation = _evaluate(reloaded, parameters, config)
-                if evaluation['energy_kcal_per_mol'] != value.final_energy_kcal_per_mol:
-                    raise ValueError('minimized_energy_recheck_failed')
-                if not torch.isfinite(torch.tensor(evaluation['forces_kcal_per_mol_angstrom'], dtype=torch.float64)).all() or torch.linalg.vector_norm(torch.tensor(evaluation['forces_kcal_per_mol_angstrom'], dtype=torch.float64), dim=-1).max().item() != value.final_max_force_kcal_per_mol_angstrom:
-                    raise ValueError('minimized_force_recheck_failed')
-                changed = [i for i, (a, b) in enumerate(zip(system.coordinates[0].tolist(), value.system.coordinates[0].tolist())) if a != b]
-                _check_inputs(request)
-                if _decode(canonical_system_json_bytes(system)) != physical_source:
-                    raise ValueError('source_system_mutated')
+                with _measure_phase(costs, 'result_recheck'):
+                    document = _decode(canonical_system_json_bytes(value.system))
+                    reloaded = all_atom_system_from_canonical_json(_json(document))
+                    if not torch.equal(value.system.coordinates.view(torch.int64), reloaded.coordinates.view(torch.int64)):
+                        raise ValueError('minimized_coordinate_roundtrip_failed')
+                    evaluation = _evaluate(reloaded, parameters, config)
+                    if evaluation['energy_kcal_per_mol'] != value.final_energy_kcal_per_mol:
+                        raise ValueError('minimized_energy_recheck_failed')
+                    if not torch.isfinite(torch.tensor(evaluation['forces_kcal_per_mol_angstrom'], dtype=torch.float64)).all() or torch.linalg.vector_norm(torch.tensor(evaluation['forces_kcal_per_mol_angstrom'], dtype=torch.float64), dim=-1).max().item() != value.final_max_force_kcal_per_mol_angstrom:
+                        raise ValueError('minimized_force_recheck_failed')
+                    changed = [i for i, (a, b) in enumerate(zip(system.coordinates[0].tolist(), value.system.coordinates[0].tolist())) if a != b]
+                with _measure_phase(costs, 'source_recheck'):
+                    _check_inputs(request)
+                    if _decode(canonical_system_json_bytes(system)) != physical_source:
+                        raise ValueError('source_system_mutated')
                 saved = {'binding_sha256': _digest(binding), 'result': value.to_dict(), 'checkpoint': value.checkpoint.to_dict(), 'system': document, 'evaluation': evaluation, 'changed_atom_indices': changed, 'coordinate_status': 'derived' if changed else 'unchanged_parent', 'source_system_sha256': physical_source['system_sha256'], 'scientifically_validated': False, 'md_performed': False, 'gpu_performed': False, 'external_solver_called': False}
-                _save_checkpoint(directory, saved)
+                with _measure_phase(costs, 'checkpoint_write'):
+                    _save_checkpoint(directory, saved)
                 checkpoint = saved['checkpoint']
                 if value.status != 'checkpointed' or (stop_after is not None and value.accepted_iterations >= stop_after):
                     break
-        _check_inputs(request)
+        with _measure_phase(costs, 'source_recheck'):
+            _check_inputs(request)
         _publish(directory / 'final-system.json', saved['system'])
-        report = {**saved, 'invocation': {'solver_calls': calls, 'restored_terminal': terminal, 'previous_attempt_archive': previous_attempt, 'wall_seconds': time.perf_counter() - started, 'cpu_seconds': time.process_time() - cpu, 'past_interrupted_cost_known': False, 'cost_scope': 'this_invocation_excluding_final_publication'}}
+        report = {**saved, 'invocation': {'solver_calls': calls, 'restored_terminal': terminal, 'previous_attempt_archive': previous_attempt, 'wall_seconds': time.perf_counter() - started, 'cpu_seconds': time.process_time() - cpu, 'past_interrupted_cost_known': False, 'cost_scope': 'this_invocation_excluding_final_publication', 'phase_costs': costs}}
+        _validate_phase_costs(report['invocation'])
         _publish(directory / 'report.json', report)
         _atomic(directory / 'report.html', '<!doctype html><meta charset="utf-8"><h1>Reference minimization</h1><pre>' + html.escape(json.dumps(report['result'], indent=2)) + '</pre><p>CPU reference model; not validated MD or affinity.</p>')
         hashes = {name: hashlib.sha256(_read(directory / name)).hexdigest() for name in ('report.json', 'final-system.json', 'report.html')}
@@ -282,6 +356,7 @@ def verify_minimization_run(directory):
     report = _decode(_read(directory / 'report.json'))
     if final['binding_sha256'] != _digest(binding) or saved['binding_sha256'] != _digest(binding) or final['status'] != report['result']['status'] or any((report.get(key) != value for key, value in saved.items())) or (_decode(_read(directory / 'final-system.json')) != saved['system']):
         raise ValueError('minimization_publication_mismatch')
+    _validate_phase_costs(report['invocation'])
     return {'verification': 'passed', 'status': final['status'], 'scientifically_validated': False}
 
 def main(argv=None):
