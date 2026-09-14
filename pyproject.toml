@@ -9,6 +9,10 @@ description = "Local molecular structure analysis, ligand-docking readiness, CAM
 requires-python = ">=3.10"
 dynamic = ["dependencies"]
 
+[project.optional-dependencies]
+research = ["torch==2.6.0", "rdkit==2026.3.6"]
+assay-development = ["rdkit==2026.3.6", "scipy==1.15.3", "scikit-learn==1.7.2"]
+
 [project.scripts]
 betelgeuze-product = "betelgeuze_product.cli:main"
 betelgeuze-cameo = "betelgeuze_cameo.cli:main"

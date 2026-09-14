@@ -159,6 +159,50 @@ jobs:
             numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Run complete Engine v2 unit suite
+      - name: Record complete suite source and environment
+        shell: bash
         run: |
-          python -m pytest -q tests/unit/test_engine_v2_*.py
+          python - <<'PYCODE'
+          import hashlib, json, os, pathlib, platform, subprocess, sys
+          files = sorted(pathlib.Path('betelgeuze_engine_v2').rglob('*.py'))
+          files += sorted(pathlib.Path('tests/unit').glob('test_engine_v2_*.py'))
+          files += sorted(pathlib.Path('tools').rglob('*.py'))
+          files += [pathlib.Path('.github/workflows/ci-engine-v2-top-stack.yml')]
+          event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          payload = {
+              'checkout_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'pull_request_head_sha': event.get('pull_request', {}).get('head', {}).get('sha'),
+              'working_tree_status': subprocess.check_output(['git', 'status', '--porcelain'], text=True),
+              'python': sys.version, 'platform': platform.platform(),
+              'installed_packages': subprocess.check_output([sys.executable, '-m', 'pip', 'freeze'], text=True).splitlines(),
+              'source_sha256': {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+              'scope': 'complete Engine V2 unit suite; test results do not constitute scientific qualification or customer execution approval',
+          }
+          pathlib.Path('complete-engine-v2-source.json').write_text(json.dumps(payload, indent=2) + '\n')
+          PYCODE
+
+      - name: Run complete Engine v2 unit suite
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -q -ra --junitxml=complete-engine-v2-junit.xml \
+            tests/unit/test_engine_v2_*.py > complete-engine-v2.log 2>&1
+          status=$?
+          cat complete-engine-v2.log
+          printf '%s\n' "$status" > complete-engine-v2-exit-code.txt
+          exit "$status"
+
+      - name: Upload complete suite diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: complete-engine-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            complete-engine-v2.log
+            complete-engine-v2-junit.xml
+            complete-engine-v2-source.json
+            complete-engine-v2-exit-code.txt
+            .github/workflows/ci-engine-v2-top-stack.yml
+          if-no-files-found: error
+          retention-days: 7

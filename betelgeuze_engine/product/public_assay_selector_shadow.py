@@ -1,0 +1,552 @@
+"""Versioned public-assay selector compatibility, for pre-docking shadow only.
+
+No training tools are imported. Target identity is the caller's declaration;
+this adapter does not verify a receptor, an assay construct, or chemical OOD.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+ADAPTER_SCHEMA = "public_assay_selector_shadow_v1"
+FEATURES = {
+    "kind": "Morgan_bit_vector", "radius": 2, "bits": 1024,
+    "include_chirality": True, "available_at_stage": "pre_docking",
+    "requires_target_structure": False,
+    "target_encoding": "one_exact_target_state_per_model",
+}
+# Immutable v1 compatibility record. Adding a producer requires a reviewed migration.
+_APPROVED_V1 = {
+    "f3334484f501c56f58be673b56abf3a1789ce97909855ae1097c86cee230cd16": {
+        "source_sha256": "daae5205bb8d767805be0b786b3e85fa5c70aaecab61535fac5b224bdd562e0d",
+        "training_protocol_sha256": "3140e0b4fa974a5afb1121fdcbb254f47e92be20250069550e7d000db377a937",
+        "target_state_sha256": "b814cbb86d26ad260ab6e487614c96006d46eab45e53122fc17672457125bdfc",
+        "rdkit_version": "2026.03.6", "endpoint": "IC50",
+        "prediction_quantity": "negative_log10_molar_IC50",
+    },
+}
+# Compatibility registration is not scientific approval or a ranking promotion.
+# The CDK2/cyclin A2 development model did not improve its mean baseline.
+_REGISTERED_V2 = {
+    "00b52d1a6b7e6b7b1c801585adcbca0c73ac57ffe7b8c000cdbc20ad38f1e4fd": {
+        "source_sha256": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+        "training_protocol_sha256": "d3a03b2fca25e290b5ad95fc53169dba910b1a4b5cafdff24149ab1b043d5743",
+        "target_state_sha256": "52e47746dd4554dd346720ec0340848ab8e3a19adedf9c453c4d5557fe3576c6",
+        "identity_context_sha256": "f9882e243e973861844a6db119fde6263b77847e1517b1a8bbb9d513d52550ac",
+        "identity_component_implementation_sha256": "c21ea44055d60313eb8305f8f438a989b805748e98b90b010ebfce836b9ea29a",
+        "identity_component_policy": "all_supplied_metadata_components_before_target_endpoint_selection_v1",
+        "rdkit_version": "2026.03.6", "endpoint": "IC50",
+        "prediction_quantity": "negative_log10_molar_IC50",
+    },
+}
+
+
+# Native ChEMBL source bindings are catalogue annotations, not physical states.
+# This frozen model also failed to improve its development mean baseline.
+CHEMBL_SCHEMA = "public_chembl_cheap_selector_ridge_v1"
+CHEMBL_FEATURES = {
+    **FEATURES,
+    "target_encoding": "one_catalogue_target_annotation_per_model_not_physical_state",
+}
+_REGISTERED_CHEMBL_V1 = {
+    "5733e7ba2d21f643034ec111648b94244c5114dfd875391d874eb983e949dca6": {
+        "endpoint": "IC50",
+        "endpoint_subtype": "enzyme_inhibition_IC50",
+        "identity_context_sha256": "3accdbd3a19313fcee3366514d5165a29fb30d184c1a79cf691cdefaf2e59dbd",
+        "implementation_hashes": {
+            "chemical_identity": "a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b",
+            "components": "b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01",
+            "measurement": "83987579c318e2ecf5b210003b591606b5a0c0a82bf10010a15dbab955d5426e",
+            "normalizer": "d69204740b5cd296343b3beff8f0959f1e0e6c9cc1ad32512421471259508765",
+            "reused_featurizer_and_metrics": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+            "trainer": "9ed664bb08ce681f9cd1919bdb513a9b90a896e4fee753cd97e35562cd836996"
+        },
+        "intake_scope_sha256": "39db885ef26fee8f4b360309e6ae35e9b97deb8cff6e5d5674357d3ea6883491",
+        "mean_baseline": 5.5153571070070635,
+        "ood_status": "not_assessed",
+        "physical_energy": False,
+        "prediction_quantity": "negative_log10_molar_IC50",
+        "rdkit_version": "2026.03.6",
+        "split_plan_sha256": "ec80249b46e825f24029c8a097ab67497985b414f51fcd94e5495cd7efb11744",
+        "target_annotation_sha256": "0ab0f219820e5b0e7b27c07731f35db19b1130863660c46b9e099435b958294f",
+        "training_protocol_sha256": "995eb9935d7759642e1a5260879913969aaa51222a5e1237170dda259e294069",
+        "uncertainty": None
+    }
+}
+
+
+# Native BindingDB preassignment registration is compatibility only. The frozen
+# quality and coverage limitations remain attached per checkpoint; ranking stays disabled.
+BINDINGDB_SCHEMA = "public_bindingdb_preassigned_ridge_v1"
+BINDINGDB_FEATURES = dict(CHEMBL_FEATURES)
+# Exact chemistry scope from the manifest pinned inside the checkpoint. It is a
+# runtime admission rule, not a chemical OOD assessment or physical-state claim.
+BINDINGDB_CHEMISTRY_SCOPE = {
+    "elements": [
+        "H",
+        "C",
+        "N",
+        "O",
+        "F",
+        "P",
+        "S",
+        "Cl",
+        "Br",
+        "I"
+    ],
+    "formal_charge_abs_max": 2,
+    "fragment_count": 1,
+    "heavy_atoms_max": 70,
+    "heavy_atoms_min": 5,
+    "isotope_atoms": 0,
+    "radical_electrons": 0
+}
+_REGISTERED_BINDINGDB_V1 = {
+    # 5-HT6 reported Ki pilot; exact-byte compatibility, no ranking promotion.
+    '818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea': {'endpoint': 'Ki',
+                                                                      'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                                                                                                'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                                                                                                'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                                                                                                'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                                                                                                'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                                                                                                'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+                                                                      'manifest_sha256': '0acc8786b0bfe60b828595c835550b5d88a3c000273baab4c285d12715976517',
+                                                                      'mean_baseline': 7.535706307733418,
+                                                                      'ood_status': 'not_assessed',
+                                                                      'physical_energy': False,
+                                                                      'prediction_quantity': 'negative_log10_molar_Ki',
+                                                                      'rdkit_version': '2026.03.6',
+                                                                      'split_plan_sha256': '5f1eec4efdc89aa8c2fa99c47b5e4c2030fef034b0290521a2a96cacb0decc98',
+                                                                      'target_annotation_sha256': '09b5a4b9bd8437045099306faee937f0b1f08971373e7a8e4a56167b597ac296',
+                                                                      'training_protocol_sha256': '480d964b3efdbcec4f38ba866cc4d6754cea4f740fad334ba35a5ecae1e1cef1',
+                                                                      'uncertainty': None},
+    # VEGFR2 biochemical IC50 development model; compatibility only, NOT_PROMOTED.
+    '1255488791dd517bf12c261bb376c1e778def7bab1cb30e242ad427b3c4cb066': {'endpoint': 'IC50',
+     'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                               'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                               'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                               'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                               'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                               'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+     'manifest_sha256': 'd13579c1476ae763ec49d883c633f257fcdb00cc280b55047a82cd394f9a3981',
+     'mean_baseline': 6.899517362869471,
+     'ood_status': 'not_assessed',
+     'physical_energy': False,
+     'prediction_quantity': 'negative_log10_molar_IC50',
+     'rdkit_version': '2026.03.6',
+     'split_plan_sha256': 'b8f843bd08c5d0f7e487234ceb1e0f06d327e57077199739c7fd56107210f9df',
+     'target_annotation_sha256': '959ca32a35bcd81b910c2a4f1aef0ebc371b73b4b8832185401a8e2fd0c65ae9',
+     'training_protocol_sha256': 'fc0a6acb46d8089cb1f1a4ba53da9fc73d70a3ae8608f9f036a995d30d6cb156',
+     'uncertainty': None},
+    "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'endpoint': 'Ki',
+ 'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                           'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                           'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                           'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                           'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                           'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+ 'manifest_sha256': '0f22a9ae2b093a36ec5692efe5cd975f9da900fadc99208112cdbcb7134a450e',
+ 'mean_baseline': 6.668214640457227,
+ 'ood_status': 'not_assessed',
+ 'physical_energy': False,
+ 'prediction_quantity': 'negative_log10_molar_Ki',
+ 'rdkit_version': '2026.03.6',
+ 'split_plan_sha256': '587e631a8ff9502de54b7ac304a6767fe30b57a8d8dd49dcfb0838f8e078fb78',
+ 'target_annotation_sha256': 'ed5586c054c184e9acfeba06749fcc27b73051fe20c9070a3d8fbfa7192f5058',
+ 'training_protocol_sha256': 'debdb754d1d1282a24715fdfa7276bb76c4c0ec372e5f4783f96e1033457cf07',
+ 'uncertainty': None},
+    "d5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3": {
+        "endpoint": "IC50",
+        "implementation_hashes": {
+            "bindingdb_primitives": "a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b",
+            "bound_readers": "69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62",
+            "components": "b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01",
+            "selector_primitives": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+            "staged_intake": "3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e",
+            "staged_trainer": "a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916"
+        },
+        "manifest_sha256": "00b5fc2e017b1f00cb336b5e1747c992b21335ebfbfe88f8c893434f9cecb5c7",
+        "mean_baseline": 5.659657694904753,
+        "ood_status": "not_assessed",
+        "physical_energy": False,
+        "prediction_quantity": "negative_log10_molar_IC50",
+        "rdkit_version": "2026.03.6",
+        "split_plan_sha256": "bf0fffbc1e3d6d2666ed8e265c6638f3886879ef23a233924d72b9b623a88551",
+        "target_annotation_sha256": "b3e2d4ebe653299360781c289413d9b3796b6cb331673c4aaa47dd4ade994a39",
+        "training_protocol_sha256": "1525c6175d7ab6872eeb616fa46a8f8afac3f0bd64e74bfe1f7454405bc847e7",
+        "uncertainty": None
+    }
+,
+    "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
+        "endpoint": "Ki",
+        "implementation_hashes": {
+            "bindingdb_primitives": "a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b",
+            "bound_readers": "d69204740b5cd296343b3beff8f0959f1e0e6c9cc1ad32512421471259508765",
+            "components": "b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01",
+            "selector_primitives": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+            "staged_intake": "3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e",
+            "staged_trainer": "a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916"
+        },
+        "manifest_sha256": "1e7d39305219e0454069ca4668376a7936ac3c3f48a5e653cca845d84d7dc618",
+        "mean_baseline": 8.453163849459678,
+        "ood_status": "not_assessed",
+        "physical_energy": False,
+        "prediction_quantity": "negative_log10_molar_Ki",
+        "rdkit_version": "2026.03.6",
+        "split_plan_sha256": "7ff5d93367c714d72828bdd497371dac1c981a7905fff3b256ab2b034ba39d2b",
+        "target_annotation_sha256": "9359ee693bcd2a1342fbc39019a015888723cdaa006cf0e11a1b9d9fb9518a5f",
+        "training_protocol_sha256": "3ea86001a405f15b305522947e8f4f11128f112b91a340bc78134492db675cd9",
+        "uncertainty": None
+    }
+}
+
+
+# Ki v2 preserves its frozen producer source, distinct from later intake policy fixes.
+# The strict development evaluation worsened; this enables observations only.
+CHEMBL_KI_SCHEMA = "public_chembl_cheap_selector_ridge_v2"
+_REGISTERED_CHEMBL_V2 = {'c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b': {'endpoint': 'Ki',
+                                                                      'endpoint_subtype': 'enzyme_inhibition_Ki',
+                                                                      'identity_context_sha256': '0d3371c5da43a0f07f02eee43d5327f352f0028a3c82c07d92dbb55bbd030b04',
+                                                                      'implementation_hashes': {'chemical_identity': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                                                                                                'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                                                                                                'measurement': '83987579c318e2ecf5b210003b591606b5a0c0a82bf10010a15dbab955d5426e',
+                                                                                                'normalizer': '7685a2ccfa1d9b6fb23750a01d382f2b0244be026c42c5817e226eded793b62e',
+                                                                                                'reused_featurizer_and_metrics': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                                                                                                'trainer': '9437b41d3de95df8f1ac7576ac9e6e107e92da6fcf2f8c5aeaf0f63a3d0a4ab3'},
+                                                                      'intake_scope_sha256': 'd4fc3754801d263781576db8dd4f2176ce402d507b371b5ed78619b422e503dc',
+                                                                      'mean_baseline': 6.49811679504411,
+                                                                      'ood_status': 'not_assessed',
+                                                                      'physical_energy': False,
+                                                                      'prediction_quantity': 'negative_log10_molar_Ki',
+                                                                      'rdkit_version': '2026.03.6',
+                                                                      'split_plan_sha256': '0f508a826cd363bcb1c2b958c5c0125a307262e7ea32c7afbdb2fa24d0ec2300',
+                                                                      'target_annotation_sha256': 'd2725bf2131adcf8594e3ab8f2a446f4116a17b50ab8c34d799180bebff79351',
+                                                                      'training_protocol_sha256': '1ae8f4dc3bdac10816eccd46646ac5e080e4fb249704aadbe0575cb8e635860c',
+                                                                      'uncertainty': None}}
+
+# Evidence observations are separate from immutable checkpoint payloads. Later
+# identity audits can invalidate independence without rewriting historical weights.
+_CHECKPOINT_EVIDENCE = {
+    '818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea': {'all_exact_evaluation_rows_positive_at_declared_threshold': True,
+                                                                      'assay_condition_harmonization_verified': False,
+                                                                      'beyond_supplied_context_independence': 'not_established',
+                                                                      'calibration_mae_mean_baseline': 0.47745304617587114,
+                                                                      'calibration_mae_morgan_ridge': 0.39500236444227793,
+                                                                      'checkpoint_rehashed_for_new_runtime': False,
+                                                                      'development_mae_mean_baseline': 0.9245623971209685,
+                                                                      'development_mae_morgan_ridge': 0.7422282556254062,
+                                                                      'evaluation_summary_sha256': 'e4b442716269b25866f82bdea7a77f7f83d1ac213269c730271cb0ee737e43bf',
+                                                                      'primary_per_compound_measurements_verified': False,
+                                                                      'promotion_status': 'NOT_PROMOTED',
+                                                                      'requested_calibration_rows': 11,
+                                                                      'requested_development_rows': 13,
+                                                                      'retrieval_improvement_demonstrated': False,
+                                                                      'supported_calibration_rows': 11,
+                                                                      'supported_development_negative_count': 0,
+                                                                      'supported_development_positive_count': 12,
+                                                                      'supported_development_rows': 12},
+    "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'evaluation_summary_sha256': '78ffd57fe746822cbd126cfd484677ba93acb97764ea080e3acd22580574d86f',
+ 'promotion_status': 'NOT_PROMOTED',
+ 'calibration_quality': 'lower_mae_than_fitted_mean_on_16_of_29_rows',
+ 'development_quality': 'lower_mae_than_fitted_mean_on_4_of_27_rows',
+ 'supported_calibration_rows': 16,
+ 'requested_calibration_rows': 29,
+ 'supported_development_rows': 4,
+ 'requested_development_rows': 27,
+ 'supported_development_positive_count': 0,
+ 'development_recall_and_average_precision': None,
+ 'primary_per_compound_measurements_verified': False,
+ 'assay_condition_harmonization_verified': False,
+ 'beyond_supplied_context_independence': 'not_established',
+ 'checkpoint_rehashed_for_new_runtime': False},
+    'd5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3': {'evaluation_summary_sha256': 'a1be98fd16ca6232555277986c3700a1b4679bc2657437d131d217bf0b043a24',
+                                                                          'promotion_status': 'NOT_PROMOTED',
+                                                                          'calibration_quality': 'worse_mae_than_fitted_mean_on_16_of_18_rows',
+                                                                          'development_quality': 'worse_mae_than_fitted_mean_on_5_of_19_rows',
+                                                                          'supported_development_positive_count': 0,
+                                                                          'development_recall_and_average_precision': None,
+                                                                          'primary_per_compound_measurements_verified': False,
+                                                                          'assay_condition_harmonization_verified': False,
+                                                                          'beyond_supplied_context_independence': 'not_established',
+                                                                          'checkpoint_rehashed_for_new_runtime': False},
+    "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
+        "identity_independence_status": "failed_expanded_metadata_dependency_audit",
+        "identity_audit_sha256": "c6a94704724f6b0360ebe4874f35b43e6410d36f944975aa93c04da620968f12",
+        "historical_observation_only": True,
+        "new_independent_evaluation_allowed": False,
+        "new_training_from_connected_components_allowed": False,
+        "numeric_evaluation_label_leakage_proven": False,
+    },
+    "c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6c2e758049b": {
+        "identity_independence_status": "failed_expanded_metadata_dependency_audit",
+        "identity_audit_sha256": "cd824606922b654df4c4daaf460435ecd2a2a566ea79da7634e0d224a9a8dee8",
+        "identity_audit_scope": "partial_ChEMBL244_IC50_metadata_2000_of_3930_rows",
+        "historical_observation_only": True,
+        "new_independent_evaluation_allowed": False,
+        "new_training_from_connected_components_allowed": False,
+        "numeric_evaluation_label_leakage_proven": False,
+        "original_exact_fit_rows_connected_to_reserved": 5,
+        "beyond_supplied_context_independence": "not_established",
+        "strict_development_quality": "worse_mae_than_fitted_mean_on_3_of_68_rows",
+        "producer_source_head": "79e3c5fe55b9844a4812df9ce995754d55e10cd3",
+        "archived_source_policy_sha256": "a968c413f33e95b0ec43840a807b520a9d6bf1fd7dbc6f06cd0df0ccd1d1b358",
+        "checkpoint_rehashed_for_new_runtime": False,
+    },
+}
+
+
+class SelectorContractError(ValueError):
+    """Input is unavailable or outside the pinned shadow contract."""
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _strict_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise SelectorContractError("duplicate_checkpoint_key")
+        result[key] = value
+    return result
+
+
+def _number(value: Any) -> bool:
+    return type(value) in (int, float) and math.isfinite(value)
+
+
+def _registration(checkpoint_sha256: str) -> tuple[str, dict[str, Any]]:
+    for version, registry in (("v1", _APPROVED_V1), ("v2", _REGISTERED_V2)):
+        if checkpoint_sha256 in registry:
+            return f"public_assay_cheap_selector_ridge_{version}", registry[checkpoint_sha256]
+    if checkpoint_sha256 in _REGISTERED_CHEMBL_V1:
+        return CHEMBL_SCHEMA, _REGISTERED_CHEMBL_V1[checkpoint_sha256]
+    if checkpoint_sha256 in _REGISTERED_CHEMBL_V2:
+        return CHEMBL_KI_SCHEMA, _REGISTERED_CHEMBL_V2[checkpoint_sha256]
+    if checkpoint_sha256 in _REGISTERED_BINDINGDB_V1:
+        return BINDINGDB_SCHEMA, _REGISTERED_BINDINGDB_V1[checkpoint_sha256]
+    raise SelectorContractError("unregistered_checkpoint_sha256")
+
+
+def _contract(checkpoint_schema: str | None = None, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    scopes = {
+        "public_assay_cheap_selector_ridge_v1": "BACE1_exact_recorded_state_mixed_assay_conditions_IC50",
+        "public_assay_cheap_selector_ridge_v2": "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50",
+    }
+    native_chembl = checkpoint_schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA}
+    native_bindingdb = checkpoint_schema == BINDINGDB_SCHEMA
+    native_annotation = native_chembl or native_bindingdb
+    scopes[BINDINGDB_SCHEMA] = (None if not native_bindingdb or binding is None else
+        f"BindingDB_catalogue_annotation_{binding['target_annotation_sha256']}_mixed_assay_conditions_{binding['endpoint']}")
+    scopes[CHEMBL_KI_SCHEMA] = "CHEMBL244_P00742_catalogue_annotation_mixed_conditions_enzyme_inhibition_Ki"
+    scopes[CHEMBL_SCHEMA] = "CHEMBL3038469_catalogue_annotation_mixed_conditions_enzyme_inhibition_IC50"
+    return {
+        "schema_version": ADAPTER_SCHEMA,
+        "endpoint_semantics_version": "registered_checkpoint_quantity_v2",
+        "runtime_adapter_sha256": _sha(Path(__file__).read_bytes()),
+        "mode": "shadow", "product_ranking_enabled": False,
+        "customer_execution": False, "uncertainty_calibrated": False,
+        "uncertainty": None, "ood_status": "not_assessed",
+        "target_identity_basis": None if checkpoint_schema is None else ("caller_declared_catalogue_target_annotation_not_physical_state"
+                                  if native_annotation else "caller_declared_original_assay_record_state"),
+        "receptor_or_assay_construct_verified": False,
+        "checkpoint_schema_version": checkpoint_schema,
+        "prediction_scope": scopes.get(checkpoint_schema),
+        "evidence_kind": "ai_prediction", "scientific_validation": False,
+        "compatibility_registration_only": True,
+        "physical_energy_prediction": False,
+        "mean_baseline_evidence_kind": "heuristic" if native_annotation else None,
+        "mean_baseline_definition": "fitted_training_mean" if native_annotation else None,
+        "chemical_scope": None if checkpoint_schema is None else (dict(BINDINGDB_CHEMISTRY_SCOPE)
+                           if native_bindingdb else {"heavy_atoms_min": 5, "heavy_atoms_max": 70, "fragments": 1,
+                           "elements": ["H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I"],
+                           "radicals": False, "isotopes": False,
+                           "formal_charge_abs_max": None if native_chembl else 2}),
+    }
+
+
+class PublicAssaySelectorShadow:
+    def __init__(self, checkpoint: str | Path, checkpoint_sha256: str):
+        payload = _read_validated_payload(checkpoint, expected_sha256=checkpoint_sha256)
+        import numpy as np
+        from rdkit import Chem
+        from rdkit.Chem import rdFingerprintGenerator
+
+        self._np, self._chem = np, Chem
+        self._generator = rdFingerprintGenerator.GetMorganGenerator(
+            radius=2, fpSize=1024, includeChirality=True)
+        self._coefficients = np.asarray(payload["coefficients"], dtype=np.float64)
+        self._intercept = float(payload["intercept"])
+        schema, binding = _registration(checkpoint_sha256)
+        self._schema = schema
+        self._native_bindingdb = schema == BINDINGDB_SCHEMA
+        self._native_chembl = schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA}
+        self._native_annotation = self._native_bindingdb or self._native_chembl
+        self._generic_quantity = schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA}
+        self._mean_baseline = payload.get("mean_baseline") if self._native_annotation else None
+        identity = "target_annotation_sha256" if self._native_annotation else "target_state_sha256"
+        self.required_input_columns = {"smiles", identity, "endpoint"}
+        if self._native_chembl:
+            self.required_input_columns.add("endpoint_subtype")
+        self.metadata = {**_contract(schema, binding), "checkpoint_sha256": checkpoint_sha256,
+                         **{key: payload[key] for key in binding},
+                         "features": dict(payload["features"]),
+                         "required_input_columns": sorted(self.required_input_columns),
+                         "checkpoint_evidence_observations": dict(_CHECKPOINT_EVIDENCE.get(checkpoint_sha256, {}))}
+
+    def _fingerprint(self, row: Mapping[str, Any]):
+        identity = "target_annotation_sha256" if self._native_annotation else "target_state_sha256"
+        if row.get(identity) != self.metadata[identity]:
+            kind = "target_annotation" if self._native_annotation else "target_state"
+            raise SelectorContractError(f"missing_or_mismatched_{kind}")
+        if self._native_chembl and row.get("endpoint_subtype") != self.metadata["endpoint_subtype"]:
+            raise SelectorContractError("missing_or_mismatched_endpoint_subtype")
+        if row.get("endpoint") != self.metadata["endpoint"]:
+            raise SelectorContractError("missing_or_mismatched_endpoint")
+        declared_ood = row.get("is_ood")
+        if declared_ood is not None and declared_ood != "":
+            if declared_ood is True or (isinstance(declared_ood, str)
+                                       and declared_ood.lower() in {"true", "1"}):
+                raise SelectorContractError("declared_ood")
+            if not (declared_ood is False or (isinstance(declared_ood, str)
+                                             and declared_ood.lower() in {"false", "0"})):
+                raise SelectorContractError("invalid_ood_declaration")
+        text = row.get("smiles")
+        if not isinstance(text, str) or not text.strip():
+            raise SelectorContractError("missing_smiles")
+        # RDKit's SMILES parser can accept a trailing name; CSV specifies SMILES only.
+        if any(char.isspace() for char in text):
+            raise SelectorContractError("invalid_smiles_whitespace")
+        mol = self._chem.MolFromSmiles(text)
+        if mol is None:
+            raise SelectorContractError("invalid_smiles")
+        atoms = list(mol.GetAtoms())
+        scope = self.metadata["chemical_scope"]
+        fragments = scope.get("fragment_count", scope.get("fragments"))
+        if (not scope["heavy_atoms_min"] <= mol.GetNumHeavyAtoms() <= scope["heavy_atoms_max"]
+                or len(self._chem.GetMolFrags(mol)) != fragments):
+            raise SelectorContractError("outside_pilot_molecule_size_or_multifragment")
+        if (any(atom.GetSymbol() not in scope["elements"]
+                or atom.GetNumRadicalElectrons() or atom.GetIsotope() for atom in atoms)):
+            raise SelectorContractError("outside_pilot_element_radical_or_isotope_scope")
+        charge_limit = scope["formal_charge_abs_max"]
+        if charge_limit is not None and abs(sum(atom.GetFormalCharge() for atom in atoms)) > charge_limit:
+            raise SelectorContractError("outside_pilot_formal_charge_scope")
+        return self._generator.GetFingerprintAsNumPy(mol)
+
+    def iter_prediction_rows(self, rows, *, chunk_size: int = 256):
+        from .public_assay_streaming import iter_prediction_rows
+        return iter_prediction_rows(self, rows, chunk_size=chunk_size)
+
+    def predict_rows(self, rows: Sequence[Mapping[str, Any]], *, chunk_size: int = 256) -> list[dict[str, Any]]:
+        """Compatibility list API; fingerprint/matrix memory is chunk-bounded."""
+        return list(self.iter_prediction_rows(rows, chunk_size=chunk_size))
+
+    def _predict_batch(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+        results, fingerprints, admitted = [], [], []
+        for index, row in enumerate(rows):
+            result = _row_result(index, row, self._schema, self.metadata["prediction_quantity"])
+            results.append(result)
+            try:
+                fingerprints.append(self._fingerprint(row))
+                admitted.append(index)
+            except (SelectorContractError, TypeError, ValueError) as exc:
+                result["reason"] = str(exc)
+        if admitted:
+            matrix = self._np.asarray(fingerprints, dtype=self._np.float64).reshape(len(admitted), 1024)
+            # Same float64 matrix product as the producer, never batch normalization.
+            with self._np.errstate(over="ignore", invalid="ignore"):
+                values = matrix @ self._coefficients + self._intercept
+            for index, value in zip(admitted, values):
+                if self._np.isfinite(value):
+                    results[index].update(status="evaluated", reason=None)
+                    if self._generic_quantity:
+                        results[index].update(predicted_value=float(value),
+                                              mean_baseline_value=self._mean_baseline)
+                    else:
+                        results[index]["predicted_negative_log10_molar_IC50"] = float(value)
+                    if self._native_chembl and not self._generic_quantity:
+                        results[index]["mean_baseline_negative_log10_molar_IC50"] = self._mean_baseline
+                else:
+                    results[index]["reason"] = "nonfinite_prediction"
+        return results
+
+
+def _read_validated_payload(path: str | Path, *, expected_sha256: str) -> dict[str, Any]:
+    """Load only the registered checkpoint bytes, without importing their producer."""
+    schema, binding = _registration(expected_sha256)
+    raw = Path(path).read_bytes()
+    if _sha(raw) != expected_sha256:
+        raise SelectorContractError("checkpoint_sha256_mismatch")
+    payload = json.loads(raw, object_pairs_hook=_strict_object)
+    required = set(binding) | {"schema_version", "features", "coefficients", "intercept",
+                               "uncertainty_calibrated", "product_ranking_enabled", "customer_execution"}
+    if not isinstance(payload, dict) or set(payload) != required:
+        raise SelectorContractError("checkpoint_schema_keys_mismatch")
+    features = (BINDINGDB_FEATURES if schema == BINDINGDB_SCHEMA else
+                CHEMBL_FEATURES if schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA} else FEATURES)
+    if payload["schema_version"] != schema or payload["features"] != features:
+        raise SelectorContractError("checkpoint_feature_contract_mismatch")
+    for key, expected in binding.items():
+        if payload[key] != expected:
+            raise SelectorContractError(f"checkpoint_binding_mismatch:{key}")
+    for key in ("uncertainty_calibrated", "product_ranking_enabled", "customer_execution"):
+        if payload[key] is not False:
+            raise SelectorContractError(f"unsupported_checkpoint_capability:{key}")
+    if schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA, BINDINGDB_SCHEMA}:
+        if (payload["physical_energy"] is not False or payload["uncertainty"] is not None
+                or payload["ood_status"] != "not_assessed" or not _number(payload["mean_baseline"])):
+            raise SelectorContractError("unsupported_native_checkpoint_capability")
+    coef = payload["coefficients"]
+    if (not isinstance(coef, list) or len(coef) != 1024
+            or not all(_number(value) for value in coef) or not _number(payload["intercept"])):
+        raise SelectorContractError("invalid_checkpoint_coefficients_or_intercept")
+    from rdkit import rdBase
+    if rdBase.rdkitVersion != payload["rdkit_version"]:
+        raise SelectorContractError("rdkit_version_mismatch")
+    return payload
+
+
+def load_public_assay_selector(path: str | Path, *, expected_sha256: str) -> PublicAssaySelectorShadow:
+    """Load a pinned model; direct construction enforces the same byte contract."""
+    return PublicAssaySelectorShadow(path, expected_sha256)
+
+
+def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | None = None,
+                prediction_quantity: str | None = None) -> dict[str, Any]:
+    def text(key):
+        value = row.get(key)
+        return value if isinstance(value, str) else None
+    result = {"row_index": index, "ligand_id": text("ligand_id"), "smiles": text("smiles"),
+            "declared_target_state_sha256": text("target_state_sha256"),
+            "declared_target_annotation_sha256": text("target_annotation_sha256"),
+            "declared_endpoint_subtype": text("endpoint_subtype"),
+            "mean_baseline_negative_log10_molar_IC50": None,
+            "declared_endpoint": text("endpoint"), "status": "unsupported",
+            "reason": None, "predicted_negative_log10_molar_IC50": None,
+            "ood_status": "not_assessed", "uncertainty": None}
+    if (checkpoint_schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA}
+            or (checkpoint_schema is None and row.get("endpoint") == "Ki")):
+        del result["predicted_negative_log10_molar_IC50"]
+        del result["mean_baseline_negative_log10_molar_IC50"]
+        quantity = (prediction_quantity if checkpoint_schema == BINDINGDB_SCHEMA else
+                    "negative_log10_molar_Ki" if checkpoint_schema == CHEMBL_KI_SCHEMA else None)
+        result.update(prediction_quantity=quantity, predicted_value=None,
+                      mean_baseline_value=None)
+    return result
+
+
+def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_json: str,
+                           resume_stage3_only: bool, checkpoint: str, checkpoint_sha256: str,
+                           output_json: str, chunk_size: int = 256) -> dict[str, Any]:
+    """Same sidecar contract, with bounded input, inference and output memory."""
+    from .public_assay_streaming import run_pre_docking_shadow as stream_shadow
+    return stream_shadow(
+        ligand_csv=ligand_csv, ligand_sdf=ligand_sdf,
+        docking_request_json=docking_request_json, resume_stage3_only=resume_stage3_only,
+        checkpoint=checkpoint, checkpoint_sha256=checkpoint_sha256,
+        output_json=output_json, chunk_size=chunk_size)
