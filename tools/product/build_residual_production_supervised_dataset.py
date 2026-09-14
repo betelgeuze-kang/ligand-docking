@@ -239,6 +239,16 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     rejections.append({"source_line": reader.line_num, "reason": reason,
                                        "stage3_source_provenance_json": energy_proxy[2][PROVENANCE_FIELD] if energy_proxy else ""})
                     continue
+                provenance = source_provenance_json(raw, source_csv=_rel(path),
+                                                    source_sha256=source_digest, source_line=reader.line_num)
+                if energy_proxy:
+                    provenance = merge_source_provenance({PROVENANCE_FIELD: provenance}, energy_proxy[2])
+                    reason = training_source_rejection({PROVENANCE_FIELD: provenance})
+                    if reason:
+                        skipped += 1
+                        rejections.append({"source_line": reader.line_num, "reason": reason,
+                                           PROVENANCE_FIELD: provenance})
+                        continue
                 mean_min_distance = _float(raw.get("mean_min_distance_A"))
                 delta_score = reference - score
                 if not math.isfinite(delta_score):
@@ -251,8 +261,7 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     "ligand_id": ligand_id,
                     "is_binder": is_binder,
                     **{key: raw.get(key, "") for key in POLICY_FIELDS},
-                    PROVENANCE_FIELD: source_provenance_json(raw, source_csv=_rel(path),
-                                                            source_sha256=source_digest, source_line=reader.line_num),
+                    PROVENANCE_FIELD: provenance,
                     "reference_binding_kcal_mol": reference,
                     "raw_score": score,
                     "score_col": score_col,
@@ -278,8 +287,6 @@ def _iter_source_rows(path: Path, *, max_rows_per_source: int) -> tuple[list[dic
                     stage3_source_provenance_json=energy_proxy[2][PROVENANCE_FIELD] if energy_proxy else "",
                     refine_tier_label="", refine_tier_label_source="",
                 )
-                if energy_proxy:
-                    row[PROVENANCE_FIELD] = merge_source_provenance(row, energy_proxy[2])
                 row.update(paired_energy_fields(raw))
                 if row["energy_pair_status"] == "declared_identity_matched":
                     energy_joined += 1

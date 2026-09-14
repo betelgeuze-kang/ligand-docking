@@ -21,6 +21,7 @@ _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _RESERVED_SPLITS = {
     "holdout", "test", "blind", "validation", "val", "fresh128", "fresh_128", "fresh-128",
     "eval", "ood_eval", "id_eval", "near_ood_eval", "far_ood_eval",
+    "calibration", "development_test", "calibration_dev",
 }
 
 
@@ -149,12 +150,44 @@ def declared_evaluation_only(row: dict[str, Any]) -> bool:
 
 def score_reference_rejection(row: dict[str, Any]) -> str:
     """Do not subtract a declared assay/physical endpoint from a composite score."""
-    incompatible = {"ic50", "ki", "kd", "potential_energy", "experimental_label", "experimental"}
+    assay_endpoints = {"ic50", "ki", "kd", "ec50"}
+    incompatible = {"potential_energy", "experimental_label", "experimental", *assay_endpoints,
+                    *("p" + endpoint for endpoint in assay_endpoints),
+                    *("negative_log10_molar_" + endpoint for endpoint in assay_endpoints)}
+    declarations = {"reference_label_kind", "reference_quantity", "reference_evidence_kind",
+                    "label_evidence_kind", "evidence_kind", "endpoint", "declared_endpoint"}
     sources = [row, *(record["row"] for record in provenance_records(row))]
     for source in sources:
-        for key in ("reference_label_kind", "reference_quantity", "reference_evidence_kind", "label_evidence_kind"):
-            if str(source.get(key, "")).strip().casefold() in incompatible:
+        # Generic assay exports need not use residual-specific column names.
+        # Inspect every original declaration, including conflicting aliases.
+        for key, value in source.items():
+            if (str(key).strip().casefold() in declarations
+                    and str(value).strip().casefold() in incompatible):
                 return "incompatible_score_reference_semantics"
+    return ""
+
+
+def refine_source_identity_rejection(row: dict[str, Any]) -> str:
+    """Reject conflicting declared state hashes in a refinement's full lineage.
+
+    Missing declarations stay unverified. Matching hashes are declarations,
+    not authenticated chemistry or permission to change the source state.
+    This check is limited to same-state refinement joins and their consumers;
+    general provenance may describe intentionally different source states.
+    """
+    sources = [row, *(record["row"] for record in provenance_records(row))]
+    for field in IDENTITY_FIELDS:
+        values = set()
+        for source in sources:
+            value = source.get(field)
+            if value is None or value == "":
+                continue
+            try:
+                values.add(_sha(value, field))
+            except ValueError:
+                return "invalid_source_identity:" + field
+        if len(values) > 1:
+            return "conflicting_source_identity:" + field
     return ""
 
 
@@ -168,6 +201,9 @@ def training_source_rejection(row: dict[str, Any]) -> str:
     if row.get("refine_tier_label_source") == "stage3_refine_tier":
         if row.get("refine_tier_join_contract") != REFINE_JOIN_CONTRACT or not provenance_records(row):
             return "legacy_refine_source_provenance_missing_regenerate_dataset"
+        reason = refine_source_identity_rejection(row)
+        if reason:
+            return reason
     return ""
 
 
