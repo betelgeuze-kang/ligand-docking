@@ -5,13 +5,9 @@ this adapter does not verify a receptor, an assay construct, or chemical OOD.
 """
 from __future__ import annotations
 
-import csv
 import hashlib
-import io
 import json
 import math
-import os
-import tempfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -83,7 +79,7 @@ _REGISTERED_CHEMBL_V1 = {
 
 
 # Native BindingDB preassignment registration is compatibility only. The frozen
-# calibration result did not improve its mean baseline; ranking stays disabled.
+# quality and coverage limitations remain attached per checkpoint; ranking stays disabled.
 BINDINGDB_SCHEMA = "public_bindingdb_preassigned_ridge_v1"
 BINDINGDB_FEATURES = dict(CHEMBL_FEATURES)
 # Exact chemistry scope from the manifest pinned inside the checkpoint. It is a
@@ -109,6 +105,81 @@ BINDINGDB_CHEMISTRY_SCOPE = {
     "radical_electrons": 0
 }
 _REGISTERED_BINDINGDB_V1 = {
+    # 5-HT6 reported Ki pilot; exact-byte compatibility, no ranking promotion.
+    '818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea': {'endpoint': 'Ki',
+                                                                      'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                                                                                                'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                                                                                                'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                                                                                                'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                                                                                                'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                                                                                                'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+                                                                      'manifest_sha256': '0acc8786b0bfe60b828595c835550b5d88a3c000273baab4c285d12715976517',
+                                                                      'mean_baseline': 7.535706307733418,
+                                                                      'ood_status': 'not_assessed',
+                                                                      'physical_energy': False,
+                                                                      'prediction_quantity': 'negative_log10_molar_Ki',
+                                                                      'rdkit_version': '2026.03.6',
+                                                                      'split_plan_sha256': '5f1eec4efdc89aa8c2fa99c47b5e4c2030fef034b0290521a2a96cacb0decc98',
+                                                                      'target_annotation_sha256': '09b5a4b9bd8437045099306faee937f0b1f08971373e7a8e4a56167b597ac296',
+                                                                      'training_protocol_sha256': '480d964b3efdbcec4f38ba866cc4d6754cea4f740fad334ba35a5ecae1e1cef1',
+                                                                      'uncertainty': None},
+    # VEGFR2 biochemical IC50 development model; compatibility only, NOT_PROMOTED.
+    '1255488791dd517bf12c261bb376c1e778def7bab1cb30e242ad427b3c4cb066': {'endpoint': 'IC50',
+     'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                               'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                               'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                               'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                               'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                               'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+     'manifest_sha256': 'd13579c1476ae763ec49d883c633f257fcdb00cc280b55047a82cd394f9a3981',
+     'mean_baseline': 6.899517362869471,
+     'ood_status': 'not_assessed',
+     'physical_energy': False,
+     'prediction_quantity': 'negative_log10_molar_IC50',
+     'rdkit_version': '2026.03.6',
+     'split_plan_sha256': 'b8f843bd08c5d0f7e487234ceb1e0f06d327e57077199739c7fd56107210f9df',
+     'target_annotation_sha256': '959ca32a35bcd81b910c2a4f1aef0ebc371b73b4b8832185401a8e2fd0c65ae9',
+     'training_protocol_sha256': 'fc0a6acb46d8089cb1f1a4ba53da9fc73d70a3ae8608f9f036a995d30d6cb156',
+     'uncertainty': None},
+    "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'endpoint': 'Ki',
+ 'implementation_hashes': {'bindingdb_primitives': 'a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b',
+                           'bound_readers': '69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62',
+                           'components': 'b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01',
+                           'selector_primitives': '3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26',
+                           'staged_intake': '3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e',
+                           'staged_trainer': 'a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916'},
+ 'manifest_sha256': '0f22a9ae2b093a36ec5692efe5cd975f9da900fadc99208112cdbcb7134a450e',
+ 'mean_baseline': 6.668214640457227,
+ 'ood_status': 'not_assessed',
+ 'physical_energy': False,
+ 'prediction_quantity': 'negative_log10_molar_Ki',
+ 'rdkit_version': '2026.03.6',
+ 'split_plan_sha256': '587e631a8ff9502de54b7ac304a6767fe30b57a8d8dd49dcfb0838f8e078fb78',
+ 'target_annotation_sha256': 'ed5586c054c184e9acfeba06749fcc27b73051fe20c9070a3d8fbfa7192f5058',
+ 'training_protocol_sha256': 'debdb754d1d1282a24715fdfa7276bb76c4c0ec372e5f4783f96e1033457cf07',
+ 'uncertainty': None},
+    "d5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3": {
+        "endpoint": "IC50",
+        "implementation_hashes": {
+            "bindingdb_primitives": "a1a900368821beb8b617796dc4189a9cbc1c8cc9ead90681380977088b79d45b",
+            "bound_readers": "69b2a5125e3095bd25e014cbf7ff9da6913c74a547bce20a59b88cfa95624f62",
+            "components": "b437c37769c7c6e1f9833af03a656b2faf3d8429e08d49404b4e1ff9f5023b01",
+            "selector_primitives": "3df5839854abf24284ebbb71bf82635d8ccbc8405b0de8990a01a07854e45a26",
+            "staged_intake": "3a2070295d1173f3e8fae82cbf122a467b68e6c9cda5c0c75153e45abeba761e",
+            "staged_trainer": "a5ece6b9dbd85b70e6995b46234bc3aa99b27548438165c891256ede3c075916"
+        },
+        "manifest_sha256": "00b5fc2e017b1f00cb336b5e1747c992b21335ebfbfe88f8c893434f9cecb5c7",
+        "mean_baseline": 5.659657694904753,
+        "ood_status": "not_assessed",
+        "physical_energy": False,
+        "prediction_quantity": "negative_log10_molar_IC50",
+        "rdkit_version": "2026.03.6",
+        "split_plan_sha256": "bf0fffbc1e3d6d2666ed8e265c6638f3886879ef23a233924d72b9b623a88551",
+        "target_annotation_sha256": "b3e2d4ebe653299360781c289413d9b3796b6cb331673c4aaa47dd4ade994a39",
+        "training_protocol_sha256": "1525c6175d7ab6872eeb616fa46a8f8afac3f0bd64e74bfe1f7454405bc847e7",
+        "uncertainty": None
+    }
+,
     "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
         "endpoint": "Ki",
         "implementation_hashes": {
@@ -159,6 +230,48 @@ _REGISTERED_CHEMBL_V2 = {'c6e508e390df9d295ec53c9cc26f16a27c7ff5e31bf8f479e777f6
 # Evidence observations are separate from immutable checkpoint payloads. Later
 # identity audits can invalidate independence without rewriting historical weights.
 _CHECKPOINT_EVIDENCE = {
+    '818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea': {'all_exact_evaluation_rows_positive_at_declared_threshold': True,
+                                                                      'assay_condition_harmonization_verified': False,
+                                                                      'beyond_supplied_context_independence': 'not_established',
+                                                                      'calibration_mae_mean_baseline': 0.47745304617587114,
+                                                                      'calibration_mae_morgan_ridge': 0.39500236444227793,
+                                                                      'checkpoint_rehashed_for_new_runtime': False,
+                                                                      'development_mae_mean_baseline': 0.9245623971209685,
+                                                                      'development_mae_morgan_ridge': 0.7422282556254062,
+                                                                      'evaluation_summary_sha256': 'e4b442716269b25866f82bdea7a77f7f83d1ac213269c730271cb0ee737e43bf',
+                                                                      'primary_per_compound_measurements_verified': False,
+                                                                      'promotion_status': 'NOT_PROMOTED',
+                                                                      'requested_calibration_rows': 11,
+                                                                      'requested_development_rows': 13,
+                                                                      'retrieval_improvement_demonstrated': False,
+                                                                      'supported_calibration_rows': 11,
+                                                                      'supported_development_negative_count': 0,
+                                                                      'supported_development_positive_count': 12,
+                                                                      'supported_development_rows': 12},
+    "e8194e9a782ae503f1a61afa5e2a53031a99c01c117d04aa1b9617369a0de94d": {'evaluation_summary_sha256': '78ffd57fe746822cbd126cfd484677ba93acb97764ea080e3acd22580574d86f',
+ 'promotion_status': 'NOT_PROMOTED',
+ 'calibration_quality': 'lower_mae_than_fitted_mean_on_16_of_29_rows',
+ 'development_quality': 'lower_mae_than_fitted_mean_on_4_of_27_rows',
+ 'supported_calibration_rows': 16,
+ 'requested_calibration_rows': 29,
+ 'supported_development_rows': 4,
+ 'requested_development_rows': 27,
+ 'supported_development_positive_count': 0,
+ 'development_recall_and_average_precision': None,
+ 'primary_per_compound_measurements_verified': False,
+ 'assay_condition_harmonization_verified': False,
+ 'beyond_supplied_context_independence': 'not_established',
+ 'checkpoint_rehashed_for_new_runtime': False},
+    'd5c4c17902ee35c920c2948f445f06b0aba13c4ba02cfa8a13390a18689ff4b3': {'evaluation_summary_sha256': 'a1be98fd16ca6232555277986c3700a1b4679bc2657437d131d217bf0b043a24',
+                                                                          'promotion_status': 'NOT_PROMOTED',
+                                                                          'calibration_quality': 'worse_mae_than_fitted_mean_on_16_of_18_rows',
+                                                                          'development_quality': 'worse_mae_than_fitted_mean_on_5_of_19_rows',
+                                                                          'supported_development_positive_count': 0,
+                                                                          'development_recall_and_average_precision': None,
+                                                                          'primary_per_compound_measurements_verified': False,
+                                                                          'assay_condition_harmonization_verified': False,
+                                                                          'beyond_supplied_context_independence': 'not_established',
+                                                                          'checkpoint_rehashed_for_new_runtime': False},
     "de9b3e21c93b0f15c02df221d2f8ee9caa3d5e0590442c34efed3394b969ac85": {
         "identity_independence_status": "failed_expanded_metadata_dependency_audit",
         "identity_audit_sha256": "c6a94704724f6b0360ebe4874f35b43e6410d36f944975aa93c04da620968f12",
@@ -219,7 +332,7 @@ def _registration(checkpoint_sha256: str) -> tuple[str, dict[str, Any]]:
     raise SelectorContractError("unregistered_checkpoint_sha256")
 
 
-def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
+def _contract(checkpoint_schema: str | None = None, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
     scopes = {
         "public_assay_cheap_selector_ridge_v1": "BACE1_exact_recorded_state_mixed_assay_conditions_IC50",
         "public_assay_cheap_selector_ridge_v2": "CDK2_cyclin_A2_exact_recorded_state_mixed_assay_conditions_IC50",
@@ -227,11 +340,13 @@ def _contract(checkpoint_schema: str | None = None) -> dict[str, Any]:
     native_chembl = checkpoint_schema in {CHEMBL_SCHEMA, CHEMBL_KI_SCHEMA}
     native_bindingdb = checkpoint_schema == BINDINGDB_SCHEMA
     native_annotation = native_chembl or native_bindingdb
-    scopes[BINDINGDB_SCHEMA] = "BindingDB_P00742_catalogue_annotation_mixed_assay_conditions_Ki"
+    scopes[BINDINGDB_SCHEMA] = (None if not native_bindingdb or binding is None else
+        f"BindingDB_catalogue_annotation_{binding['target_annotation_sha256']}_mixed_assay_conditions_{binding['endpoint']}")
     scopes[CHEMBL_KI_SCHEMA] = "CHEMBL244_P00742_catalogue_annotation_mixed_conditions_enzyme_inhibition_Ki"
     scopes[CHEMBL_SCHEMA] = "CHEMBL3038469_catalogue_annotation_mixed_conditions_enzyme_inhibition_IC50"
     return {
         "schema_version": ADAPTER_SCHEMA,
+        "endpoint_semantics_version": "registered_checkpoint_quantity_v2",
         "runtime_adapter_sha256": _sha(Path(__file__).read_bytes()),
         "mode": "shadow", "product_ranking_enabled": False,
         "customer_execution": False, "uncertainty_calibrated": False,
@@ -277,7 +392,7 @@ class PublicAssaySelectorShadow:
         self.required_input_columns = {"smiles", identity, "endpoint"}
         if self._native_chembl:
             self.required_input_columns.add("endpoint_subtype")
-        self.metadata = {**_contract(schema), "checkpoint_sha256": checkpoint_sha256,
+        self.metadata = {**_contract(schema, binding), "checkpoint_sha256": checkpoint_sha256,
                          **{key: payload[key] for key in binding},
                          "features": dict(payload["features"]),
                          "required_input_columns": sorted(self.required_input_columns),
@@ -323,10 +438,18 @@ class PublicAssaySelectorShadow:
             raise SelectorContractError("outside_pilot_formal_charge_scope")
         return self._generator.GetFingerprintAsNumPy(mol)
 
-    def predict_rows(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    def iter_prediction_rows(self, rows, *, chunk_size: int = 256):
+        from .public_assay_streaming import iter_prediction_rows
+        return iter_prediction_rows(self, rows, chunk_size=chunk_size)
+
+    def predict_rows(self, rows: Sequence[Mapping[str, Any]], *, chunk_size: int = 256) -> list[dict[str, Any]]:
+        """Compatibility list API; fingerprint/matrix memory is chunk-bounded."""
+        return list(self.iter_prediction_rows(rows, chunk_size=chunk_size))
+
+    def _predict_batch(self, rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         results, fingerprints, admitted = [], [], []
         for index, row in enumerate(rows):
-            result = _row_result(index, row, self._schema)
+            result = _row_result(index, row, self._schema, self.metadata["prediction_quantity"])
             results.append(result)
             try:
                 fingerprints.append(self._fingerprint(row))
@@ -393,7 +516,8 @@ def load_public_assay_selector(path: str | Path, *, expected_sha256: str) -> Pub
     return PublicAssaySelectorShadow(path, expected_sha256)
 
 
-def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | None = None) -> dict[str, Any]:
+def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | None = None,
+                prediction_quantity: str | None = None) -> dict[str, Any]:
     def text(key):
         value = row.get(key)
         return value if isinstance(value, str) else None
@@ -409,7 +533,8 @@ def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | Non
             or (checkpoint_schema is None and row.get("endpoint") == "Ki")):
         del result["predicted_negative_log10_molar_IC50"]
         del result["mean_baseline_negative_log10_molar_IC50"]
-        quantity = "negative_log10_molar_Ki" if checkpoint_schema in {BINDINGDB_SCHEMA, CHEMBL_KI_SCHEMA} else None
+        quantity = (prediction_quantity if checkpoint_schema == BINDINGDB_SCHEMA else
+                    "negative_log10_molar_Ki" if checkpoint_schema == CHEMBL_KI_SCHEMA else None)
         result.update(prediction_quantity=quantity, predicted_value=None,
                       mean_baseline_value=None)
     return result
@@ -417,78 +542,11 @@ def _row_result(index: int, row: Mapping[str, Any], checkpoint_schema: str | Non
 
 def run_pre_docking_shadow(*, ligand_csv: str, ligand_sdf: str, docking_request_json: str,
                            resume_stage3_only: bool, checkpoint: str, checkpoint_sha256: str,
-                           output_json: str) -> dict[str, Any]:
-    """Read original CSV rows and write a sidecar; never return a selection/ranking."""
-    result = {**_contract(), "status": "not_evaluated", "reason": None,
-              "input_scope": "original_csv_before_mapping_filters_truncation_and_replicas",
-              "requested_rows": None, "evaluated_rows": 0, "unsupported_rows": None,
-              "input_path": ligand_csv, "input_sha256": None, "rows": []}
-    try:
-        requested_schema, _ = _registration(checkpoint_sha256)
-    except SelectorContractError:
-        requested_schema = None
-    protected_paths = [path for path in (ligand_csv, ligand_sdf, docking_request_json, checkpoint) if path]
-    try:
-        if resume_stage3_only:
-            result["reason"] = "resume_has_no_pre_docking_input_evaluation"
-        elif docking_request_json and Path(docking_request_json).exists():
-            result.update(reason="unsupported_input_type:docking_request_json",
-                          input_path=docking_request_json,
-                          input_scope="unmodified_docking_request_not_enumerated")
-        elif not ligand_csv:
-            result.update(reason="unsupported_input_type:sdf_or_unspecified", input_path=ligand_sdf,
-                          input_scope="unmodified_non_csv_input_not_enumerated")
-        else:
-            raw = Path(ligand_csv).read_bytes()
-            result["input_sha256"] = _sha(raw)
-            records = list(csv.reader(io.StringIO(raw.decode("utf-8-sig"), newline=""), strict=True))
-            header, cells = (records[0], records[1:]) if records else ([], [])
-            result["input_header"] = header
-            rows = [dict(zip(header, values)) for values in cells]
-            result.update(requested_rows=len(rows), unsupported_rows=len(rows))
-            try:
-                model = load_public_assay_selector(checkpoint, expected_sha256=checkpoint_sha256)
-                result.update(_contract(model.metadata["checkpoint_schema_version"]))
-                result["model"] = model.metadata
-                schema_ok = (len(header) == len(set(header))
-                             and model.required_input_columns.issubset(header))
-                valid_indices = [i for i, values in enumerate(cells) if schema_ok and len(values) == len(header)]
-                predictions = model.predict_rows([rows[i] for i in valid_indices])
-                results = [_row_result(i, row, requested_schema) for i, row in enumerate(rows)]
-                for entry in results:
-                    entry["reason"] = "invalid_csv_schema_or_row_width"
-                for index, prediction in zip(valid_indices, predictions):
-                    results[index] = {**prediction, "row_index": index}
-            except Exception as exc:
-                result["reason"] = f"model_unavailable:{type(exc).__name__}:{exc}"
-                results = [_row_result(i, row, requested_schema) for i, row in enumerate(rows)]
-                for entry in results:
-                    entry["reason"] = result["reason"]
-            for entry, values in zip(results, cells):
-                entry["input_cells"] = values
-            evaluated = sum(entry["status"] == "evaluated" for entry in results)
-            result.update(status="completed", rows=results, evaluated_rows=evaluated,
-                          unsupported_rows=len(rows) - evaluated)
-    except Exception as exc:
-        result["reason"] = f"input_unavailable:{type(exc).__name__}:{exc}"
-    destination = Path(output_json)
-    temporary = None
-    try:
-        for path in protected_paths:
-            source = Path(path)
-            if (destination.resolve() == source.resolve()
-                    or (destination.exists() and source.exists() and os.path.samefile(destination, source))):
-                raise SelectorContractError("sidecar_aliases_input_or_checkpoint")
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=destination.parent,
-                                         prefix=destination.name + ".", delete=False) as stream:
-            temporary = Path(stream.name)
-            json.dump(result, stream, sort_keys=True, indent=2, allow_nan=False)
-            stream.write("\n")
-        os.replace(temporary, destination)
-        result.update(sidecar_status="written", sidecar_json=str(destination))
-    except Exception as exc:
-        result.update(sidecar_status="failed", sidecar_error=f"{type(exc).__name__}:{exc}")
-    finally:
-        if temporary is not None and temporary.exists():
-            temporary.unlink()
-    return {key: value for key, value in result.items() if key not in {"rows", "input_header"}}
+                           output_json: str, chunk_size: int = 256) -> dict[str, Any]:
+    """Same sidecar contract, with bounded input, inference and output memory."""
+    from .public_assay_streaming import run_pre_docking_shadow as stream_shadow
+    return stream_shadow(
+        ligand_csv=ligand_csv, ligand_sdf=ligand_sdf,
+        docking_request_json=docking_request_json, resume_stage3_only=resume_stage3_only,
+        checkpoint=checkpoint, checkpoint_sha256=checkpoint_sha256,
+        output_json=output_json, chunk_size=chunk_size)

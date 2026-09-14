@@ -106,7 +106,7 @@ def test_production_guarded_residual_abstains_on_yellow_band():
 
 
 def test_stage2_skip_router_decisions():
-    skip = route_stage2_candidate(family="gpcr", affinity_hint=0.0, prior_rank_proxy=0.9)
+    skip = route_stage2_candidate(family="gpcr", affinity_hint=0.0, onsps_norm=0.0, mw_norm=0.0, prior_rank_proxy=0.9)
     assert skip["stage2_route_decision"] == "skip_stage2_inline_score"
     full = route_stage2_candidate(family="gpcr", affinity_hint=0.5, prior_rank_proxy=0.05)
     assert full["stage2_route_decision"] == "full_stage2_trajectory"
@@ -114,7 +114,7 @@ def test_stage2_skip_router_decisions():
 
 def test_stage2_skip_router_batch_summary():
     rows = [
-        {"family": "gpcr", "affinity_hint": 0.0, "prior_rank_proxy": 0.95},
+        {"family": "gpcr", "affinity_hint": 0.0, "onsps_norm": 0.0, "mw_norm": 0.0, "prior_rank_proxy": 0.95},
         {"family": "gpcr", "affinity_hint": 0.8, "prior_rank_proxy": 0.05},
     ]
     traj_rows, summary = apply_stage2_skip_router(rows, family="gpcr")
@@ -381,7 +381,7 @@ def test_force_residual_shortlist_hook_applies_to_top_fraction():
 
 def test_stage2_skip_router_exposes_skipped_rows():
     rows = [
-        {"family": "gpcr", "affinity_hint": 0.0, "prior_rank_proxy": 0.95},
+        {"family": "gpcr", "affinity_hint": 0.0, "onsps_norm": 0.0, "mw_norm": 0.0, "prior_rank_proxy": 0.95},
         {"family": "gpcr", "affinity_hint": 0.8, "prior_rank_proxy": 0.05},
     ]
     traj_rows, summary = apply_stage2_skip_router(rows, family="gpcr")
