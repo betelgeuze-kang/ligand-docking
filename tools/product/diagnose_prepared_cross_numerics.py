@@ -114,6 +114,35 @@ def _engine_pairs(result, indices, side, axis):
     return values
 
 
+
+def _pair_finite_difference(position, other, receptor, ligand, config, axis, h):
+    """Second-order derivative inside the unchanged minimum-distance domain.
+
+    Differentiate by moving the ligand coordinate. The returned derivative is
+    the receptor force; callers invert it for a ligand component. The historic
+    central stencil is retained wherever both points are admissible.
+    """
+    with localcontext() as ctx:
+        ctx.prec = 120
+        origin, center = list(map(D, position)), list(map(D, other))
+        def point(offset):
+            value = center.copy()
+            value[axis] += offset * h
+            return value
+        def allowed(value):
+            return sum((b - a)**2 for a, b in zip(origin, value)).sqrt() >= D(0.35)
+        def energy(value):
+            return decimal_pair(origin, value, receptor, ligand, config, precision=120)[0]
+        if allowed(point(1)) and allowed(point(-1)):
+            return (energy(point(1)) - energy(point(-1))) / (2*h), "central"
+        # A one-sided O(h^2) stencil avoids evaluating the forbidden domain.
+        for sign, method in ((1, "forward"), (-1, "backward")):
+            if allowed(point(sign)) and allowed(point(2*sign)):
+                value = (-3*energy(center) + 4*energy(point(sign)) - energy(point(2*sign))) / (2*h*sign)
+                return value, method
+        return None, "unavailable_inside_declared_domain"
+
+
 def diagnose_result(result, *, engine_pairs=False):
     original = check.check_result(result)
     receptor, ligand, rp, lp, config, reference = _float_terms(result)
@@ -185,21 +214,17 @@ def diagnose_result(result, *, engine_pairs=False):
         for h in (D("1e-12"), D("1e-16")):
             with localcontext() as ctx:
                 ctx.prec = 100
-                plus, minus = list(map(D, ligand[j])), list(map(D, ligand[j]))
-                plus[axis] += h
-                minus[axis] -= h
-                ep = decimal_pair(
-                    receptor[i], plus, rp[i], lp[j], config, precision=100
-                )[0]
-                em = decimal_pair(
-                    receptor[i], minus, rp[i], lp[j], config, precision=100
-                )[0]
-                fd = (ep - em) / (2 * h) * (1 if side == "receptor" else -1)
+                fd, method = _pair_finite_difference(
+                    receptor[i], ligand[j], rp[i], lp[j], config, axis, h
+                )
+                fd = None if fd is None else fd * (1 if side == "receptor" else -1)
                 finite_differences.append(
                     {
                         "step_angstrom": str(h),
-                        "force": str(fd),
-                        "abs_error": str(
+                        "status": "not_evaluated" if fd is None else "evaluated",
+                        "method": method,
+                        "force": None if fd is None else str(fd),
+                        "abs_error": None if fd is None else str(
                             abs(fd - D(terms[dominant]["decimal120_force"]))
                         ),
                     }

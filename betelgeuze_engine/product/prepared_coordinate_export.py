@@ -18,7 +18,7 @@ from betelgeuze_engine.product.prepared_gromacs_input import (
 )
 
 SCHEMA = "prepared_coordinate_export_request_v1"
-FORMATS = {"protein_pdb": (8, 3), "ligand_sdf": (10, 4), "ligand_gro": (0, 10)}
+FORMATS = {"protein_pdb": (8, 3), "ligand_sdf": (10, 4), "ligand_gro": (15, 10)}
 
 
 def _coordinates(value, count, label):
@@ -64,7 +64,7 @@ def _render(raw, key, system, coordinates):
             line_index = index + 2
             line = lines[line_index]
             ending = line[len(line.rstrip(b"\r\n")):]
-            lines[line_index] = line[:20] + b" ".join(v[0] for v in fields) + ending
+            lines[line_index] = line[:20] + b"".join(v[0] for v in fields) + ending
         rendered.append([v[1] * (10.0 if key == "ligand_gro" else 1.0) for v in fields])
     error = max((abs(a-b) for p, q in zip(coordinates, rendered) for a, b in zip(p, q)), default=0.)
     return b"".join(lines), rendered, error
