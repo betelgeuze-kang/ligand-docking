@@ -26,6 +26,7 @@ import uuid
 
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "prepared_candidate_comparison_protocol_v1"
+ORDERED_SCHEMA = "prepared_candidate_comparison_protocol_v2"
 MAX_BYTES = 32 * 1024 * 1024
 
 
@@ -213,6 +214,31 @@ def load_rows(source):
     }
 
 
+def _execution_order(protocol):
+    """Validate explicit v2 order; never infer an order from observed outcomes."""
+    if protocol["schema_version"] == SCHEMA:
+        return ARMS
+    order = protocol.get("arm_order")
+    if (type(order) is not list or len(order) != len(ARMS)
+            or any(type(name) is not str for name in order) or set(order) != set(ARMS)
+            or protocol.get("tie_policy") != "seeded_pool_order"
+            or type(protocol.get("selection_seed")) is not int
+            or not 0 <= protocol["selection_seed"] < 2**32):
+        raise ValueError("invalid_prespecified_comparison_order")
+    return tuple(order)
+
+
+def _prediction_order(frozen, predictions):
+    if frozen["protocol"]["schema_version"] == SCHEMA:
+        return sorted(predictions, key=lambda rid: (-predictions[rid], rid))
+    seed = frozen["protocol"]["selection_seed"]
+    ordinal = {rid: index for index, rid in enumerate(frozen["pool"])}
+    # Stable seeded permutation of ORIGINAL pool positions, not record IDs.
+    # The pool, seed and arm order are all bound before labels are read.
+    tie = {rid: sha({"seed": seed, "pool_index": index}) for rid, index in ordinal.items()}
+    return sorted(predictions, key=lambda rid: (-predictions[rid], tie[rid], ordinal[rid]))
+
+
 def freeze(protocol):
     started = time.perf_counter()
     fields = {
@@ -223,12 +249,15 @@ def freeze(protocol):
         "max_engine_calls_per_arm",
         "top_k",
     }
-    if (
-        type(protocol) is not dict
-        or not fields <= set(protocol) <= fields | {"reuse_ai_from"}
-        or protocol["schema_version"] != SCHEMA
-    ):
+    if type(protocol) is not dict:
         raise ValueError("unsupported_comparison_protocol")
+    version = protocol.get("schema_version")
+    if version == ORDERED_SCHEMA:
+        fields |= {"selection_seed", "tie_policy", "arm_order"}
+    if (version not in {SCHEMA, ORDERED_SCHEMA}
+            or not fields <= set(protocol) <= fields | {"reuse_ai_from"}):
+        raise ValueError("unsupported_comparison_protocol")
+    _execution_order(protocol)
     budget = _number(protocol["budget_seconds_per_arm"], positive=True)
     if budget > 3600:
         raise ValueError("comparison_budget_exceeds_capacity")
@@ -440,7 +469,7 @@ def _priority(frozen, arm, directory):
                 )
                 values.append(float(fy[similarity == similarity.max()].mean()))
         predictions = {rid: _number(float(value)) for rid, value in zip(valid, values)}
-    order = sorted(predictions, key=lambda rid: (-predictions[rid], rid))
+    order = _prediction_order(frozen, predictions)
     return (
         order,
         predictions,
@@ -460,9 +489,10 @@ def worker(run_dir, arm, deadline):
     frozen, binding = envelope["payload"], envelope["sha256"]
     if sha(frozen) != binding:
         raise ValueError("frozen_comparison_binding_mismatch")
-    import torch
+    if arm != "similarity":
+        import torch
 
-    torch.set_num_threads(1)
+        torch.set_num_threads(1)
     order, predictions, setup = _priority(frozen, arm, directory)
     publish(
         directory / "priority.json",
@@ -475,10 +505,11 @@ def worker(run_dir, arm, deadline):
             "evaluation_labels_read": 0,
         },
     )
-    from betelgeuze_engine.product.prepared_rigid_poses import (
-        evaluate_rigid_pose_request,
-    )
-    from tools.product.verify_prepared_cross_numerics import check_report
+    if arm != "similarity":
+        from betelgeuze_engine.product.prepared_rigid_poses import (
+            evaluate_rigid_pose_request,
+        )
+        from tools.product.verify_prepared_cross_numerics import check_report
 
     called = 0
     for rid in order:
@@ -659,7 +690,7 @@ def run(protocol, output_dir, *, resume=False):
         else:
             publish(output_dir / "frozen.json", envelope)
         arms = {}
-        for arm in ARMS:
+        for arm in _execution_order(protocol):
             directory = output_dir / arm
             directory.mkdir(exist_ok=resume)
             attempt = directory / "attempt.json"
