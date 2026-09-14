@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import datetime as dt
 import glob
@@ -4530,6 +4531,49 @@ def _resolve_queue_csv(args: argparse.Namespace) -> str:
     return queue_csv
 
 
+def _apply_residual_score_model_shadow(result_df: pd.DataFrame, args: argparse.Namespace) -> tuple[pd.DataFrame, Dict[str, Any]]:
+    """Append diagnostics after selection; never change ranking or old AuxMLP."""
+    checkpoint = str(getattr(args, "residual_score_shadow_checkpoint", "") or "").strip()
+    expected_sha = str(getattr(args, "residual_score_shadow_checkpoint_sha256", "") or "").strip()
+    meta: Dict[str, Any] = {"enabled": bool(checkpoint or expected_sha), "status": "disabled",
+                            "requested_rows": len(result_df), "evaluated_rows": 0, "rejected_rows": 0,
+                            "ranking_effect": "none", "production_checkpoint_ready": False,
+                            "uncertainty_calibrated": False, "physical_energy_residual_validated": False}
+    if not meta["enabled"]:
+        return result_df, meta
+    from betelgeuze_engine.product.residual_score_shadow import (
+        ResidualScoreShadowError, load_residual_score_shadow,
+    )
+
+    try:
+        model = load_residual_score_shadow(checkpoint, expected_sha256=expected_sha)
+        score_column = model.contract["input_score_column"]
+        # Each row reads the exact saved score source. Absence is rejected by
+        # the shared encoder; no fallback to a newer score or zero is allowed.
+        rows = [{**row, "raw_score": row.get(score_column)} for row in result_df.to_dict(orient="records")]
+        predictions = model.predict_rows(rows)
+        meta.update({"status": "evaluated", "checkpoint_sha256": model.checkpoint_sha256,
+                     "training_fingerprint_digest": model.training_fingerprint_digest,
+                     "contract": model.contract, "delta_energy_head_trained": model.energy_trained,
+                     "delta_force_head_trained": False,
+                     "output_semantics": "diagnostic_score_proxy_not_affinity_or_physical_energy"})
+    except ResidualScoreShadowError as exc:
+        predictions = [{"status": "rejected", "reason": str(exc), "binder_logit": None,
+                        "delta_score": None, "corrected_score": None, "delta_energy": None,
+                        "delta_force": None, "uncertainty": None} for _ in range(len(result_df))]
+        meta.update({"status": "rejected", "reason": str(exc)})
+    output = result_df.copy()
+    for name in ("status", "reason", "binder_logit", "delta_score", "corrected_score",
+                 "delta_energy", "delta_force", "uncertainty"):
+        output[f"residual_model_shadow_{name}"] = [item[name] for item in predictions]
+    meta["evaluated_rows"] = sum(item["status"] == "evaluated" for item in predictions)
+    meta["rejected_rows"] = len(predictions) - meta["evaluated_rows"]
+    meta["rejection_reason_counts"] = dict(Counter(item["reason"] for item in predictions if item["status"] == "rejected"))
+    if meta["rejected_rows"]:
+        meta["status"] = "partially_evaluated" if meta["evaluated_rows"] else "rejected"
+    return output, meta
+
+
 def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     queue_csv = _resolve_queue_csv(args)
     df = pd.read_csv(queue_csv)
@@ -4918,6 +4962,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     )
     result_df = rank_selection_frame(result_df, selection_score_authority)
     result_df = _append_replicate_export_metrics(result_df, ranking_meta)
+    result_df, learned_shadow_meta = _apply_residual_score_model_shadow(result_df, args)
     result_csv = str(args.out_scores_csv).strip() or os.path.join(out_root, "ligand_scores.csv")
     _ensure_dir(os.path.dirname(result_csv) or ".")
     # Full H-bond pair evidence stays in the job-scoped EvidenceBundle.  Keep
@@ -5072,6 +5117,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         },
         "aux_model": aux_meta,
         "residual_prototype": residual_shadow_meta,
+        "residual_score_model_shadow": learned_shadow_meta,
     }
     if not score_only:
         summary["artifacts"]["jobs_dir"] = jobs_root
@@ -5237,6 +5283,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out-scores-csv", type=str, default="")
     p.add_argument("--out-summary-json", type=str, default="")
     p.add_argument("--out-summary-md", type=str, default="")
+    p.add_argument("--residual-score-shadow-checkpoint", type=str, default="",
+                   help="Optional residual candidate diagnostics; never changes ranking.")
+    p.add_argument("--residual-score-shadow-checkpoint-sha256", type=str, default="")
     p.add_argument("--aux-model-checkpoint", type=str, default="")
     p.add_argument("--aux-score-weight", type=float, default=0.35)
     p.add_argument("--residual-prototype-enabled", action=argparse.BooleanOptionalAction, default=False)
