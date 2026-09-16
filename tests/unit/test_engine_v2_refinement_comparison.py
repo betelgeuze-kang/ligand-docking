@@ -134,12 +134,12 @@ def test_weighted_reservation_and_candidate_cap():
 
 
 def test_request_sources_remain_unchanged():
-    a, r, l = _authority()
-    original = canonical_system_sha256(r), canonical_system_sha256(l)
-    run_cpu_refinement_comparison(a, DockingBudget(candidate_count=2, top_k=1, max_refinement_steps=2),
-        receptor_system=r, ligand_system=l, parameters=_parameters(l),
+    authority, receptor, ligand = _authority()
+    original = canonical_system_sha256(receptor), canonical_system_sha256(ligand)
+    run_cpu_refinement_comparison(authority, DockingBudget(candidate_count=2, top_k=1, max_refinement_steps=2),
+        receptor_system=receptor, ligand_system=ligand, parameters=_parameters(ligand),
         implementation_source_sha256="e" * 64, minimization=_config().minimization)
-    assert (canonical_system_sha256(r), canonical_system_sha256(l)) == original
+    assert (canonical_system_sha256(receptor), canonical_system_sha256(ligand)) == original
 
 
 def test_selection_keeps_baseline_when_refinement_invalid_or_worse():
@@ -161,10 +161,10 @@ def test_selection_keeps_baseline_when_refinement_invalid_or_worse():
 
 
 def test_refiner_rejects_legacy_config_and_receipts_identify_new_numerics():
-    a, _, l = _authority()
+    authority, _, ligand = _authority()
     with pytest.raises(TypeError, match="1.1"):
         energy_refinement.EnergyBasedLocalRefiner(
-            a, l, _parameters(l), implementation_source_sha256="e" * 64,
+            authority, ligand, _parameters(ligand), implementation_source_sha256="e" * 64,
             config=_legacy_config())
     with pytest.raises(TypeError, match="1.1"):
         EnergyLocalRefinementConfig(minimization=_legacy_config().minimization)
