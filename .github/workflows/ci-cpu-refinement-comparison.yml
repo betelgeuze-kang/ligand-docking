@@ -3,11 +3,14 @@ on:
   pull_request:
     paths:
       - 'betelgeuze_engine_v2/**'
+      - 'betelgeuze_product/cpu_refinement/**'
+      - 'betelgeuze_product/__init__.py'
       - 'betelgeuze_product/refinement_comparison_workflow.py'
       - 'betelgeuze_product/reference_minimization_workflow.py'
       - 'betelgeuze_product/local_research_workflow.py'
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
+      - 'tests/unit/test_cpu_refinement_source_boundaries.py'
       - '.github/workflows/ci-cpu-refinement-comparison.yml'
   workflow_dispatch:
 permissions:
@@ -53,15 +56,17 @@ jobs:
       - name: Lint changed implementation and tests
         run: |
           python -m ruff check --isolated --no-cache \
-            betelgeuze_engine_v2/physics/reference_forcefield_v1_1.py \
-            betelgeuze_engine_v2/physics/reference_minimization_v1_1.py \
-            betelgeuze_engine_v2/docking/energy_refinement_v1_1.py \
-            betelgeuze_engine_v2/docking/refinement_comparison.py \
+            betelgeuze_product/cpu_refinement/reference_forcefield_v1_1.py \
+            betelgeuze_product/cpu_refinement/reference_minimization_v1_1.py \
+            betelgeuze_product/cpu_refinement/energy_refinement_v1_1.py \
+            betelgeuze_product/cpu_refinement/refinement_comparison.py \
+            betelgeuze_product/cpu_refinement/__init__.py \
             betelgeuze_product/refinement_comparison_workflow.py \
             tests/unit/test_engine_v2_reference_angle_boundary.py \
             tests/unit/test_engine_v2_refinement_comparison.py \
             tests/unit/test_engine_v2_numerics_v1_1_contracts.py \
-            tests/unit/test_refinement_comparison_workflow.py
+            tests/unit/test_refinement_comparison_workflow.py \
+            tests/unit/test_cpu_refinement_source_boundaries.py
       - name: Exercise actual CPU paths and unchanged historical protocols
         shell: bash
         run: |
@@ -71,6 +76,8 @@ jobs:
             tests/unit/test_engine_v2_refinement_comparison.py \
             tests/unit/test_engine_v2_numerics_v1_1_contracts.py \
             tests/unit/test_refinement_comparison_workflow.py \
+            tests/unit/test_cpu_refinement_source_boundaries.py \
+            tests/unit/test_engine_v2_global_orientation_development_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_minimization.py \
             tests/unit/test_engine_v2_reference_forcefield_v2.py \

@@ -13,21 +13,21 @@ import math
 import time
 
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
-from betelgeuze_engine_v2.physics.reference_minimization_v1_1 import ReferenceMinimizationConfig
+from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import ReferenceMinimizationConfig
 from betelgeuze_engine_v2.physics.reference_parameters import ReferenceForceFieldParameters
-from .authority import AuthenticatedDockingProblem
+from betelgeuze_engine_v2.docking.authority import AuthenticatedDockingProblem
 from .energy_refinement_v1_1 import (
     EnergyBasedLocalRefiner, EnergyLocalRefinementConfig,
 )
-from .guided_placement import build_guided_placement_context
-from .identity import coordinate_fingerprint
-from .proposals import DockingBudget
-from .scorer_v1 import (
+from betelgeuze_engine_v2.docking.guided_placement import build_guided_placement_context
+from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
+from betelgeuze_engine_v2.docking.proposals import DockingBudget
+from betelgeuze_engine_v2.docking.scorer_v1 import (
     ChemistryPoseScorerV1, ScorerV1Config,
     run_authenticated_scorer_v1_guided_search,
 )
 
-from .energy_refinement import run_authenticated_energy_refined_scorer_v1_guided_search
+from betelgeuze_engine_v2.docking.energy_refinement import run_authenticated_energy_refined_scorer_v1_guided_search
 
 SCHEMA_ID = "betelgeuze.cpu_refinement_comparison/1.0.0"
 MAX_COMPARISON_CANDIDATES = 256

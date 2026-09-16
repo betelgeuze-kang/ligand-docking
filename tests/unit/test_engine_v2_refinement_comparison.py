@@ -8,8 +8,8 @@ import json
 import pytest
 
 from betelgeuze_engine_v2.docking import DockingBudget
-from betelgeuze_engine_v2.docking import energy_refinement_v1_1 as energy_refinement
-from betelgeuze_engine_v2.docking.refinement_comparison import (
+from betelgeuze_product.cpu_refinement import energy_refinement_v1_1 as energy_refinement
+from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig, _selection, plan_refinement_comparison,
     run_cpu_refinement_comparison,
 )
@@ -17,8 +17,8 @@ from betelgeuze_engine_v2.molecular import canonical_system_sha256
 from tests.unit.test_engine_v2_energy_local_refinement_stage6 import _authority, _config as _legacy_config, _parameters
 
 
-from betelgeuze_engine_v2.docking.energy_refinement_v1_1 import EnergyLocalRefinementConfig
-from betelgeuze_engine_v2.physics.reference_minimization_v1_1 import ReferenceMinimizationConfig
+from betelgeuze_product.cpu_refinement.energy_refinement_v1_1 import EnergyLocalRefinementConfig
+from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import ReferenceMinimizationConfig
 
 
 def _config():
@@ -105,7 +105,7 @@ def test_equal_work_caps_both_arms_without_claiming_equal_cpu_time():
 
 @pytest.mark.parametrize("mode", ["same_candidates", "equal_work_budget"])
 def test_insufficient_budget_rejected_before_any_search(monkeypatch, mode):
-    import betelgeuze_engine_v2.docking.refinement_comparison as module
+    import betelgeuze_product.cpu_refinement.refinement_comparison as module
     def forbidden(*args, **kwargs):
         pytest.fail("search executed before budget admission")
     monkeypatch.setattr(module, "run_authenticated_scorer_v1_guided_search", forbidden)

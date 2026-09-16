@@ -19,11 +19,11 @@ from betelgeuze_engine_v2.docking import (
     DockingBudget, DockingScope, PocketDefinition,
     build_element_aware_authenticated_known_pocket_docking_problem,
 )
-from betelgeuze_engine_v2.docking.refinement_comparison import (
+from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig, run_cpu_refinement_comparison,
 )
 from betelgeuze_engine_v2.molecular.serialization import all_atom_system_from_canonical_json
-from betelgeuze_engine_v2.physics.reference_minimization_v1_1 import _config_from_document
+from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import _config_from_document
 from .local_research_workflow import _decode, _json
 from .reference_minimization_workflow import _bound, _directory, _parameters, _publish, _read
 
@@ -35,7 +35,12 @@ def _source_manifest() -> dict[str, str]:
     root = Path(betelgeuze_engine_v2.__file__).resolve().parent
     paths = sorted(root.rglob("*.py"))
     selected = {"betelgeuze_engine_v2/" + p.relative_to(root).as_posix(): p for p in paths}
-    for name in ("refinement_comparison_workflow.py", "reference_minimization_workflow.py",
+    product_root = Path(__file__).resolve().parent
+    # This opt-in closure is deliberately separate from the frozen engine
+    # manifest. Relocating modules must never exclude their bytes from evidence.
+    for path in sorted((product_root / "cpu_refinement").rglob("*.py")):
+        selected["betelgeuze_product/" + path.relative_to(product_root).as_posix()] = path
+    for name in ("__init__.py", "refinement_comparison_workflow.py", "reference_minimization_workflow.py",
                  "local_research_workflow.py"):
         selected["betelgeuze_product/" + name] = Path(__file__).resolve().parent / name
     return {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in selected.items()}

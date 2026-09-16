@@ -11,7 +11,7 @@ scientifically validated docking workflow. Default product routes are unchanged.
 The historical `reference_forcefield.py` uses `acos(clamp(cos(theta)))`. Very close
 to a straight angle, clamping can flatten the energy derivative and make the
 historical minimizer report convergence without moving. The new
-`physics.reference_forcefield_v1_1` uses the normalized cross product and dot
+`betelgeuze_product.cpu_refinement.reference_forcefield_v1_1` uses the normalized cross product and dot
 product in `atan2`, preserving the harmonic-angle energy expression. Zero-length
 and numerically collinear vectors are rejected explicitly. This does not claim
 that singular geometries are supported.
@@ -28,6 +28,17 @@ checkpoint algorithm identities and refiner receipts identify 1.1; actual 1.0
 checkpoints are rejected by 1.1 and vice versa. No checkpoint migration or
 historical resealing is provided. The legacy V2 constrained path is not silently
 switched to a new evaluator.
+
+## Frozen engine boundary
+
+The opt-in modules live under `betelgeuze_product.cpu_refinement`, not inside
+`betelgeuze_engine_v2`. The historical ScorerV1 development protocol binds the
+entire engine Python tree, including its path set. Adding otherwise unused files
+there changed that identity; merely preserving old file contents was insufficient.
+The original engine tree and frozen verifier remain unchanged. The new workflow
+separately hashes every Python file in `cpu_refinement`, including `__init__.py`,
+and rechecks those bytes before publication. This is not an exception to the
+legacy guard: legacy code does not import the opt-in implementation.
 
 ## CLI and input preparation
 
@@ -47,8 +58,8 @@ The request has exactly these fields:
 ```python
 from dataclasses import asdict
 from betelgeuze_engine_v2.docking import DockingBudget
-from betelgeuze_engine_v2.docking.refinement_comparison import RefinementComparisonConfig
-from betelgeuze_engine_v2.physics.reference_minimization_v1_1 import ReferenceMinimizationConfig
+from betelgeuze_product.cpu_refinement.refinement_comparison import RefinementComparisonConfig
+from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import ReferenceMinimizationConfig
 
 request = {
     "schema_id": "cpu_refinement_comparison_request/1.0.0",

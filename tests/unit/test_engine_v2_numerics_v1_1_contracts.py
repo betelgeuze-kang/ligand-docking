@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from betelgeuze_engine_v2.physics import reference_forcefield_v1_1 as physics
-from betelgeuze_engine_v2.physics import reference_minimization_v1_1 as minimizer
+from betelgeuze_product.cpu_refinement import reference_forcefield_v1_1 as physics
+from betelgeuze_product.cpu_refinement import reference_minimization_v1_1 as minimizer
 from tests.unit import test_engine_v2_reference_physics as physics_contracts
 from tests.unit import test_engine_v2_reference_minimization as minimizer_contracts
 

@@ -11,14 +11,14 @@ from dataclasses import dataclass, field, replace
 import torch
 
 from betelgeuze_engine_v2.contracts import failure_receipt
-from betelgeuze_engine_v2.physics.reference_minimization_v1_1 import (
+from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import (
     REFERENCE_MINIMIZATION_ALGORITHM_ID, ReferenceMinimizationConfig,
     minimize_reference_force_field,
 )
-from . import energy_refinement as legacy
-from .energy_refinement import EnergyRefinementError, _coordinate_hex
-from .identity import coordinate_fingerprint
-from .proposals import DockingProposal
+from betelgeuze_engine_v2.docking import energy_refinement as legacy
+from betelgeuze_engine_v2.docking.energy_refinement import EnergyRefinementError, _coordinate_hex
+from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
+from betelgeuze_engine_v2.docking.proposals import DockingProposal
 
 ENERGY_REFINER_ALGORITHM_ID = "authenticated_ligand_internal_reference_forcefield_bounded_minimization/1.1.0"
 

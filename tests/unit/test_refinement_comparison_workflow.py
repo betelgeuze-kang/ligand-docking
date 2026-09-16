@@ -12,7 +12,7 @@ import sys
 import pytest
 
 from betelgeuze_engine_v2.docking import DockingBudget
-from betelgeuze_engine_v2.docking.refinement_comparison import RefinementComparisonConfig
+from betelgeuze_product.cpu_refinement.refinement_comparison import RefinementComparisonConfig
 from betelgeuze_engine_v2.molecular.serialization import canonical_system_json_bytes
 from betelgeuze_product import refinement_comparison_workflow as workflow
 from tests.unit.test_engine_v2_energy_local_refinement_stage6 import _authority, _parameters

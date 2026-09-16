@@ -15,9 +15,9 @@ import torch
 from betelgeuze_engine_v2.contracts import QuantityDescriptor
 from betelgeuze_engine_v2.geometry import CompactNeighborList
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
-from .composition import EnergyTermResult
-from .reference_parameters import COULOMB_KCAL_ANGSTROM_PER_MOL_E2, ReferenceForceFieldParameters
-from .reference_forcefield import (
+from betelgeuze_engine_v2.physics.composition import EnergyTermResult
+from betelgeuze_engine_v2.physics.reference_parameters import COULOMB_KCAL_ANGSTROM_PER_MOL_E2, ReferenceForceFieldParameters
+from betelgeuze_engine_v2.physics.reference_forcefield import (
     ReferencePhysicsApplicabilityError, ReferencePhysicsEvaluation,
     _applicability_blockers, _vector, _torsion_angle, _switch,
 )

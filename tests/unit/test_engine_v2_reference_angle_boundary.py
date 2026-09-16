@@ -14,10 +14,10 @@ from betelgeuze_engine_v2.molecular import (
     AllAtomSystem, Atom, Bond, Chain, Residue, StructureProvenance,
     canonical_topology_sha256,
 )
-from betelgeuze_engine_v2.physics.reference_forcefield_v1_1 import (
+from betelgeuze_product.cpu_refinement.reference_forcefield_v1_1 import (
     ReferencePhysicsApplicabilityError, _angle, evaluate_reference_force_field,
 )
-from betelgeuze_engine_v2.physics.reference_minimization_v1_1 import (
+from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import (
     ReferenceMinimizationConfig, ReferenceMinimizationError,
     minimize_reference_force_field, require_reference_minimization_checkpoint_document,
 )

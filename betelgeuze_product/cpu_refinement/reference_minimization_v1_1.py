@@ -19,15 +19,15 @@ import torch
 
 from betelgeuze_engine_v2.geometry import RadiusGraphConfig, build_compact_radius_graph
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256, canonical_topology_sha256
-from . import reference_minimization as legacy
-from .reference_minimization import (
+from betelgeuze_engine_v2.physics import reference_minimization as legacy
+from betelgeuze_engine_v2.physics.reference_minimization import (
     ReferenceMinimizationError, ReferenceMinimizationObservation,
     REFERENCE_MINIMIZATION_CHECKPOINT_SCHEMA_ID,
     _digest, _sha256, _exact_int, _finite_float, _coordinate_bytes,
     _coordinate_digest, _validate_source_system,
 )
 from .reference_forcefield_v1_1 import ReferencePhysicsApplicabilityError, evaluate_reference_force_field
-from .reference_parameters import ReferenceForceFieldParameters
+from betelgeuze_engine_v2.physics.reference_parameters import ReferenceForceFieldParameters
 
 REFERENCE_MINIMIZATION_ALGORITHM_ID = "betelgeuze.engine_v2_reference_force_steepest_descent/1.1.0"
 
