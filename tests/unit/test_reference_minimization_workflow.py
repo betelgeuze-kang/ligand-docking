@@ -221,3 +221,182 @@ def test_process_death_during_publication_preserves_partial_history(tmp_path):
     assert (history / 'report.json.partial').read_text() == 'interrupted'
     assert result['invocation']['solver_calls'] == 0
     assert workflow.verify_minimization_run(tmp_path / 'run')['verification'] == 'passed'
+
+# Request admission remains semantic; repeated checks bind the exact same bytes.
+@pytest.mark.parametrize('source', ['system', 'parameters'])
+def test_rechecks_read_all_source_bytes_without_redecoding(tmp_path, monkeypatch, source):
+    request, _, _, _ = make_request(tmp_path / 'input', iterations=3, interval=1)
+    raw = Path(request[source]['path']).read_bytes()
+    original_decode, original_read = workflow._decode, workflow._read
+    reads, decodes = [], []
+
+    def read(path):
+        value = original_read(path)
+        if Path(path) == Path(request[source]['path']):
+            reads.append(value)
+        return value
+
+    def decode(value):
+        if any(value is item for item in reads):
+            decodes.append(value)
+        return original_decode(value)
+
+    monkeypatch.setattr(workflow, '_read', read)
+    monkeypatch.setattr(workflow, '_decode', decode)
+    result = workflow.run_minimization(request, tmp_path / 'run')
+    calls = result['invocation']['solver_calls']
+    assert len(reads) == 2 * calls + 2
+    assert all(value == raw for value in reads)
+    assert len(decodes) == 1
+
+
+@pytest.mark.parametrize('source', ['system', 'parameters'])
+@pytest.mark.parametrize('replacement', [b'{"duplicate":1,"duplicate":2}', b'{truncated'])
+def test_initial_semantic_admission_remains_required(tmp_path, source, replacement):
+    request, _, _, _ = make_request(tmp_path / 'input')
+    Path(request[source]['path']).write_bytes(replacement)
+    request[source]['sha256'] = hashlib.sha256(replacement).hexdigest()
+    with pytest.raises((ValueError, TypeError, KeyError)):
+        workflow.run_minimization(request, tmp_path / 'run')
+    assert not (tmp_path / 'run').exists()
+
+
+@pytest.mark.parametrize('source', ['system', 'parameters'])
+def test_rechecks_detect_changed_bytes_with_restored_size_and_mtime(tmp_path, monkeypatch, source):
+    request, _, _, _ = make_request(tmp_path / 'input', interval=1)
+    path = Path(request[source]['path'])
+    raw, info = path.read_bytes(), path.stat()
+    original = workflow._evaluate
+
+    def mutate(*args):
+        value = original(*args)
+        altered = bytearray(raw)
+        altered[len(altered) // 2] ^= 1
+        path.write_bytes(altered)
+        os.utime(path, ns=(info.st_atime_ns, info.st_mtime_ns))
+        return value
+
+    monkeypatch.setattr(workflow, '_evaluate', mutate)
+    with pytest.raises(ValueError, match='input_sha256_mismatch'):
+        workflow.run_minimization(request, tmp_path / 'run')
+    assert not (tmp_path / 'run/checkpoint.json').exists()
+    assert not (tmp_path / 'run/complete.json').exists()
+
+
+@pytest.mark.parametrize('interval', [1, 3, 100])
+def test_observed_phase_costs_preserve_solver_and_checkpoint_schedule(tmp_path, interval):
+    request, system, parameters, config = make_request(tmp_path / 'input', iterations=5, interval=interval)
+    observed = workflow.run_minimization(request, tmp_path / 'run')
+    direct = minimize_reference_force_field(system, parameters, config)
+    assert observed['result'] == direct.to_dict()
+    invocation = observed['invocation']
+    costs = invocation['phase_costs']
+    assert costs['schema_version'] == 'reference_minimization_phase_costs_v1'
+    assert costs['scope'] == 'this_invocation_instrumented_substeps_only'
+    assert costs['force_evaluation_count_observed'] is False
+    phases = costs['phases']
+    calls = invocation['solver_calls']
+    assert phases['input_load']['calls'] == 1
+    assert phases['source_recheck']['calls'] == 2 * calls + 1
+    assert phases['solver']['calls'] == calls
+    assert phases['result_recheck']['calls'] == calls
+    assert phases['checkpoint_write']['calls'] == calls
+    assert set(phases) == {'input_load', 'source_recheck', 'solver', 'result_recheck', 'checkpoint_write'}
+    import math
+    for phase in phases.values():
+        assert type(phase['calls']) is int and phase['calls'] >= 0
+        for name in ('wall_seconds', 'cpu_seconds'):
+            assert type(phase[name]) is float and math.isfinite(phase[name]) and phase[name] >= 0
+    assert sum(p['wall_seconds'] for p in phases.values()) <= invocation['wall_seconds']
+    assert workflow.verify_minimization_run(tmp_path / 'run')['verification'] == 'passed'
+
+
+def test_terminal_restore_has_no_new_solver_or_checkpoint_cost(tmp_path, monkeypatch):
+    request, _, _, _ = make_request(tmp_path / 'input', distance=1.0)
+    first = workflow.run_minimization(request, tmp_path / 'run')
+    import betelgeuze_engine_v2.physics.reference_minimization as owner
+    monkeypatch.setattr(owner, 'minimize_reference_force_field', lambda *a, **k: pytest.fail('recomputed'))
+    monkeypatch.setattr(workflow, '_evaluate', lambda *a, **k: pytest.fail('rechecked terminal physics'))
+    restored = workflow.run_minimization(request, tmp_path / 'run', resume=True)
+    assert first['result'] == restored['result']
+    costs = restored['invocation']['phase_costs']['phases']
+    for phase in ('solver', 'result_recheck', 'checkpoint_write'):
+        assert costs[phase] == {'calls': 0, 'wall_seconds': 0.0, 'cpu_seconds': 0.0}
+    assert costs['source_recheck']['calls'] == 1
+    assert workflow.verify_minimization_run(tmp_path / 'run')['verification'] == 'passed'
+    old = tmp_path / 'run' / restored['invocation']['previous_attempt_archive']
+    assert workflow.verify_minimization_run(old)['verification'] == 'passed'
+
+
+def _reseal_minimization_report_for_corruption_test(directory, report):
+    """Only fresh synthetic local copies; never rewrite historical evidence."""
+    path = directory / 'report.json'
+    path.write_text(json.dumps(report))
+    completion_path = directory / 'complete.json'
+    completion = json.loads(completion_path.read_text())
+    completion['artifacts']['report.json'] = hashlib.sha256(path.read_bytes()).hexdigest()
+    completion_path.write_text(json.dumps(completion))
+
+
+@pytest.mark.parametrize('mutation', [
+    'negative_wall', 'bool_time', 'string_time', 'negative_calls', 'bool_calls',
+    'wrong_solver_calls', 'wrong_source_calls', 'wrong_write_calls', 'missing_phase',
+    'extra_phase', 'wrong_scope', 'claims_force_count', 'nonzero_unexecuted', 'overflow_time',
+])
+def test_readonly_verifier_rejects_inconsistent_phase_costs(tmp_path, mutation):
+    request, _, _, _ = make_request(tmp_path / 'input', distance=1.0)
+    report = workflow.run_minimization(request, tmp_path / 'run')
+    if mutation == 'nonzero_unexecuted':
+        report = workflow.run_minimization(request, tmp_path / 'run', resume=True)
+    costs = report['invocation']['phase_costs']
+    phases = costs['phases']
+    if mutation == 'negative_wall':
+        phases['solver']['wall_seconds'] = -1.0
+    elif mutation == 'bool_time':
+        phases['solver']['cpu_seconds'] = True
+    elif mutation == 'string_time':
+        phases['solver']['wall_seconds'] = '0.1'
+    elif mutation == 'negative_calls':
+        phases['solver']['calls'] = -1
+    elif mutation == 'bool_calls':
+        phases['solver']['calls'] = True
+    elif mutation == 'wrong_solver_calls':
+        phases['solver']['calls'] += 1
+    elif mutation == 'wrong_source_calls':
+        phases['source_recheck']['calls'] += 1
+    elif mutation == 'wrong_write_calls':
+        phases['checkpoint_write']['calls'] += 1
+    elif mutation == 'missing_phase':
+        phases.pop('input_load')
+    elif mutation == 'extra_phase':
+        phases['gpu'] = {'calls': 0, 'wall_seconds': 0.0, 'cpu_seconds': 0.0}
+    elif mutation == 'wrong_scope':
+        costs['scope'] = 'entire_docking_gpu_run'
+    elif mutation == 'claims_force_count':
+        costs['force_evaluation_count_observed'] = True
+    elif mutation == 'overflow_time':
+        phases['solver']['cpu_seconds'] = 10 ** 400
+    else:
+        phases['solver']['wall_seconds'] = 0.1
+    _reseal_minimization_report_for_corruption_test(tmp_path / 'run', report)
+    before = {p.name: p.read_bytes() for p in (tmp_path / 'run').iterdir() if p.is_file()}
+    with pytest.raises(ValueError, match='minimization_phase_costs'):
+        workflow.verify_minimization_run(tmp_path / 'run')
+    assert before == {p.name: p.read_bytes() for p in (tmp_path / 'run').iterdir() if p.is_file()}
+
+
+def test_legacy_report_without_phase_costs_remains_readable(tmp_path):
+    request, _, _, _ = make_request(tmp_path / 'input', distance=1.0)
+    report = workflow.run_minimization(request, tmp_path / 'run')
+    report['invocation'].pop('phase_costs', None)
+    _reseal_minimization_report_for_corruption_test(tmp_path / 'run', report)
+    assert workflow.verify_minimization_run(tmp_path / 'run')['verification'] == 'passed'
+
+
+def test_phase_costs_do_not_reject_parallel_cpu_time(tmp_path):
+    request, _, _, _ = make_request(tmp_path / 'input', distance=1.0)
+    report = workflow.run_minimization(request, tmp_path / 'run')
+    phase = report['invocation']['phase_costs']['phases']['solver']
+    phase.update(wall_seconds=0.25, cpu_seconds=0.75)
+    _reseal_minimization_report_for_corruption_test(tmp_path / 'run', report)
+    assert workflow.verify_minimization_run(tmp_path / 'run')['verification'] == 'passed'
