@@ -4,13 +4,15 @@ on:
     paths:
       - 'betelgeuze_engine_v2/**'
       - 'betelgeuze_product/**'
-      - 'tests/unit/test_cpu_refinement*.py'
-      - 'tests/unit/test_cpu_fixed_receptor*.py'
+      - 'tests/unit/test_cpu_*.py'
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
       - 'tools/verify_cpu_refinement_v1_2_install.py'
+      - 'tools/verify_cpu_candidate_resume_install.py'
       - 'tools/benchmark_cpu_refinement_v1_2_verification.py'
       - 'tools/benchmark_cpu_tangent_projection.py'
+      - 'tools/benchmark_cpu_candidate_journal_scaling.py'
+      - 'tools/benchmark_cpu_candidate_resume_process.py'
       - 'pyproject.toml'
       - 'requirements-package.txt'
       - '.github/workflows/ci-cpu-refinement-v1-2.yml'
@@ -61,20 +63,20 @@ jobs:
       - name: Lint new implementation and tests without exclusions
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
-            tests/unit/test_cpu_refinement_v1_2_*.py \
-            tests/unit/test_cpu_fixed_receptor*.py \
+            tests/unit/test_cpu_*.py \
             tools/verify_cpu_refinement_v1_2_install.py \
+            tools/verify_cpu_candidate_resume_install.py \
             tools/benchmark_cpu_refinement_v1_2_verification.py \
-            tools/benchmark_cpu_tangent_projection.py
+            tools/benchmark_cpu_tangent_projection.py \
+            tools/benchmark_cpu_candidate_journal_scaling.py \
+            tools/benchmark_cpu_candidate_resume_process.py
           git diff --check
       - name: Actual corrected extended paths and unchanged historical regressions
         shell: bash
         run: |
           set -euo pipefail
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
-            tests/unit/test_cpu_refinement_v1_2_*.py \
-            tests/unit/test_cpu_fixed_receptor*.py \
-            tests/unit/test_cpu_refinement_source_boundaries.py \
+            tests/unit/test_cpu_*.py \
             tests/unit/test_engine_v2_reference_angle_boundary.py \
             tests/unit/test_engine_v2_refinement_comparison.py \
             tests/unit/test_engine_v2_numerics_v1_1_contracts.py \
@@ -106,6 +108,12 @@ jobs:
           python tools/verify_cpu_refinement_v1_2_install.py \
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output verification-artifacts/installed-cli
+      - name: Verify installed candidate resume and portable reports
+        run: |
+          trap 'if [ -d "$RUNNER_TEMP/candidate-resume-installed" ]; then cp -a "$RUNNER_TEMP/candidate-resume-installed" verification-artifacts/candidate-resume-installed; fi' EXIT
+          python tools/verify_cpu_candidate_resume_install.py \
+            --python "$RUNNER_TEMP/corrected-installed/bin/python" \
+            --output "$RUNNER_TEMP/candidate-resume-installed"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:

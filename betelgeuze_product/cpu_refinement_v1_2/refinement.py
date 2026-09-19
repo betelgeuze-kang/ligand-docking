@@ -13,7 +13,7 @@ from betelgeuze_engine_v2.physics.reference_forcefield_v2 import _constraint_obs
 from .evaluation import ExtendedEvaluator
 from .fixed_receptor import FixedReceptorEvaluator, FIXED_ATTEMPT_SCHEMA, ENERGY_BASIS
 from .minimization import ALGORITHM_ID, SolverConfig, minimize_extended
-from .provenance import ResearchError, canonical, coordinates_hex, digest, require_digest
+from .provenance import ResearchError, canonical, coordinates_hex, decode_coordinates, digest, require_digest
 
 from .work import WorkMeter
 
@@ -68,6 +68,7 @@ class ExtendedRefiner(legacy.EnergyBasedLocalRefiner):
             self.refiner_id = "cpu_fixed_receptor_refiner"
             self.refiner_version = "1.0.0"
         self._solver = solver
+        self._replayed_attempts = set()
         selected = RefinementConfig(minimization=solver.minimization, max_attempts=max_attempts,
             solver=solver, evaluator_fingerprint_sha256=self._extended_evaluator.fingerprint_sha256)
         super().__init__(authority, ligand, parameters.base_parameters,
@@ -77,6 +78,59 @@ class ExtendedRefiner(legacy.EnergyBasedLocalRefiner):
         super().assert_ready()
         if self._extended_evaluator.fingerprint_sha256 != self._config.evaluator_fingerprint_sha256:
             raise ResearchError("extended refiner parameters changed")
+
+    @property
+    def replayed_attempts(self):
+        """Source proposal identities restored; retained work is historical work."""
+        return frozenset(self._replayed_attempts)
+
+    def validate_saved_attempt(self, proposal, document, work, *, max_steps):
+        """Structural replay validation; does not rerun physics or admit science."""
+        from .evidence_contracts import same, verify_attempt_execution
+        steps = self._assert_inputs(proposal, max_steps)
+        document, work = json.loads(canonical(document)), json.loads(canonical(work))
+        solver = replace(self._solver, minimization=replace(self._solver.minimization, max_iterations=steps))
+        bound = 1 + steps * (solver.minimization.max_backtracks + 1)
+        verify_attempt_execution(document, work, solver=solver, steps=steps, bound=bound,
+                                 cross=None if self._fixed_environment is None else self._fixed_environment.cross)
+        same(document["receipt_sha256"], digest({k: v for k, v in document.items() if k != "receipt_sha256"}), "saved attempt receipt")
+        expected = {"candidate_id": proposal.candidate_id, "proposal_index": proposal.proposal_index,
+                    "source_proposal_fingerprint_sha256": proposal.fingerprint_sha256,
+                    "pre_coordinates_sha256": coordinate_fingerprint(proposal.coordinates),
+                    "pre_coordinates_binary64_hex": coordinates_hex(proposal.coordinates),
+                    "evaluator": self._extended_evaluator.identity(),
+                    "implementation_source_sha256": self.implementation_source_sha256}
+        for name, value in expected.items():
+            same(document[name], value, f"saved attempt {name}")
+        if document["status"] == "success":
+            after = decode_coordinates(document["post_coordinates_binary64_hex"], self._ligand_system.atom_count)[0]
+            same(coordinate_fingerprint(after), document["post_coordinates_sha256"], "saved optimized coordinates")
+            same(document["energy_delta"], document["final_energy"] - document["initial_energy"], "saved energy delta")
+            displacement = float(torch.linalg.vector_norm(after - proposal.coordinates, dim=-1).max())
+            same(document["maximum_displacement_angstrom"], displacement, "saved displacement")
+        return document, work
+
+    def restore_attempt(self, proposal, document, work, *, max_steps):
+        """Restore optimized proposal/failure without force evaluation.
+
+        Caller must separately bind request/source/environment and distinguish
+        historical attempt work from current replay overhead in final reports.
+        """
+        if proposal.fingerprint_sha256 in self._attempts:
+            raise ResearchError("proposal already refined or restored")
+        document, work = self.validate_saved_attempt(proposal, document, work, max_steps=max_steps)
+        attempt = Attempt(canonical({k: v for k, v in document.items() if k != "receipt_sha256"}), canonical(work))
+        if document["status"] == "success":
+            after = decode_coordinates(document["post_coordinates_binary64_hex"], self._ligand_system.atom_count)[0]
+            refined = proposal.with_refined_coordinates(after, refiner_id=self.refiner_id,
+                refiner_version=self.refiner_version, refinement_receipt_sha256=attempt.receipt_sha256,
+                torsion_angles=self._torsion_angles_for(after))
+            self.assert_ready()
+        self._attempts[proposal.fingerprint_sha256] = attempt
+        self._replayed_attempts.add(proposal.fingerprint_sha256)
+        if document["status"] == "failure":
+            raise ResearchError("restored corrected extended refinement failure")
+        return refined
 
     def refine(self, proposal, *, max_steps):
         steps = self._assert_inputs(proposal, max_steps)
