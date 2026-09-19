@@ -5,6 +5,8 @@ on:
       - 'betelgeuze_engine_v2/**'
       - 'betelgeuze_product/**'
       - 'tests/unit/test_cpu_refinement*.py'
+      - 'tests/unit/test_cpu_fixed_receptor*.py'
+      - 'tools/verify_fixed_receptor_install.py'
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
       - 'tools/verify_cpu_refinement_v1_2_install.py'
@@ -61,9 +63,11 @@ jobs:
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
             tests/unit/test_cpu_refinement_v1_2_*.py \
+            tests/unit/test_cpu_fixed_receptor*.py \
             tools/verify_cpu_refinement_v1_2_install.py \
             tools/benchmark_cpu_refinement_v1_2_verification.py \
-            tools/benchmark_cpu_tangent_projection.py
+            tools/benchmark_cpu_tangent_projection.py \
+            tools/verify_fixed_receptor_install.py
           git diff --check
       - name: Actual corrected extended paths and unchanged historical regressions
         shell: bash
@@ -71,6 +75,7 @@ jobs:
           set -euo pipefail
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
             tests/unit/test_cpu_refinement_v1_2_*.py \
+            tests/unit/test_cpu_fixed_receptor*.py \
             tests/unit/test_cpu_refinement_source_boundaries.py \
             tests/unit/test_engine_v2_reference_angle_boundary.py \
             tests/unit/test_engine_v2_refinement_comparison.py \
@@ -103,6 +108,11 @@ jobs:
           python tools/verify_cpu_refinement_v1_2_install.py \
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output verification-artifacts/installed-cli
+      - name: Verify installed fixed-receptor preflight run restart and read-only verification
+        run: |
+          python tools/verify_fixed_receptor_install.py \
+            --python "$RUNNER_TEMP/corrected-installed/bin/python" \
+            --output verification-artifacts/installed-fixed-receptor
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
