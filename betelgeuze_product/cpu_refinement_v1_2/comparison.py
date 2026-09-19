@@ -9,11 +9,12 @@ from betelgeuze_engine_v2.molecular import canonical_system_sha256
 from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig, _pose, _search, plan_refinement_comparison,
 )
+from .evidence_contracts import REPORT_SCHEMA, POLICY_ID
 from .evaluation import ExtendedEvaluator
 from .minimization import SolverConfig
 from .provenance import ResearchError, digest, source_manifest
 from .refinement import ExtendedRefiner
-from .selection import SelectionConfig, candidate_from_row, select_final_candidates
+from .selection import SelectionConfig, candidate_from_row, select_final_candidates, refinement_admissible
 from .work import WorkMeter
 
 
@@ -39,6 +40,8 @@ def choose_variant(before: dict, after: dict, attempt: dict, require_convergence
         return fallback, "refinement_not_converged"
     if attempt["energy_delta"] > 0:
         return fallback, "internal_energy_increased"
+    if not refinement_admissible(after, attempt, require_convergence):
+        raise ResearchError("refinement admission policy disagreement")
     if fallback == "baseline" and after["score"] >= before["score"]:
         return fallback, "score_not_improved"
     return "refined", "valid_refinement_selected"
@@ -122,14 +125,20 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
         final = select_final_candidates(candidates, descriptors["baseline"], selection, ligand_system.atom_count)
     else:
         final = None  # Different source sets cannot masquerade as matched pairs.
-    per_arm = {name: select_final_candidates(
+    raw_per_arm = {name: select_final_candidates(
         [candidate_from_row(row, name) for row in arms[name]["rows"] if row["succeeded"] and row["selection_eligible"]],
         descriptors[name], selection, ligand_system.atom_count) for name in arms}
+    per_arm = {"baseline": raw_per_arm["baseline"],
+        "refined": select_final_candidates(
+            [candidate_from_row(row, "refined") for row, attempt in
+             zip(arms["refined"]["rows"], attempts, strict=True)
+             if refinement_admissible(row, attempt, comparison.require_convergence_for_selection)],
+            descriptors["refined"], selection, ligand_system.atom_count)}
     if (source_manifest() != sources
             or canonical_system_sha256(receptor_system) != authority.receptor_system_sha256
             or canonical_system_sha256(ligand_system) != authority.ligand_system_sha256):
         raise ResearchError("comparison input or implementation changed")
-    report = {"schema_id": "cpu_extended_comparison/1.2.0", "mode": comparison.mode,
+    report = {"schema_id": REPORT_SCHEMA, "mode": comparison.mode,
               "implementation_source_sha256": implementation,
               "authority_input_receipt_sha256": authority.input_receipt_sha256,
               "evaluator": evaluator.identity(), "solver": solver.to_dict(),
@@ -137,6 +146,8 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
               "atom_count": ligand_system.atom_count, "arms": arms, "attempts": attempts,
               "paired_decisions": pairs, "final_selection": final, "per_arm_selection": per_arm,
               "refinement_work": refinement_work,
+              "selection_config": selection.to_dict(), "selection_policy_id": POLICY_ID,
+              "raw_per_arm_selection": raw_per_arm, "request_binding": None,
               "force_evaluation_bound_per_candidate": force_bound,
               "timing_scope": "scorer_context_generation_refinement_scoring_validity_selection_per_arm",
               "timing_excludes": ["preflight", "source_verification", "final_cross_variant_selection", "publication"],

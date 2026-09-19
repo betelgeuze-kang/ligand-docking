@@ -81,3 +81,13 @@ def select_final_candidates(candidates: list[dict], descriptor: DockingScoreDesc
     return {"config": config.to_dict(), "score_descriptor": descriptor.to_dict(),
             "input_candidate_count": len(candidates), "selected_candidates": selected,
             "decisions": decisions, "globally_ranked": True, "scientifically_validated": False}
+
+
+def refinement_admissible(row: dict, attempt: dict, require_convergence: bool) -> bool:
+    """Common absolute admission; relative score improvement is checked separately."""
+    if type(require_convergence) is not bool:
+        raise ResearchError("exact convergence policy required")
+    return (row["succeeded"] is True and row["selection_eligible"] is True
+            and attempt["status"] == "success"
+            and (not require_convergence or attempt["converged"] is True)
+            and attempt["energy_delta"] <= 0.)

@@ -9,6 +9,7 @@ on:
       - 'tests/unit/test_refinement_comparison_workflow.py'
       - 'tools/verify_cpu_refinement_v1_2_install.py'
       - 'tools/benchmark_cpu_refinement_v1_2_verification.py'
+      - 'tools/benchmark_cpu_tangent_projection.py'
       - 'pyproject.toml'
       - 'requirements-package.txt'
       - '.github/workflows/ci-cpu-refinement-v1-2.yml'
@@ -61,7 +62,8 @@ jobs:
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
             tests/unit/test_cpu_refinement_v1_2_*.py \
             tools/verify_cpu_refinement_v1_2_install.py \
-            tools/benchmark_cpu_refinement_v1_2_verification.py
+            tools/benchmark_cpu_refinement_v1_2_verification.py \
+            tools/benchmark_cpu_tangent_projection.py
           git diff --check
       - name: Actual corrected extended paths and unchanged historical regressions
         shell: bash
@@ -86,6 +88,9 @@ jobs:
       - name: Measure full-byte verification without another JSON parse
         run: |
           python tools/benchmark_cpu_refinement_v1_2_verification.py --output verification-artifacts/verification-benchmark.json
+      - name: Compare tangent projection costs with unchanged numerical results
+        run: |
+          python tools/benchmark_cpu_tangent_projection.py --output verification-artifacts/tangent-projection-benchmark.json
       - name: Build actual root product wheel and install in separate environment
         run: |
           python -m build --wheel --no-isolation --outdir "$RUNNER_TEMP/corrected-wheels"
