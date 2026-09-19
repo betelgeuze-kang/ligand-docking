@@ -15,7 +15,7 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import _pose
 from .refinement import ExtendedRefiner
 from .minimization import minimize_objective, require_checkpoint
 from .provenance import ResearchError, digest, finite, decode_coordinates
-from .evidence_contracts import same, exact_fields, verify_pose_row, verify_work
+from .evidence_contracts import same, exact_fields, verify_pose_row, verify_work, calls
 from .selection import candidate_from_row, select_final_candidates
 from .work import WorkMeter
 
@@ -136,16 +136,20 @@ def verify_candidate(record, plan, index):
     same(numerical["proposal_index"], index, "candidate index")
     same(numerical["source_proposal_sha256"], plan["proposals"][index], "candidate source")
     before, after, attempt = numerical["baseline"], numerical["refined"], numerical["attempt"]
-    for row in (before, after):
+    for row, expected_refined in ((before, False), (after, True)):
         if row is None:
             continue
         verify_pose_row(row, plan["atom_count"])
+        same(row["proposal_index"], index, "row candidate index")
+        same(row["refined"], expected_refined, "row refinement flag")
         same(row["candidate_id"], numerical["candidate_id"], "row candidate identity")
         same(row["proposal_fingerprint_sha256"], numerical["source_proposal_sha256"], "row source")
         if row["succeeded"]:
             from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
             xyz = decode_coordinates(row["coordinates_binary64_hex"], plan["atom_count"])[0]
             same(coordinate_fingerprint(xyz), row["coordinates_sha256"], "scored coordinates")
+            if not expected_refined:
+                same(digest(row["coordinates_binary64_hex"]), plan["candidate_coordinates"][index], "original scored coordinates")
             terms = row["terms"]
             same(float(row["score"]).hex(), terms["total_score_binary64_hex"], "score value")
             same(terms["receipt_sha256"], score_digest({k: v for k, v in terms.items() if k != "receipt_sha256"}), "score receipt")
@@ -154,6 +158,8 @@ def verify_candidate(record, plan, index):
     if attempt["status"] == "success":
         exact_fields(attempt, {"status", "checkpoint", "initial_components", "final_components", "energy_changes"})
         cp = require_checkpoint(attempt["checkpoint"]).to_dict()
+        if cp["status"] not in {"converged", "max_iterations_reached", "line_search_failed"}:
+            raise ResearchError("candidate cannot commit a paused solver state")
         same(cp["evaluator"], plan["objective"], "candidate objective")
         same(cp["config"], plan["solver"], "candidate solver")
         same(cp["implementation_sha256"], plan["implementation_sha256"], "candidate implementation")
@@ -185,10 +191,22 @@ def verify_candidate(record, plan, index):
     from .evidence_contracts import verify_numerical_work
     bound = 1 + plan["solver"]["minimization"]["max_iterations"] * (1 + plan["solver"]["minimization"]["max_backtracks"])
     verify_numerical_work(execution["solver"], bound)
-    verify_work(execution["component_evaluations"])
-    verify_work(execution["scoring"])
+    component_stages = verify_work(execution["component_evaluations"])
+    scoring_stages = verify_work(execution["scoring"])
+    if not set(component_stages) <= {"geometry.build", "force.evaluate"} or not set(scoring_stages) <= {"score.evaluate"}:
+        raise ResearchError("unexpected candidate observation stage")
+    same(calls(component_stages, "force.evaluate"), calls(component_stages, "geometry.build", "completed"),
+         "component graph/force calls")
+    if calls(component_stages, "geometry.build") > 2:
+        raise ResearchError("component evaluation count exceeds pre/post bound")
+    rows = [row for row in (before, after) if row is not None]
+    successful_rows = sum(row["succeeded"] for row in rows)
+    if not successful_rows <= calls(scoring_stages, "score.evaluate", "completed") <= calls(scoring_stages, "score.evaluate") <= len(rows):
+        raise ResearchError("scoring calls do not support returned rows")
     if attempt["status"] == "success":
-        same(execution["component_evaluations"]["stages"]["force.evaluate"]["calls"], 2, "breakdown calls")
+        same(calls(component_stages, "force.evaluate", "completed"), 2, "successful breakdown calls")
+        if not cp["accepted_iterations"] + 1 <= execution["solver"]["force_evaluation_calls"] <= cp["evaluation_count"]:
+            raise ResearchError("solver work does not support accepted iterations")
         same(execution["solver"]["constraint_projection_calls"], cp["evaluation_count"], "solver logical calls")
     return numerical
 
