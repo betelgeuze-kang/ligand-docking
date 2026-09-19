@@ -207,7 +207,39 @@ w.run_resumable_request(json.loads(Path(sys.argv[1]).read_text()), sys.argv[2])
                     archive_sha256=hashlib.sha256(fragment).hexdigest(),
                 )
             )
+    admission_rejections = []
+    for command in ("run", "run-resumable"):
+        inputs = output / (command + "-invalid-inputs")
+        inputs.mkdir()
+        request = request_fixture(inputs)
+        cross_path = inputs / "cross_parameters-fixed.json"
+        cross = json.loads(cross_path.read_text())
+        cross["ligand_topology_sha256"] = "0" * 64
+        raw = json.dumps(cross).encode()
+        cross_path.write_bytes(raw)
+        request["cross_parameters"]["sha256"] = hashlib.sha256(raw).hexdigest()
+        request_file = output / (command + "-invalid-request.json")
+        request_file.write_text(json.dumps(request))
+        result_dir = output / (command + "-invalid-output")
+        run(
+            [
+                "-m",
+                "betelgeuze_product.cpu_refinement_v1_2",
+                command,
+                str(request_file),
+                "--output",
+                str(result_dir),
+            ],
+            expected_returncode=1,
+        )
+        assert (
+            "ResearchError: ligand topology/base parameters do not match cross model"
+            in commands[-1]["stderr"]
+        )
+        assert not result_dir.exists()
+        admission_rejections.append(dict(command=command, output_created=False))
     result = {
+        "admission_rejections": admission_rejections,
         "recoveries": recoveries,
         "probe": probe,
         "modes": observations,

@@ -79,6 +79,7 @@ def run_candidate_comparison(
             != authority.pocket.coordinate_frame_id
         ):
             raise ResearchError("fixed receptor/frame authority mismatch")
+        fixed_environment.validate_ligand(ligand_system, parameters.base_parameters)
         evaluator = FixedReceptorEvaluator(evaluator, fixed_environment)
 
     def check():
