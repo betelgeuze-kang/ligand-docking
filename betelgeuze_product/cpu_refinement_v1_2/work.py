@@ -50,6 +50,15 @@ class WorkMeter:
         count = integer(count, 0, 1_000_000_000)
         self._counters["input_bytes_verified"] = self._counters.get("input_bytes_verified", 0) + count
 
+    def observe_tangent_projection(self, sweeps: int, converged: bool) -> None:
+        sweeps = integer(sweeps, 0, 1000)
+        if type(converged) is not bool:
+            raise ResearchError("exact tangent convergence observation required")
+        for key, increment in (("tangent_projection_sweeps", sweeps),
+                               ("tangent_projection_completed", int(converged)),
+                               ("tangent_projection_exhausted", int(not converged))):
+            self._counters[key] = self._counters.get(key, 0) + increment
+
     def counts(self, stage: str) -> dict[str, int]:
         return deepcopy(self._stages.get(stage, {"calls": 0, "completed": 0, "failed": 0,
                                                "wall_ns": 0, "cpu_ns": 0}))

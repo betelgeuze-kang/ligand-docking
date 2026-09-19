@@ -6,6 +6,58 @@ lives in `betelgeuze_product.cpu_refinement_v1_2`. The entire historical engine,
 remain unchanged. No scientific validation, affinity calibration, customer
 admission, GPU/MD validation or overall docking speedup is asserted.
 
+## D1/D2 hardening (report format 1.2.1)
+
+The active CLI now emits `cpu_extended_comparison/1.2.1` inside
+`local_cpu_extended_comparison/1.2.1`; the prepared request format and numerical
+solver/checkpoint algorithm IDs are unchanged. Changing implementation bytes
+still prevents reuse of an old source-bound checkpoint. No historical evidence
+is relabeled or resealed, and legacy engine/default routes remain unchanged.
+
+D1 checks exact numeric types and ranges, detailed validity checks/evaluation
+coverage/blockers against upper selection flags, overlap observations, candidate
+counts/ratios, derived per-arm budgets, effective per-candidate solver settings,
+termination summaries, and actual work against its stage counts and totals.
+Actual force calls need not equal logical trials: projection failures can precede
+force evaluation. Failed candidates keep their reservation and observations.
+Portable output verification compares the retained request's budget, seed,
+comparison policy, solver, selection, input references and pocket metadata with
+the admitted execution record, without reopening input paths on another host.
+It does not verify absent input bytes, rerun scoring, prove historical execution,
+or defeat a party consistently rewriting all fields and hashes.
+
+`raw_per_arm_selection` is explicitly diagnostic. `per_arm_selection` applies
+absolute refinement admission (valid result, non-increasing internal energy,
+and convergence when requested). Mixed final selection additionally compares
+against the eligible baseline's score. Thus equal-budget runs, which cannot
+form matched pairs, no longer present unconverged results as admitted Top-K
+when convergence was requested. Raw rows and diagnostic rankings remain intact.
+
+Legacy 1.2.0 reports remain readable when their retained evidence is consistent;
+the verifier identifies their per-arm lists as diagnostic and reports that new
+input-binding evidence is absent. Old reports do not acquire fabricated costs,
+new selection semantics or a new source identity. Missing mandatory evidence or
+contradictions are rejected, not silently upgraded. Original verification
+summaries are compared in their original shape without rewriting the files.
+
+D2 computes each constraint direction once **within one force-projection call**.
+The existing equal-weight Jacobi update order, degree relaxation, tolerances and
+sweep budget are retained. Every invocation rebuilds geometry; positions from a
+previous evaluation are never cached. Standalone kernel tests cover minimum-image
+parity, but the product solver remains nonperiodic. Invalid/nonfinite input and
+zero constraint distance fail explicitly. A rank-revealing SVD is used only in
+a test oracle, not as an undeclared runtime fallback. Exhaustion is still a
+failure to satisfy the requested tolerance; no hidden extra sweeps are added.
+
+Invocation work additionally records tangent sweep totals and converged/exhausted
+projection counts, separately from numerical checkpoint identity. These counts
+are checked against completed projection calls and configured limits. Older
+reports do not have these observations, and the reader does not invent them.
+The projection benchmark retains all cases, including unconstrained calls where
+input validation overhead can dominate. Its warmed, alternating stage timings
+are not an overall docking speedup or scientific accuracy result.
+
+
 ## A. Corrected extended evaluator and one projected solver
 
 `ExtendedEvaluator` composes the corrected 1.1 harmonic-angle evaluator with the

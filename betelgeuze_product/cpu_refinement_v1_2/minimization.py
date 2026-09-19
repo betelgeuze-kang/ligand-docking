@@ -16,7 +16,7 @@ from betelgeuze_engine_v2.geometry import RadiusGraphConfig, build_compact_radiu
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
 from betelgeuze_engine_v2.physics.reference_constrained_minimization import (
     ReferenceConstrainedMinimizationConfig as LegacyConstraintConfig,
-    _project_forces_to_constraint_tangent, _validate_source_system,
+    _validate_source_system,
 )
 from betelgeuze_engine_v2.physics.reference_forcefield_v2 import (
     DistanceConstraintProjectionConfig, ReferenceForceFieldV2ApplicabilityError,
@@ -36,6 +36,7 @@ from .provenance import (
 )
 
 from .work import WorkMeter
+from .tangent_projection import project_tangent_forces as _project_forces_to_constraint_tangent
 
 ALGORITHM_ID = "cpu_corrected_projected_descent/1.2.0"
 CHECKPOINT_SCHEMA = "cpu_corrected_projected_checkpoint/1.2.0"
@@ -269,10 +270,11 @@ def minimize_extended(
             result = evaluator.evaluate(state, neighbors)
         energy = float(result.term.energy[0])
         with meter.measure("force.project"):
-            tangent, force, _, _, converged = _project_forces_to_constraint_tangent(
+            tangent, force, _, sweeps, converged = _project_forces_to_constraint_tangent(
                 system, xyz, result.term.forces, parameters, config)
             if not math.isfinite(force) or not bool(torch.isfinite(tangent).all()):
                 raise FloatingPointError("nonfinite projected tangent force")
+            meter.observe_tangent_projection(sweeps, converged)
         residual = max((abs(row.residual_angstrom) for row in result.constraint_observations), default=0.)
         return energy, tangent, force, residual, converged and result.constraints_satisfied
 

@@ -13,6 +13,9 @@ from betelgeuze_product import refinement_comparison_workflow as previous
 from betelgeuze_product.local_research_workflow import _decode, _json
 from betelgeuze_product.reference_minimization_workflow import _bound, _directory, _publish, _read
 from .comparison import run_comparison
+from .evidence_contracts import (
+    REPORT_SCHEMA, request_binding, verify_request_settings, verify_work, same,
+)
 from .minimization import SolverConfig
 from .provenance import ResearchError, canonical, digest, environment, exact_fields, source_manifest
 from .selection import SelectionConfig
@@ -77,6 +80,7 @@ def load_request(request, implementation):
 
 def run_request(request: dict, output: str | Path) -> dict:
     request = _decode(_json(request))
+    binding = request_binding(request)
     meter = WorkMeter()
     with meter.measure("implementation.verify"):
         sources = source_manifest()
@@ -89,7 +93,10 @@ def run_request(request: dict, output: str | Path) -> dict:
         with meter.measure("comparison.execute"):
             result = run_comparison(authority, budget, receptor_system=receptor, ligand_system=ligand,
                 parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection)
+        result["request_binding"] = binding
+        result["report_sha256"] = digest({key: value for key, value in result.items() if key != "report_sha256"})
         with meter.measure("result.verify"):
+            verify_request_settings(request, result)
             verification = verify_report(result)
         for name in ("receptor", "ligand", "parameters", "extensions", "solvation"):
             if request[name] is not None:
@@ -97,7 +104,7 @@ def run_request(request: dict, output: str | Path) -> dict:
         with meter.measure("implementation.verify"):
             if source_manifest() != sources or result["implementation_source_sha256"] != implementation:
                 raise ResearchError("implementation source changed")
-        report = {"schema_id": "local_cpu_extended_comparison/1.2.0", "request_sha256": digest(request),
+        report = {"schema_id": "local_cpu_extended_comparison/1.2.1", "request_sha256": digest(request),
                   "implementation_sources": sources, "implementation_source_sha256": implementation,
                   "environment": environment(), "result": result, "verification": verification,
                   "execution_work_before_report_publication": meter.snapshot()}
@@ -111,6 +118,15 @@ def run_request(request: dict, output: str | Path) -> dict:
 
 
 def verify_output(directory: str | Path) -> dict:
+    try:
+        return _verify_output(directory)
+    except ResearchError:
+        raise
+    except (KeyError, TypeError, ValueError, IndexError, OverflowError) as exc:
+        raise ResearchError("malformed published evidence") from exc
+
+
+def _verify_output(directory: str | Path) -> dict:
     directory = Path(directory).absolute()
     # Reuse the existing regular-file/nonsymlink bounded readers. No writes.
     report_bytes = _read(directory / "report.json")
@@ -130,7 +146,24 @@ def verify_output(directory: str | Path) -> dict:
             or type(completion.get("candidate_failure_count")) is not int
             or completion["candidate_failure_count"] != sum(arm["failure_count"] for arm in report["result"]["arms"].values())):
         raise ResearchError("completion marker does not match failure-inclusive result")
+    verify_request_settings(request, report["result"])
     verification = verify_report(report["result"])
-    if canonical(verification) != canonical(report["verification"]):
-        raise ResearchError("stored structural verification is inconsistent")
+    current = report["result"]["schema_id"] == REPORT_SCHEMA
+    same(report["schema_id"], "local_cpu_extended_comparison/1.2.1" if current
+         else "local_cpu_extended_comparison/1.2.0", "outer report schema")
+    stored = report["verification"]
+    expected = verification if current or "verification_schema_id" in stored else {
+        key: verification[key] for key in ("structural_verification_passed", "report_sha256",
+                                          "scientifically_validated", "scoring_reexecuted")}
+    same(stored, expected, "stored structural verification")
+    before = report["execution_work_before_report_publication"]
+    after = completion["execution_work"]
+    verify_work(before)
+    verify_work(after)
+    same(after["counters"], before["counters"], "publication counters")
+    same({name: row for name, row in after["stages"].items() if name != "report.publish"},
+         before["stages"], "pre/post publication work")
+    publication = after["stages"].get("report.publish", {})
+    same(publication.get("calls"), 1, "report publication count")
+    same(publication.get("completed"), 1, "report publication success")
     return verification
