@@ -188,6 +188,9 @@ def run_resumable_request(request, output, *, resume=False, stop_after=None):
         )
     )
 
+    if fixed is not None:
+        fixed.validate_ligand(ligand, parameters.base_parameters)
+
     def check():
         meter = WorkMeter()
         for field in ("receptor", "ligand", "parameters", "extensions", "solvation") + (

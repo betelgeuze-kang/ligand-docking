@@ -70,6 +70,7 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
             raise ResearchError("fixed environment does not match docking receptor")
         if fixed_environment.cross.coordinate_frame_id != authority.pocket.coordinate_frame_id:
             raise ResearchError("fixed interaction coordinate frame does not match docking pocket")
+        fixed_environment.validate_ligand(ligand_system, parameters.base_parameters)
         evaluator = FixedReceptorEvaluator(evaluator, fixed_environment)
     refiner = ExtendedRefiner(authority, ligand_system, parameters, solver, solvation=solvation,
         implementation_source_sha256=implementation, max_attempts=after_budget.candidate_count,

@@ -140,8 +140,8 @@ class FixedReceptorEnvironment:
             if atom.partial_charge_e is None or float(atom.partial_charge_e).hex() != param.charge_e.hex():
                 raise ResearchError("receptor declared charges disagree with explicit parameters")
 
-    def evaluate_cross(self, ligand: AllAtomSystem, base_parameters) -> tuple[dict, torch.Tensor, int]:
-        """Bounded peak pair memory; O(N_ligand*N_receptor) work, not an O(N) claim."""
+    def validate_ligand(self, ligand: AllAtomSystem, base_parameters) -> tuple:
+        """Reject globally incompatible ligand inputs without evaluating physics."""
         self.assert_intact()
         require_system(ligand, 256)
         if type(base_parameters) is not ReferenceForceFieldParameters:
@@ -159,6 +159,11 @@ class FixedReceptorEnvironment:
                 raise ResearchError("ligand nonbonded parameter outside supported bounds")
             if atom.partial_charge_e is None or float(atom.partial_charge_e).hex() != param.charge_e.hex():
                 raise ResearchError("ligand declared charges disagree with cross parameters")
+        return tuple(params)
+
+    def evaluate_cross(self, ligand: AllAtomSystem, base_parameters) -> tuple[dict, torch.Tensor, int]:
+        """Bounded peak pair memory; O(N_ligand*N_receptor) work, not an O(N) claim."""
+        params = self.validate_ligand(ligand, base_parameters)
         xyz = ligand.coordinates[0].detach().clone().requires_grad_(True)
         receptor_xyz = self.receptor.coordinates[0].detach().clone()
         lj_sum = torch.zeros((), dtype=torch.float64)

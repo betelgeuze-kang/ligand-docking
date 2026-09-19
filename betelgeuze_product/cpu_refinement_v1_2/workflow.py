@@ -91,6 +91,8 @@ def run_request(request: dict, output: str | Path) -> dict:
         prepared = request if not fixed_mode else {**{k: v for k, v in request.items() if k != "cross_parameters"}, "schema_id": REQUEST_SCHEMA}
         authority, receptor, ligand, parameters, budget, solver, solvent, comparison, selection = load_request(prepared, implementation)
         fixed = None if not fixed_mode else FixedReceptorEnvironment(receptor, CrossParameters.from_dict(_bound(request["cross_parameters"])))
+        if fixed is not None:
+            fixed.validate_ligand(ligand, parameters.base_parameters)
     with _directory(output, resume=False) as directory:
         with meter.measure("request.publish"):
             _publish(directory / "request.json", request)
