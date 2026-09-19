@@ -83,11 +83,27 @@ def select_final_candidates(candidates: list[dict], descriptor: DockingScoreDesc
             "decisions": decisions, "globally_ranked": True, "scientifically_validated": False}
 
 
-def refinement_admissible(row: dict, attempt: dict, require_convergence: bool) -> bool:
+def refinement_admissible(row: dict, attempt: dict, require_convergence: bool,
+                         max_internal_increase_kcal_per_mol: float | None = None) -> bool:
     """Common absolute admission; relative score improvement is checked separately."""
     if type(require_convergence) is not bool:
         raise ResearchError("exact convergence policy required")
-    return (row["succeeded"] is True and row["selection_eligible"] is True
+    admitted = (row["succeeded"] is True and row["selection_eligible"] is True
             and attempt["status"] == "success"
             and (not require_convergence or attempt["converged"] is True)
             and attempt["energy_delta"] <= 0.)
+
+    if not admitted:
+        return False
+    from .fixed_receptor import FIXED_EVALUATOR_ID
+    fixed = attempt["evaluator"]["evaluator_id"] == FIXED_EVALUATOR_ID
+    if fixed:
+        if max_internal_increase_kcal_per_mol is None:
+            raise ResearchError("explicit fixed-receptor strain cap required")
+        cap = finite(max_internal_increase_kcal_per_mol, nonnegative=True)
+        increase = (attempt["final_objective_components"]["ligand_internal"]
+                    - attempt["initial_objective_components"]["ligand_internal"])
+        return increase <= cap
+    if max_internal_increase_kcal_per_mol is not None:
+        raise ResearchError("strain cap belongs to fixed-receptor objective only")
+    return True

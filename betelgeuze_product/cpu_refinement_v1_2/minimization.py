@@ -29,7 +29,8 @@ from betelgeuze_product.cpu_refinement.reference_forcefield_v1_1 import Referenc
 from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import (
     ReferenceMinimizationConfig, _config_from_document,
 )
-from .evaluation import ExtendedEvaluator
+from .evaluation import make_evaluator
+from .fixed_receptor import FIXED_EVALUATOR_ID, verify_components
 from .provenance import (
     ResearchError, canonical, coordinates_hex, decode_coordinates, digest,
     environment, exact_fields, finite, integer, require_digest, source_manifest,
@@ -111,6 +112,9 @@ def require_checkpoint(value: object) -> Checkpoint:
              "coordinates_sha256", "initial_energy", "initial_max_tangent_force",
              "current_energy", "current_max_tangent_force", "current_constraint_residual",
              "accepted_iterations", "evaluation_count", "status", "observations", "checkpoint_sha256"}
+    fixed = isinstance(value, Mapping) and isinstance(value.get("evaluator"), Mapping) and value["evaluator"].get("evaluator_id") == FIXED_EVALUATOR_ID
+    if fixed:
+        names |= {"initial_objective_components", "current_objective_components"}
     exact_fields(value, names)
     if value["schema_id"] != CHECKPOINT_SCHEMA or value["algorithm_id"] != ALGORITHM_ID:
         raise ResearchError("checkpoint algorithm identity mismatch; no migration permitted")
@@ -202,6 +206,9 @@ def require_checkpoint(value: object) -> Checkpoint:
         valid = False
     if not valid:
         raise ResearchError("checkpoint termination status is inconsistent")
+    if fixed:
+        verify_components(value["initial_objective_components"], value["initial_energy"])
+        verify_components(value["current_objective_components"], value["current_energy"])
     return Checkpoint(canonical(value))
 
 
@@ -235,6 +242,7 @@ def minimize_extended(
     checkpoint: Checkpoint | Mapping | None = None,
     pause_after_accepted_iterations: int | None = None,
     meter: WorkMeter | None = None,
+    fixed_environment=None,
 ) -> MinimizationResult:
     config = SolverConfig() if config is None else config
     if type(config) is not SolverConfig:
@@ -242,7 +250,7 @@ def minimize_extended(
     _validate_source_system(system)
     if system.cell is not None or system.atom_count > 256:
         raise ResearchError("new solver supports nonperiodic systems of at most 256 atoms")
-    evaluator = ExtendedEvaluator(parameters, solvation)
+    evaluator = make_evaluator(parameters, solvation, fixed_environment)
     initial_identity = evaluator.identity()
     source = canonical_system_sha256(system)
     meter = WorkMeter() if meter is None else meter
@@ -276,7 +284,9 @@ def minimize_extended(
                 raise FloatingPointError("nonfinite projected tangent force")
             meter.observe_tangent_projection(sweeps, converged)
         residual = max((abs(row.residual_angstrom) for row in result.constraint_observations), default=0.)
-        return energy, tangent, force, residual, converged and result.constraints_satisfied
+        components = ({name: float(value[0]) for name, value in result.component_energies.items()}
+                      if fixed_environment is not None else None)
+        return energy, tangent, force, residual, converged and result.constraints_satisfied, components
 
     def observation(index, iteration, trial, outcome, xyz, projection, step, energy=None, force=None):
         return {"index": index, "iteration": iteration, "trial": trial, "outcome": outcome,
@@ -290,13 +300,14 @@ def minimize_extended(
         if not projection.converged:
             raise ResearchError("initial constraint projection failed")
         try:
-            energy, forces, force, residual, tangent_ok = evaluate(xyz)
+            energy, forces, force, residual, tangent_ok, components = evaluate(xyz)
         except (*APPLICABILITY_ERRORS, FloatingPointError) as exc:
             raise ResearchError("initial corrected state is not evaluable") from exc
         if not tangent_ok:
             raise ResearchError("initial tangent projection or constraint satisfaction failed")
         rows = [observation(1, 0, 0, "initial", xyz, projection, 0., energy, force)]
         accepted = 0
+        initial_components = components
     else:
         saved = require_checkpoint(checkpoint).to_dict()
         expected = {"source_system_sha256": source, "evaluator": initial_identity,
@@ -312,11 +323,17 @@ def minimize_extended(
         if not projection.converged or not torch.equal(xyz, verification):
             raise ResearchError("checkpoint is not on the constraint surface")
         with meter.measure("restart.verify"):
-            energy, forces, force, residual, tangent_ok = evaluate(xyz)
+            energy, forces, force, residual, tangent_ok, components = evaluate(xyz)
         if not tangent_ok or any(float(observed).hex() != float(saved[name]).hex()
             for observed, name in ((energy, "current_energy"), (force, "current_max_tangent_force"),
                                    (residual, "current_constraint_residual"))):
             raise ResearchError("checkpoint energy, tangent force or constraints do not reproduce")
+        if fixed_environment is not None:
+            if canonical(components) != canonical(saved["current_objective_components"]):
+                raise ResearchError("checkpoint objective components do not reproduce")
+            initial_components = saved["initial_objective_components"]
+        else:
+            initial_components = None
         rows = saved["observations"]
         accepted = saved["accepted_iterations"]
     if pause is not None and pause < accepted:
@@ -346,7 +363,7 @@ def minimize_extended(
                 outcome = "rejected_displacement"
             else:
                 try:
-                    trial_energy, trial_forces, trial_force, trial_residual, tangent_ok = evaluate(trial_xyz)
+                    trial_energy, trial_forces, trial_force, trial_residual, tangent_ok, trial_components = evaluate(trial_xyz)
                 except APPLICABILITY_ERRORS:
                     outcome = "rejected_applicability"
                 except FloatingPointError:
@@ -363,6 +380,7 @@ def minimize_extended(
                                     trial_xyz, projection, step, trial_energy, trial_force))
             if outcome == "accepted":
                 xyz, energy, forces, force, residual = trial_xyz, trial_energy, trial_forces, trial_force, trial_residual
+                components = trial_components
                 accepted += 1
                 moved = True
                 break
@@ -385,6 +403,8 @@ def minimize_extended(
                 "current_energy": energy, "current_max_tangent_force": force,
                 "current_constraint_residual": residual, "accepted_iterations": accepted,
                 "evaluation_count": len(rows), "status": status, "observations": rows}
+    if fixed_environment is not None:
+        document.update(initial_objective_components=initial_components, current_objective_components=components)
     saved = require_checkpoint({**document, "checkpoint_sha256": digest(document)})
     output = system.with_coordinates(xyz, operation=ALGORITHM_ID,
                                      operation_evidence_sha256=saved.checkpoint_sha256)

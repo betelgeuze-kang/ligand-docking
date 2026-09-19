@@ -13,6 +13,7 @@ from betelgeuze_product import refinement_comparison_workflow as previous
 from betelgeuze_product.local_research_workflow import _decode, _json
 from betelgeuze_product.reference_minimization_workflow import _bound, _directory, _publish, _read
 from .comparison import run_comparison
+from .fixed_receptor import FIXED_REPORT_SCHEMA, FIXED_REQUEST_SCHEMA, CrossParameters, FixedReceptorEnvironment
 from .evidence_contracts import (
     REPORT_SCHEMA, request_binding, verify_request_settings, verify_work, same,
 )
@@ -61,8 +62,10 @@ def _solvation(document):
 def load_request(request, implementation):
     previous_fields = {"backend", "receptor", "ligand", "parameters", "pocket",
                        "receptor_margin_angstrom", "budget", "comparison"}
-    exact_fields(request, previous_fields | {"schema_id", "solver", "extensions", "solvation", "selection"})
-    if request["schema_id"] != REQUEST_SCHEMA:
+    fixed = request.get("schema_id") == FIXED_REQUEST_SCHEMA
+    extra = {"cross_parameters", "max_internal_increase_kcal_per_mol"} if fixed else set()
+    exact_fields(request, previous_fields | {"schema_id", "solver", "extensions", "solvation", "selection"} | extra)
+    if request["schema_id"] not in {REQUEST_SCHEMA, FIXED_REQUEST_SCHEMA}:
         raise ResearchError("explicit 1.2 request schema required")
     solver = SolverConfig.from_dict(request["solver"])
     # Delegate only the unchanged prepared-input portion, never a checkpoint.
@@ -75,7 +78,12 @@ def load_request(request, implementation):
     selection = SelectionConfig(selected["top_k"], selected["diversity_rmsd_angstrom"])
     if canonical(selection.to_dict()) != canonical(selected) or selection.top_k != budget.top_k:
         raise ResearchError("selection configuration mismatch")
-    return authority, receptor, ligand, parameters, budget, solver, solvation, comparison, selection
+    environment = None
+    if fixed:
+        environment = FixedReceptorEnvironment(receptor, CrossParameters.from_dict(_bound(request["cross_parameters"])))
+        if environment.parameters.coordinate_frame_id != authority.problem.coordinate_frame_id:
+            raise ResearchError("fixed receptor and pocket coordinate frame mismatch")
+    return authority, receptor, ligand, parameters, budget, solver, solvation, comparison, selection, environment
 
 
 def run_request(request: dict, output: str | Path) -> dict:
@@ -86,25 +94,28 @@ def run_request(request: dict, output: str | Path) -> dict:
         sources = source_manifest()
         implementation = digest(sources)
     with meter.measure("inputs.parse"):
-        authority, receptor, ligand, parameters, budget, solver, solvent, comparison, selection = load_request(request, implementation)
+        authority, receptor, ligand, parameters, budget, solver, solvent, comparison, selection, fixed_environment = load_request(request, implementation)
     with _directory(output, resume=False) as directory:
         with meter.measure("request.publish"):
             _publish(directory / "request.json", request)
         with meter.measure("comparison.execute"):
             result = run_comparison(authority, budget, receptor_system=receptor, ligand_system=ligand,
-                parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection)
+                parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection,
+                fixed_environment=fixed_environment,
+                max_internal_increase_kcal_per_mol=request.get("max_internal_increase_kcal_per_mol"))
         result["request_binding"] = binding
         result["report_sha256"] = digest({key: value for key, value in result.items() if key != "report_sha256"})
         with meter.measure("result.verify"):
             verify_request_settings(request, result)
             verification = verify_report(result)
-        for name in ("receptor", "ligand", "parameters", "extensions", "solvation"):
+        for name in (("receptor", "ligand", "parameters", "extensions", "solvation") +
+                     (("cross_parameters",) if fixed_environment is not None else ())):
             if request[name] is not None:
                 verify_admitted_bytes(request[name], meter)
         with meter.measure("implementation.verify"):
             if source_manifest() != sources or result["implementation_source_sha256"] != implementation:
                 raise ResearchError("implementation source changed")
-        report = {"schema_id": "local_cpu_extended_comparison/1.2.1", "request_sha256": digest(request),
+        report = {"schema_id": "local_cpu_fixed_receptor_comparison/1.0.0" if fixed_environment is not None else "local_cpu_extended_comparison/1.2.1", "request_sha256": digest(request),
                   "implementation_sources": sources, "implementation_source_sha256": implementation,
                   "environment": environment(), "result": result, "verification": verification,
                   "execution_work_before_report_publication": meter.snapshot()}
@@ -148,8 +159,9 @@ def _verify_output(directory: str | Path) -> dict:
         raise ResearchError("completion marker does not match failure-inclusive result")
     verify_request_settings(request, report["result"])
     verification = verify_report(report["result"])
-    current = report["result"]["schema_id"] == REPORT_SCHEMA
-    same(report["schema_id"], "local_cpu_extended_comparison/1.2.1" if current
+    fixed = report["result"]["schema_id"] == FIXED_REPORT_SCHEMA
+    current = report["result"]["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}
+    same(report["schema_id"], "local_cpu_fixed_receptor_comparison/1.0.0" if fixed else "local_cpu_extended_comparison/1.2.1" if current
          else "local_cpu_extended_comparison/1.2.0", "outer report schema")
     stored = report["verification"]
     expected = verification if current or "verification_schema_id" in stored else {
