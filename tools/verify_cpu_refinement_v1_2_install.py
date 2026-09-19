@@ -15,6 +15,7 @@ import subprocess
 import tempfile
 
 from tests.unit.test_cpu_refinement_v1_2_workflow import extended_request_fixture
+from tests.unit.test_cpu_refinement_v1_2_fixed_workflow import fixed_request_fixture
 
 
 def verify(python: Path, output: Path) -> dict:
@@ -58,7 +59,38 @@ def verify(python: Path, output: Path) -> dict:
             raise RuntimeError("installed implementation differs from checkout bytes")
         if report["result"]["arms"]["refined"]["failure_count"]:
             raise RuntimeError("installed synthetic refinement did not succeed")
-        result = {"installed_cli_verified": True, "outside_checkout": True,
+        fixed_inputs = outside / "fixed-inputs"
+        fixed_inputs.mkdir()
+        fixed_request = fixed_request_fixture(fixed_inputs)
+        fixed_request_path = fixed_inputs / "request.json"
+        fixed_request_path.write_text(json.dumps(fixed_request))
+        fixed_output = outside / "fixed-run"
+        for arguments in (("run", str(fixed_request_path), "--output", str(fixed_output)),
+                          ("verify", str(fixed_output))):
+            command = [executable, "-I", "-m", "betelgeuze_product.cpu_refinement_v1_2", *arguments]
+            run = subprocess.run(command, cwd=outside, env=env, capture_output=True, text=True, timeout=180)
+            records.append({"command": command, "returncode": run.returncode,
+                            "stdout": run.stdout, "stderr": run.stderr})
+            (output / "commands.json").write_text(json.dumps(records, indent=2))
+            if run.returncode:
+                raise RuntimeError("installed fixed-receptor CLI failed")
+        saved = output / "fixed-receptor"
+        saved.mkdir()
+        for name in ("request.json", "report.json", "complete.json"):
+            (saved / name).write_bytes((fixed_output / name).read_bytes())
+        fixed_report = json.loads((fixed_output / "report.json").read_bytes())
+        fixed_result = fixed_report["result"]
+        if (fixed_result["schema_id"] != "cpu_fixed_receptor_comparison/1.0.0"
+                or fixed_result["arms"]["refined"]["failure_count"]
+                or not fixed_result["receptor_ligand_interaction_energy_minimized"]
+                or fixed_report["implementation_sources"] != report["implementation_sources"]):
+            raise RuntimeError("installed fixed objective or implementation mismatch")
+        for attempt in fixed_result["attempts"]:
+            if (attempt["energy_delta"] >= 0
+                    or attempt["pre_coordinates_sha256"] == attempt["post_coordinates_sha256"]
+                    or attempt["initial_objective_components"]["cross_screened_coulomb"] == 0):
+                raise RuntimeError("installed fixed objective did not move an interacting ligand")
+        result = {"fixed_receptor_cli_verified": True, "installed_cli_verified": True, "outside_checkout": True,
                   "pythonpath_removed": True, "isolated_python_flag": True,
                   "new_source_hashes": installed, "scientifically_validated": False}
         (output / "verification.json").write_text(json.dumps(result, indent=2))

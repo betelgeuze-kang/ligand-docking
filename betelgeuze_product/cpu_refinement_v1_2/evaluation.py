@@ -117,3 +117,12 @@ class ExtendedEvaluator:
         return ExtendedEvaluation(term, MappingProxyType(components),
             _constraint_observations(system.coordinates, system, self.parameters.constraints),
             identity, tuple(dict.fromkeys(blockers)))
+
+
+def make_evaluator(parameters, solvation=None, fixed_environment=None):
+    """Select an explicit objective; default internal behavior is unchanged."""
+    base = ExtendedEvaluator(parameters, solvation)
+    if fixed_environment is None:
+        return base
+    from .fixed_receptor import FixedReceptorEvaluator
+    return FixedReceptorEvaluator(base, fixed_environment)

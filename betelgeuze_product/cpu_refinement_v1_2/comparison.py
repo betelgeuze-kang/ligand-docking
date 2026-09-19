@@ -10,9 +10,10 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig, _pose, _search, plan_refinement_comparison,
 )
 from .evidence_contracts import REPORT_SCHEMA, POLICY_ID
-from .evaluation import ExtendedEvaluator
+from .evaluation import make_evaluator
+from .fixed_receptor import FIXED_REPORT_SCHEMA, FIXED_POLICY_ID
 from .minimization import SolverConfig
-from .provenance import ResearchError, digest, source_manifest
+from .provenance import ResearchError, digest, finite, source_manifest
 from .refinement import ExtendedRefiner
 from .selection import SelectionConfig, candidate_from_row, select_final_candidates, refinement_admissible
 from .work import WorkMeter
@@ -30,7 +31,8 @@ class MeasuredScorer(ChemistryPoseScorerV1):
             return super()._score_terms_python(proposal)
 
 
-def choose_variant(before: dict, after: dict, attempt: dict, require_convergence: bool) -> tuple[str, str]:
+def choose_variant(before: dict, after: dict, attempt: dict, require_convergence: bool,
+                   max_internal_increase_kcal_per_mol=None) -> tuple[str, str]:
     fallback = "baseline" if before["succeeded"] and before["selection_eligible"] else "none"
     if attempt["status"] != "success" or not after["succeeded"]:
         return fallback, "refinement_or_rescoring_failed"
@@ -39,16 +41,17 @@ def choose_variant(before: dict, after: dict, attempt: dict, require_convergence
     if require_convergence and not attempt["converged"]:
         return fallback, "refinement_not_converged"
     if attempt["energy_delta"] > 0:
-        return fallback, "internal_energy_increased"
-    if not refinement_admissible(after, attempt, require_convergence):
-        raise ResearchError("refinement admission policy disagreement")
+        return fallback, "total_objective_increased" if max_internal_increase_kcal_per_mol is not None else "internal_energy_increased"
+    if not refinement_admissible(after, attempt, require_convergence, max_internal_increase_kcal_per_mol):
+        return fallback, "ligand_strain_limit_exceeded"
     if fallback == "baseline" and after["score"] >= before["score"]:
         return fallback, "score_not_improved"
     return "refined", "valid_refinement_selected"
 
 
 def run_comparison(authority, budget, *, receptor_system, ligand_system, parameters,
-                   solver: SolverConfig, solvation=None, comparison=None, selection=None) -> dict:
+                   solver: SolverConfig, solvation=None, comparison=None, selection=None,
+                   fixed_environment=None, max_internal_increase_kcal_per_mol=None) -> dict:
     comparison = RefinementComparisonConfig() if comparison is None else comparison
     selection = SelectionConfig(budget.top_k) if selection is None else selection
     if type(solver) is not SolverConfig:
@@ -59,11 +62,20 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
     if (canonical_system_sha256(receptor_system) != authority.receptor_system_sha256
             or canonical_system_sha256(ligand_system) != authority.ligand_system_sha256):
         raise ResearchError("comparison source identity mismatch")
+    if fixed_environment is not None:
+        if max_internal_increase_kcal_per_mol is None:
+            raise ResearchError("explicit fixed-receptor ligand strain cap required")
+        cap = finite(max_internal_increase_kcal_per_mol, nonnegative=True)
+        if cap > 1.e6:
+            raise ResearchError("ligand strain cap exceeds supported range")
+    elif max_internal_increase_kcal_per_mol is not None:
+        raise ResearchError("strain cap requires fixed receptor")
     sources = source_manifest()
     implementation = digest(sources)
-    evaluator = ExtendedEvaluator(parameters, solvation)
+    evaluator = make_evaluator(parameters, solvation, fixed_environment)
     refiner = ExtendedRefiner(authority, ligand_system, parameters, solver, solvation=solvation,
-        implementation_source_sha256=implementation, max_attempts=after_budget.candidate_count)
+        implementation_source_sha256=implementation, max_attempts=after_budget.candidate_count,
+        fixed_environment=fixed_environment)
     refiner.assert_ready()
     arms, searches, descriptors = {}, {}, {}
     for name, arm_budget, arm_refiner in (("baseline", before_budget, None), ("refined", after_budget, refiner)):
@@ -118,7 +130,8 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
             for row, key in ((before, "pre_coordinates_sha256"), (after, "post_coordinates_sha256")):
                 if row["succeeded"] and row["coordinates_sha256"] != attempt.get(key):
                     raise ResearchError("scored coordinates do not match actual refinement coordinates")
-            choice, reason = choose_variant(before, after, attempt, comparison.require_convergence_for_selection)
+            choice, reason = choose_variant(before, after, attempt, comparison.require_convergence_for_selection,
+                                            max_internal_increase_kcal_per_mol)
             pairs.append({"candidate_id": before["candidate_id"], "variant": choice, "reason": reason})
             if choice != "none":
                 candidates.append(candidate_from_row(before if choice == "baseline" else after, choice))
@@ -132,13 +145,14 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
         "refined": select_final_candidates(
             [candidate_from_row(row, "refined") for row, attempt in
              zip(arms["refined"]["rows"], attempts, strict=True)
-             if refinement_admissible(row, attempt, comparison.require_convergence_for_selection)],
+             if refinement_admissible(row, attempt, comparison.require_convergence_for_selection,
+                                     max_internal_increase_kcal_per_mol)],
             descriptors["refined"], selection, ligand_system.atom_count)}
     if (source_manifest() != sources
             or canonical_system_sha256(receptor_system) != authority.receptor_system_sha256
             or canonical_system_sha256(ligand_system) != authority.ligand_system_sha256):
         raise ResearchError("comparison input or implementation changed")
-    report = {"schema_id": REPORT_SCHEMA, "mode": comparison.mode,
+    report = {"schema_id": FIXED_REPORT_SCHEMA if fixed_environment is not None else REPORT_SCHEMA, "mode": comparison.mode,
               "implementation_source_sha256": implementation,
               "authority_input_receipt_sha256": authority.input_receipt_sha256,
               "evaluator": evaluator.identity(), "solver": solver.to_dict(),
@@ -146,13 +160,15 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
               "atom_count": ligand_system.atom_count, "arms": arms, "attempts": attempts,
               "paired_decisions": pairs, "final_selection": final, "per_arm_selection": per_arm,
               "refinement_work": refinement_work,
-              "selection_config": selection.to_dict(), "selection_policy_id": POLICY_ID,
+              "selection_config": selection.to_dict(), "selection_policy_id": FIXED_POLICY_ID if fixed_environment is not None else POLICY_ID,
               "raw_per_arm_selection": raw_per_arm, "request_binding": None,
               "force_evaluation_bound_per_candidate": force_bound,
               "timing_scope": "scorer_context_generation_refinement_scoring_validity_selection_per_arm",
               "timing_excludes": ["preflight", "source_verification", "final_cross_variant_selection", "publication"],
-              "failure_rows_retained": True, "receptor_ligand_interaction_energy_minimized": False,
+              "failure_rows_retained": True, "receptor_ligand_interaction_energy_minimized": fixed_environment is not None,
               "equal_elapsed_cpu_time_claimed": False, "scientifically_validated": False,
               "customer_execution_allowed": False, "claim_safe": False}
+    if fixed_environment is not None:
+        report["max_internal_increase_kcal_per_mol"] = max_internal_increase_kcal_per_mol
     report["report_sha256"] = digest(report)
     return report
