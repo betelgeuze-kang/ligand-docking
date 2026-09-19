@@ -9,8 +9,9 @@ customer, or product authority.
 
 ## Capability inventory
 
-- generate human-readable status from the compact current-state registry and
-  the canonical capability ledger;
+- generate exact-commit implementation and release state from repository
+  sources, while keeping the manual fail-closed authority state and canonical
+  capability ledger separate;
 - keep software implementation, scientific validation, benchmark validity,
   HIP performance, MD validation, product qualification, and customer
   authorization as separate axes;
