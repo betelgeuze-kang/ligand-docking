@@ -236,13 +236,28 @@ def minimize_extended(
     pause_after_accepted_iterations: int | None = None,
     meter: WorkMeter | None = None,
 ) -> MinimizationResult:
+    return minimize_objective(system, ExtendedEvaluator(parameters, solvation), config,
+                              checkpoint=checkpoint,
+                              pause_after_accepted_iterations=pause_after_accepted_iterations, meter=meter)
+
+
+def minimize_objective(system: AllAtomSystem, evaluator, config: SolverConfig | None = None, *,
+                       checkpoint=None, pause_after_accepted_iterations=None, meter=None) -> MinimizationResult:
+    """Shared solver for explicitly identified internal or fixed-environment objectives.
+
+    The objective identity is retained in the existing source-bound checkpoint;
+    no module-global replacement or historical checkpoint translation occurs.
+    """
+    from .cross_interaction import FixedReceptorEvaluator
+    if type(evaluator) not in (ExtendedEvaluator, FixedReceptorEvaluator):
+        raise ResearchError("supported explicitly identified evaluator required")
+    parameters = evaluator.parameters
     config = SolverConfig() if config is None else config
     if type(config) is not SolverConfig:
         raise ResearchError("explicit 1.2 solver config required")
     _validate_source_system(system)
     if system.cell is not None or system.atom_count > 256:
         raise ResearchError("new solver supports nonperiodic systems of at most 256 atoms")
-    evaluator = ExtendedEvaluator(parameters, solvation)
     initial_identity = evaluator.identity()
     source = canonical_system_sha256(system)
     meter = WorkMeter() if meter is None else meter
