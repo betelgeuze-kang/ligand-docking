@@ -11,6 +11,7 @@ from betelgeuze_engine_v2.docking import energy_refinement as legacy
 from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
 from betelgeuze_engine_v2.physics.reference_forcefield_v2 import _constraint_observations
 from .evaluation import ExtendedEvaluator
+from .fixed_receptor import FixedReceptorEvaluator, FIXED_ATTEMPT_SCHEMA, ENERGY_BASIS
 from .minimization import ALGORITHM_ID, SolverConfig, minimize_extended
 from .provenance import ResearchError, canonical, coordinates_hex, digest, require_digest
 
@@ -59,8 +60,13 @@ class ExtendedRefiner(legacy.EnergyBasedLocalRefiner):
     refiner_version = "1.2.0"
 
     def __init__(self, authority, ligand, parameters, solver, *, implementation_source_sha256,
-                 solvation=None, max_attempts=256):
+                 solvation=None, max_attempts=256, fixed_environment=None):
         self._extended_evaluator = ExtendedEvaluator(parameters, solvation)
+        self._fixed_environment = fixed_environment
+        if fixed_environment is not None:
+            self._extended_evaluator = FixedReceptorEvaluator(self._extended_evaluator, fixed_environment)
+            self.refiner_id = "cpu_fixed_receptor_refiner"
+            self.refiner_version = "1.0.0"
         self._solver = solver
         selected = RefinementConfig(minimization=solver.minimization, max_attempts=max_attempts,
             solver=solver, evaluator_fingerprint_sha256=self._extended_evaluator.fingerprint_sha256)
@@ -87,14 +93,17 @@ class ExtendedRefiner(legacy.EnergyBasedLocalRefiner):
                    "pre_coordinates_binary64_hex": coordinates_hex(before),
                    "evaluator": identity, "solver": solver.to_dict(),
                    "implementation_source_sha256": self.implementation_source_sha256}
+        if self._fixed_environment is not None:
+            payload["schema_id"] = FIXED_ATTEMPT_SCHEMA
         meter = WorkMeter()
         try:
             source = self._ligand_system.with_coordinates(before.unsqueeze(0), operation="extended_refinement_input")
             constraints = _constraint_observations(source.coordinates, source, self._extended_evaluator.parameters.constraints)
             if not all(row.satisfied for row in constraints):
                 raise ResearchError("candidate is not on the declared constraint surface")
+            kwargs = {} if self._fixed_environment is None else {"fixed_environment": self._fixed_environment}
             result = minimize_extended(source, self._extended_evaluator.parameters, solver,
-                                       solvation=self._extended_evaluator.solvation, meter=meter)
+                                       solvation=self._extended_evaluator.solvation, meter=meter, **kwargs)
             state = result.checkpoint.to_dict()
             after = result.system.coordinates[0].detach().clone()
             displacement = float(torch.linalg.vector_norm(after - before, dim=-1).max())
@@ -109,6 +118,10 @@ class ExtendedRefiner(legacy.EnergyBasedLocalRefiner):
                 max_constraint_residual=state["current_constraint_residual"],
                 accepted_iterations=state["accepted_iterations"], evaluation_count=state["evaluation_count"],
                 checkpoint_sha256=result.checkpoint.checkpoint_sha256)
+            if self._fixed_environment is not None:
+                payload.update(initial_components=state["initial_components"], final_components=state["current_components"],
+                               energy_basis=ENERGY_BASIS,
+                               max_internal_increase_kcal_per_mol=self._fixed_environment.cross.max_internal_increase_kcal_per_mol)
             work = dict(result.execution)
             attempt = Attempt(canonical(payload), canonical(work))
             refined = proposal.with_refined_coordinates(after, refiner_id=self.refiner_id,
