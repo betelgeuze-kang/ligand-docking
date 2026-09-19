@@ -5,6 +5,7 @@ on:
       - 'betelgeuze_engine_v2/**'
       - 'betelgeuze_product/**'
       - 'tests/unit/test_cpu_refinement*.py'
+      - 'tests/unit/test_cpu_fixed_receptor*.py'
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
       - 'tools/verify_cpu_refinement_v1_2_install.py'
@@ -61,6 +62,7 @@ jobs:
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
             tests/unit/test_cpu_refinement_v1_2_*.py \
+            tests/unit/test_cpu_fixed_receptor*.py \
             tools/verify_cpu_refinement_v1_2_install.py \
             tools/benchmark_cpu_refinement_v1_2_verification.py \
             tools/benchmark_cpu_tangent_projection.py
@@ -71,6 +73,7 @@ jobs:
           set -euo pipefail
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
             tests/unit/test_cpu_refinement_v1_2_*.py \
+            tests/unit/test_cpu_fixed_receptor*.py \
             tests/unit/test_cpu_refinement_source_boundaries.py \
             tests/unit/test_engine_v2_reference_angle_boundary.py \
             tests/unit/test_engine_v2_refinement_comparison.py \

@@ -87,7 +87,11 @@ def refinement_admissible(row: dict, attempt: dict, require_convergence: bool) -
     """Common absolute admission; relative score improvement is checked separately."""
     if type(require_convergence) is not bool:
         raise ResearchError("exact convergence policy required")
-    return (row["succeeded"] is True and row["selection_eligible"] is True
+    strain_ok = True
+    if "max_internal_increase_kcal_per_mol" in attempt:
+        strain_ok = (attempt["final_components"]["ligand_internal"] - attempt["initial_components"]["ligand_internal"]
+                     <= attempt["max_internal_increase_kcal_per_mol"])
+    return (strain_ok and row["succeeded"] is True and row["selection_eligible"] is True
             and attempt["status"] == "success"
             and (not require_convergence or attempt["converged"] is True)
             and attempt["energy_delta"] <= 0.)
