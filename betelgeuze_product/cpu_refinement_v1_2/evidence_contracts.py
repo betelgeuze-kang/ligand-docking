@@ -264,6 +264,11 @@ def verify_execution_evidence(report: dict) -> None:
             combined = {**report["request_binding"], **{name: report[name] for name in ("budget", "solver", "comparison")},
                         "selection": report["selection_config"]}
             same(report["request_binding"], request_binding(combined), "request binding metadata")
+            same(combined["schema_id"], FIXED_REQUEST_SCHEMA if fixed_mode
+                 else "cpu_extended_comparison_request/1.2.0", "request objective")
+            if fixed_mode:
+                same(combined["pocket"]["coordinate_frame_id"], cross.coordinate_frame_id,
+                     "fixed interaction coordinate frame")
         exact_fields(report["raw_per_arm_selection"], {"baseline", "refined"})
     exact_fields(report, names)
     exact_fields(report["arms"], {"baseline", "refined"})
