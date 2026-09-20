@@ -337,7 +337,8 @@ def test_probe_kills_descendants_on_timeout(tmp_path, monkeypatch):
         path = Path(f"/proc/{pid}/stat")
         try:
             state = path.read_text().split(")", 1)[1].split()[0]
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
+            # Linux may report ESRCH if the process exits during the procfs read.
             break
         if state == "Z":  # exited child awaiting the container init's reap
             break
