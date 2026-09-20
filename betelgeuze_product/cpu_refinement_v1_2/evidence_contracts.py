@@ -264,6 +264,11 @@ def verify_execution_evidence(report: dict) -> None:
             combined = {**report["request_binding"], **{name: report[name] for name in ("budget", "solver", "comparison")},
                         "selection": report["selection_config"]}
             same(report["request_binding"], request_binding(combined), "request binding metadata")
+            same(combined["schema_id"], FIXED_REQUEST_SCHEMA if fixed_mode
+                 else "cpu_extended_comparison_request/1.2.0", "request objective")
+            if fixed_mode:
+                same(combined["pocket"]["coordinate_frame_id"], cross.coordinate_frame_id,
+                     "fixed interaction coordinate frame")
         exact_fields(report["raw_per_arm_selection"], {"baseline", "refined"})
     exact_fields(report, names)
     exact_fields(report["arms"], {"baseline", "refined"})
@@ -338,65 +343,73 @@ def verify_execution_evidence(report: dict) -> None:
     attempts, works = report["attempts"], report["refinement_work"]
     if type(attempts) is not list or type(works) is not list or len(works) != len(attempts) or len(works) != after.candidate_count:
         raise ResearchError("refinement work denominator mismatch")
-    effective_doc = effective.to_dict()
     for attempt, work in zip(attempts, works, strict=True):
-        fields_expected = {"schema_id", "candidate_id", "proposal_index", "source_proposal_fingerprint_sha256",
-            "pre_coordinates_sha256", "pre_coordinates_binary64_hex", "evaluator", "solver",
-            "implementation_source_sha256", "status", "receipt_sha256"}
-        if attempt["status"] == "success":
-            fields_expected |= {"post_coordinates_sha256", "post_coordinates_binary64_hex", "initial_energy",
-                "final_energy", "energy_delta", "maximum_displacement_angstrom", "converged", "minimization_status",
-                "max_tangent_force", "max_constraint_residual", "accepted_iterations", "evaluation_count", "checkpoint_sha256"}
-        else:
-            fields_expected |= {"public_error_code", "private_error_sha256", "private_error_byte_length"}
-        if fixed_mode and attempt["status"] == "success":
-            fields_expected |= {"initial_components", "final_components", "energy_basis", "max_internal_increase_kcal_per_mol"}
-            validate_components(attempt["initial_components"], attempt["initial_energy"])
-            validate_components(attempt["final_components"], attempt["final_energy"])
-            same(attempt["energy_basis"], ENERGY_BASIS, "energy objective semantics")
-            same(attempt["max_internal_increase_kcal_per_mol"], cross.max_internal_increase_kcal_per_mol, "strain bound")
-        exact_fields(attempt, fields_expected)
-        same(attempt["schema_id"], FIXED_ATTEMPT_SCHEMA if fixed_mode else "cpu_extended_refinement_attempt/1.2.0", "attempt schema")
-        same(attempt["solver"], effective_doc, "effective candidate solver")
-        verify_numerical_work(work, bound)
-        counters = work["work"]["counters"]
-        completed_projections = calls(work["work"]["stages"], "force.project", "completed")
-        if report["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA} and completed_projections:
-            if "tangent_projection_sweeps" not in counters:
-                raise ResearchError("missing new tangent projection observations")
-            if counters["tangent_projection_sweeps"] > completed_projections * solver.force_projection_max_sweeps:
-                raise ResearchError("tangent projection sweep budget exceeded")
-        if attempt["status"] == "success":
-            for name in ("initial_energy", "final_energy", "energy_delta"):
-                finite(attempt[name])
-            for name in ("maximum_displacement_angstrom", "max_tangent_force", "max_constraint_residual"):
-                finite(attempt[name], nonnegative=True)
-            accepted = integer(attempt["accepted_iterations"], 0, budget.max_refinement_steps)
-            evaluations = integer(attempt["evaluation_count"], 1, bound)
-            require_digest(attempt["checkpoint_sha256"])
-            boolean(attempt["converged"])
-            status = attempt["minimization_status"]
-            if status not in {"converged", "max_iterations_reached", "line_search_failed"}:
-                raise ResearchError("invalid terminal minimization status")
-            same(attempt["converged"], status == "converged", "minimization convergence")
-            same(attempt["converged"], attempt["max_tangent_force"] <= solver.minimization.force_tolerance_kcal_per_mol_angstrom,
-                 "force/convergence status")
-            if status == "max_iterations_reached" and accepted != budget.max_refinement_steps:
-                raise ResearchError("iteration exhaustion without exhausted budget")
-            if status == "line_search_failed" and accepted >= budget.max_refinement_steps:
-                raise ResearchError("line search failure after exhausted budget")
-            if not accepted + 1 <= work["force_evaluation_calls"] <= evaluations:
-                raise ResearchError("force calls do not support accepted iterations")
-            # Logical trial ledger includes projections rejected BEFORE force calls.
-            same(work["constraint_projection_calls"], evaluations, "trial/projection accounting")
-            if attempt["maximum_displacement_angstrom"] > budget.max_refinement_steps * solver.minimization.maximum_atom_displacement_angstrom + 1.e-10:
-                raise ResearchError("refinement displacement exceeded bound")
-        elif attempt["status"] == "failure":
-            count(attempt["private_error_byte_length"])
-            require_digest(attempt["private_error_sha256"])
-        else:
-            raise ResearchError("unknown refinement status")
+        verify_attempt_execution(attempt, work, solver=effective, steps=budget.max_refinement_steps,
+                                 bound=bound, cross=cross if fixed_mode else None,
+                                 current=report["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA})
     refined = report["arms"]["refined"]
     count(refined["failed_force_evaluation_calls"])
     same(refined["actual_force_evaluation_calls"], sum(w["force_evaluation_calls"] for w in works), "force call total")
     same(refined["failed_force_evaluation_calls"], sum(w["failed_force_evaluation_calls"] for w in works), "failed force total")
+
+
+def verify_attempt_execution(attempt, work, *, solver, steps, bound, cross=None, current=True):
+    """Shared per-attempt budget/components checks for reports and durable replay."""
+    fixed_mode = cross is not None
+    effective_doc = solver.to_dict()
+    fields_expected = {"schema_id", "candidate_id", "proposal_index", "source_proposal_fingerprint_sha256",
+        "pre_coordinates_sha256", "pre_coordinates_binary64_hex", "evaluator", "solver",
+        "implementation_source_sha256", "status", "receipt_sha256"}
+    if attempt["status"] == "success":
+        fields_expected |= {"post_coordinates_sha256", "post_coordinates_binary64_hex", "initial_energy",
+            "final_energy", "energy_delta", "maximum_displacement_angstrom", "converged", "minimization_status",
+            "max_tangent_force", "max_constraint_residual", "accepted_iterations", "evaluation_count", "checkpoint_sha256"}
+    else:
+        fields_expected |= {"public_error_code", "private_error_sha256", "private_error_byte_length"}
+    if fixed_mode and attempt["status"] == "success":
+        fields_expected |= {"initial_components", "final_components", "energy_basis", "max_internal_increase_kcal_per_mol"}
+        validate_components(attempt["initial_components"], attempt["initial_energy"])
+        validate_components(attempt["final_components"], attempt["final_energy"])
+        same(attempt["energy_basis"], ENERGY_BASIS, "energy objective semantics")
+        same(attempt["max_internal_increase_kcal_per_mol"], cross.max_internal_increase_kcal_per_mol, "strain bound")
+    exact_fields(attempt, fields_expected)
+    same(attempt["schema_id"], FIXED_ATTEMPT_SCHEMA if fixed_mode else "cpu_extended_refinement_attempt/1.2.0", "attempt schema")
+    same(attempt["solver"], effective_doc, "effective candidate solver")
+    verify_numerical_work(work, bound)
+    counters = work["work"]["counters"]
+    completed_projections = calls(work["work"]["stages"], "force.project", "completed")
+    if current and completed_projections:
+        if "tangent_projection_sweeps" not in counters:
+            raise ResearchError("missing new tangent projection observations")
+        if counters["tangent_projection_sweeps"] > completed_projections * solver.force_projection_max_sweeps:
+            raise ResearchError("tangent projection sweep budget exceeded")
+    if attempt["status"] == "success":
+        for name in ("initial_energy", "final_energy", "energy_delta"):
+            finite(attempt[name])
+        for name in ("maximum_displacement_angstrom", "max_tangent_force", "max_constraint_residual"):
+            finite(attempt[name], nonnegative=True)
+        accepted = integer(attempt["accepted_iterations"], 0, steps)
+        evaluations = integer(attempt["evaluation_count"], 1, bound)
+        require_digest(attempt["checkpoint_sha256"])
+        boolean(attempt["converged"])
+        status = attempt["minimization_status"]
+        if status not in {"converged", "max_iterations_reached", "line_search_failed"}:
+            raise ResearchError("invalid terminal minimization status")
+        same(attempt["converged"], status == "converged", "minimization convergence")
+        same(attempt["converged"], attempt["max_tangent_force"] <= solver.minimization.force_tolerance_kcal_per_mol_angstrom,
+             "force/convergence status")
+        if status == "max_iterations_reached" and accepted != steps:
+            raise ResearchError("iteration exhaustion without exhausted budget")
+        if status == "line_search_failed" and accepted >= steps:
+            raise ResearchError("line search failure after exhausted budget")
+        if not accepted + 1 <= work["force_evaluation_calls"] <= evaluations:
+            raise ResearchError("force calls do not support accepted iterations")
+        # Logical trial ledger includes projections rejected BEFORE force calls.
+        same(work["constraint_projection_calls"], evaluations, "trial/projection accounting")
+        if attempt["maximum_displacement_angstrom"] > steps * solver.minimization.maximum_atom_displacement_angstrom + 1.e-10:
+            raise ResearchError("refinement displacement exceeded bound")
+    elif attempt["status"] == "failure":
+        count(attempt["private_error_byte_length"])
+        require_digest(attempt["private_error_sha256"])
+    else:
+        raise ResearchError("unknown refinement status")

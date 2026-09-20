@@ -127,6 +127,14 @@ candidate persistence/resume is NOT added in this change.
 
 ## Verification and deployment boundary
 
+When a report retains request metadata, portable verification checks that its
+request schema names the same internal-only or fixed-receptor objective as the
+result. Fixed-receptor reports also require the retained pocket frame to match
+the cross-parameter coordinate frame. Contradictions reject even when envelope
+and attempt digests have been recomputed. Unbound direct-API reports remain
+explicitly without input-binding evidence; verification does not reopen the
+original host's input files or certify their physical suitability.
+
 New tests use synthetic data, not the reserved real-molecule holdout. They
 include independent math-only radial energy/derivatives (including switch
 forces), block/pair completeness, receptor size > ligand capacity, rotations,
