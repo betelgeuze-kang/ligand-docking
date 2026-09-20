@@ -72,10 +72,14 @@ def evaluate_request(request: dict, *, checkpoint_dir=None, resume=False) -> dic
             execution_options = {}
             if version_two:
                 execution = case["execution"]
-                if (not isinstance(execution, dict) or set(execution) != {"projection_partition"}
+                if (not isinstance(execution, dict) or set(execution) not in ({"projection_partition"}, {"projection_partition", "ligand_size_profile"})
                         or type(execution["projection_partition"]) is not str
                         or execution["projection_partition"] not in {"source_order_v1", "spatial_median_v1"}):
                     raise ValueError("explicit supported projection_partition required in v2 execution")
+                if ("ligand_size_profile" in execution and
+                        (type(execution["ligand_size_profile"]) is not str or
+                         execution["ligand_size_profile"] not in {"standard_256_v1", "extended_512_v1"})):
+                    raise ValueError("unsupported ligand_size_profile in v2 execution")
                 execution_options = dict(execution)
                 row["execution"] = dict(execution)
             evaluation = case["evaluation"]
