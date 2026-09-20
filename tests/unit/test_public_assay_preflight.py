@@ -1,5 +1,4 @@
 """Synthetic metadata only: no experimental labels or protected outcomes."""
-import copy
 import gzip
 import hashlib
 import json
@@ -7,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from tools.product import public_assay_preflight as mod
+from betelgeuze_product import public_assay_preflight as mod
 
 
 def node(name, keys, protected=False, declarations=None):
