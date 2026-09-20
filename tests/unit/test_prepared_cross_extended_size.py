@@ -6,10 +6,8 @@ from tests.unit.test_score_prepared_cross_interactions import _prepared, _write_
 from tools.product import score_prepared_cross_interactions as consumer
 
 
-def test_extended_315_atom_source_files_keep_all_parameters_and_failed_default(tmp_path):
-    directory = tmp_path / 'sources'
+def _large_prepared(directory, count=315):
     prepared = _prepared(directory)
-    count = 315
     sdf = ('Synthetic independent carbon sites\n local numerical constants\n\n'
            f'{count:3d}  0  0  0  0  0            999 V2000\n' + ''.join(
                f'{1.4*i:10.4f}{4.:10.4f}{0.:10.4f} C   0  0  0  0  0  0  0  0  0  0  0  0\n'
@@ -21,7 +19,12 @@ def test_extended_315_atom_source_files_keep_all_parameters_and_failed_default(t
         f'{i+1} C 1 LIG C{i+1} {i+1} -0.3 12.011\n' for i in range(count))
     for key, name, value in [('ligand_sdf','large.sdf',sdf),('ligand_gro','large.gro',gro),('ligand_itp','large.itp',itp)]:
         prepared[key] = _write_source(directory,name,value)
-    case = _case(prepared)
+    return prepared
+
+
+def test_extended_315_atom_source_files_keep_all_parameters_and_failed_default(tmp_path):
+    count = 315
+    case = _case(_large_prepared(tmp_path / "sources", count))
     case['evaluation']['pocket_radius_angstrom'] = 1000.
     case['execution'] = {'projection_partition':'spatial_median_v1','ligand_size_profile':'extended_512_v1'}
     standard = copy.deepcopy(case)
