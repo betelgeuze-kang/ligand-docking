@@ -15,6 +15,7 @@ import subprocess
 import tempfile
 
 from tests.unit.test_cpu_refinement_v1_2_workflow import extended_request_fixture
+from tests.unit.test_cpu_fixed_receptor_pipeline import request_fixture as fixed_request_fixture
 
 
 def verify(python: Path, output: Path) -> dict:
@@ -38,6 +39,17 @@ def verify(python: Path, output: Path) -> dict:
              "--output", str(outside / "run")],
             [executable, "-I", "-m", "betelgeuze_product.cpu_refinement_v1_2", "verify", str(outside / "run")],
         ]
+        fixed_inputs = outside / "fixed-inputs"
+        fixed_inputs.mkdir()
+        fixed_request = fixed_request_fixture(fixed_inputs)
+        fixed_path = fixed_inputs / "request.json"
+        fixed_path.write_text(json.dumps(fixed_request))
+        commands.extend([
+            [executable, "-I", "-m", "betelgeuze_product.cpu_refinement_v1_2", "run",
+             str(fixed_path), "--output", str(outside / "fixed-run")],
+            [executable, "-I", "-m", "betelgeuze_product.cpu_refinement_v1_2", "verify",
+             str(outside / "fixed-run")],
+        ])
         records = []
         for command in commands:
             run = subprocess.run(command, cwd=outside, env=env, capture_output=True, text=True, timeout=180)
@@ -58,7 +70,15 @@ def verify(python: Path, output: Path) -> dict:
             raise RuntimeError("installed implementation differs from checkout bytes")
         if report["result"]["arms"]["refined"]["failure_count"]:
             raise RuntimeError("installed synthetic refinement did not succeed")
-        result = {"installed_cli_verified": True, "outside_checkout": True,
+        fixed_report = json.loads((outside / "fixed-run" / "report.json").read_bytes())
+        if fixed_report["result"]["arms"]["refined"]["failure_count"]:
+            raise RuntimeError("installed fixed-receptor refinement failed")
+        if fixed_report["result"]["schema_id"] != "cpu_fixed_receptor_comparison/1.0.0":
+            raise RuntimeError("installed CLI did not use fixed-receptor model")
+        (output / "fixed-run").mkdir()
+        for name in ("request.json", "report.json", "complete.json"):
+            (output / "fixed-run" / name).write_bytes((outside / "fixed-run" / name).read_bytes())
+        result = {"fixed_receptor_cli_verified": True, "installed_cli_verified": True, "outside_checkout": True,
                   "pythonpath_removed": True, "isolated_python_flag": True,
                   "new_source_hashes": installed, "scientifically_validated": False}
         (output / "verification.json").write_text(json.dumps(result, indent=2))

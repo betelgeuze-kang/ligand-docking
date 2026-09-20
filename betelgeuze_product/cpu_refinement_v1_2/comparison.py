@@ -11,6 +11,7 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import (
 )
 from .evidence_contracts import REPORT_SCHEMA, POLICY_ID
 from .evaluation import ExtendedEvaluator
+from .fixed_receptor import FixedReceptorEvaluator, FIXED_REPORT_SCHEMA, FIXED_POLICY_ID
 from .minimization import SolverConfig
 from .provenance import ResearchError, digest, source_manifest
 from .refinement import ExtendedRefiner
@@ -39,8 +40,10 @@ def choose_variant(before: dict, after: dict, attempt: dict, require_convergence
     if require_convergence and not attempt["converged"]:
         return fallback, "refinement_not_converged"
     if attempt["energy_delta"] > 0:
-        return fallback, "internal_energy_increased"
+        return fallback, "total_objective_increased" if "energy_basis" in attempt else "internal_energy_increased"
     if not refinement_admissible(after, attempt, require_convergence):
+        if "max_internal_increase_kcal_per_mol" in attempt:
+            return fallback, "ligand_internal_strain_limit_exceeded"
         raise ResearchError("refinement admission policy disagreement")
     if fallback == "baseline" and after["score"] >= before["score"]:
         return fallback, "score_not_improved"
@@ -48,7 +51,7 @@ def choose_variant(before: dict, after: dict, attempt: dict, require_convergence
 
 
 def run_comparison(authority, budget, *, receptor_system, ligand_system, parameters,
-                   solver: SolverConfig, solvation=None, comparison=None, selection=None) -> dict:
+                   solver: SolverConfig, solvation=None, comparison=None, selection=None, fixed_environment=None) -> dict:
     comparison = RefinementComparisonConfig() if comparison is None else comparison
     selection = SelectionConfig(budget.top_k) if selection is None else selection
     if type(solver) is not SolverConfig:
@@ -62,8 +65,16 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
     sources = source_manifest()
     implementation = digest(sources)
     evaluator = ExtendedEvaluator(parameters, solvation)
+    if fixed_environment is not None:
+        if fixed_environment.cross.receptor_system_sha256 != authority.receptor_system_sha256:
+            raise ResearchError("fixed environment does not match docking receptor")
+        if fixed_environment.cross.coordinate_frame_id != authority.pocket.coordinate_frame_id:
+            raise ResearchError("fixed interaction coordinate frame does not match docking pocket")
+        fixed_environment.validate_ligand(ligand_system, parameters.base_parameters)
+        evaluator = FixedReceptorEvaluator(evaluator, fixed_environment)
     refiner = ExtendedRefiner(authority, ligand_system, parameters, solver, solvation=solvation,
-        implementation_source_sha256=implementation, max_attempts=after_budget.candidate_count)
+        implementation_source_sha256=implementation, max_attempts=after_budget.candidate_count,
+        **({} if fixed_environment is None else {"fixed_environment": fixed_environment}))
     refiner.assert_ready()
     arms, searches, descriptors = {}, {}, {}
     for name, arm_budget, arm_refiner in (("baseline", before_budget, None), ("refined", after_budget, refiner)):
@@ -154,5 +165,10 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
               "failure_rows_retained": True, "receptor_ligand_interaction_energy_minimized": False,
               "equal_elapsed_cpu_time_claimed": False, "scientifically_validated": False,
               "customer_execution_allowed": False, "claim_safe": False}
+    if fixed_environment is not None:
+        fixed_environment.assert_intact()
+        report.update(schema_id=FIXED_REPORT_SCHEMA, selection_policy_id=FIXED_POLICY_ID,
+                      cross_parameters=fixed_environment.cross.to_dict(),
+                      receptor_ligand_interaction_energy_minimized=True)
     report["report_sha256"] = digest(report)
     return report

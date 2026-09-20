@@ -9,6 +9,7 @@ from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
 from betelgeuze_engine_v2.docking.scoring import DockingScoreDescriptor, ScoreDirection
 from betelgeuze_engine_v2.docking.scorer_v1 import _sha256 as score_receipt_digest
 from .comparison import choose_variant
+from .fixed_receptor import FIXED_REPORT_SCHEMA, FIXED_POLICY_ID
 from .evidence_contracts import (
     REPORT_SCHEMA, LEGACY_REPORT_SCHEMA, POLICY_ID, same, selection_config,
     verify_execution_evidence,
@@ -27,15 +28,15 @@ def verify_report(report: dict) -> dict:
 
 
 def _verify_report(report: dict) -> dict:
-    if report.get("schema_id") not in {REPORT_SCHEMA, LEGACY_REPORT_SCHEMA}:
+    if report.get("schema_id") not in {REPORT_SCHEMA, LEGACY_REPORT_SCHEMA, FIXED_REPORT_SCHEMA}:
         raise ResearchError("unsupported comparison report")
     if digest({k: v for k, v in report.items() if k != "report_sha256"}) != report.get("report_sha256"):
         raise ResearchError("comparison report digest mismatch")
     if any(report.get(flag) is not False for flag in ("scientifically_validated", "customer_execution_allowed", "claim_safe")):
         raise ResearchError("research report cannot promote execution or scientific claims")
-    current = report["schema_id"] == REPORT_SCHEMA
+    current = report["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}
     if current:
-        same(report["selection_policy_id"], POLICY_ID, "selection policy")
+        same(report["selection_policy_id"], FIXED_POLICY_ID if report["schema_id"] == FIXED_REPORT_SCHEMA else POLICY_ID, "selection policy")
     n = integer(report["atom_count"], 1, 256)
     verify_execution_evidence(report)
     k = integer(report["budget"]["top_k"], 1, 256)
@@ -134,6 +135,7 @@ def _verify_report(report: dict) -> dict:
         raise ResearchError("variant selection decisions are inconsistent")
     return {"structural_verification_passed": True, "report_sha256": report["report_sha256"],
             "scientifically_validated": False, "scoring_reexecuted": False,
-            "verification_schema_id": "cpu_evidence_verification/1.2.1",
+            "verification_schema_id": ("cpu_fixed_receptor_evidence_verification/1.0.0" if report["schema_id"] == FIXED_REPORT_SCHEMA
+                                       else "cpu_evidence_verification/1.2.1"),
             "legacy_per_arm_selection_is_diagnostic": not current,
             "input_binding_evidence_present": current and report["request_binding"] is not None}

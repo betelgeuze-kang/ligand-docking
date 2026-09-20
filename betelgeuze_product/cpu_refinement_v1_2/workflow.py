@@ -13,6 +13,7 @@ from betelgeuze_product import refinement_comparison_workflow as previous
 from betelgeuze_product.local_research_workflow import _decode, _json
 from betelgeuze_product.reference_minimization_workflow import _bound, _directory, _publish, _read
 from .comparison import run_comparison
+from .fixed_receptor import CrossParameters, FixedReceptorEnvironment, FIXED_REQUEST_SCHEMA, FIXED_REPORT_SCHEMA
 from .evidence_contracts import (
     REPORT_SCHEMA, request_binding, verify_request_settings, verify_work, same,
 )
@@ -86,25 +87,31 @@ def run_request(request: dict, output: str | Path) -> dict:
         sources = source_manifest()
         implementation = digest(sources)
     with meter.measure("inputs.parse"):
-        authority, receptor, ligand, parameters, budget, solver, solvent, comparison, selection = load_request(request, implementation)
+        fixed_mode = request["schema_id"] == FIXED_REQUEST_SCHEMA
+        prepared = request if not fixed_mode else {**{k: v for k, v in request.items() if k != "cross_parameters"}, "schema_id": REQUEST_SCHEMA}
+        authority, receptor, ligand, parameters, budget, solver, solvent, comparison, selection = load_request(prepared, implementation)
+        fixed = None if not fixed_mode else FixedReceptorEnvironment(receptor, CrossParameters.from_dict(_bound(request["cross_parameters"])))
+        if fixed is not None:
+            fixed.validate_ligand(ligand, parameters.base_parameters)
     with _directory(output, resume=False) as directory:
         with meter.measure("request.publish"):
             _publish(directory / "request.json", request)
         with meter.measure("comparison.execute"):
             result = run_comparison(authority, budget, receptor_system=receptor, ligand_system=ligand,
-                parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection)
+                parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection,
+                **({} if fixed is None else {"fixed_environment": fixed}))
         result["request_binding"] = binding
         result["report_sha256"] = digest({key: value for key, value in result.items() if key != "report_sha256"})
         with meter.measure("result.verify"):
             verify_request_settings(request, result)
             verification = verify_report(result)
-        for name in ("receptor", "ligand", "parameters", "extensions", "solvation"):
+        for name in ("receptor", "ligand", "parameters", "extensions", "solvation") + (("cross_parameters",) if fixed_mode else ()):
             if request[name] is not None:
                 verify_admitted_bytes(request[name], meter)
         with meter.measure("implementation.verify"):
             if source_manifest() != sources or result["implementation_source_sha256"] != implementation:
                 raise ResearchError("implementation source changed")
-        report = {"schema_id": "local_cpu_extended_comparison/1.2.1", "request_sha256": digest(request),
+        report = {"schema_id": "local_cpu_fixed_receptor_comparison/1.0.0" if fixed_mode else "local_cpu_extended_comparison/1.2.1", "request_sha256": digest(request),
                   "implementation_sources": sources, "implementation_source_sha256": implementation,
                   "environment": environment(), "result": result, "verification": verification,
                   "execution_work_before_report_publication": meter.snapshot()}
@@ -148,9 +155,10 @@ def _verify_output(directory: str | Path) -> dict:
         raise ResearchError("completion marker does not match failure-inclusive result")
     verify_request_settings(request, report["result"])
     verification = verify_report(report["result"])
-    current = report["result"]["schema_id"] == REPORT_SCHEMA
-    same(report["schema_id"], "local_cpu_extended_comparison/1.2.1" if current
-         else "local_cpu_extended_comparison/1.2.0", "outer report schema")
+    current = report["result"]["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}
+    expected_schema = ("local_cpu_fixed_receptor_comparison/1.0.0" if report["result"]["schema_id"] == FIXED_REPORT_SCHEMA
+                       else "local_cpu_extended_comparison/1.2.1" if current else "local_cpu_extended_comparison/1.2.0")
+    same(report["schema_id"], expected_schema, "outer report schema")
     stored = report["verification"]
     expected = verification if current or "verification_schema_id" in stored else {
         key: verification[key] for key in ("structural_verification_passed", "report_sha256",

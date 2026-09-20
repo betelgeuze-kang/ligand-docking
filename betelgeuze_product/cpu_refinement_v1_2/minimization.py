@@ -30,6 +30,8 @@ from betelgeuze_product.cpu_refinement.reference_minimization_v1_1 import (
     ReferenceMinimizationConfig, _config_from_document,
 )
 from .evaluation import ExtendedEvaluator
+from .fixed_receptor import (FixedReceptorEnvironment, FixedReceptorEvaluator, FIXED_EVALUATOR_ID,
+                             components_document, validate_components)
 from .provenance import (
     ResearchError, canonical, coordinates_hex, decode_coordinates, digest,
     environment, exact_fields, finite, integer, require_digest, source_manifest,
@@ -111,7 +113,13 @@ def require_checkpoint(value: object) -> Checkpoint:
              "coordinates_sha256", "initial_energy", "initial_max_tangent_force",
              "current_energy", "current_max_tangent_force", "current_constraint_residual",
              "accepted_iterations", "evaluation_count", "status", "observations", "checkpoint_sha256"}
+    fixed_mode = isinstance(value, Mapping) and isinstance(value.get("evaluator"), Mapping) and value["evaluator"].get("evaluator_id") == FIXED_EVALUATOR_ID
+    if fixed_mode:
+        names |= {"initial_components", "current_components"}
     exact_fields(value, names)
+    if fixed_mode:
+        validate_components(value["initial_components"], value["initial_energy"])
+        validate_components(value["current_components"], value["current_energy"])
     if value["schema_id"] != CHECKPOINT_SCHEMA or value["algorithm_id"] != ALGORITHM_ID:
         raise ResearchError("checkpoint algorithm identity mismatch; no migration permitted")
     for name in ("source_system_sha256", "implementation_sha256", "coordinates_sha256", "checkpoint_sha256"):
@@ -235,6 +243,7 @@ def minimize_extended(
     checkpoint: Checkpoint | Mapping | None = None,
     pause_after_accepted_iterations: int | None = None,
     meter: WorkMeter | None = None,
+    fixed_environment: FixedReceptorEnvironment | None = None,
 ) -> MinimizationResult:
     config = SolverConfig() if config is None else config
     if type(config) is not SolverConfig:
@@ -243,6 +252,8 @@ def minimize_extended(
     if system.cell is not None or system.atom_count > 256:
         raise ResearchError("new solver supports nonperiodic systems of at most 256 atoms")
     evaluator = ExtendedEvaluator(parameters, solvation)
+    if fixed_environment is not None:
+        evaluator = FixedReceptorEvaluator(evaluator, fixed_environment)
     initial_identity = evaluator.identity()
     source = canonical_system_sha256(system)
     meter = WorkMeter() if meter is None else meter
@@ -260,7 +271,10 @@ def minimize_extended(
             result = project_distance_constraints(state, parameters, config.constraint_projection)
             return result, result.system.coordinates.detach().clone()
 
+    last_components = None
+
     def evaluate(xyz):
+        nonlocal last_components
         state = system.with_coordinates(xyz, operation="research_1_2_evaluation")
         with meter.measure("geometry.build"):
             neighbors = build_compact_radius_graph(xyz, RadiusGraphConfig(
@@ -268,6 +282,8 @@ def minimize_extended(
                 max_neighbors=minimum.max_neighbors, max_atoms_per_cell=minimum.max_atoms_per_cell))
         with meter.measure("force.evaluate"):
             result = evaluator.evaluate(state, neighbors)
+        if fixed_environment is not None:
+            last_components = components_document(result)
         energy = float(result.term.energy[0])
         with meter.measure("force.project"):
             tangent, force, _, sweeps, converged = _project_forces_to_constraint_tangent(
@@ -297,6 +313,7 @@ def minimize_extended(
             raise ResearchError("initial tangent projection or constraint satisfaction failed")
         rows = [observation(1, 0, 0, "initial", xyz, projection, 0., energy, force)]
         accepted = 0
+        initial_components = current_components = last_components
     else:
         saved = require_checkpoint(checkpoint).to_dict()
         expected = {"source_system_sha256": source, "evaluator": initial_identity,
@@ -317,6 +334,13 @@ def minimize_extended(
             for observed, name in ((energy, "current_energy"), (force, "current_max_tangent_force"),
                                    (residual, "current_constraint_residual"))):
             raise ResearchError("checkpoint energy, tangent force or constraints do not reproduce")
+        if fixed_environment is not None:
+            if saved["current_components"] != last_components:
+                raise ResearchError("checkpoint fixed-receptor components do not reproduce")
+            initial_components = saved["initial_components"]
+        else:
+            initial_components = None
+        current_components = last_components
         rows = saved["observations"]
         accepted = saved["accepted_iterations"]
     if pause is not None and pause < accepted:
@@ -363,6 +387,7 @@ def minimize_extended(
                                     trial_xyz, projection, step, trial_energy, trial_force))
             if outcome == "accepted":
                 xyz, energy, forces, force, residual = trial_xyz, trial_energy, trial_forces, trial_force, trial_residual
+                current_components = last_components
                 accepted += 1
                 moved = True
                 break
@@ -385,6 +410,8 @@ def minimize_extended(
                 "current_energy": energy, "current_max_tangent_force": force,
                 "current_constraint_residual": residual, "accepted_iterations": accepted,
                 "evaluation_count": len(rows), "status": status, "observations": rows}
+    if fixed_environment is not None:
+        document.update(initial_components=initial_components, current_components=current_components)
     saved = require_checkpoint({**document, "checkpoint_sha256": digest(document)})
     output = system.with_coordinates(xyz, operation=ALGORITHM_ID,
                                      operation_evidence_sha256=saved.checkpoint_sha256)
