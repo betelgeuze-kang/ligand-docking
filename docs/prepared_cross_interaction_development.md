@@ -891,8 +891,21 @@ not change the physical model, force-field parameters, 64-atom component tiles,
 source validation, minimum-distance guards, or source atom accounting. Extended
 results contain `input_domain` with the requested profile and both atom limits.
 Standard results retain their previous field layout. This option is supported
-by the direct adapter and V2 cross consumer; the rigid-pose request contract has
-not been extended in this change.
+by the direct adapter, V2 cross consumer and rigid-pose request consumer.
+For a rigid-pose request, include the existing required `preparation_reuse`
+field alongside `projection_partition` and the optional `ligand_size_profile`.
+The default remains `standard_256_v1`. The declared profile is retained in the
+report execution and bound to the request checkpoint; changing it rejects a
+resume before rewriting completed rows. Completed rows are restored without
+preparation or physics, while an interrupted batch evaluates only remaining
+poses. Invalid profiles fail before source loading and oversized ligands remain
+failed rows in the requested denominator.
+
+Real-file synthetic tests at 315 and 512 atoms exercise both partitions,
+interruption after a durable row, completion with an invalid pose, exact resumed
+numerical results, zero recomputation on completed resume, and profile-change
+rejection with unchanged checkpoint bytes. These tests do not establish actual
+peptide preparation or scientific qualification.
 
 Tests cover both partitions at 256, 257, 315 and 512 atoms against independent
 scalar energies and analytic forces, including nonzero forces on the last atom.
