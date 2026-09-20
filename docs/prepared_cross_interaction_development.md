@@ -867,3 +867,38 @@ physical evaluation; any canonical mutation still fails integrity before scoring
 All source/pose observation costs are included in whole-request cost and marked
 in per-pose scopes. Additive diagnostic fields retain request/report v1; there is
 no checkpoint, energy definition, persistent-cache or frozen protocol migration.
+
+### Explicit 512-atom ligand input profile
+
+The direct prepared cross adapter accepts
+`ligand_size_profile="extended_512_v1"` for a full ligand containing at most
+512 atoms, including explicitly supplied hydrogens. The default
+`standard_256_v1` retains the existing 256-atom limit. The receptor limit remains
+10,000. A 513-atom ligand is rejected even with the extended profile. Invalid or
+untyped profile names are rejected before input loading in the V2 consumer.
+
+For `prepared_cross_interaction_request_v2` and its assay-shadow variant, use:
+
+```json
+"execution": {
+  "projection_partition": "spatial_median_v1",
+  "ligand_size_profile": "extended_512_v1"
+}
+```
+
+`projection_partition` remains required. The size profile is optional and does
+not change the physical model, force-field parameters, 64-atom component tiles,
+source validation, minimum-distance guards, or source atom accounting. Extended
+results contain `input_domain` with the requested profile and both atom limits.
+Standard results retain their previous field layout. This option is supported
+by the direct adapter and V2 cross consumer; the rigid-pose request contract has
+not been extended in this change.
+
+Tests cover both partitions at 256, 257, 315 and 512 atoms against independent
+scalar energies and analytic forces, including nonzero forces on the last atom.
+They preserve source hashes, reject an out-of-range size and a last-block short
+contact, and verify the default and extended profiles give identical quantities
+for a 256-atom input. A CLI test reads 315 synthetic sites from hash-bound SDF,
+GRO and ITP files, retains all parameters/forces, and preserves the failure of
+the same input under the default profile. These are numerical/software checks,
+not molecular preparation, affinity validation, or a performance claim.
