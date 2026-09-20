@@ -15,7 +15,8 @@ def test_strict_bounds_and_reversal(left,right,expected):
 
 @pytest.mark.parametrize("bad", [ep(0),ep(float("nan")),ep(True),ep(2,"<="),ep(float("inf"))])
 def test_invalid_endpoints_rejected_even_without_pairs(bad):
-    with pytest.raises(ValueError):compare_rankings({"a":bad},{"arm":{}})
+    with pytest.raises(ValueError):
+        compare_rankings({"a":bad},{"arm":{}})
 
 def test_missing_and_unknown_pairs_preserve_denominator():
     result=compare_rankings({"a":ep(1),"b":ep(2),"c":ep(3,">"),"d":ep(4,">")},
@@ -35,7 +36,8 @@ def test_ties_and_score_direction():
 
 @pytest.mark.parametrize("scores", [{"z":1},{"a":float("nan")},{"a":True}])
 def test_bad_scores_rejected(scores):
-    with pytest.raises(ValueError):compare_rankings({"a":ep(1)},{"arm":scores})
+    with pytest.raises(ValueError):
+        compare_rankings({"a":ep(1)},{"arm":scores})
 
 def test_missing_arm_and_permutation_do_not_impute():
     endpoints={"b":ep(2),"a":ep(1)}
