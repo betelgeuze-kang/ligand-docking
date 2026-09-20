@@ -1,6 +1,6 @@
 # Censored concentration rank diagnostics
 
-`tools.product.censored_rank_metrics` computes descriptive concordance within one already authorized, frozen target/domain/assay/endpoint/unit cohort. It does not load labels, authorize access, train, calibrate, or change source roles. Callers must enforce those boundaries and exclude reference-self comparisons consistently across all arms before invocation.
+`betelgeuze_engine.product.censored_rank_metrics` computes descriptive concordance within one already authorized, frozen target/domain/assay/endpoint/unit cohort. It does not load labels, authorize access, train, calibrate, or change source roles. Callers must enforce those boundaries and exclude reference-self comparisons consistently across all arms before invocation.
 
 Supply positive finite concentration endpoints with relation `=` or strict `>`. A measured value equal to a strict censor bound is known to be smaller; overlapping ranges and two right-censored endpoints are unordered. Other relations are rejected. Reported standard deviations are not confidence intervals and must remain in source records.
 

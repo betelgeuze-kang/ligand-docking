@@ -1,5 +1,5 @@
 import pytest
-from tools.product.censored_rank_metrics import endpoint_order, compare_rankings
+from betelgeuze_engine.product.censored_rank_metrics import endpoint_order, compare_rankings
 
 def ep(value, relation="="):
     return dict(value=value, relation=relation)
