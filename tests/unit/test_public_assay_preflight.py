@@ -11,7 +11,7 @@ from betelgeuze_product import public_assay_preflight as mod
 
 def node(name, keys, protected=False, declarations=None):
     return {"schema_version": "public_assay_identity_context_v1", "node_id": name,
-            "record_id": name, "keys": [["document", hashlib.sha256(k.encode()).hexdigest()] for k in keys],
+            "record_id": name, "keys": [["document", hashlib.sha256(k.encode()).hexdigest()] for k in keys] + [["canonical", hashlib.sha256(("chemical:" + name).encode()).hexdigest()]],
             "policy_declarations": declarations if declarations is not None else [{}],
             "protected": protected, "chemical_identity_available": True,
             "document_identity_available": True, "source": {}}
