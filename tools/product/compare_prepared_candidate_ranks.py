@@ -16,6 +16,7 @@ from betelgeuze_engine.product import censored_rank_metrics as legacy_metric
 from betelgeuze_engine.product import paired_rank_metrics as metric
 from betelgeuze_product import public_assay_components, residual_evidence
 from tools.product import compare_prepared_candidate_policies as runner
+from tools.product import rank_publication as publication
 
 PLAN_SCHEMA = "prepared_rank_plan_v1"
 DIRECTIONS = {"similarity": "higher_is_better", "engine": "lower_is_better",
@@ -24,7 +25,7 @@ DIRECTIONS = {"similarity": "higher_is_better", "engine": "lower_is_better",
 
 def _implementations():
     return {name: hashlib.sha256(Path(path).read_bytes()).hexdigest() for name, path in (
-        ("adapter", __file__), ("metrics", metric.__file__), ("legacy_metrics", legacy_metric.__file__),
+        ("adapter", __file__), ("publication", publication.__file__), ("metrics", metric.__file__), ("legacy_metrics", legacy_metric.__file__),
         ("runner", runner.__file__), ("components", public_assay_components.__file__),
         ("residual_evidence", residual_evidence.__file__))}
 
@@ -42,7 +43,7 @@ def _plan(plan, frozen):
     if plan["assay_ids"] != assays:
         raise ValueError("rank_plan_assay_coverage_mismatch")
     # Validate combinations and worst-case work before engine execution or labels.
-    metric.compare_cohort({rid: None for rid in frozen["pool"]},
+    metric.validate_cohort({rid: None for rid in frozen["pool"]},
         {arm: {} for arm in runner.ARMS}, plan["comparisons"], max_pair_work=plan["max_pair_work"])
     if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
         from tools.product.train_public_chembl_selector import load_intake
@@ -59,34 +60,37 @@ def run(protocol, plan, output_dir, *, resume=False):
     _plan(plan, frozen)
     envelope = {"plan": plan, "frozen_sha256": runner.sha(frozen),
                 "implementations": _implementations(), "plan_frozen_before_predictions": True}
-    root = Path(output_dir).resolve()
-    if not resume:
-        root.mkdir(mode=0o700)
-        runner.publish(root / "rank-plan.json", envelope)
-    elif runner.read(root / "rank-plan.json") != envelope:
-        raise ValueError("rank_resume_plan_or_implementation_changed")
-    result = runner.run(protocol, root / "execution", resume=resume)
-    if result["binding"] != envelope["frozen_sha256"] or _implementations() != envelope["implementations"]:
-        raise ValueError("rank_execution_binding_changed")
-    receipt = {"schema_version": "prepared_rank_ready_v1",
-        "plan": runner.file_ref(root / "rank-plan.json"),
-        "comparison": runner.file_ref(root / "execution/comparison.json"),
-        "frozen": runner.file_ref(root / "execution/frozen.json")}
-    if (root / "ready.json").exists():
-        if runner.read(root / "ready.json") != receipt:
-            raise ValueError("rank_ready_binding_changed")
-    else:
-        runner.publish(root / "ready.json", receipt)
-        runner.publish(root / "run-cost.json", {"observed_wrapper_wall_seconds": time.perf_counter() - start,
-            "includes": ["plan_preflight", "runner_validation", "all_sequential_arms", "ready_publication"],
-            "excludes": ["upstream_preparation", "later_label_evaluation", "this_cost_publication"],
-            "is_sum_of_arm_budgets": False})
-    return runner.file_ref(root / "ready.json")
+    with publication.directory(output_dir, resume=resume) as root:
+        if resume and publication.read_regular(root / "rank-plan.json") != envelope:
+            raise ValueError("rank_resume_plan_or_implementation_changed")
+        publication.publish_or_match(root / "rank-plan.json", envelope)
+        result = runner.run(protocol, root / "execution", resume=resume and (root / "execution").exists())
+        if result["binding"] != envelope["frozen_sha256"] or _implementations() != envelope["implementations"]:
+            raise ValueError("rank_execution_binding_changed")
+        cost_path = root / "run-cost.json"
+        if cost_path.exists():
+            cost = publication.read_regular(cost_path)
+        else:
+            cost = {"schema_version": "prepared_rank_run_cost_v2", "frozen_binding": result["binding"],
+                "plan_sha256": runner.sha(plan), "observed_invocation_wall_seconds": time.perf_counter() - start,
+                "prior_invocation_cost_unknown": resume,
+                "includes": ["plan_preflight", "runner_validation", "sequential_arm_execution_or_reuse"],
+                "excludes": ["upstream_preparation", "later_label_evaluation", "cost_and_ready_publication"],
+                "is_sum_of_arm_budgets": False}
+        publication.validate_run_cost(cost, result["binding"], runner.sha(plan))
+        # Commit cost first. A resumed invocation cannot invent the lost initial duration.
+        publication.publish_or_match(cost_path, cost)
+        receipt = {"schema_version": "prepared_rank_ready_v2",
+            "plan": runner.file_ref(root / "rank-plan.json"), "cost": runner.file_ref(cost_path),
+            "comparison": runner.file_ref(root / "execution/comparison.json"),
+            "frozen": runner.file_ref(root / "execution/frozen.json")}
+        publication.publish_or_match(root / "ready.json", receipt)
+        return runner.file_ref(root / "ready.json")
 
 
 def _validated_predictions(ready_ref):
     ready = runner.bound(ready_ref)
-    if set(ready) != {"schema_version", "plan", "comparison", "frozen"} or ready["schema_version"] != "prepared_rank_ready_v1":
+    if set(ready) != {"schema_version", "plan", "comparison", "frozen", "cost"} or ready["schema_version"] != "prepared_rank_ready_v2":
         raise ValueError("invalid_rank_ready_receipt")
     envelope = runner.bound(ready["plan"])
     result, frozen_document = runner.bound(ready["comparison"]), runner.bound(ready["frozen"])
@@ -98,6 +102,7 @@ def _validated_predictions(ready_ref):
             or envelope["frozen_sha256"] != binding or _implementations() != envelope["implementations"]
             or result["pool"] != frozen["pool"] or set(result["arms"]) != set(runner.ARMS)):
         raise ValueError("rank_frozen_prediction_mismatch")
+    publication.validate_run_cost(publication.bound_regular(ready["cost"]), binding, runner.sha(envelope["plan"]))
     _plan(envelope["plan"], frozen)
     current, _ = runner.freeze(frozen["protocol"])
     if current != frozen:
@@ -151,15 +156,25 @@ def _native_outcomes(frozen, result, plan, directory, summary_sha256):
 
 
 def evaluate(ready_ref, output_dir, *, synthetic_ref=None, evaluation_dir=None,
-             summary_sha256=None, details=False):
+             summary_sha256=None, details=False, resume=False):
+    """Resume publication only with identical inputs and verified staged evidence."""
+    with publication.directory(output_dir, resume=resume) as root:
+        return _evaluate(ready_ref, root, synthetic_ref=synthetic_ref, evaluation_dir=evaluation_dir,
+                         summary_sha256=summary_sha256, details=details, resume=resume)
+
+
+def _evaluate(ready_ref, output_dir, *, synthetic_ref=None, evaluation_dir=None,
+              summary_sha256=None, details=False, resume=False):
     """No generic native-label JSON override; native intake must pass its own guards."""
     if type(details) is not bool:
         raise ValueError("rank_details_flag_must_be_boolean")
-    if Path(output_dir).exists():
-        raise FileExistsError("refuse_existing_rank_evaluation")
     start = time.perf_counter()
     ready, plan, frozen, result = _validated_predictions(ready_ref)
     validation_seconds = time.perf_counter() - start
+    intent = {"schema_version": "prepared_rank_evaluation_intent_v1", "ready": ready_ref,
+        "synthetic": synthetic_ref, "evaluation_dir": None if evaluation_dir is None else str(Path(evaluation_dir).resolve()),
+        "summary_sha256": summary_sha256, "details": details, "implementations": _implementations()}
+    publication.publish_or_match(Path(output_dir) / "evaluation-plan.json", intent)
     source_kind = frozen["protocol"]["source"]["kind"]
     label_start = time.perf_counter()
     if source_kind == "synthetic_constants" and synthetic_ref is not None and evaluation_dir is None:
@@ -182,7 +197,10 @@ def evaluate(ready_ref, output_dir, *, synthetic_ref=None, evaluation_dir=None,
     outcome_seconds = time.perf_counter() - label_start
     identities = {r["record_id"]: r for r in frozen["rows"]}
     root = Path(output_dir)
-    root.mkdir(mode=0o700)
+    outcomes_sha256 = runner.sha({"outcomes": outcomes, "reasons": reasons})
+    recovered = publication.recover_report(root, intent, ready_ref, outcomes_sha256)
+    if recovered is not None:
+        return recovered
     metrics, metric_start = {}, time.perf_counter()
     for assay in plan["assay_ids"]:
         pool = [rid for rid in result["pool"] if identities[rid]["assay_id"] == assay]
@@ -195,7 +213,7 @@ def evaluate(ready_ref, output_dir, *, synthetic_ref=None, evaluation_dir=None,
         chunks = []
         def sink(rows):
             path = root / (runner.sha(assay) + f"-{len(chunks):06d}.json")
-            runner.publish(path, rows)
+            publication.publish_or_match(path, rows)
             chunks.append(runner.file_ref(path))
         summary = metric.compare_cohort({rid: outcomes[rid] for rid in pool}, scores,
             plan["comparisons"], max_pair_work=plan["max_pair_work"], detail_sink=sink if details else None)
@@ -212,12 +230,18 @@ def evaluate(ready_ref, output_dir, *, synthetic_ref=None, evaluation_dir=None,
         later = _native_outcomes(frozen, result, plan, evaluation_dir, summary_sha256)
         if later != (outcomes, reasons):
             raise ValueError("rank_native_endpoints_changed_during_evaluation")
-    report = {"schema_version": "prepared_rank_evaluation_v1", "ready": ready_ref,
+    report = {"schema_version": "prepared_rank_evaluation_v2", "ready": ready_ref,
+        "outcomes_sha256": outcomes_sha256, "run_cost": publication.bound_regular(ready["cost"]),
         "frozen_binding": result["binding"], "plan": plan, "evidence_kind": evidence_kind,
         "endpoint_source": synthetic_ref if synthetic_ref is not None else
             {"evaluation_dir": str(evaluation_dir), "summary_sha256": summary_sha256},
         "metrics_by_assay": metrics, "full_candidate_denominator": len(result["pool"]),
         "arm_denominators": {a: result["arms"][a]["denominator"] for a in runner.ARMS},
+        "score_quantities": {a: result["arms"][a]["score_quantity"] for a in runner.ARMS},
+        "calculation": frozen["protocol"].get("calculation", {"backend": "prepared_rigid_cross_v1"}),
+        "candidate_calculation_observations": {a: [{"record_id": row["record_id"],
+            "d3_summary": row.get("d3_summary"), "status": row["status"]} for row in result["arms"][a]["rows"]]
+            for a in runner.ARMS},
         "arm_costs": {a: result["arms"][a]["cost"] for a in runner.ARMS},
         "worker_observations": {a: result["arms"][a]["worker_observations"] for a in runner.ARMS},
         "common_validation_seconds": result["common_validation_seconds"],
@@ -228,9 +252,7 @@ def evaluate(ready_ref, output_dir, *, synthetic_ref=None, evaluation_dir=None,
         "same_wall_time_guaranteed": False, "end_to_end_upstream_cost_measured": False,
         "labels_read_after_frozen_predictions": True, "same_prepared_assay_state_verified": False,
         "heldout_blindness_verified": False, "scientifically_validated": False, "ai_advantage_claimed": False}
-    runner.publish(root / "report.json", report)
-    runner.publish(root / "complete.json", {"report": runner.file_ref(root / "report.json"),
-        "scientifically_validated": False})
+    publication.finalize(root, report, intent)
     return report
 
 
@@ -251,6 +273,7 @@ def main(argv=None):
     ev.add_argument("--evaluation-dir", type=Path)
     ev.add_argument("--summary-sha256")
     ev.add_argument("--details", action="store_true")
+    ev.add_argument("--resume", action="store_true")
     args = parser.parse_args(argv)
     if args.command == "run":
         print(runner.canonical(run(runner.read(args.protocol), runner.read(args.plan), args.output_dir, resume=args.resume)))
@@ -258,7 +281,7 @@ def main(argv=None):
         synthetic = None if args.synthetic is None else {"path": str(args.synthetic), "sha256": args.synthetic_sha256}
         evaluate({"path": str(args.ready), "sha256": args.ready_sha256}, args.output_dir,
                  synthetic_ref=synthetic, evaluation_dir=args.evaluation_dir,
-                 summary_sha256=args.summary_sha256, details=args.details)
+                 summary_sha256=args.summary_sha256, details=args.details, resume=args.resume)
     return 0
 
 
