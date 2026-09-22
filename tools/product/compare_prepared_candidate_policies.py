@@ -27,6 +27,7 @@ import uuid
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "prepared_candidate_comparison_protocol_v1"
 ORDERED_SCHEMA = "prepared_candidate_comparison_protocol_v2"
+D3_SCHEMA = "prepared_candidate_comparison_protocol_v3"
 MAX_BYTES = 32 * 1024 * 1024
 
 
@@ -252,9 +253,13 @@ def freeze(protocol):
     if type(protocol) is not dict:
         raise ValueError("unsupported_comparison_protocol")
     version = protocol.get("schema_version")
-    if version == ORDERED_SCHEMA:
+    if version in {ORDERED_SCHEMA, D3_SCHEMA}:
         fields |= {"selection_seed", "tie_policy", "arm_order"}
-    if (version not in {SCHEMA, ORDERED_SCHEMA}
+    if version == D3_SCHEMA:
+        fields.add("calculation")
+        if protocol.get("calculation") != {"backend": "fixed_receptor_d3_v1", "score_quantity": "uncalibrated_scorer_v1_dimensionless_minimize"}:
+            raise ValueError("explicit_D3_backend_and_score_quantity_required")
+    if (version not in {SCHEMA, ORDERED_SCHEMA, D3_SCHEMA}
             or not fields <= set(protocol) <= fields | {"reuse_ai_from"}):
         raise ValueError("unsupported_comparison_protocol")
     _execution_order(protocol)
@@ -278,13 +283,14 @@ def freeze(protocol):
     inputs, requests = {}, {}
     for rid, ref in protocol["requests"].items():
         request = None if ref is None else bound(ref)
-        if (
-            request is not None
-            and request.get("schema_version") != "prepared_rigid_pose_cross_request_v1"
-        ):
-            raise ValueError("requires_existing_rigid_pose_request")
         requests[rid] = request
-        inputs[rid] = None if request is None else _input_binding(request)
+        if version == D3_SCHEMA:
+            from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
+            inputs[rid] = None if request is None else policy_adapter.input_binding(request)
+        else:
+            if request is not None and request.get("schema_version") != "prepared_rigid_pose_cross_request_v1":
+                raise ValueError("requires_existing_rigid_pose_request")
+            inputs[rid] = None if request is None else _input_binding(request)
     runtime = _runtime_binding()
     root = Path(__file__).resolve().parents[2]
     runtime["comparison_tools"] = {
@@ -299,7 +305,8 @@ def freeze(protocol):
         "source_inputs": inputs,
         "runtime": runtime,
         "provenance": provenance,
-        "scope": "online_imports_validation_features_fit_inference_provided_pose_scoring_and_worker_io",
+        "scope": ("online_imports_features_fit_inference_matched_baseline_D3_refinement_rescoring_and_worker_io"
+                  if version == D3_SCHEMA else "online_imports_validation_features_fit_inference_provided_pose_scoring_and_worker_io"),
         "upstream_acquisition_preparation_and_pose_generation_measured": False,
         "scientifically_validated": False,
         "product_ranking_enabled": False,
@@ -533,6 +540,15 @@ def worker(run_dir, arm, deadline):
         try:
             if arm == "similarity":
                 result.update(status="evaluated", score=predictions[rid], reason=None)
+            elif frozen["requests"][rid] is not None and frozen["protocol"]["schema_version"] == D3_SCHEMA:
+                from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
+                called += 1
+                report = policy_adapter.evaluate(frozen["requests"][rid])
+                summary = policy_adapter.summarize(report, request=frozen["requests"][rid])
+                file = directory / (sha(rid) + ".d3.json")
+                publish(file, report)
+                result.update(status=summary["status"], score=summary["score"], reason=summary["reason"],
+                              d3_summary=summary, d3_report=file_ref(file))
             elif frozen["requests"][rid] is not None:
                 called += 1
                 report = json.loads(
@@ -624,6 +640,15 @@ def _arm_summary(directory, frozen, binding, completion):
                 != value["pose_report"]["sha256"]
             ):
                 raise ValueError("pose_report_hash_mismatch")
+        if value.get("d3_report"):
+            from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
+            summary = policy_adapter.summarize(bound(value["d3_report"]), request=frozen["requests"][rid])
+            if (summary != value["d3_summary"] or summary["score"] != value["score"]
+                    or summary["status"] != value["status"]):
+                raise ValueError("D3_committed_summary_mismatch")
+        elif (frozen["protocol"]["schema_version"] == D3_SCHEMA and directory.name != "similarity"
+              and value["status"] == "evaluated"):
+            raise ValueError("D3_evaluated_row_missing_report")
         rows.append(value)
     direction = -1 if directory.name == "similarity" else 1
     ranked = sorted(
@@ -653,7 +678,8 @@ def _arm_summary(directory, frozen, binding, completion):
         "cost": completion,
         "score_quantity": "predicted_negative_log10_molar_endpoint"
         if directory.name == "similarity"
-        else "existing_cross_only_kcal_per_mol",
+        else ("uncalibrated_scorer_v1_dimensionless_minimize" if frozen["protocol"]["schema_version"] == D3_SCHEMA
+              else "existing_cross_only_kcal_per_mol"),
         "combined_assay_energy_score": None,
     }
 
