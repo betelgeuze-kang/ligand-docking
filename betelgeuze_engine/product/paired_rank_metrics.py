@@ -45,17 +45,8 @@ def _finish(ids, endpoints, values, counts, comparable_digest):
             "concordance": (counts["concordant"] + .5 * counts["score_tie"]) / n if n else None}
 
 
-def compare_cohort(endpoints, arms, comparisons, *, max_pair_work=5_000_000,
-                   detail_sink=None, chunk_size=1024):
-    """Compare full coverage and common candidate/pair coverage simultaneously.
-
-    Scores must already be higher-is-better. Endpoints are positive exact '=' or
-    strict '>' concentrations in one unit; None preserves unavailable outcomes.
-    `comparisons` is an explicit list of two arm names per requested comparison.
-    A sink receives ordered chunks, must persist them itself, and may raise to
-    abort. No result is returned after a sink failure. No intervals/significance,
-    equal runtime, independence or AI advantage are inferred here.
-    """
+def _prepare_cohort(endpoints, arms, comparisons, max_pair_work):
+    """Validate and snapshot candidate inputs; never enumerate pairs."""
     if type(endpoints) is not dict or not 1 <= len(endpoints) <= 10000:
         raise ValueError("invalid_rank_cohort")
     if any(type(rid) is not str or not rid for rid in endpoints):
@@ -64,10 +55,6 @@ def compare_cohort(endpoints, arms, comparisons, *, max_pair_work=5_000_000,
         raise ValueError("invalid_rank_arms")
     if type(max_pair_work) is not int or not 1 <= max_pair_work <= 100_000_000:
         raise ValueError("invalid_rank_work_limit")
-    if type(chunk_size) is not int or not 1 <= chunk_size <= 4096:
-        raise ValueError("invalid_rank_chunk_size")
-    if detail_sink is not None and not callable(detail_sink):
-        raise ValueError("rank_detail_sink_must_be_callable")
     ids = sorted(endpoints)
     # Snapshot inputs so caller/sink mutation cannot alter the in-progress metric.
     outcomes = {}
@@ -97,6 +84,32 @@ def compare_cohort(endpoints, arms, comparisons, *, max_pair_work=5_000_000,
     work = len(ids) * (len(ids) - 1) // 2 * (len(values) + 2 * len(pairs))
     if work > max_pair_work:
         raise ValueError("rank_pair_work_limit_exceeded")
+    return ids, outcomes, values, pairs, work
+
+
+def validate_cohort(endpoints, arms, comparisons, *, max_pair_work=5_000_000):
+    """Use identical admission and arithmetic work bounds without running a metric."""
+    ids, _, values, pairs, work = _prepare_cohort(endpoints, arms, comparisons, max_pair_work)
+    return {"candidate_denominator": len(ids), "arm_count": len(values),
+            "comparison_count": len(pairs), "pair_arm_work_reserved": work}
+
+
+def compare_cohort(endpoints, arms, comparisons, *, max_pair_work=5_000_000,
+                   detail_sink=None, chunk_size=1024):
+    """Compare full coverage and common candidate/pair coverage simultaneously.
+
+    Scores must already be higher-is-better. Endpoints are positive exact '=' or
+    strict '>' concentrations in one unit; None preserves unavailable outcomes.
+    `comparisons` is an explicit list of two arm names per requested comparison.
+    A sink receives ordered chunks, must persist them itself, and may raise to
+    abort. No result is returned after a sink failure. No intervals/significance,
+    equal runtime, independence or AI advantage are inferred here.
+    """
+    if type(chunk_size) is not int or not 1 <= chunk_size <= 4096:
+        raise ValueError("invalid_rank_chunk_size")
+    if detail_sink is not None and not callable(detail_sink):
+        raise ValueError("rank_detail_sink_must_be_callable")
+    ids, outcomes, values, pairs, work = _prepare_cohort(endpoints, arms, comparisons, max_pair_work)
     counts = {arm: dict.fromkeys(STATUSES, 0) for arm in values}
     digests = {arm: sha256() for arm in values}
     common = [sorted(set(values[a]) & set(values[b])) for a, b in pairs]
