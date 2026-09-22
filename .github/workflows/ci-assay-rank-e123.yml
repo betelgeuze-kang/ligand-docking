@@ -4,12 +4,16 @@ on:
     paths:
       - 'betelgeuze_product/public_assay*.py'
       - 'betelgeuze_product/residual_evidence.py'
+      - 'betelgeuze_product/cpu_refinement_v1_2/**'
       - 'betelgeuze_engine/product/*.py'
       - 'tools/product/*.py'
       - 'tests/unit/test_public_assay*.py'
       - 'tests/unit/test_paired_rank_metrics.py'
       - 'tests/unit/test_prepared_rank_workflow.py'
       - 'tests/unit/test_prepared_candidate_comparison.py'
+      - 'tests/unit/test_rank_recovery_f1.py'
+      - 'tests/unit/test_candidate_policy_d3.py'
+      - 'tools/verify_policy_d3_install.py'
       - 'tests/unit/test_censored_rank_metrics.py'
       - 'tools/benchmark_paired_rank_metrics.py'
       - 'tools/verify_assay_rank_install.py'
@@ -60,13 +64,13 @@ jobs:
           sha256sum betelgeuze_product/public_assay_preflight.py betelgeuze_engine/product/paired_rank_metrics.py tools/product/compare_prepared_candidate_ranks.py > e123-evidence/implementation.sha256
       - name: Lint changed production and new regression code
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_product/public_assay_preflight.py betelgeuze_engine/product/paired_rank_metrics.py tools/product/compare_prepared_candidate_ranks.py tests/unit/test_public_assay_preflight_v2.py tests/unit/test_paired_rank_metrics.py tests/unit/test_prepared_rank_workflow.py tools/benchmark_paired_rank_metrics.py tools/verify_assay_rank_install.py
+          python -m ruff check --isolated --no-cache betelgeuze_product/public_assay_preflight.py betelgeuze_engine/product/paired_rank_metrics.py tools/product/compare_prepared_candidate_ranks.py tests/unit/test_public_assay_preflight_v2.py tests/unit/test_paired_rank_metrics.py tests/unit/test_prepared_rank_workflow.py tools/benchmark_paired_rank_metrics.py tools/verify_assay_rank_install.py tools/product/rank_publication.py tools/product/compare_prepared_candidate_policies.py betelgeuze_product/cpu_refinement_v1_2/policy_adapter.py tests/unit/test_rank_recovery_f1.py tests/unit/test_candidate_policy_d3.py tools/verify_policy_d3_install.py
           git diff --check
       - name: Existing and new contracts with real CPU arms
         shell: bash
         run: |
           set -euo pipefail
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_public_assay_preflight.py tests/unit/test_public_assay_preflight_v2.py tests/unit/test_paired_rank_metrics.py tests/unit/test_prepared_rank_workflow.py tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_public_assay_components.py tests/unit/test_public_chembl_staged_intake.py --junitxml=e123-evidence/regressions.xml 2>&1 | tee e123-evidence/regressions.log
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_public_assay_preflight.py tests/unit/test_public_assay_preflight_v2.py tests/unit/test_paired_rank_metrics.py tests/unit/test_prepared_rank_workflow.py tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_public_assay_components.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_rank_recovery_f1.py tests/unit/test_candidate_policy_d3.py --junitxml=e123-evidence/regressions.xml 2>&1 | tee e123-evidence/regressions.log
       - name: Retain exact summary memory and timing observations
         run: python tools/benchmark_paired_rank_metrics.py --output e123-evidence/metric-benchmark.json
       - name: Build product wheel and verify installed E1/E3 without source imports
@@ -77,6 +81,11 @@ jobs:
           cd "$RUNNER_TEMP"
           env -u PYTHONPATH "$RUNNER_TEMP/e123-installed/bin/python" -I "$GITHUB_WORKSPACE/tools/verify_assay_rank_install.py" > "$GITHUB_WORKSPACE/e123-evidence/installed.json"
           env -u PYTHONPATH "$RUNNER_TEMP/e123-installed/bin/python" -I "$GITHUB_WORKSPACE/tests/unit/test_public_assay_preflight.py" -v 2> "$GITHUB_WORKSPACE/e123-evidence/installed-preflight.log"
+      - name: Verify installed D3 policy adapter with pinned CPU dependencies
+        run: |
+          python -m venv --system-site-packages "$RUNNER_TEMP/f1f2-installed"
+          "$RUNNER_TEMP/f1f2-installed/bin/python" -I -m pip install --no-deps --force-reinstall "$RUNNER_TEMP"/e123-wheels/*.whl
+          python tools/verify_policy_d3_install.py --python "$RUNNER_TEMP/f1f2-installed/bin/python" --output-dir e123-evidence/installed-d3
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
