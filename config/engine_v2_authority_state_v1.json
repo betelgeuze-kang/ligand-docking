@@ -1,0 +1,36 @@
+{
+  "schema_id": "betelgeuze.engine_v2_authority_state/1.0.0",
+  "engine_id": "betelgeuze_independent_engine_v2",
+  "policy_id": "manual_fail_closed_successor_schema_only",
+  "execution_authority": {
+    "customer_execution_enabled": false,
+    "customer_pose_emission_authorized": false,
+    "external_reservation_authorized": false,
+    "fresh_128_execution_authorized": false,
+    "hip_device_execution_authorized": false,
+    "molecular_holdout_execution_authorized": false,
+    "product_execution_authorized": false,
+    "public_benchmark_execution_authorized": false,
+    "stage0_admission_authorized": false,
+    "supervisor_operation_authorized": false
+  },
+  "claim_authority": {
+    "benchmark_validity_green": false,
+    "docking_accuracy_claim_allowed": false,
+    "free_energy_claim_allowed": false,
+    "gpu_acceleration_claim_allowed": false,
+    "scientific_validity_green": false
+  },
+  "qualification_guard": {
+    "native_fixed64_cpu_v7_authoritative": false,
+    "native_fixed64_cpu_v7_consumed": true,
+    "native_fixed64_cpu_v7_rerun_authorized": false
+  },
+  "operational_blockers": [
+    "external_reservation_provider_not_operational",
+    "external_reservation_endpoint_not_configured",
+    "external_reservation_trust_anchor_not_configured",
+    "historical_execution_operational_authority_false"
+  ],
+  "unresolved_operational_decisions": 32
+}
