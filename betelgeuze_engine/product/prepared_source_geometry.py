@@ -303,7 +303,7 @@ def _source_angles(system, side, bound_rows):
     if bound_rows is None:
         return None
     bound_rows, angle_count = bound_rows
-    coordinates = system.coordinates.detach()[0].tolist()
+    coordinates = system.coordinates.detach()[0].tolist() if angle_count else ()
     measured_count = explicit_count = inherited_count = unsupported_count = undefined_count = 0
     largest_difference = None
     displayed = []
