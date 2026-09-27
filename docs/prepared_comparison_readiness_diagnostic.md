@@ -3,8 +3,12 @@
 `tools.analysis.prepared_comparison_readiness` reads an existing four-arm rank
 `ready.json` receipt and its frozen protocol/result. It runs no comparison worker,
 prediction, assay-label evaluation, pose generation, or preparation. Its own
-module lives outside `tools/product/*.py`, so adding the diagnostic does not
-change the comparison runner's frozen tool-file list or invalidate earlier runs.
+module lives outside `tools/product/*.py`, so this module alone does not
+change the comparison runner's frozen tool-file list. This PR also changes the
+prepared GROMACS loader, which is part of the frozen runtime binding. A
+`ready.json` made at an older commit cannot pass this command's exact-runtime
+validation from the new checkout; keep its matching historical runtime for
+reproduction. The diagnostic does not relax that check.
 
 The command verifies the ready, plan, frozen input, comparison, current input
 and runtime bytes, and each committed arm summary before reporting. It emits
