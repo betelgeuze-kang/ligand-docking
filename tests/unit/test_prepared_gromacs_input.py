@@ -203,6 +203,22 @@ def test_explicit_units_zeros_coordinates_and_provenance(request_doc):
     assert not provenance["posres_enabled"]
 
 
+@pytest.mark.parametrize("tail", ["nan 100", ".1 inf", ".1", ".1 100 extra"])
+def test_prepared_explicit_bond_parameters_require_finite_complete_pair(request_doc, tail):
+    _change(request_doc["ligand_itp"], lambda text: text.replace(
+        "[ bonds ]\n1 2 1\n2 3 1", f"[ bonds ]\n1 2 1 {tail}\n2 3 1"))
+    with pytest.raises(parser.PreparedGromacsInputError, match="function-1 bond|explicit function-1 bond parameter"):
+        parser.load_prepared_gromacs_components(request_doc)
+
+
+def test_prepared_explicit_bond_pair_coexists_with_inherited_bond(request_doc):
+    _change(request_doc["ligand_itp"], lambda text: text.replace(
+        "[ bonds ]\n1 2 1\n2 3 1", "[ bonds ]\n1 2 1 .1 100\n2 3 1"))
+    _, ligand, _, _, evidence = parser.load_prepared_gromacs_components(request_doc)
+    assert ligand.atom_count == 3
+    assert evidence["ligand_source_bond_adjacency"] == [[0, 1], [1, 2]]
+
+
 @pytest.mark.parametrize("key", ["protein_pdb", "protein_atomtypes", "protein_defaults", "ligand_sdf", "ligand_gro", "ligand_itp", "ligand_atomtypes", "ligand_defaults"])
 def test_hash_is_required_for_every_source(request_doc, key):
     request_doc[key]["sha256"] = "0" * 64

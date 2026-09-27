@@ -142,6 +142,14 @@ def test_compiled_bond_section_provenance_must_match_selected_source(tmp_path):
     assert group["supplied_direct_bond_lengths"] is None
 
 
+@pytest.mark.parametrize("tail", ["nan 100", ".1 inf", ".1", ".1 100 extra"])
+def test_selected_explicit_bond_parameters_require_finite_complete_pair(tmp_path, tail):
+    request = _request(tmp_path)
+    _edit(request, "topology", "1 2 1 .1 100", f"1 2 1 {tail}")
+    with pytest.raises(ValueError, match="function-1 bond|explicit function-1 bond parameter"):
+        load_compiled_gromacs_cross_particles(request)
+
+
 @pytest.mark.parametrize("defect", ["duplicate_type", "duplicate_molecule", "selected_conditional", "inventory_conditional", "nonfinite_charge", "nonfinite_environment", "name", "residue_partition", "selected_copy_count", "missing_atomtype"])
 def test_malformed_or_ambiguous_sources_reject_before_evaluation(tmp_path, defect):
     request = _request(tmp_path)

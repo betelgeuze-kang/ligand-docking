@@ -214,6 +214,12 @@ def _molecule(top: dict, label: str, *, protein_insertion_codes: bool = False) -
             _integer(tokens[arity], label)
             if section == "bonds":
                 _require(tokens[arity] == "1", f"{label}: only ordinary harmonic bond adjacency is supported")
+                # Function 1 may inherit parameters from the force field, or
+                # explicitly supply both equilibrium length and force constant.
+                # Bonded terms are retained as source evidence, not evaluated.
+                _require(len(tokens) in {3, 5}, f"{label}: function-1 bond requires zero or two explicit parameters")
+                for token in tokens[3:]:
+                    _number(token, f"{label}: explicit function-1 bond parameter")
                 pair = tuple(sorted(indices))
                 _require(pair not in adjacency, f"{label}: duplicate bond adjacency")
                 adjacency.add(pair)
