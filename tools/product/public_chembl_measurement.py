@@ -396,7 +396,7 @@ def admission(metadata: dict, purpose: str = "normalization_only", *, source_pro
     if metadata.get("graph_blocked") is not False and purpose != "normalization_only":
         issues.append("reserved_identity_component" if metadata.get("graph_blocked") is True
                       else "identity_component_status_unknown")
-    if metadata.get("source_access_admitted") is False:
+    if "source_access_admitted" in metadata and metadata["source_access_admitted"] is not True:
         issues.append("source_access_not_admitted")
     declarations, reserved, unknown, categories = _roles(metadata)
     if unknown:

@@ -36,6 +36,28 @@ def test_explicit_curated_scope_preserves_primary_and_construct_uncertainty():
     assert out["source_metadata"]["assay_conditions"]["ATP_molar"] is None
 
 
+@pytest.mark.parametrize("value,eligible", [
+    (False, False), (0, False), (None, False), ("false", False), (True, True),
+])
+def test_explicit_source_access_requires_exact_true(value, eligible):
+    metadata = deepcopy(PROFILE)
+    metadata["source_access_admitted"] = value
+    original = deepcopy(metadata)
+    out = admission(metadata, "fit")
+    assert out["eligible_for_declared_purpose"] is eligible
+    assert ("source_access_not_admitted" in out["issues"]) is not eligible
+    assert out["training_admitted"] is False
+    assert metadata == original == out["source_metadata"]
+
+
+def test_absent_source_access_declaration_keeps_legacy_development_scope():
+    metadata = deepcopy(PROFILE)
+    out = admission(metadata, "fit")
+    assert "source_access_admitted" not in metadata
+    assert out["eligible_for_declared_purpose"] is True
+    assert out["training_admitted"] is False
+
+
 @pytest.mark.parametrize("field,value", [
     ("evidence_scope", None), ("source_id", None), ("source_id", True), ("source_id", 37),
     ("document_kind", "review"), ("document_kind", None),
