@@ -24,6 +24,12 @@ from betelgeuze_engine_v2.molecular import AllAtomSystem
 from betelgeuze_engine.product.prepared_validation import require_valid_prepared_system
 
 SCHEMA = "prepared_source_geometry_observation_v1"
+_COMPILED_SCHEMAS = {"compiled_gromacs_cross_particles_v1", "compiled_gromacs_cross_particles_v2"}
+
+
+def _compiled_profile(provenance):
+    schema = provenance.get("schema_version")
+    return type(schema) is str and schema in _COMPILED_SCHEMAS
 SEARCH_RADIUS_ANGSTROM = 1.0
 MAX_DISPLAYED_PAIRS = 16
 MAX_COMPONENT_ATOMS = {"receptor": 10000, "ligand": 256}
@@ -31,7 +37,7 @@ MAX_COMPONENT_ATOMS = {"receptor": 10000, "ligand": 256}
 
 def _bond_context(provenance, side, system):
     count = system.atom_count
-    if provenance.get("schema_version") == "compiled_gromacs_cross_particles_v1":
+    if _compiled_profile(provenance):
         sections = provenance.get("selected_molecule_bond_section_presence")
         entry = sections.get(side) if isinstance(sections, dict) else None
         if (not isinstance(entry, dict) or type(entry.get("present")) is not bool
@@ -95,7 +101,7 @@ def _remember(heap, distance, first, second):
 
 def _source_bond_equilibria(provenance, side, system, bonds):
     """Bind explicit source bond rows to canonical indices, without inference."""
-    if bonds is None or provenance.get("schema_version") == "compiled_gromacs_cross_particles_v1":
+    if bonds is None or _compiled_profile(provenance):
         return {}
     topologies, sources = provenance.get("original_topologies"), provenance.get("sources")
     if not isinstance(topologies, dict) or not isinstance(sources, dict):
@@ -217,7 +223,7 @@ def _direct_bond_lengths(system, side, bonds, source_equilibria):
 
 def _source_angle_rows(provenance, side, system):
     """Resolve original angle rows without inferring missing bonded parameters."""
-    if provenance.get("schema_version") == "compiled_gromacs_cross_particles_v1":
+    if _compiled_profile(provenance):
         return None, "compiled_source_angle_mapping_unavailable"
     topologies, sources = provenance.get("original_topologies"), provenance.get("sources")
     if not isinstance(topologies, dict):
