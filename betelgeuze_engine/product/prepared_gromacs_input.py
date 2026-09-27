@@ -8,7 +8,7 @@ bond orders or evaluated. No hydrogen, charge, tautomer or coordinate is made.
 from __future__ import annotations
 
 from dataclasses import replace
-from decimal import Decimal
+from decimal import Decimal, Inexact, InvalidOperation, localcontext
 import hashlib
 import math
 from pathlib import Path
@@ -26,6 +26,7 @@ SCHEMA_VERSION = "prepared_gromacs_components_v1"
 MOLECULE_LIST_SCHEMA_VERSION = "prepared_gromacs_components_v2"
 INSERTION_CODE_SCHEMA_VERSION = "prepared_gromacs_components_v3"
 _MAX_BYTES = 16 * 1024 * 1024
+_CHARGE_OBSERVATION_DECIMAL_LIMIT = 4096
 _MOLECULE_SECTIONS = {"moleculetype", "atoms", "bonds", "pairs", "angles", "dihedrals"}
 _DECLARATIONS = {"coordinate_frame_id", "prepared_state_id", "parameter_source_id", "charge_source_id"}
 
@@ -55,6 +56,38 @@ def _number(token: str, label: str) -> float:
         raise PreparedGromacsInputError(f"{label}: numeric value required") from exc
     _require(math.isfinite(value), f"{label}: finite value required")
     return value
+
+
+def _printed_charge_arithmetic(tokens: list[str], sdf_formal_sum: int) -> tuple[str | None, str | None, str, str | None]:
+    """Observe exact printed charge arithmetic when it is bounded and parseable."""
+    values = []
+    try:
+        for token in tokens:
+            if len(token) > _CHARGE_OBSERVATION_DECIMAL_LIMIT:
+                return None, None, "indeterminate", "charge_token_exceeds_diagnostic_bound"
+            value = Decimal(token)
+            if not value.is_finite() or abs(value.as_tuple().exponent) > _CHARGE_OBSERVATION_DECIMAL_LIMIT:
+                return None, None, "indeterminate", "charge_exponent_exceeds_diagnostic_bound"
+            values.append(value)
+    except (InvalidOperation, ValueError):
+        return None, None, "indeterminate", "charge_token_not_decimal_parseable"
+
+    reference = Decimal(sdf_formal_sum)
+    min_exponent = min([reference.as_tuple().exponent, *(value.as_tuple().exponent for value in values)])
+    max_adjusted = max([reference.adjusted(), *(value.adjusted() for value in values)])
+    precision = max_adjusted - min_exponent + len(str(len(values) + 1)) + 2
+    if precision > _CHARGE_OBSERVATION_DECIMAL_LIMIT:
+        return None, None, "indeterminate", "charge_precision_span_exceeds_diagnostic_bound"
+    try:
+        with localcontext() as context:
+            context.prec = max(1, precision)
+            context.traps[Inexact] = True
+            partial_sum = sum(values, Decimal(0))
+            difference = partial_sum - reference
+    except (Inexact, InvalidOperation):
+        return None, None, "indeterminate", "charge_decimal_arithmetic_inexact"
+    relation = "equal_as_encoded" if difference == 0 else "different_as_encoded"
+    return str(partial_sum), str(difference), relation, None
 
 
 def _integer(token: str, label: str, *, minimum: int = 1) -> int:
@@ -535,6 +568,22 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
         with Path(source["path"]).open("rb") as stream:
             postflight = stream.read(_MAX_BYTES + 1)
         _require(len(postflight) <= _MAX_BYTES and hashlib.sha256(postflight).hexdigest() == source["sha256"], f"{label}: source changed during parsing")
+    sdf_formal_sum = sum(atom.formal_charge for atom in ligand.atoms)
+    itp_partial_sum, difference, relation, unavailable_reason = _printed_charge_arithmetic(
+        [row["source_row"]["tokens"][6] for row in ligand_rows], sdf_formal_sum)
+    ligand_charge_sum_observation = {
+        "selected_atom_count": ligand.atom_count,
+        "sdf_encoded_formal_charge_sum_e": sdf_formal_sum,
+        "itp_printed_partial_charge_sum_e": itp_partial_sum,
+        "itp_minus_sdf_charge_sum_e": difference,
+        "arithmetic_relation": relation,
+        "diagnostic_unavailable_reason": unavailable_reason,
+        "sdf_source_sha256": sources["ligand_sdf"]["sha256"],
+        "itp_source_sha256": sources["ligand_itp"]["sha256"],
+        "scope": "source net-charge arithmetic only; not chemical-state identity or force-field validation",
+        "chemical_state_identity_verified": False,
+        "force_field_assignment_validated": False,
+    }
     provenance = {
         "schema_version": request["schema_version"], "sources": sources, "source_hashes_postflight_verified": True,
         "source_declarations": dict(request["source_declarations"]), "declarations_verified": False,
@@ -553,6 +602,7 @@ def load_prepared_gromacs_components(request: dict) -> tuple[AllAtomSystem, AllA
         "unit_conversion": {"sigma_nm_to_angstrom": 10.0, "epsilon_kj_to_kcal_divisor": 4.184, "source_zero_preserved": True},
         "protein_name_mapping": name_changes, "ligand_residue_name_mapping": dict(request["ligand_residue_name_mapping"]),
         "ligand_atomtype_name_mapping": dict(mapping),
+        "ligand_source_net_charge_observation": ligand_charge_sum_observation,
         "receptor_source_bond_adjacency": receptor_adjacency,
         "ligand_source_bond_adjacency": [list(pair) for pair in sorted(ligand_adjacency)],
         "gromacs_bond_order_available": False, "chemical_bond_orders_inferred": False,

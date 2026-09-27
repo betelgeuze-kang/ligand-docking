@@ -86,6 +86,22 @@ parsers are reused. Any explicitly enabled transfer of a blank PDB element from
 an exactly matched topology atomic number records the raw blank, source value,
 source and projected hashes; it does not infer an element from an atom name.
 
+`ligand_source_net_charge_observation` records the selected ligand atom count,
+the sum of SDF V2000 encoded atomic formal charges, and the sum of the printed
+ITP `[ atoms ]` partial-charge tokens in units of elementary charge. Within a
+bounded, safely parseable decimal range, the ITP tokens are summed exactly as
+printed, without float rounding or an equality tolerance. The signed
+`itp_minus_sdf_charge_sum_e` and `arithmetic_relation` (`equal_as_encoded` or
+`different_as_encoded`) describe only that arithmetic. If a charge token cannot
+be parsed or its precision/exponent span exceeds the diagnostic bound, the ITP
+sum and difference are null, the relation is `indeterminate`, and the observation
+records a reason; the prepared input can still load. The observation carries
+both source SHA-256 hashes. The scorer still uses the supplied ITP partial
+charges; the diagnostic does not rewrite charges or reject an otherwise valid
+input. Any arithmetic relation, including `indeterminate`, leaves chemical-state
+identity and force-field assignment unverified and does not establish source
+coevality, assay-state equivalence, or qualification.
+
 The initial public development candidate comes from OpenFF's pinned
 protein-ligand-benchmark 0.2.1 CDK2/lig_1h1q prepared files. Its prepared ligand
 state is retained even where the current CCD tautomer differs. The separately
