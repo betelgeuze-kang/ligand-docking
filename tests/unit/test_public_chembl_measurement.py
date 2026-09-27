@@ -3,7 +3,8 @@ from copy import deepcopy
 import json
 import pytest
 from tools.product.public_chembl_measurement import (
-    DB_CURATED_SCOPE, admission, normalize_measurement, require_unique_activity_ids, strict_loads,
+    DB_CURATED_SCOPE, admission, normalize_measurement, require_unique_activity_ids,
+    strict_loads, threshold_activity_label,
 )
 
 BASE = {"activity_id": 987654321, "type": "IC50", "value": "100", "units": "nM",
@@ -48,6 +49,101 @@ def test_explicit_source_access_requires_exact_true(value, eligible):
     assert ("source_access_not_admitted" in out["issues"]) is not eligible
     assert out["training_admitted"] is False
     assert metadata == original == out["source_metadata"]
+
+
+@pytest.mark.parametrize("relation,concentration_nm,expected", [
+    ("=", "1000", (True, "exact_point")),
+    ("=", "1001", (False, "exact_point")),
+    (">", "1000", (False, "right_censored_bound_proves_inactive")),
+    (">=", "1000", (None, "censored_bound_overlaps_threshold")),
+    (">", "999", (None, "censored_bound_overlaps_threshold")),
+    (">=", "1001", (False, "right_censored_bound_proves_inactive")),
+    ("<", "1000", (True, "left_censored_bound_proves_active")),
+    ("<=", "1000", (True, "left_censored_bound_proves_active")),
+    ("<", "1001", (None, "censored_bound_overlaps_threshold")),
+    ("~", "1000", (None, "unsupported_observation")),
+])
+def test_threshold_classification_respects_censoring_and_boundary(relation, concentration_nm, expected):
+    row = deepcopy(BASE)
+    row.update(value=concentration_nm, standard_value=concentration_nm,
+               relation=relation, standard_relation=relation)
+    observation = normalize_measurement(row)
+    assert observation["source_activity"]["relation"] == relation
+    assert threshold_activity_label(observation, 6.0) == expected
+    assert observation["measurement_is_exact_for_fit"] is (relation == "=")
+
+
+def test_logarithmic_censoring_is_inverted_before_threshold_classification():
+    row = deepcopy(BASE)
+    row.update(type="pIC50", value="6", units=None, relation="<",
+               standard_value="1000", standard_relation=">")
+    observation = normalize_measurement(row)
+    assert observation["status"] == "censored"
+    assert observation["source_activity"]["relation"] == "<"
+    assert observation["relation"] == ">"
+    assert threshold_activity_label(observation, 6.0) == (False, "right_censored_bound_proves_inactive")
+
+
+@pytest.mark.parametrize("relation,published,standard,expected", [
+    (">", "1000.00000000000000001", "1000.00000000000000001",
+     (False, "right_censored_bound_proves_inactive")),
+    ("<", "1000.00000000000000001", "1000.00000000000000001",
+     (None, "censored_bound_overlaps_threshold")),
+    ("=", "1000.00000000000000001", "1000.00000000000000001",
+     (False, "exact_point")),
+    (">", "999.999", "1000", (None, "source_bound_not_jointly_proven")),
+    ("<", "1000.001", "1000", (None, "source_bound_not_jointly_proven")),
+])
+def test_threshold_uses_both_precise_captured_concentration_bounds(relation, published, standard, expected):
+    row = deepcopy(BASE)
+    row.update(value=published, standard_value=standard,
+               relation=relation, standard_relation=relation)
+    observation = normalize_measurement(row)
+    assert observation["status"] in {"exact", "censored"}
+    assert observation["negative_log10_molar"] == 6.0 or published in {"999.999", "1000.001"}
+    assert threshold_activity_label(observation, 6.0) == expected
+
+
+@pytest.mark.parametrize("kind,value,units,relation,cutoff,expected", [
+    ("pIC50", "5.999999999999999999", None, "<", 6.0,
+     (False, "right_censored_bound_proves_inactive")),
+    ("log IC50", "-5.999999999999999999", "M", ">", 6.0,
+     (False, "right_censored_bound_proves_inactive")),
+    ("pIC50", "6.5", None, "<", 6.5,
+     (False, "right_censored_bound_proves_inactive")),
+    ("log IC50", "-6.5", "M", ">", 6.5,
+     (False, "right_censored_bound_proves_inactive")),
+    ("IC50", "316.227766", "nM", ">", 6.5,
+     (None, "ambiguous_cutoff_conversion")),
+])
+def test_threshold_log_bounds_compare_in_decimal_space_and_linear_noninteger_cutoff_fails_closed(
+        kind, value, units, relation, cutoff, expected):
+    row = deepcopy(BASE)
+    row.update(type=kind, standard_type=kind, value=value, standard_value=value,
+               units=units, standard_units=units, relation=relation, standard_relation=relation)
+    observation = normalize_measurement(row)
+    assert observation["status"] == "censored"
+    assert threshold_activity_label(observation, cutoff) == expected
+
+
+def test_float_valued_captured_bound_is_not_used_for_threshold_classification():
+    row = deepcopy(BASE)
+    row.update(value=1000.0, standard_value=1000.0, relation=">", standard_relation=">")
+    observation = normalize_measurement(row)
+    assert observation["status"] == "censored"
+    assert threshold_activity_label(observation, 6.0) == (None, "unsupported_observation")
+
+
+def test_censored_threshold_evaluation_keeps_fit_and_source_gates():
+    metadata = deepcopy(PROFILE)
+    metadata.update(assigned_role="development_test", measurement_status="censored")
+    assert admission(metadata, "threshold_evaluation")["eligible_for_declared_purpose"] is True
+    assert admission(metadata, "evaluation")["eligible_for_declared_purpose"] is False
+    assert admission(metadata, "fit")["eligible_for_declared_purpose"] is False
+    for change in ({"source_access_admitted": False}, {"graph_blocked": True},
+                   {"source_license": None}, {"assigned_role": "fit"}):
+        denied = admission({**metadata, **change}, "threshold_evaluation")
+        assert denied["eligible_for_declared_purpose"] is False
 
 
 def test_absent_source_access_declaration_keeps_legacy_development_scope():

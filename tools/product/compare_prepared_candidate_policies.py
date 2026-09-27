@@ -963,6 +963,7 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
         if evaluation_summary.get(key) != frozen["provenance"][key]:
             raise ValueError("native_evaluation_role_scope_mismatch")
     from tools.product.train_public_chembl_selector import load_intake
+    from tools.product.public_chembl_measurement import threshold_activity_label
 
     summary, _, scope, records = load_intake(
         Path(evaluation_dir), summary_sha256, "evaluation"
@@ -974,18 +975,21 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
         raise ValueError("native_evaluation_denominator_mismatch")
     identities = {r["record_id"]: r for r in frozen["rows"]}
     threshold = _number(scope["positive_threshold_negative_log10_molar"])
-    labels = {}
+    labels, label_basis_counts = {}, Counter()
     for rid, row in selected.items():
         if (
             row["component_id"] != identities[rid]["component_id"]
             or row["assay_id"] != identities[rid]["assay_id"]
         ):
             raise ValueError("native_evaluation_identity_changed")
-        labels[rid] = (
-            row["observation"]["negative_log10_molar"] >= threshold
-            if row["eligible_for_point_model"]
-            else None
-        )
+        if row["eligible_for_point_model"] is True or (
+                row.get("eligible_for_threshold_classification") is True
+                and row.get("threshold_classification_issues") == []):
+            label, basis = threshold_activity_label(row["observation"], threshold)
+        else:
+            label, basis = None, "threshold_classification_ineligible"
+        labels[rid] = label
+        label_basis_counts[basis] += 1
     by_assay = {}
     for assay in sorted({r["assay_id"] for r in selected.values()}):
         pool = [rid for rid in result["pool"] if selected[rid]["assay_id"] == assay]
@@ -1008,6 +1012,7 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
         "requested": len(labels),
         "known": sum(v is not None for v in labels.values()),
         "unknown": sum(v is None for v in labels.values()),
+        "classification_basis_counts": dict(sorted(label_basis_counts.items())),
         "endpoint": scope["endpoint"],
         "positive_threshold_negative_log10_molar": threshold,
         "same_prepared_assay_state_verified": False,

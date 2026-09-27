@@ -273,6 +273,89 @@ def normalize_measurement(activity: dict) -> dict:
                                      if key in activity}}
 
 
+def _source_threshold_label(source: dict, cutoff: Decimal) -> tuple[bool | None, str, str | None]:
+    """Compare one captured bound in its own exact decimal measurement space."""
+    if not isinstance(source, dict) or source.get("upper_value") is not None:
+        return None, "unsupported_observation", None
+    raw, kind, relation = source.get("value"), source.get("type"), source.get("relation")
+    # JSON float tokens are already rounded by strict_loads; their original
+    # lexical decimal bound is unavailable, so even an apparent tie is unsafe.
+    if type(raw) is float or relation not in {"=", "<", "<=", ">", ">="}:
+        return None, "unsupported_observation", None
+    bound, error = _number(raw)
+    if error:
+        return None, "unsupported_observation", None
+    normalized_relation = relation
+    if kind in ENDPOINTS:
+        unit = source.get("units")
+        if bound <= 0 or not isinstance(unit, str) or unit not in UNIT_NM:
+            return None, "unsupported_observation", None
+        if cutoff != cutoff.to_integral_value():
+            return None, "ambiguous_cutoff_conversion", normalized_relation
+        if abs(cutoff) > 1000:
+            return None, "ambiguous_cutoff_conversion", normalized_relation
+        # All supported unit factors are powers of ten. Shift the cutoff's
+        # exponent instead of multiplying the captured bound under a finite
+        # Decimal context, which could round a near-boundary source value.
+        threshold = Decimal("1e" + str(9 - int(cutoff) - UNIT_NM[unit].adjusted()))
+        compared = bound
+    elif isinstance(kind, str) and kind in {"p" + endpoint for endpoint in ENDPOINTS}:
+        if not _missing(source.get("units")):
+            return None, "unsupported_observation", None
+        threshold, compared = cutoff, bound
+        normalized_relation = RELATIONS[relation]
+    elif isinstance(kind, str) and kind.startswith("log ") and kind[4:] in ENDPOINTS:
+        if source.get("units") != "M":
+            return None, "unsupported_observation", None
+        threshold, compared = -cutoff, bound
+    else:
+        return None, "unsupported_observation", None
+    comparison = (compared > threshold) - (compared < threshold)
+    if kind.startswith("p"):
+        comparison = -comparison
+    if normalized_relation == "=":
+        return comparison <= 0, "exact_point", normalized_relation
+    if normalized_relation == ">" and comparison >= 0:
+        return False, "right_censored_bound_proves_inactive", normalized_relation
+    if normalized_relation == ">=" and comparison > 0:
+        return False, "right_censored_bound_proves_inactive", normalized_relation
+    if normalized_relation in {"<", "<="} and comparison <= 0:
+        return True, "left_censored_bound_proves_active", normalized_relation
+    return None, "censored_bound_overlaps_threshold", normalized_relation
+
+
+def threshold_activity_label(observation: dict, cutoff_negative_log10_molar: float) -> tuple[bool | None, str]:
+    """Classify only when both captured bounds prove the same threshold label.
+
+    Active means concentration <= the prespecified cutoff. Float-normalized
+    concentrations and p-values are never used for boundary decisions.
+    """
+    if type(cutoff_negative_log10_molar) not in (int, float) or not math.isfinite(cutoff_negative_log10_molar):
+        raise ValueError("invalid_activity_threshold")
+    if not isinstance(observation, dict) or observation.get("status") not in {"exact", "censored"}:
+        return None, "unsupported_observation"
+    if observation.get("issues") != [] or not isinstance(observation.get("source_activity"), dict):
+        return None, "unsupported_observation"
+    cutoff = Decimal(str(cutoff_negative_log10_molar))
+    activity = observation["source_activity"]
+    published = _source_threshold_label(_field_projection(activity, ""), cutoff)
+    standard = _source_threshold_label(_field_projection(activity, "standard_"), cutoff)
+    if (published[2] != observation.get("relation") or standard[2] != observation.get("relation")
+            or (observation["status"] == "exact") != (observation.get("relation") == "=")):
+        return None, "unsupported_observation"
+    if published[0] is None or standard[0] is None:
+        if "unsupported_observation" in {published[1], standard[1]}:
+            return None, "unsupported_observation"
+        if "ambiguous_cutoff_conversion" in {published[1], standard[1]}:
+            return None, "ambiguous_cutoff_conversion"
+        if published[0] != standard[0]:
+            return None, "source_bound_not_jointly_proven"
+        return None, "censored_bound_overlaps_threshold"
+    if published[0] != standard[0]:
+        return None, "published_standard_threshold_disagreement"
+    return standard[0], standard[1]
+
+
 def _roles(metadata):
     # Share the established policy for missing/unknown/reserved declarations.
     from tools.product.public_assay_components import POLICY_FIELDS, policy_declarations, reservation_status
@@ -324,7 +407,7 @@ def admission(metadata: dict, purpose: str = "normalization_only", *, source_pro
     """
     if not isinstance(metadata, dict):
         raise ValueError("admission_metadata_not_object")
-    if purpose not in {"normalization_only", "split_assignment", "fit", "evaluation", "calibration", "development_test"}:
+    if purpose not in {"normalization_only", "split_assignment", "fit", "evaluation", "threshold_evaluation", "calibration", "development_test"}:
         raise ValueError("unsupported_admission_purpose")
     if not isinstance(source_profile, str) or source_profile not in {"literature_only_v1", "chembl_receptor_research_v4"}:
         raise ValueError("unsupported_source_admission_profile")
@@ -391,7 +474,8 @@ def admission(metadata: dict, purpose: str = "normalization_only", *, source_pro
     validity = metadata.get("data_validity_comment")
     if validity not in (None, "", "Manually validated"):
         issues.append("reported_data_validity_issue")
-    if metadata.get("measurement_status") != "exact":
+    if metadata.get("measurement_status") != "exact" and not (
+            purpose == "threshold_evaluation" and metadata.get("measurement_status") == "censored"):
         issues.append("measurement_not_exact")
     if metadata.get("graph_blocked") is not False and purpose != "normalization_only":
         issues.append("reserved_identity_component" if metadata.get("graph_blocked") is True
@@ -412,7 +496,7 @@ def admission(metadata: dict, purpose: str = "normalization_only", *, source_pro
             issues.append("fit_assignment_not_declared")
     elif purpose == "split_assignment" and categories:
         issues.append("source_role_already_assigned")
-    elif purpose == "evaluation":
+    elif purpose in {"evaluation", "threshold_evaluation"}:
         assigned = metadata.get("assigned_role")
         if not isinstance(assigned, str) or assigned not in {"calibration", "development_test"}:
             issues.append("evaluation_assignment_not_declared")

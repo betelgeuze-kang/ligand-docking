@@ -98,6 +98,27 @@ whole pool's coverage, unfilled top-k positions and known-positive recall.
 Boundary ties receive fractional expected counts instead of an ID-based advantage.
 `evaluate_synthetic` is a Python API for independently stored boolean test labels.
 
+The source-bound ChEMBL intake now records a separate development-test
+`eligible_for_threshold_classification` decision. It preserves the original
+published and standard relations and keeps censored values ineligible for the
+exact-point Ridge fit. After the comparison is frozen, `evaluate` uses a
+prespecified active definition of concentration **at or below** the cutoff.
+An exact point is classified normally. For a right-censored concentration,
+`> B` proves inactive when `B` is at or above the cutoff, while `>= B` proves
+inactive only when `B` is above it. A left-censored `< B` or `<= B` proves
+active when `B` is at or below the cutoff. Bounds that overlap the cutoff,
+approximate values, ranges, malformed observations and source/role-ineligible
+records remain unknown. Each published and standard bound is compared from
+its captured decimal value; both must independently prove the same label.
+Captured floating-point bounds, potentially rounded cutoff conversions and
+published/standard bounds that cross the threshold remain unknown. The report
+counts exact, one-sided and unknown bases separately. For example, with
+active defined as IC50 <= 1 µM, `> 1 µM` is a
+known threshold-negative, while `>= 1 µM` remains unknown. This is a binary
+threshold inference from an experimental bound, not an exact IC50 estimate.
+Native intake versions without the explicit threshold gate retain their prior
+unknown handling for censored values.
+
 Neither output establishes primary-source correctness, assay/prepared-state
 equivalence, blind evaluation, calibrated uncertainty, scientific qualification,
 end-to-end speedup, or AI superiority. A negative AI result is retained. Repeating

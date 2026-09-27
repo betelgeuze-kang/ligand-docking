@@ -435,10 +435,32 @@ def test_native_shaped_synthetic_intake_preserves_roles_and_reuses_actual_traine
         "path": str(frozen_fit_path),
         "sha256": hashlib.sha256(frozen_fit_path.read_bytes()).hexdigest(),
     }
-    native_fixture.build(
-        source, native_fixture.capture(source, "evaluation", frozen_fit), "evaluation"
+    development_ids = sorted(a["activity_id"] for a in source["plan"]["assignments"]
+                             if a["role"] == "development_test")
+    assert len(development_ids) >= 4
+
+    def censor_synthetic_outcomes(response):
+        for activity in response["activities"]:
+            if activity["activity_id"] in development_ids[:4]:
+                position = development_ids.index(activity["activity_id"])
+                relation = (">", ">=", "<", ">")[position]
+                published = "999.999" if position == 3 else "1000"
+                activity.update(value=published, standard_value="1000",
+                                relation=relation, standard_relation=relation)
+
+    evaluation_capture = native_fixture.rewrite_capture_response(
+        native_fixture.capture(source, "evaluation", frozen_fit), censor_synthetic_outcomes
     )
+    native_fixture.build(source, evaluation_capture, "evaluation")
     eval_dir = source["root"] / "evaluation-intake"
+    evaluated_records = [json.loads(line) for line in (eval_dir / "records.jsonl").read_text().splitlines()]
+    by_activity = {r["activity_id"]: r for r in evaluated_records}
+    for activity_id in development_ids[:4]:
+        row = by_activity[activity_id]
+        assert row["eligible_for_point_model"] is False
+        assert row["eligible_for_threshold_classification"] is True
+        assert row["threshold_classification_issues"] == []
+        assert row["observation"]["source_activity"]["relation"] in {">", ">=", "<"}
     result_ref = {
         "path": str(run_dir / "comparison.json"),
         "sha256": hashlib.sha256(
@@ -456,7 +478,15 @@ def test_native_shaped_synthetic_intake_preserves_roles_and_reuses_actual_traine
         hashlib.sha256((eval_dir / "summary.json").read_bytes()).hexdigest(),
         source["root"] / "native-metrics.json",
     )
-    assert evaluated["requested"] == len(pool) and evaluated["known"] == len(pool)
+    assert evaluated["requested"] == len(pool) and evaluated["known"] == len(pool) - 2
+    assert evaluated["unknown"] == 2
+    assert evaluated["classification_basis_counts"] == {
+        "censored_bound_overlaps_threshold": 1,
+        "exact_point": len(pool) - 4,
+        "left_censored_bound_proves_active": 1,
+        "right_censored_bound_proves_inactive": 1,
+        "source_bound_not_jointly_proven": 1,
+    }
     assert sum(
         item["similarity"]["requested"]
         for item in evaluated["metrics_by_assay"].values()
