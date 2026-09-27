@@ -30,23 +30,32 @@ MAX_COMPONENT_ATOMS = {"receptor": 10000, "ligand": 256}
 
 def _bond_context(provenance, side, system):
     count = system.atom_count
-    topologies = provenance.get("original_topologies", {})
-    labels = {"ligand_itp"}
-    if side == "receptor":
-        # Inspect expected sources as well as present sources. Otherwise a
-        # wholly missing chain/molecule can look like complete bond coverage.
-        labels = {name for name in topologies if name.startswith("protein_chain_")}
-        for atom in system.atoms:
-            chain = system.chains[system.residues[atom.residue_index].chain_index]
-            base = "protein_chain_" + chain.chain_id
-            source = atom.metadata.get("prepared_gromacs_source", {})
-            label = source.get("source_molecule_label", base)
-            if not isinstance(label, str) or not (label == base or label.startswith(base + "_molecule_")):
-                raise ValueError("source molecule label does not match canonical chain")
-            labels.add(label)
-    if not labels or any("bonds" not in topologies.get(label, {}).get("sections", {})
-                         for label in labels):
-        return None, "missing_in_one_or_more_source_molecules"
+    if provenance.get("schema_version") == "compiled_gromacs_cross_particles_v1":
+        sections = provenance.get("selected_molecule_bond_section_presence")
+        entry = sections.get(side) if isinstance(sections, dict) else None
+        if (not isinstance(entry, dict) or type(entry.get("present")) is not bool
+                or entry.get("source_molecule") != system.provenance.source_id):
+            return None, "source_bond_section_presence_unavailable"
+        if not entry["present"]:
+            return None, "missing_in_one_or_more_source_molecules"
+    else:
+        topologies = provenance.get("original_topologies", {})
+        labels = {"ligand_itp"}
+        if side == "receptor":
+            # Inspect expected sources as well as present sources. Otherwise a
+            # wholly missing chain/molecule can look like complete bond coverage.
+            labels = {name for name in topologies if name.startswith("protein_chain_")}
+            for atom in system.atoms:
+                chain = system.chains[system.residues[atom.residue_index].chain_index]
+                base = "protein_chain_" + chain.chain_id
+                source = atom.metadata.get("prepared_gromacs_source", {})
+                label = source.get("source_molecule_label", base)
+                if not isinstance(label, str) or not (label == base or label.startswith(base + "_molecule_")):
+                    raise ValueError("source molecule label does not match canonical chain")
+                labels.add(label)
+        if not labels or any("bonds" not in topologies.get(label, {}).get("sections", {})
+                             for label in labels):
+            return None, "missing_in_one_or_more_source_molecules"
     rows = provenance.get(side + "_source_bond_adjacency")
     if not isinstance(rows, list):
         return None, "source_adjacency_unavailable"
