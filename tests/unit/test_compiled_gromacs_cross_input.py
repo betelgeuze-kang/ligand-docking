@@ -93,6 +93,14 @@ def test_complete_projection_keeps_sources_zeros_and_omissions(tmp_path, dummy):
         "receptor": {"source_molecule": "REC", "present": True},
         "ligand": {"source_molecule": "LIG", "present": True},
     }
+    charges = evidence["selected_source_partial_charge_observation"]
+    assert charges["receptor"]["selected_particle_count"] == 2
+    assert charges["ligand"]["selected_particle_count"] == 2
+    assert charges["receptor"]["source_partial_charge_sum_e"] == pytest.approx(.3)
+    assert charges["ligand"]["source_partial_charge_sum_e"] == pytest.approx(-.3)
+    assert not charges["receptor"]["formal_charge_balance_assessed"]
+    assert not charges["ligand"]["formal_charge_balance_assessed"]
+    assert "not formal charge" in evidence["partial_charge_observation_scope"]
     assert not receptor.bonds and not ligand.bonds
     assert not evidence["chemical_state_identity_verified"] and not evidence["eligible_for_same_state_assay_join"]
     assert receptor.atoms[0].metadata["formal_charge_observation"] is None
