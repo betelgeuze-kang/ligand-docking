@@ -273,6 +273,18 @@ claimed. A missing source molecule or `[ bonds ]` section leaves bond-filtered
 counts null. An explicit empty section is retained as supplied information,
 not evidence that the chemical topology is complete.
 
+For prepared GROMACS file inputs, an explicit function-1 `[ bonds ]` equilibrium
+length is bound by original molecule atom indices, source row and file SHA-256.
+The [GROMACS topology format](https://manual.gromacs.org/current/reference-manual/topologies/topology-file-formats.html#table-14-details-of-moleculetype-directives)
+specifies this `b0` value in nm; the observer converts it to Å and reports
+measured length minus that source value on the bounded displayed rows. Full
+explicit/unknown counts and the largest absolute difference cover every supplied
+direct bond, including undisplayed rows. Inherited parameters and inputs without
+a bound source row remain unknown. The compiled-particle profile does not provide
+this row mapping. No source-equilibrium difference is treated as a calibrated
+bond-quality threshold: `length_validity_assessed` and
+`affects_score_or_admission` remain false.
+
 Missing preparation, nonfinite/unsupported geometry, invalid adjacency or the
 bounded neighbor/cell capacity yields an unavailable observation with null
 groups. A successful zero count remains distinct. Neighbor capacity can depend

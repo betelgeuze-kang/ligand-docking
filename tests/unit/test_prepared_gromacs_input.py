@@ -117,6 +117,31 @@ def test_v2_ordered_molecules_preserve_original_atoms_and_source_indices(request
     assert not evidence["coordinates_generated"] and not any(evidence["claim_policy"].values())
 
 
+def test_v2_bond_equilibrium_observation_uses_original_molecule_indices_and_hash(request_doc):
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+
+    request = _ordered_bonded_molecules(request_doc)
+    second = request["protein_chains"][0]["molecule_itps"][1]
+    _change(second, lambda text: text.replace("[ bonds ]\n1 2 1\n", "[ bonds ]\n1 2 1 .1 100\n"))
+    receptor, ligand, _, _, evidence = parser.load_prepared_gromacs_components(request)
+    observation = observe_prepared_source_geometry(receptor, ligand, evidence)
+    assert observation["status"] == "observed"
+    lengths = observation["groups"]["receptor"]["supplied_direct_bond_lengths"]
+    assert lengths["bond_count"] == 3
+    assert lengths["explicit_source_equilibrium_count"] == 1
+    assert lengths["unknown_source_equilibrium_count"] == 2
+    row = next(row for row in lengths["shortest_pairs"]
+               if [atom["atom_index"] for atom in row["atoms"]] == [3, 4])
+    assert row["distance_angstrom"] == pytest.approx(1.0)
+    assert row["source_equilibrium"] == {
+        "status": "explicit", "equilibrium_length_nm_token": ".1",
+        "equilibrium_length_angstrom": 1.0,
+        "source_topology": "protein_chain__molecule_1", "source_line": 7,
+        "source_sha256": second["sha256"], "measured_minus_source_angstrom": 0.0,
+    }
+    assert lengths["length_validity_assessed"] is False
+
+
 def test_v2_blank_element_transfer_resolves_original_molecule_source(request_doc):
     request = _ordered_bonded_molecules(request_doc)
     request["pdb_element_policy"] = "pdb_blank_element_from_matching_topology_atomic_number"

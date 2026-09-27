@@ -66,6 +66,46 @@ def test_source_short_pair_is_observed_in_actual_consumer_without_changing_energ
     assert all(Path(path).read_bytes() == value for path, value in before.items())
 
 
+def test_explicit_source_equilibrium_is_bound_and_inherited_length_stays_unknown(tmp_path):
+    explicit = _short_pair(tmp_path / "explicit", distance=-3.5)
+    inherited = _short_pair(tmp_path / "inherited", distance=-3.5)
+    explicit_ref = explicit["protein_chains"][0]["molecule_itp"]
+    inherited_ref = inherited["protein_chains"][0]["molecule_itp"]
+    _replace(explicit_ref, Path(explicit_ref["path"]).read_text() + "1 2 1 .1 100\n")
+    _replace(inherited_ref, Path(inherited_ref["path"]).read_text() + "1 2 1\n")
+    source_bytes = {ref["path"]: Path(ref["path"]).read_bytes()
+                    for prepared in (explicit, inherited)
+                    for ref in (prepared["protein_pdb"], prepared["protein_atomtypes"],
+                                prepared["protein_chains"][0]["molecule_itp"], prepared["ligand_itp"])}
+
+    rows = consumer.evaluate_request(_request([_case(explicit), _case(inherited)]))["rows"]
+    assert [row["status"] for row in rows] == ["evaluated", "evaluated"]
+    assert rows[0]["result"]["quantities"] == rows[1]["result"]["quantities"]
+    measured, unknown = [row["source_geometry_observation"]["groups"]["receptor"]
+                         ["supplied_direct_bond_lengths"] for row in rows]
+    assert measured["bond_count"] == unknown["bond_count"] == 1
+    assert measured["minimum_angstrom"] == measured["maximum_angstrom"] == pytest.approx(3.5)
+    assert measured["explicit_source_equilibrium_count"] == 1
+    assert measured["unknown_source_equilibrium_count"] == 0
+    assert measured["largest_absolute_measured_minus_source_angstrom"] == pytest.approx(2.5)
+    reference = measured["shortest_pairs"][0]["source_equilibrium"]
+    assert reference == {
+        "status": "explicit", "equilibrium_length_nm_token": ".1",
+        "equilibrium_length_angstrom": 1.0,
+        "source_topology": "protein_chain_A", "source_line": 7,
+        "source_sha256": explicit_ref["sha256"],
+        "measured_minus_source_angstrom": pytest.approx(2.5),
+    }
+    assert unknown["explicit_source_equilibrium_count"] == 0
+    assert unknown["unknown_source_equilibrium_count"] == 1
+    assert unknown["largest_absolute_measured_minus_source_angstrom"] is None
+    assert unknown["shortest_pairs"][0]["source_equilibrium"]["status"] == "inherited_unknown"
+    assert unknown["shortest_pairs"][0]["source_equilibrium"]["measured_minus_source_angstrom"] is None
+    assert measured["length_validity_assessed"] is unknown["length_validity_assessed"] is False
+    assert rows[0]["source_geometry_observation"]["affects_score_or_admission"] is False
+    assert all(Path(path).read_bytes() == value for path, value in source_bytes.items())
+
+
 def test_real_module_retains_source_observation_when_original_physical_guard_rejects(tmp_path):
     cases = [_case(_short_pair(tmp_path / "valid")),
              _case(_short_pair(tmp_path / "rejected", distance=0.2)), None]
@@ -138,6 +178,32 @@ def test_supplied_bond_lengths_include_pairs_outside_short_pair_radius():
     assert [row["distance_angstrom"] for row in lengths["longest_pairs"]] == pytest.approx([3.5, 1.5])
     assert [[atom["atom_index"] for atom in row["atoms"]] for row in lengths["longest_pairs"]] == [[1, 2], [0, 1]]
     assert lengths["length_validity_assessed"] is False
+
+
+def test_bond_length_summary_covers_undisplayed_source_deviation():
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+
+    receptor = _system([[float(i), 0, 0] for i in range(20)], [0] * 20)
+    receptor = replace(receptor, atoms=tuple(replace(atom, metadata={
+        "prepared_gromacs_source": {"source_atom_index": i + 1,
+                                    "source_molecule_label": "protein_chain_A"}})
+        for i, atom in enumerate(receptor.atoms)))
+    bonds = [[i, i + 1] for i in range(19)]
+    rows = [{"line": i + 1, "tokens": [str(i + 1), str(i + 2), "1",
+             ".01" if i == 18 else ".1", "100"]} for i in range(19)]
+    provenance = _provenance({"bonds": rows}, bonds)
+    provenance["sources"] = {"protein_chain_A": {"sha256": "a" * 64}}
+    lengths = observe_prepared_source_geometry(
+        receptor, _system([[40, 0, 0]], [0]), provenance
+    )["groups"]["receptor"]["supplied_direct_bond_lengths"]
+    assert lengths["bond_count"] == lengths["explicit_source_equilibrium_count"] == 19
+    assert lengths["unknown_source_equilibrium_count"] == 0
+    assert lengths["minimum_angstrom"] == lengths["maximum_angstrom"] == 1.0
+    assert len(lengths["shortest_pairs"]) == len(lengths["longest_pairs"]) == 16
+    assert lengths["unlisted_pair_count"] == 3
+    assert all(row["source_equilibrium"]["measured_minus_source_angstrom"] == 0.0
+               for row in lengths["shortest_pairs"] + lengths["longest_pairs"])
+    assert lengths["largest_absolute_measured_minus_source_angstrom"] == pytest.approx(0.9)
 
 
 def test_one_missing_molecule_bond_section_does_not_qualify_partial_chain_adjacency():

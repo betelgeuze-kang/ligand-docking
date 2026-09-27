@@ -92,19 +92,89 @@ def _remember(heap, distance, first, second):
         heapq.heapreplace(heap, item)
 
 
-def _direct_bond_lengths(system, side, bonds):
+def _source_bond_equilibria(provenance, side, system, bonds):
+    """Bind explicit source bond rows to canonical indices, without inference."""
+    if bonds is None or provenance.get("schema_version") == "compiled_gromacs_cross_particles_v1":
+        return {}
+    topologies, sources = provenance.get("original_topologies"), provenance.get("sources")
+    if not isinstance(topologies, dict) or not isinstance(sources, dict):
+        return {}
+    canonical_by_source = {}
+    for index, atom in enumerate(system.atoms):
+        origin = atom.metadata.get("prepared_gromacs_source", {})
+        source_index = origin.get("source_atom_index") if isinstance(origin, dict) else None
+        if type(source_index) is not int or source_index < 1:
+            return {}
+        if side == "ligand":
+            label = "ligand_itp"
+        else:
+            chain = system.chains[system.residues[atom.residue_index].chain_index]
+            label = origin.get("source_molecule_label", "protein_chain_" + chain.chain_id)
+        if not isinstance(label, str) or label not in topologies or label not in sources:
+            return {}
+        key = (label, source_index)
+        if key in canonical_by_source:
+            raise ValueError("duplicate source atom identity in bond observation")
+        canonical_by_source[key] = index
+
+    records = {}
+    for label in {key[0] for key in canonical_by_source}:
+        source = sources[label]
+        if not isinstance(source, dict) or not isinstance(source.get("sha256"), str):
+            raise ValueError("source bond hash unavailable")
+        rows = topologies[label].get("sections", {}).get("bonds", [])
+        for row in rows:
+            if not isinstance(row, dict) or not isinstance(row.get("tokens"), list):
+                raise ValueError("invalid source bond row")
+            tokens = row["tokens"]
+            if len(tokens) not in (3, 5):
+                raise ValueError("invalid source bond parameter width")
+            first = canonical_by_source.get((label, int(tokens[0])))
+            second = canonical_by_source.get((label, int(tokens[1])))
+            if first is None or second is None:
+                raise ValueError("source bond atom missing from canonical component")
+            pair = tuple(sorted((first, second)))
+            if pair not in bonds or pair in records:
+                raise ValueError("source bond row and canonical adjacency differ")
+            equilibrium = float(tokens[3]) * 10.0 if len(tokens) == 5 else None
+            if equilibrium is not None and not math.isfinite(equilibrium):
+                raise ValueError("nonfinite converted source bond equilibrium length")
+            records[pair] = {
+                "status": "explicit" if equilibrium is not None else "inherited_unknown",
+                "equilibrium_length_nm_token": tokens[3] if len(tokens) == 5 else None,
+                "equilibrium_length_angstrom": equilibrium,
+                "source_topology": label,
+                "source_line": row["line"],
+                "source_sha256": source["sha256"],
+            }
+    if set(records) != bonds:
+        raise ValueError("source bond row coverage differs from canonical adjacency")
+    return records
+
+
+def _direct_bond_lengths(system, side, bonds, source_equilibria):
     """Describe every supplied direct bond without a length/validity threshold."""
     if bonds is None:
         return None
     coordinates = system.coordinates.detach()[0].tolist()
     shortest, longest = [], []
-    minimum = maximum = None
+    minimum = maximum = largest_absolute_deviation = None
+    explicit_count = 0
     for first, second in sorted(bonds):
         distance = math.dist(coordinates[first], coordinates[second])
         if not math.isfinite(distance):
             raise ValueError("nonfinite supplied direct bond distance")
         minimum = distance if minimum is None else min(minimum, distance)
         maximum = distance if maximum is None else max(maximum, distance)
+        reference = source_equilibria.get((first, second))
+        if reference is not None and reference["status"] == "explicit":
+            explicit_count += 1
+            signed_deviation = distance - reference["equilibrium_length_angstrom"]
+            if not math.isfinite(signed_deviation):
+                raise ValueError("nonfinite source bond length difference")
+            deviation = abs(signed_deviation)
+            largest_absolute_deviation = (deviation if largest_absolute_deviation is None
+                                          else max(largest_absolute_deviation, deviation))
         _remember(shortest, distance, first, second)
         # The minimum heap entry is the least preferred longest pair. For ties,
         # lower source atom indices remain in the bounded display.
@@ -115,8 +185,17 @@ def _direct_bond_lengths(system, side, bonds):
             heapq.heapreplace(longest, item)
 
     def row(distance, first, second):
+        source = source_equilibria.get((first, second))
+        if source is None:
+            source = {"status": "source_parameter_unavailable", "equilibrium_length_nm_token": None,
+                      "equilibrium_length_angstrom": None,
+                      "source_topology": None, "source_line": None, "source_sha256": None}
+        equilibrium = source["equilibrium_length_angstrom"]
         return {"distance_angstrom": distance,
-                "atoms": [_atom(system, side, first), _atom(system, side, second)]}
+                "atoms": [_atom(system, side, first), _atom(system, side, second)],
+                "source_equilibrium": {**source,
+                    "measured_minus_source_angstrom": (
+                        distance - equilibrium if equilibrium is not None else None)}}
 
     return {
         "bond_count": len(bonds),
@@ -128,6 +207,9 @@ def _direct_bond_lengths(system, side, bonds):
             ((d, -a, -b) for d, a, b in longest),
             key=lambda item: (-item[0], item[1], item[2]))],
         "unlisted_pair_count": max(0, len(bonds) - MAX_DISPLAYED_PAIRS),
+        "explicit_source_equilibrium_count": explicit_count,
+        "unknown_source_equilibrium_count": len(bonds) - explicit_count,
+        "largest_absolute_measured_minus_source_angstrom": largest_absolute_deviation,
         "length_validity_assessed": False,
     }
 
@@ -163,11 +245,12 @@ def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSys
                 raise ValueError("source geometry requires one nonperiodic CPU float64 frame")
             identities[side] = require_valid_prepared_system(system).system_sha256
             bonds[side], availability = _bond_context(preparation_provenance, side, system)
+            equilibria = _source_bond_equilibria(preparation_provenance, side, system, bonds[side])
             groups[side] = {"source_atom_count": system.atom_count,
                             "possible_unique_pairs": system.atom_count * (system.atom_count - 1) // 2,
                             "direct_bond_table_status": availability,
                             "supplied_direct_bond_lengths": _direct_bond_lengths(
-                                system, side, bonds[side])}
+                                system, side, bonds[side], equilibria)}
         groups["cross"] = {"source_atom_counts": {s: x.atom_count for s, x in systems.items()},
                            "possible_unique_pairs": receptor.atom_count * ligand.atom_count,
                            "direct_bond_table_status": "not_classified_between_supplied_components"}
