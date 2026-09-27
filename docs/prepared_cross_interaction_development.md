@@ -284,6 +284,14 @@ clash threshold or a chemical validity test. Receptor, ligand and cross groups
 report complete unique pair counts within that window and up to 16 nearest
 pairs per list, with the exact undisplayed count. Atom indices, source serials,
 chain/residue/insertion codes and canonical source hashes identify observations.
+The cross group also reports `closest_pair_all_distances`: the exact minimum
+over every supplied receptor–ligand atom pair, including hydrogens and pairs
+outside the 1 Å window. It is computed in bounded 64×64 tiles and ties resolve
+by original receptor then ligand atom index. A zero count within 1 Å therefore
+does not imply that the closest pair is unavailable. This distance is an
+observation, not a calibrated clash decision; it changes neither scoring nor
+admission. If geometry observation is unavailable, its pair remains unknown,
+never a measured zero.
 The supplied direct adjacency alone separates direct bonds from other pairs;
 1–3/1–4 exclusions and a complete chemical nonbonded interpretation are not
 claimed. A missing source molecule or `[ bonds ]` section leaves bond-filtered
