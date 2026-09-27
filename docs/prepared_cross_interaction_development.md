@@ -42,6 +42,23 @@ than an assigned atomic charge. Same-state experimental joins remain unverified
 and ineligible. All hydrogens and partial charges used in the calculation come
 from the source files. No missing coordinate or parameter is fabricated.
 
+`compiled_gromacs_cross_particles_v2` adds an explicit coordinate-refinement
+carrier to this same particle profile. It keeps the v1 hash-bound `coordinates`
+GRO and adds a separate hash-bound `refined_coordinates` GRO. The original must
+print every coordinate with three decimal places in nm. The refined file must
+retain the exact title, count, atom identity/order fields and box line, print
+four to twelve decimal places in nm, and put every coordinate component within
+an inclusive 0.0005 nm distance of its original value. Standard adjacent
+fixed-width 8.3 and 15.10 GRO coordinate fields are accepted. The reader
+checks every source site, including excluded and explicitly omitted sites, then
+evaluates the refined coordinates.
+Both coordinate files receive postflight hash checks and distinct provenance.
+This inclusive half-step distance bound allows both exact endpoints; it does
+not prove that a particular rounding tie rule would print the original value.
+It also does not verify that the coordinates came from the same preparation
+run or match an experimental chemical state. V1 inputs and outputs retain
+their existing meaning.
+
 Selected/global preprocessing is rejected. Only inert `#ifndef FLEXIBLE` water
 bond/constraint branches outside selected molecules can be retained without
 evaluation; they cannot change the particle inventory. Omitted selected sites
