@@ -12,6 +12,7 @@ import hashlib
 import heapq
 import math
 from pathlib import Path
+import re
 import time
 
 import torch
@@ -214,6 +215,190 @@ def _direct_bond_lengths(system, side, bonds, source_equilibria):
     }
 
 
+def _source_angle_rows(provenance, side, system):
+    """Resolve original angle rows without inferring missing bonded parameters."""
+    if provenance.get("schema_version") == "compiled_gromacs_cross_particles_v1":
+        return None, "compiled_source_angle_mapping_unavailable"
+    topologies, sources = provenance.get("original_topologies"), provenance.get("sources")
+    if not isinstance(topologies, dict):
+        return None, "source_angle_topologies_unavailable"
+    labels = {"ligand_itp"} if side == "ligand" else {
+        name for name in topologies if name.startswith("protein_chain_")}
+    for atom in system.atoms:
+        if side == "ligand":
+            continue
+        chain = system.chains[system.residues[atom.residue_index].chain_index]
+        base = "protein_chain_" + chain.chain_id
+        origin = atom.metadata.get("prepared_gromacs_source", {})
+        label = origin.get("source_molecule_label", base) if isinstance(origin, dict) else base
+        if not isinstance(label, str) or not (label == base or label.startswith(base + "_molecule_")):
+            return None, "source_angle_molecule_label_unavailable"
+        labels.add(label)
+    if not labels or any(label not in topologies or
+                         "angles" not in topologies[label].get("sections", {}) for label in labels):
+        return None, "missing_in_one_or_more_source_molecules"
+    if not isinstance(sources, dict):
+        return None, "source_angle_identity_unavailable"
+    if provenance.get("source_hashes_postflight_verified") is not True:
+        return None, "source_angle_identity_unverified"
+    ordered_labels = sorted(labels)
+    for label in ordered_labels:
+        source = sources.get(label)
+        digest = source.get("sha256") if isinstance(source, dict) else None
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            return None, "source_angle_identity_unavailable"
+
+    canonical_by_source = {}
+    for index, atom in enumerate(system.atoms):
+        origin = atom.metadata.get("prepared_gromacs_source", {})
+        source_index = origin.get("source_atom_index") if isinstance(origin, dict) else None
+        if type(source_index) is not int or source_index < 1:
+            return None, "source_angle_atom_index_unavailable"
+        if side == "ligand":
+            label = "ligand_itp"
+        else:
+            chain = system.chains[system.residues[atom.residue_index].chain_index]
+            label = origin.get("source_molecule_label", "protein_chain_" + chain.chain_id)
+        if label not in labels:
+            return None, "source_angle_molecule_label_unavailable"
+        key = (label, source_index)
+        if key in canonical_by_source:
+            return None, "duplicate_source_angle_atom_identity"
+        canonical_by_source[key] = index
+
+    if any(not isinstance(topologies[label]["sections"]["angles"], list)
+           for label in ordered_labels):
+        return None, "invalid_source_angle_section"
+    if all(not topologies[label]["sections"]["angles"] for label in ordered_labels):
+        return ((), 0), "present_empty_in_all_source_molecules"
+    angle_count = 0
+    for label in ordered_labels:
+        for row in topologies[label]["sections"]["angles"]:
+            if not isinstance(row, dict) or not isinstance(row.get("tokens"), list):
+                return None, "invalid_source_angle_row"
+            tokens = row["tokens"]
+            if len(tokens) < 4:
+                return None, "invalid_source_angle_row"
+            try:
+                indices = [canonical_by_source[(label, int(token))] for token in tokens[:3]]
+            except (KeyError, ValueError):
+                return None, "source_angle_atom_mapping_unavailable"
+            if len(set(indices)) != 3:
+                return None, "invalid_source_angle_triplet"
+            angle_count += 1
+
+    def bound_rows():
+        for label in ordered_labels:
+            source_hash = sources[label]["sha256"]
+            for row in topologies[label]["sections"]["angles"]:
+                indices = [canonical_by_source[(label, int(token))]
+                           for token in row["tokens"][:3]]
+                yield label, row, source_hash, indices
+
+    return (bound_rows(), angle_count), "present_in_all_source_molecules_not_chemical_completeness"
+
+
+def _source_angles(system, side, bound_rows):
+    """Observe source-listed triplets and explicit function-1 equilibria."""
+    if bound_rows is None:
+        return None
+    bound_rows, angle_count = bound_rows
+    coordinates = system.coordinates.detach()[0].tolist()
+    measured_count = explicit_count = inherited_count = unsupported_count = undefined_count = 0
+    largest_difference = None
+    displayed = []
+    for ordinal, (label, source_row, source_hash, indices) in enumerate(bound_rows):
+        first, center, last = indices
+        left = [coordinates[first][axis] - coordinates[center][axis] for axis in range(3)]
+        right = [coordinates[last][axis] - coordinates[center][axis] for axis in range(3)]
+        left_norm, right_norm = math.hypot(*left), math.hypot(*right)
+        if left_norm == 0.0 or right_norm == 0.0:
+            measured, geometry_status = None, "undefined_zero_vector"
+            undefined_count += 1
+        else:
+            cross = (left[1] * right[2] - left[2] * right[1],
+                     left[2] * right[0] - left[0] * right[2],
+                     left[0] * right[1] - left[1] * right[0])
+            dot = sum(a * b for a, b in zip(left, right))
+            measured = math.degrees(math.atan2(math.hypot(*cross), dot))
+            if not math.isfinite(measured):
+                raise ValueError("nonfinite source angle measurement")
+            geometry_status = "defined"
+            measured_count += 1
+
+        tokens = source_row["tokens"]
+        equilibrium = None
+        try:
+            function = int(tokens[3])
+        except ValueError:
+            function = None
+        if function == 1 and len(tokens) == 4:
+            parameter_status = "inherited_unknown"
+            inherited_count += 1
+        elif function == 1 and len(tokens) == 6:
+            try:
+                equilibrium, force_constant = float(tokens[4]), float(tokens[5])
+            except ValueError:
+                equilibrium = force_constant = None
+            if (equilibrium is not None and force_constant is not None
+                    and math.isfinite(equilibrium) and math.isfinite(force_constant)):
+                parameter_status = "explicit"
+                explicit_count += 1
+            else:
+                equilibrium = None
+                parameter_status = "unsupported_source_parameters"
+                unsupported_count += 1
+        else:
+            parameter_status = "unsupported_source_parameters"
+            unsupported_count += 1
+        difference = measured - equilibrium if measured is not None and equilibrium is not None else None
+        if difference is not None:
+            absolute = abs(difference)
+            largest_difference = absolute if largest_difference is None else max(largest_difference, absolute)
+        # Keep only the largest explicit discrepancies. Source-row ordinal
+        # breaks ties without comparing or retaining unbounded atom records.
+        item = (abs(difference) if difference is not None else -1.0, -ordinal,
+                (label, source_row, source_hash, indices, measured,
+                 geometry_status, parameter_status, equilibrium, difference))
+        if len(displayed) < MAX_DISPLAYED_PAIRS:
+            heapq.heappush(displayed, item)
+        elif item[:2] > displayed[0][:2]:
+            heapq.heapreplace(displayed, item)
+
+    def display_row(record):
+        label, source_row, source_hash, indices, measured, geometry_status, parameter_status, equilibrium, difference = record
+        return {
+            "measured_angle_degrees": measured,
+            "geometry_status": geometry_status,
+            "atoms": [_atom(system, side, index) for index in indices],
+            "source_equilibrium": {
+                "status": parameter_status,
+                "equilibrium_angle_degrees_token": (
+                    source_row["tokens"][4] if parameter_status == "explicit" else None),
+                "equilibrium_angle_degrees": equilibrium,
+                "source_topology": label,
+                "source_line": source_row["line"],
+                "source_sha256": source_hash,
+                "measured_minus_source_degrees": difference,
+            },
+        }
+
+    return {
+        "angle_count": angle_count,
+        "measured_angle_count": measured_count,
+        "undefined_geometry_count": undefined_count,
+        "explicit_source_equilibrium_count": explicit_count,
+        "unknown_source_equilibrium_count": angle_count - explicit_count,
+        "inherited_source_equilibrium_count": inherited_count,
+        "unsupported_source_parameters_count": unsupported_count,
+        "largest_absolute_measured_minus_source_degrees": largest_difference,
+        "displayed_angles": [display_row(item[2]) for item in sorted(
+            displayed, key=lambda item: (-item[0], -item[1]))],
+        "unlisted_angle_count": max(0, angle_count - MAX_DISPLAYED_PAIRS),
+        "angle_validity_assessed": False,
+    }
+
+
 def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSystem,
                                      preparation_provenance: dict) -> dict:
     """Observe unchanged canonical source coordinates before cross evaluation.
@@ -246,11 +431,14 @@ def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSys
             identities[side] = require_valid_prepared_system(system).system_sha256
             bonds[side], availability = _bond_context(preparation_provenance, side, system)
             equilibria = _source_bond_equilibria(preparation_provenance, side, system, bonds[side])
+            source_angle_rows, angle_status = _source_angle_rows(preparation_provenance, side, system)
             groups[side] = {"source_atom_count": system.atom_count,
                             "possible_unique_pairs": system.atom_count * (system.atom_count - 1) // 2,
                             "direct_bond_table_status": availability,
                             "supplied_direct_bond_lengths": _direct_bond_lengths(
-                                system, side, bonds[side], equilibria)}
+                                system, side, bonds[side], equilibria),
+                            "source_angle_table_status": angle_status,
+                            "supplied_source_angles": _source_angles(system, side, source_angle_rows)}
         groups["cross"] = {"source_atom_counts": {s: x.atom_count for s, x in systems.items()},
                            "possible_unique_pairs": receptor.atom_count * ligand.atom_count,
                            "direct_bond_table_status": "not_classified_between_supplied_components"}

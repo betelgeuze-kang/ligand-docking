@@ -285,6 +285,28 @@ this row mapping. No source-equilibrium difference is treated as a calibrated
 bond-quality threshold: `length_validity_assessed` and
 `affects_score_or_admission` remain false.
 
+The same observer separately lists source `[ angles ]` triplets. For an explicit
+function-1 row, it compares the measured source-coordinate angle with the
+printed equilibrium `theta0`, which the
+[GROMACS topology format](https://manual.gromacs.org/current/reference-manual/topologies/topology-file-formats.html)
+specifies in degrees. It binds the triplet to original molecule atom indices,
+the source line and file SHA-256. Inherited parameters, unsupported functions
+or parameter widths, and angles with a zero-length arm remain unknown rather
+than becoming a measured zero. An absent section, missing source mapping, or
+compiled-particle profile has a null angle observation; an explicitly empty
+section has a measured zero row count only when the postflight source hashes
+and canonical source atom indices are bound. Otherwise it remains unknown.
+At most 16 rows with the largest
+measured-versus-source differences are displayed, while complete category
+counts and the maximum absolute difference cover every source row. This is a
+source-geometry diagnostic, not bonded-energy evaluation or a calibrated angle
+quality threshold: `angle_validity_assessed` and
+`affects_score_or_admission` remain false.
+Source-parameter categories (explicit, inherited, unsupported) partition the
+source rows independently of geometry categories (measured, undefined). Thus
+an explicit `theta0` with a zero-length coordinate arm counts as explicit and
+undefined, with no measured-minus-source difference.
+
 Missing preparation, nonfinite/unsupported geometry, invalid adjacency or the
 bounded neighbor/cell capacity yields an unavailable observation with null
 groups. A successful zero count remains distinct. Neighbor capacity can depend
