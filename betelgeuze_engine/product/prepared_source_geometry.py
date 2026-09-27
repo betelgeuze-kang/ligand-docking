@@ -3,11 +3,14 @@
 A one-angstrom search radius describes unusually short source separations. It
 is not a calibrated clash criterion, bond-length model, or validity threshold.
 Only supplied direct bonds are classified; no chemical connectivity is inferred.
+Supplied direct-bond lengths are observed at every distance, separately from
+the one-angstrom search, without inferring acceptable length ranges.
 """
 from __future__ import annotations
 
 import hashlib
 import heapq
+import math
 from pathlib import Path
 import time
 
@@ -80,6 +83,46 @@ def _remember(heap, distance, first, second):
         heapq.heapreplace(heap, item)
 
 
+def _direct_bond_lengths(system, side, bonds):
+    """Describe every supplied direct bond without a length/validity threshold."""
+    if bonds is None:
+        return None
+    coordinates = system.coordinates.detach()[0].tolist()
+    shortest, longest = [], []
+    minimum = maximum = None
+    for first, second in sorted(bonds):
+        distance = math.dist(coordinates[first], coordinates[second])
+        if not math.isfinite(distance):
+            raise ValueError("nonfinite supplied direct bond distance")
+        minimum = distance if minimum is None else min(minimum, distance)
+        maximum = distance if maximum is None else max(maximum, distance)
+        _remember(shortest, distance, first, second)
+        # The minimum heap entry is the least preferred longest pair. For ties,
+        # lower source atom indices remain in the bounded display.
+        item = (distance, -first, -second)
+        if len(longest) < MAX_DISPLAYED_PAIRS:
+            heapq.heappush(longest, item)
+        elif item > longest[0]:
+            heapq.heapreplace(longest, item)
+
+    def row(distance, first, second):
+        return {"distance_angstrom": distance,
+                "atoms": [_atom(system, side, first), _atom(system, side, second)]}
+
+    return {
+        "bond_count": len(bonds),
+        "minimum_angstrom": minimum,
+        "maximum_angstrom": maximum,
+        "shortest_pairs": [row(d, a, b) for d, a, b in sorted(
+            (-d, -a, -b) for d, a, b in shortest)],
+        "longest_pairs": [row(d, a, b) for d, a, b in sorted(
+            ((d, -a, -b) for d, a, b in longest),
+            key=lambda item: (-item[0], item[1], item[2]))],
+        "unlisted_pair_count": max(0, len(bonds) - MAX_DISPLAYED_PAIRS),
+        "length_validity_assessed": False,
+    }
+
+
 def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSystem,
                                      preparation_provenance: dict) -> dict:
     """Observe unchanged canonical source coordinates before cross evaluation.
@@ -113,7 +156,9 @@ def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSys
             bonds[side], availability = _bond_context(preparation_provenance, side, system)
             groups[side] = {"source_atom_count": system.atom_count,
                             "possible_unique_pairs": system.atom_count * (system.atom_count - 1) // 2,
-                            "direct_bond_table_status": availability}
+                            "direct_bond_table_status": availability,
+                            "supplied_direct_bond_lengths": _direct_bond_lengths(
+                                system, side, bonds[side])}
         groups["cross"] = {"source_atom_counts": {s: x.atom_count for s, x in systems.items()},
                            "possible_unique_pairs": receptor.atom_count * ligand.atom_count,
                            "direct_bond_table_status": "not_classified_between_supplied_components"}

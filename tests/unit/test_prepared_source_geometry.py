@@ -62,6 +62,7 @@ def test_source_short_pair_is_observed_in_actual_consumer_without_changing_energ
     assert row["result"]["sources"] == direct["sources"]
     assert observation["affects_score_or_admission"] is False
     assert observation["physical_validity_assessed"] is False
+    assert group["supplied_direct_bond_lengths"]["bond_count"] == 0
     assert all(Path(path).read_bytes() == value for path, value in before.items())
 
 
@@ -114,6 +115,29 @@ def test_missing_empty_and_present_source_bonds_stay_distinct(sections, adjacenc
     assert observation["groups"]["receptor"]["non_direct_bond_pair_count"] == expected
     assert observation["groups"]["cross"]["pair_count_within_radius"] == 0
     assert observation["groups"]["cross"]["direct_bond_pair_count"] is None
+    lengths = observation["groups"]["receptor"]["supplied_direct_bond_lengths"]
+    if expected is None:
+        assert lengths is None
+    else:
+        assert lengths["bond_count"] == len(adjacency)
+
+
+def test_supplied_bond_lengths_include_pairs_outside_short_pair_radius():
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+    receptor = _system([[0, 0, 0], [1.5, 0, 0], [5, 0, 0]], [0, 0, 0])
+    ligand = _system([[10, 0, 0]], [0])
+    group = observe_prepared_source_geometry(
+        receptor, ligand, _provenance({"bonds": []}, [[0, 1], [1, 2]])
+    )["groups"]["receptor"]
+    assert group["pair_count_within_radius"] == 0
+    lengths = group["supplied_direct_bond_lengths"]
+    assert lengths["bond_count"] == 2
+    assert lengths["minimum_angstrom"] == pytest.approx(1.5)
+    assert lengths["maximum_angstrom"] == pytest.approx(3.5)
+    assert [row["distance_angstrom"] for row in lengths["shortest_pairs"]] == pytest.approx([1.5, 3.5])
+    assert [row["distance_angstrom"] for row in lengths["longest_pairs"]] == pytest.approx([3.5, 1.5])
+    assert [[atom["atom_index"] for atom in row["atoms"]] for row in lengths["longest_pairs"]] == [[1, 2], [0, 1]]
+    assert lengths["length_validity_assessed"] is False
 
 
 def test_one_missing_molecule_bond_section_does_not_qualify_partial_chain_adjacency():
