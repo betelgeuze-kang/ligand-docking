@@ -666,14 +666,40 @@ def _arm_summary(directory, frozen, binding, completion):
                 value.update(status="unsupported", reason="predictor_abstained")
             elif completion["status"] == "complete" and stop_reason in ("engine_call_cap", "deadline"):
                 value["reason"] = stop_reason
+        if value["status"] == "evaluated":
+            _number(value["score"])
+        elif value["score"] is not None:
+            raise ValueError("unscored_comparison_row_has_score")
+        if directory.name == "similarity" and value["status"] == "evaluated":
+            if (priority is None or rid not in priority["predictions"]
+                    or value["score"] != _number(priority["predictions"][rid])):
+                raise ValueError("similarity_score_prediction_mismatch")
         if value.get("pose_report"):
-            from betelgeuze_engine.product.prepared_pose_journal import _file_hash
+            from tools.product.public_assay_components import loads
+            from tools.product.verify_prepared_cross_numerics import MAX_BYTES as MAX_POSE_BYTES, check_report
 
-            if (
-                _file_hash(Path(value["pose_report"]["path"]))
-                != value["pose_report"]["sha256"]
-            ):
+            reference = value["pose_report"]
+            if type(reference) is not dict or set(reference) != {"path", "sha256"}:
+                raise ValueError("invalid_pose_report_reference")
+            with Path(reference["path"]).open("rb") as stream:
+                raw = stream.read(MAX_POSE_BYTES + 1)
+            if len(raw) > MAX_POSE_BYTES or hashlib.sha256(raw).hexdigest() != reference["sha256"]:
                 raise ValueError("pose_report_hash_mismatch")
+            report = loads(raw.decode())
+            checked = check_report(report)
+            if (value.get("pose_denominator") != report["denominator"]
+                    or value.get("numeric_denominator") != checked["denominator"]):
+                raise ValueError("pose_report_denominator_mismatch")
+            if checked["status"] == "passed":
+                expected = min(row["result"]["quantities"]["cross_total_kcal_per_mol"]
+                               for row in report["rows"])
+                if value["status"] != "evaluated" or value["score"] != expected:
+                    raise ValueError("pose_report_score_mismatch")
+            elif value["status"] != "failed":
+                raise ValueError("pose_report_numeric_status_mismatch")
+        elif (frozen["protocol"]["schema_version"] != D3_SCHEMA
+              and directory.name != "similarity" and value["status"] == "evaluated"):
+            raise ValueError("evaluated_rigid_row_missing_pose_report")
         if value.get("d3_report"):
             from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
             summary = policy_adapter.summarize(bound(value["d3_report"]), request=frozen["requests"][rid])
