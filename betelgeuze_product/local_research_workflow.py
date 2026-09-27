@@ -134,6 +134,7 @@ def _cross_geometry_observation(row: dict) -> dict:
     cross = (observation.get("groups") or {}).get("cross") or {}
     observed = observation.get("status") == "observed"
     closest = cross.get("closest_pairs") or []
+    closest_all = cross.get("closest_pair_all_distances") if observed else None
     return {
         "status": observation.get("status", "unavailable"),
         "reason": observation.get("reason"),
@@ -141,6 +142,9 @@ def _cross_geometry_observation(row: dict) -> dict:
         "pair_count_within_radius": cross.get("pair_count_within_radius") if observed else None,
         "closest_distance_angstrom": (
             min(pair["distance_angstrom"] for pair in closest) if observed and closest else None),
+        "closest_pair_all_distances": closest_all,
+        "closest_distance_all_pairs_angstrom": (
+            closest_all.get("distance_angstrom") if isinstance(closest_all, dict) else None),
         "physical_validity_assessed": observation.get("physical_validity_assessed", False),
         "affects_score_or_admission": observation.get("affects_score_or_admission", False),
     }
@@ -156,17 +160,19 @@ def _html_report(report: dict) -> str:
                 "<p>Status: " + esc(report["status"]) + "</p>",
                 "<p>Requested backend: " + esc(report["backend_requested"]) +
                 "; executed physics backend: " + esc(report["backend_executed"]) + "</p>"]
-    sections.append("<h2>Supplied pose results</h2><table><tr><th>Index</th><th>Pose</th><th>Status</th><th>Cross energy (kcal/mol)</th><th>Observation radius (Å)</th><th>Cross pairs within observation radius</th><th>Closest observed cross distance (Å)</th></tr>")
+    sections.append("<h2>Supplied pose results</h2><table><tr><th>Index</th><th>Pose</th><th>Status</th><th>Cross energy (kcal/mol)</th><th>Observation radius (Å)</th><th>Cross pairs within observation radius</th><th>Closest observed cross distance (Å)</th><th>Closest cross distance over all pairs (Å)</th></tr>")
     for row in report.get("physics", {}).get("poses", []):
         observation = row.get("cross_geometry_observation") or {}
         count = observation.get("pair_count_within_radius")
         distance = observation.get("closest_distance_angstrom")
+        all_distance = observation.get("closest_distance_all_pairs_angstrom")
         cells = [row.get(key) for key in (
             "request_index", "pose_id", "status", "cross_energy_kcal_per_mol")]
         cells.extend([observation.get("search_radius_angstrom", "unavailable"),
                       count if count is not None else "unavailable",
                       distance if distance is not None else (
-                          "none observed" if count == 0 else "unavailable")])
+                          "none observed" if count == 0 else "unavailable"),
+                      all_distance if all_distance is not None else "unavailable"])
         sections.append("<tr>" + "".join("<td>" + esc(value) + "</td>" for value in cells) + "</tr>")
     sections.append("</table><p>Short cross separations are observations. Numerical completion does not establish pose validity or training eligibility.</p>")
     for name in ("physics.json", "assay-shadow.json"):

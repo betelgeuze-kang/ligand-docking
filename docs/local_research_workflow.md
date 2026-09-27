@@ -87,7 +87,10 @@ independent scientific signature or hostile same-user modifications.
 ## Per-pose cross geometry observations
 
 The summary and HTML expose each pose's existing cross observation radius, pair
-count and closest observed distance. Measured zero pairs remains zero; missing
+count and closest observed distance. They additionally expose the closest
+cross distance over all supplied pairs even when none lies within the 1 Å
+window; the summary JSON retains both atom identities. Measured zero pairs
+within the radius remains zero; missing
 or failed observations remain unavailable. These bounded observations do not
 change energy, forces, admission, execution status or training eligibility. A
 completed calculation is not evidence of a physically valid pose. Full atom
