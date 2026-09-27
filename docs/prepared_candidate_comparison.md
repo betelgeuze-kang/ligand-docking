@@ -76,6 +76,15 @@ a free retry. Missing, unsupported, failed and unprocessed candidates all remain
 in the original pool denominator. Immutable publication never overwrites prior
 results. A final successful comparison receipt also rechecks its original inputs.
 
+The comparison's frozen runtime also records the installed scikit-learn and SciPy
+versions used by selector fitting. A version change rejects resume; the shared
+prepared-pose journal retains its existing runtime format. A normally completed
+engine worker records `engine_call_cap` when it stops at the prespecified call
+limit, and unvisited candidates in its order carry that reason. An observed
+worker deadline remains distinct from a call cap, including a worker that exits
+just before the parent observes the hard deadline. Worker-failure and
+interrupted-budget reasons retain their separate meanings.
+
 ## Evaluation and interpretation
 
 The separate `evaluate` command requires the comparison and frozen-file paths

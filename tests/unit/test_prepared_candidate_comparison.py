@@ -95,7 +95,7 @@ def test_leakage_or_denominator_change_rejected_before_run(tmp_path, change):
     assert not (tmp_path / "out").exists()
 
 
-def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
+def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path, monkeypatch):
     protocol = _protocol(tmp_path)
     before = copy.deepcopy(protocol)
     output = tmp_path / "run"
@@ -153,6 +153,24 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
         for p in output.rglob("*")
         if p.is_file()
     }
+    dependencies = comparison.read(output / "frozen.json")["payload"]["runtime"][
+        "comparison_selector_dependencies"
+    ]
+    assert dependencies == {
+        name: comparison.importlib.metadata.version(name) for name in ("scikit-learn", "scipy")
+    }
+    installed_version = comparison.importlib.metadata.version
+    for changed_name in ("scikit-learn", "scipy"):
+        with monkeypatch.context() as changed:
+            def drifted_version(name):
+                version = installed_version(name)
+                return version + ".drift" if name == changed_name else version
+
+            changed.setattr(comparison.importlib.metadata, "version", drifted_version)
+            with pytest.raises(ValueError, match="resume_input_or_runtime_changed"):
+                comparison.run(protocol, output, resume=True)
+    # Resume's source/runtime preflight rejects drift without any endpoint input.
+    assert comparison.run(protocol, output, resume=True) == result
     assert protocol == before
     committed = output / "engine" / (comparison.sha("a") + ".row.json")
     saved = committed.read_bytes()
@@ -230,16 +248,50 @@ def test_hard_time_budget_keeps_all_candidates_and_has_no_free_retry(tmp_path):
 
 def test_engine_call_cap_keeps_failures_and_remaining_denominator(tmp_path):
     protocol = _protocol(tmp_path, calls=1)
-    result = comparison.run(protocol, tmp_path / "run")
+    output = tmp_path / "run"
+    result = comparison.run(protocol, output)
     for name in ("engine", "ai_engine", "similarity_engine"):
+        arm = result["arms"][name]
+        assert arm["cost"]["status"] == "complete"
+        assert arm["worker_observations"]["worker-complete.json"]["engine_calls"] == 1
         assert (
-            result["arms"][name]["worker_observations"]["worker-complete.json"][
-                "engine_calls"
-            ]
-            == 1
+            arm["worker_observations"]["worker-complete.json"]["stop_reason"]
+            == "engine_call_cap"
         )
-        assert result["arms"][name]["denominator"]["requested"] == 4
+        assert arm["denominator"]["requested"] == 4
+        ordered = arm["worker_observations"]["priority.json"]["order"]
+        unprocessed = [row for row in arm["rows"] if row["status"] == "not_processed"]
+        assert {row["record_id"] for row in unprocessed} == set(ordered[1:])
+        assert all(row["reason"] == "engine_call_cap" for row in unprocessed)
+        assert sum(
+            count for status, count in arm["denominator"].items() if status != "requested"
+        ) == 4
     assert result["arms"]["similarity"]["denominator"]["evaluated"] == 3
+    assert (
+        result["arms"]["similarity"]["worker_observations"]["worker-complete.json"][
+            "stop_reason"
+        ]
+        == "order_exhausted"
+    )
+    # The worker can observe its deadline and exit before the parent marks the
+    # arm budget exhausted. Preserve that observed reason for ordered skips.
+    worker_path = output / "engine/worker-complete.json"
+    worker_bytes = worker_path.read_bytes()
+    try:
+        worker = comparison.read(worker_path)
+        worker["stop_reason"] = "deadline"
+        worker_path.write_text(comparison.canonical(worker))
+        frozen = comparison.read(output / "frozen.json")["payload"]
+        replay = comparison._arm_summary(
+            output / "engine", frozen, result["binding"], result["arms"]["engine"]["cost"]
+        )
+        assert all(
+            row["reason"] == "deadline"
+            for row in replay["rows"]
+            if row["status"] == "not_processed"
+        )
+    finally:
+        worker_path.write_bytes(worker_bytes)
 
 
 def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):

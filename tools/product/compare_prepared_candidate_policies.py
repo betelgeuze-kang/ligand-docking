@@ -13,6 +13,7 @@ from collections import Counter
 import copy
 import fcntl
 import hashlib
+import importlib.metadata
 import json
 import math
 import os
@@ -297,6 +298,11 @@ def freeze(protocol):
         str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted((root / "tools/product").glob("*.py"))
     }
+    # The shared pose-journal binding predates this selector workflow. Keep its
+    # historical meaning while binding the libraries used by cold fitting here.
+    runtime["comparison_selector_dependencies"] = {
+        name: importlib.metadata.version(name) for name in ("scikit-learn", "scipy")
+    }
     result = {
         "protocol": copy.deepcopy(protocol),
         "rows": rows,
@@ -519,13 +525,16 @@ def worker(run_dir, arm, deadline):
         from tools.product.verify_prepared_cross_numerics import check_report
 
     called = 0
+    stop_reason = "order_exhausted"
     for rid in order:
         if time.monotonic() >= deadline:
+            stop_reason = "deadline"
             break
         if (
             arm != "similarity"
             and called >= frozen["protocol"]["max_engine_calls_per_arm"]
         ):
+            stop_reason = "engine_call_cap"
             break
         tick, cpu = time.perf_counter(), time.process_time()
         result = {
@@ -590,12 +599,14 @@ def worker(run_dir, arm, deadline):
             {"payload": result, "sha256": sha(result)},
             deadline=deadline,
         ):
+            stop_reason = "deadline"
             break
     publish(
         directory / "worker-complete.json",
         {
             "binding": binding,
             "engine_calls": called,
+            "stop_reason": stop_reason,
             "process_cpu_seconds": time.process_time(),
             "process_peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         },
@@ -603,6 +614,28 @@ def worker(run_dir, arm, deadline):
 
 
 def _arm_summary(directory, frozen, binding, completion):
+    observations = {}
+    for name in ("priority.json", "worker-complete.json"):
+        if (directory / name).exists():
+            observation = read(directory / name)
+            if observation["binding"] != binding:
+                raise ValueError("worker_observation_binding_mismatch")
+            if name == "priority.json" and observation["setup_cost"].get("model_reference"):
+                payload = bound(observation["setup_cost"]["model_reference"])
+                if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
+                    for key in ("checkpoint", "protocol"):
+                        bound(payload[key])
+            observations[name] = observation
+    priority = observations.get("priority.json")
+    worker_complete = observations.get("worker-complete.json")
+    stop_reason = None if worker_complete is None else worker_complete["stop_reason"]
+    if stop_reason not in (None, "order_exhausted", "deadline", "engine_call_cap"):
+        raise ValueError("invalid_worker_stop_reason")
+    if stop_reason == "engine_call_cap" and (
+        directory.name == "similarity"
+        or worker_complete["engine_calls"] != frozen["protocol"]["max_engine_calls_per_arm"]
+    ):
+        raise ValueError("invalid_engine_call_cap_observation")
     rows = []
     for rid in frozen["pool"]:
         path = directory / (sha(rid) + ".row.json")
@@ -626,12 +659,13 @@ def _arm_summary(directory, frozen, binding, completion):
                 value = item
             else:
                 value["reason"] = "completed_after_budget"
-        elif (directory / "priority.json").exists():
-            priority = read(directory / "priority.json")
+        elif priority is not None:
             if priority["binding"] != binding or priority["arm"] != directory.name:
                 raise ValueError("priority_binding_mismatch")
             if directory.name != "engine" and rid not in priority["order"]:
                 value.update(status="unsupported", reason="predictor_abstained")
+            elif completion["status"] == "complete" and stop_reason in ("engine_call_cap", "deadline"):
+                value["reason"] = stop_reason
         if value.get("pose_report"):
             from betelgeuze_engine.product.prepared_pose_journal import _file_hash
 
@@ -655,18 +689,6 @@ def _arm_summary(directory, frozen, binding, completion):
         (r for r in rows if r["status"] == "evaluated"),
         key=lambda r: (direction * r["score"], r["record_id"]),
     )
-    observations = {}
-    for name in ("priority.json", "worker-complete.json"):
-        if (directory / name).exists():
-            value = read(directory / name)
-            if value["binding"] != binding:
-                raise ValueError("worker_observation_binding_mismatch")
-            if name == "priority.json" and value["setup_cost"].get("model_reference"):
-                payload = bound(value["setup_cost"]["model_reference"])
-                if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
-                    for key in ("checkpoint", "protocol"):
-                        bound(payload[key])
-            observations[name] = value
     return {
         "worker_observations": observations,
         "rows": rows,
