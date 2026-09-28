@@ -28,6 +28,10 @@ class BRD4ManifestTests(unittest.TestCase):
         (self.root / "official_sources").mkdir()
         for relative, _, _, _ in VERIFIER.SOURCE_FILES.values():
             shutil.copyfile(PACKET / relative, self.root / relative)
+        shutil.copyfile(
+            PACKET / VERIFIER.GEOMETRY_RECEIPT[0],
+            self.root / VERIFIER.GEOMETRY_RECEIPT[0],
+        )
         self.manifest = json.loads(
             (PACKET / "source_manifest.v1.json").read_text(encoding="utf-8")
         )
@@ -69,6 +73,19 @@ class BRD4ManifestTests(unittest.TestCase):
         altered = copy.deepcopy(self.manifest)
         altered["protection_and_roles"]["training_role"] = "fit"
         with self.assertRaisesRegex(ValueError, "roles_or_rights_overclaimed"):
+            VERIFIER.validate(altered)
+
+    def test_coordinated_geometry_receipt_and_manifest_hash_tamper_rejects(
+        self,
+    ) -> None:
+        altered = copy.deepcopy(self.manifest)
+        path = self.root / VERIFIER.GEOMETRY_RECEIPT[0]
+        raw = path.read_bytes()
+        path.write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
+        altered["source_geometry_receipt"]["sha256"] = VERIFIER.sha256(path)
+        with self.assertRaisesRegex(
+            ValueError, "source_geometry_receipt_changed_or_overclaimed"
+        ):
             VERIFIER.validate(altered)
 
 

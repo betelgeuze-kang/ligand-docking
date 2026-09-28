@@ -32,6 +32,11 @@ SOURCE_FILES = {
         "0dc0ed30c51996ff5712996b6a43a57049be3736ab601cf58b417975cdbb8ac8",
     ),
 }
+GEOMETRY_RECEIPT = (
+    "source_geometry.v1.json",
+    67787,
+    "3ee4b1330a40569a3905eefd6f0096ecda609dbb489f935b486a4e5c596cf84c",
+)
 
 
 def require(condition: bool, reason: str) -> None:
@@ -218,6 +223,7 @@ def validate(manifest: dict[str, object]) -> int:
         == {
             "public_source_metadata_reviewed": True,
             "source_files_downloaded": True,
+            "source_geometry_observed": True,
             "receptor_prepared": False,
             "s_ligand_prepared": False,
             "r_ligand_prepared": False,
@@ -226,6 +232,30 @@ def validate(manifest: dict[str, object]) -> int:
             "protected_evaluation_access": False,
         },
         "non_static_action_claimed",
+    )
+    geometry_path, geometry_size, geometry_digest = GEOMETRY_RECEIPT
+    require(
+        manifest["source_geometry_receipt"]
+        == {
+            "relative_path": geometry_path,
+            "size_bytes": geometry_size,
+            "sha256": geometry_digest,
+            "evidence_class": "unprepared_archive_coordinate_and_ccd_observation",
+            "prepared_state_or_assay_microstate_proven": False,
+        },
+        "source_geometry_receipt_changed_or_overclaimed",
+    )
+    actual_geometry_path = ROOT / geometry_path
+    require(
+        actual_geometry_path.is_file()
+        and not actual_geometry_path.is_symlink()
+        and actual_geometry_path.resolve().is_relative_to(ROOT.resolve()),
+        "source_geometry_receipt_missing_or_outside_packet",
+    )
+    require(
+        actual_geometry_path.stat().st_size == geometry_size
+        and sha256(actual_geometry_path) == geometry_digest,
+        "source_geometry_receipt_bytes_changed",
     )
     decisions = manifest["unresolved_decisions"]
     require(

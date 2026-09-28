@@ -74,6 +74,13 @@
       "sha256": "0dc0ed30c51996ff5712996b6a43a57049be3736ab601cf58b417975cdbb8ac8"
     }
   ],
+  "source_geometry_receipt": {
+    "relative_path": "source_geometry.v1.json",
+    "size_bytes": 67787,
+    "sha256": "3ee4b1330a40569a3905eefd6f0096ecda609dbb489f935b486a4e5c596cf84c",
+    "evidence_class": "unprepared_archive_coordinate_and_ccd_observation",
+    "prepared_state_or_assay_microstate_proven": false
+  },
   "structure_observation": {
     "pdb_id": "3MXF",
     "organism": "Homo sapiens",
@@ -178,6 +185,7 @@
   "performed_actions": {
     "public_source_metadata_reviewed": true,
     "source_files_downloaded": true,
+    "source_geometry_observed": true,
     "receptor_prepared": false,
     "s_ligand_prepared": false,
     "r_ligand_prepared": false,

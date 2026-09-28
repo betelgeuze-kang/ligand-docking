@@ -129,10 +129,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m ruff check betelgeuze_product/public_assay_graph_diagnostic.py tests/unit/test_public_assay_graph_diagnostic.py docs/research/brd4_3mxf_source_preflight/verify_manifest.py docs/research/brd4_3mxf_source_preflight/test_verify_manifest.py docs/research/smyd2_5arg_source_preflight/verify_manifest.py docs/research/smyd2_5arg_source_preflight/verify_source_geometry.py docs/research/smyd2_5arg_source_preflight/test_source_geometry.py
+          python -m ruff check betelgeuze_product/public_assay_graph_diagnostic.py tests/unit/test_public_assay_graph_diagnostic.py docs/research/brd4_3mxf_source_preflight/verify_manifest.py docs/research/brd4_3mxf_source_preflight/test_verify_manifest.py docs/research/brd4_3mxf_source_preflight/verify_source_geometry.py docs/research/brd4_3mxf_source_preflight/test_source_geometry.py docs/research/smyd2_5arg_source_preflight/verify_manifest.py docs/research/smyd2_5arg_source_preflight/verify_source_geometry.py docs/research/smyd2_5arg_source_preflight/test_source_geometry.py
           python docs/research/prmt3_4ryl_source_preflight/verify_manifest.py
           python -I -B docs/research/brd4_3mxf_source_preflight/verify_manifest.py
           python -I -S -B docs/research/brd4_3mxf_source_preflight/test_verify_manifest.py
+          python -I -S -B docs/research/brd4_3mxf_source_preflight/verify_source_geometry.py
+          python -I -S -B docs/research/brd4_3mxf_source_preflight/test_source_geometry.py
           python docs/research/smyd2_5arg_source_preflight/verify_manifest.py
           python -I -S -B docs/research/smyd2_5arg_source_preflight/verify_source_geometry.py
           python -I -S -B docs/research/smyd2_5arg_source_preflight/test_source_geometry.py
