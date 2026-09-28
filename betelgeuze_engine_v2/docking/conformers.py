@@ -1262,9 +1262,21 @@ def _source_atom_projection(system: AllAtomSystem) -> tuple[tuple[object, ...], 
     )
 
 
+def _source_stereo_first_atom_index(bond: Bond) -> int:
+    first_atom_index = bond.metadata.get("sdf_v2000_stereo_first_atom_index")
+    if type(first_atom_index) is not int or first_atom_index not in (
+        bond.atom_i, bond.atom_j,
+    ):
+        raise ConformerPreparationError(
+            "source SDF wedge first-atom orientation is invalid"
+        )
+    return first_atom_index
+
+
 def _source_bond_projection(system: AllAtomSystem) -> tuple[tuple[object, ...], ...]:
-    return tuple(
-        (
+    rows = []
+    for bond in system.bonds:
+        row = (
             bond.index,
             bond.atom_i,
             bond.atom_j,
@@ -1272,8 +1284,12 @@ def _source_bond_projection(system: AllAtomSystem) -> tuple[tuple[object, ...], 
             bond.aromatic,
             bond.stereo,
         )
-        for bond in system.bonds
-    )
+        if bond.stereo in {"up", "down", "either"}:
+            # Preserve existing nonstereo identities while binding the directed
+            # endpoint that canonical endpoint sorting otherwise discards.
+            row += (_source_stereo_first_atom_index(bond),)
+        rows.append(row)
+    return tuple(rows)
 
 
 def _rdkit_bond_projection(molecule: Any) -> tuple[tuple[object, ...], ...]:
@@ -1779,6 +1795,10 @@ def _require_source_text_projection_contract(
             or row.get("order_binary64_hex") != bond.order.hex()
             or row.get("aromatic") is not bond.aromatic
             or row.get("molfile_stereo_code") != stereo_code
+            or (
+                stereo_code in {1, 4, 6}
+                and _source_stereo_first_atom_index(bond) != begin_atom_index
+            )
         ):
             raise ConformerPreparationError(
                 "source SDF bond projection is cross-wired"

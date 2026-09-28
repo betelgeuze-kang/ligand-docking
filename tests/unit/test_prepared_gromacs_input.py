@@ -67,6 +67,50 @@ def _change(ref, transform):
     ref["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def test_directed_sdf_wedge_remains_visible_but_does_not_qualify_calculation(
+    request_doc, tmp_path,
+):
+    from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
+    from betelgeuze_engine_v2.molecular import validate_all_atom_system
+
+    anchors, source_hashes = [], []
+    for first, second in ((1, 2), (2, 1)):
+        original = "  1  2  1  0  0  0\n"
+        wedge = f"{first:3d}{second:3d}{1:3d}{1:3d}  0  0  0\n"
+        _change(request_doc["ligand_sdf"], lambda _text: _sdf().replace(original, wedge))
+        _, ligand, _, _, provenance = parser.load_prepared_gromacs_components(request_doc)
+        assert provenance["source_hashes_postflight_verified"] is True
+        anchors.append(ligand.bonds[0].metadata["sdf_v2000_stereo_first_atom_index"])
+        source_hashes.append(provenance["sources"]["ligand_sdf"]["sha256"])
+        validation = validate_all_atom_system(ligand)
+        assert validation.stereochemistry_declared is True
+        assert validation.stereochemistry_geometry_verified is False
+        report = evaluate_rigid_pose_request({
+            "schema_version": "prepared_rigid_pose_cross_request_v1",
+            "prepared_input": copy.deepcopy(request_doc),
+            "evaluation": {
+                "pocket_center_angstrom": [2.0, 1.0, 0.0],
+                "pocket_radius_angstrom": 10.0,
+                "cutoff_angstrom": 10.0,
+                "switch_start_angstrom": 8.0,
+                "dielectric": 1.0,
+                "screening_kappa_per_angstrom": 0.0,
+            },
+            "execution": {"projection_partition": "source_order_v1",
+                          "preparation_reuse": "request"},
+            "poses": [{"pose_id": "fixed-source-pose",
+                       "rotation_matrix": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
+                                           [0.0, 0.0, 1.0]],
+                       "translation_angstrom": [0.0, 0.0, 0.0]}],
+        }, checkpoint_dir=tmp_path / f"wedge-{first}-{second}")
+        assert report["denominator"] == {"requested": 1, "evaluated": 1,
+                                         "failed": 0, "skipped": 0}
+        assert report["rows"][0]["evaluation_completed"] is True
+        assert report["scientifically_validated"] is False
+    assert anchors == [0, 1]
+    assert source_hashes[0] != source_hashes[1]
+
+
 def _ordered_molecule_request(request_doc, chain_id=""):
     refs = [entry["molecule_itp"] for entry in request_doc["protein_chains"]]
     _change(refs[1], lambda text: text.replace("1 N 1 SYN", "1 N 2 SYN"))

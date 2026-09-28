@@ -17,6 +17,9 @@ on:
       - 'tests/unit/test_installed_comparison_receipts.py'
       - 'tests/unit/test_installed_synthetic_comparison.py'
       - 'tests/unit/test_installed_native_v4_*.py'
+      - 'tests/unit/test_native_v4_comparison_readiness.py'
+      - 'tools/analysis/native_v4_comparison_readiness.py'
+      - 'docs/native_v4_comparison_readiness.md'
       - 'docs/engine_v2_installed_synthetic_receipt.md'
       - 'docs/engine_v2_installed_synthetic_run.md'
       - 'docs/engine_v2_installed_native_v4_comparison.md'
@@ -52,6 +55,9 @@ on:
       - 'tests/unit/test_installed_comparison_receipts.py'
       - 'tests/unit/test_installed_synthetic_comparison.py'
       - 'tests/unit/test_installed_native_v4_*.py'
+      - 'tests/unit/test_native_v4_comparison_readiness.py'
+      - 'tools/analysis/native_v4_comparison_readiness.py'
+      - 'docs/native_v4_comparison_readiness.md'
       - 'docs/engine_v2_installed_synthetic_receipt.md'
       - 'docs/engine_v2_installed_synthetic_run.md'
       - 'docs/engine_v2_installed_native_v4_comparison.md'
@@ -288,6 +294,7 @@ jobs:
           files = sorted(root.glob('betelgeuze_product/*native_v4*.py'))
           files += [root / 'betelgeuze_product/installed_synthetic_comparison.py']
           files += sorted(root.glob('tests/unit/test_installed_native_v4_*.py'))
+          files += [root / 'tools/analysis/native_v4_comparison_readiness.py', root / 'tests/unit/test_native_v4_comparison_readiness.py']
           payload = {
               'checkout_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
               'pull_request_head_sha': json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text()).get('pull_request', {}).get('head', {}).get('sha'),
@@ -299,15 +306,18 @@ jobs:
           PY
       - name: Lint and test source and prepared binding boundaries
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_product/installed_native_v4_*.py betelgeuze_product/native_v4_*.py betelgeuze_product/installed_synthetic_comparison.py tests/unit/test_installed_native_v4_*.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_installed_native_v4_source.py tests/unit/test_installed_native_v4_comparison.py tests/unit/test_installed_native_v4_replay_cli.py tests/unit/test_installed_synthetic_comparison.py --junitxml=native-v4-boundary-junit.xml
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0d # v7.0.1
+          python -m ruff check --isolated --no-cache betelgeuze_product/installed_native_v4_*.py betelgeuze_product/native_v4_*.py betelgeuze_product/installed_synthetic_comparison.py tests/unit/test_installed_native_v4_*.py tools/analysis/native_v4_comparison_readiness.py tests/unit/test_native_v4_comparison_readiness.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_installed_native_v4_source.py tests/unit/test_installed_native_v4_comparison.py tests/unit/test_installed_native_v4_replay_cli.py tests/unit/test_installed_synthetic_comparison.py tests/unit/test_native_v4_comparison_readiness.py --junitxml=native-v4-boundary-junit.xml
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: native-v4-boundary-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             native-v4-boundary-source.json
             native-v4-boundary-junit.xml
+            tools/analysis/native_v4_comparison_readiness.py
+            tests/unit/test_native_v4_comparison_readiness.py
+            docs/native_v4_comparison_readiness.md
             .github/workflows/ci-prepared-candidate-comparison.yml
           if-no-files-found: warn
           retention-days: 14

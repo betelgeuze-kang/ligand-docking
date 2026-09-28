@@ -23,7 +23,12 @@ from typing import Mapping, Sequence
 
 import torch
 
-from betelgeuze_engine_v2.io import parse_pdb, parse_sdf_v2000
+from betelgeuze_engine_v2.io import (
+    SDF_PARSER_NAME,
+    SDF_PARSER_VERSION,
+    parse_pdb,
+    parse_sdf_v2000,
+)
 from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
 
 from .public_evaluator import (
@@ -294,7 +299,7 @@ def authenticated_public_benchmark_derivation_policy_document() -> dict[str, obj
     projection: dict[str, object] = {
         "schema_id": AUTHENTICATED_PUBLIC_BENCHMARK_DERIVATION_POLICY_SCHEMA_ID,
         "receptor_parser": "betelgeuze_engine_v2.strict_pdb/1.1.0",
-        "ligand_parser": "betelgeuze_engine_v2.strict_sdf_v2000/1.0.0",
+        "ligand_parser": f"{SDF_PARSER_NAME}/{SDF_PARSER_VERSION}",
         "candidate_sha256_recomputed": True,
         "receptor_sha256_recomputed": True,
         "reference_sha256_recomputed": True,

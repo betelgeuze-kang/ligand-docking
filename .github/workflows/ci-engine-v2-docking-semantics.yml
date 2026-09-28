@@ -54,6 +54,7 @@ jobs:
             benchmarks/oracles
             tools/run_engine_v2_public_redocking_300.py
             tests/unit/test_engine_v2_conformer_ensemble_stage3.py
+            tests/unit/test_engine_v2_source_bound_sdf_stereo.py
             tests/unit/test_engine_v2_public_redocking_runner_stage7.py
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -72,6 +73,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_conformer_ensemble_stage3.py \
+            tests/unit/test_engine_v2_source_bound_sdf_stereo.py \
             tests/unit/test_engine_v2_public_redocking_runner_stage7.py
 
   docking-semantics:

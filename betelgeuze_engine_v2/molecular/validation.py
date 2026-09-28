@@ -445,6 +445,38 @@ def validate_all_atom_system(system: AllAtomSystem) -> ValidationReport:
                         "E/Z label is typed but has not been checked against coordinates",
                     )
                 )
+        elif bond_stereo in {"UP", "DOWN", "EITHER"}:
+            stereochemistry_declared = True
+            stereochemistry_geometry_verified = False
+            if bond.aromatic or not math.isclose(float(bond.order), 1.0, abs_tol=1.0e-6):
+                topology_consistent = False
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        "incompatible_directed_bond_stereo",
+                        location,
+                        "directed bond stereo requires a non-aromatic single bond",
+                    )
+                )
+            source_first = bond.metadata.get("sdf_v2000_stereo_first_atom_index")
+            if type(source_first) is not int or source_first not in pair:
+                topology_consistent = False
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        "bond_stereo_anchor_invalid",
+                        location,
+                        "directed bond stereo requires a valid first-atom orientation",
+                    )
+                )
+            issues.append(
+                ValidationIssue(
+                    "warning",
+                    "bond_stereo_geometry_unverified",
+                    location,
+                    "wedge direction is retained but stereochemistry has not been checked against coordinates",
+                )
+            )
 
     if system.cell is not None:
         vectors = system.cell.vectors

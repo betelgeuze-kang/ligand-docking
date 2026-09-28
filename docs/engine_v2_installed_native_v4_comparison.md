@@ -31,6 +31,17 @@ source identifiers and file hashes. Unresolved stereochemistry and a ligand
 identity mismatch reject the request before scoring. A changed source, origin,
 request, or runtime also rejects resume and read-only verification.
 
+For strict V2000 SDF, single-bond stereo codes 1, 4, and 6 retain the **first
+bond atom** as the directed wedge endpoint, as specified in the [BIOVIA CTfile
+format](https://discover.3ds.com/sites/default/files/2020-08/biovia_ctfileformats_2020.pdf).
+Canonical bond endpoints may be sorted, but SDF export and source-bound
+conformer preparation must preserve and verify that original direction.
+Missing or invalid direction metadata fails validation. A retained wedge is
+only a declaration: coordinate stereochemistry is unverified and cannot make a
+scientific or product claim ready. Nonstereo prepared v1/v2 identities remain
+unchanged; a legacy directed-bond canonical record without its source endpoint
+must be reparsed from authenticated SDF bytes.
+
 `candidate_prepared_identity_bound` in v2 records this structural integrity
 check. The source origin is a declaration bound into the rederived intake, not
 independent evidence that its receptor construct or microstate was used in the
