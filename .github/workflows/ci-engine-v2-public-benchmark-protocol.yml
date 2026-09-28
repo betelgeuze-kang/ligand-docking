@@ -9,6 +9,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/fixtures/public_evaluator_authenticated_eb07925cf.source"
       - "tests/unit/test_engine_v2_public_benchmark_materializer.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
@@ -22,6 +23,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/fixtures/public_evaluator_authenticated_eb07925cf.source"
       - "tests/unit/test_engine_v2_public_benchmark_materializer.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
@@ -58,6 +60,7 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
+            tests/fixtures/public_evaluator_authenticated_eb07925cf.source
             tests/unit/test_engine_v2_public_benchmark_materializer.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml

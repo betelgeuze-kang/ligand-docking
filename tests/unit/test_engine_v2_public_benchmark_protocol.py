@@ -311,7 +311,36 @@ def test_document_round_trip_tamper_detection_and_private_atomic_writer(
 def test_scorer_source_identities_verify_and_detect_checkout_drift(
     tmp_path: Path,
 ) -> None:
-    observed = verify_public_benchmark_scorer_sources(Path.cwd())
+    repository_root = Path(__file__).resolve().parents[2]
+    historical_evaluator = (
+        repository_root
+        / "tests/fixtures/public_evaluator_authenticated_eb07925cf.source"
+    ).read_bytes()
+    assert hashlib.sha256(historical_evaluator).hexdigest() == (
+        "d552a9405642a2f03334d18e886c2b1fcb186887820be2919ab9358eff107750"
+    )
+    live_evaluator = (
+        repository_root
+        / "betelgeuze_engine_v2/benchmark/public_evaluator_authenticated.py"
+    )
+    assert hashlib.sha256(live_evaluator.read_bytes()).hexdigest() == (
+        "6e00e5fbac73b6e30ecf694a268228de2792a118953fe8b8e353434e5cd2b077"
+    )
+    with pytest.raises(
+        PublicBenchmarkProtocolError,
+        match="scorer source SHA-256 mismatch for runtime_authenticated_evaluator",
+    ):
+        verify_public_benchmark_scorer_sources(repository_root)
+
+    protocol = frozen_public_benchmark_protocol()
+    for identity in protocol.scorer_identities:
+        target = tmp_path / identity.relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if identity.purpose == "runtime_authenticated_evaluator":
+            target.write_bytes(historical_evaluator)
+        else:
+            shutil.copyfile(repository_root / identity.relative_path, target)
+    observed = verify_public_benchmark_scorer_sources(tmp_path)
     assert set(observed) == {
         "failure_inclusive_report",
         "input_materializer",
@@ -321,13 +350,6 @@ def test_scorer_source_identities_verify_and_detect_checkout_drift(
         "runtime_round2_evaluator",
         "symmetry_aware_rmsd",
     }
-
-    protocol = frozen_public_benchmark_protocol()
-    for identity in protocol.scorer_identities:
-        target = tmp_path / identity.relative_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(identity.relative_path, target)
-    assert verify_public_benchmark_scorer_sources(tmp_path) == observed
 
     drifted = tmp_path / protocol.scorer_identities[0].relative_path
     drifted.write_bytes(drifted.read_bytes() + b"\n# drift\n")

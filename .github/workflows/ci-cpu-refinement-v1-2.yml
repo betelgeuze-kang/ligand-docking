@@ -7,6 +7,8 @@ on:
       - 'tests/unit/test_cpu_*.py'
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
+      - 'tests/unit/frozen_engine_v2_historical_sources.py'
+      - 'tests/fixtures/engine_v2_python_sources_eb07925cf.json'
       - 'tools/verify_cpu_refinement_v1_2_install.py'
       - 'tools/verify_cpu_candidate_resume_install.py'
       - 'tools/benchmark_cpu_refinement_v1_2_verification.py'
