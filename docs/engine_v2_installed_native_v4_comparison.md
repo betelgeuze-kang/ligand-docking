@@ -136,3 +136,27 @@ Independent evidence connecting the prepared receptor construct and ligand
 microstate to the assay, independent calibration and evaluation roles, and
 evaluation outcomes remain prerequisites for testing a scientific ranking
 claim.
+
+## PR #566 exact package-code replay (2026-09-28)
+
+A later isolated Python 3.10 replay used package-code commit
+`3ad331560c29a3e158aa28de95f3d871e11be119` and a newly built wheel with
+SHA-256 `33494fafeeea725aa4031d0f3164462157d20e505f0f87fd4af68112ab71d47d`.
+The subsequent `1da3014dfab316cf83688e57a18b13f5e2095778` commit adds only
+a development-only research decision document and verifier; compared with the
+replayed commit, package source bytes are unchanged. The sealed local receipt at
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-stereo-readiness-20260928/final-receipt.json`
+records the environment, hashes, source verification, installed SDF wedge check,
+and run/verify/resume results. It is local software evidence, not a CI result.
+
+The installed source verifier rederived 258 metadata rows: 255 fit and three
+development records, with 196 point-eligible fit observations and zero
+evaluation labels read. Public v1 and v2 run/verify/resume completed with zero
+engine calls. A separately source-linked **synthetic** v2 candidate made one
+engine call in each engine-bearing arm, then verified and resumed. An unlinked
+real candidate failed before a run directory was created. The read-only
+[comparison readiness diagnostic](native_v4_comparison_readiness.md) found
+three requested records but one distinct Ki chemical identity, zero prepared
+or method-consistent records, and zero four-arm common scored records. No
+actual-target ranking comparison, assay-state verification, or scientific
+qualification follows from this replay.
