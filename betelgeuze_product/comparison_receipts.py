@@ -153,9 +153,9 @@ def _validate_result(result: dict, report_reader) -> list[dict]:
         _require(type(completion) is dict and completion.get("binding") == binding
                  and completion.get("status") == "complete"
                  and completion.get("budget_seconds") == budget
-                 and _finite(completion.get("deadline"))
+                 and _finite(completion.get("deadline")) and completion["deadline"] > 0
                  and _finite(completion.get("measured_process_wall_seconds"))
-                 and completion["measured_process_wall_seconds"] >= 0
+                 and 0 <= completion["measured_process_wall_seconds"] <= budget
                  and _finite(completion.get("termination_overhead_seconds"))
                  and completion["termination_overhead_seconds"] == max(
                      0.0, completion["measured_process_wall_seconds"] - budget),
