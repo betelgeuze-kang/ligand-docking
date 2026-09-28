@@ -202,6 +202,73 @@ def test_nonfit_role_or_document_origin_rejects_embedded_outcome(
         installed.verify_source(poisoned_reference)
 
 
+@pytest.mark.parametrize("location,error", [
+    ("entry", "receptor_entry"),
+    ("origin_descriptor", "source_origin"),
+    ("method", "method_origin"),
+    ("method_nested", "method_origin"),
+    ("bibliography", "bibliography_origin"),
+    ("bibliography_nested", "bibliography_origin"),
+    ("manifest", "receptor_manifest"),
+    ("manifest_descriptor", "receptor_manifest"),
+    ("scope", "receptor_scope"),
+    ("chemistry_scope", "receptor_scope"),
+])
+def test_nonfit_label_free_envelopes_reject_embedded_outcome(
+    bounded_source, location, error,
+):
+    tmp_path, source, reference, entries = bounded_source
+    entries = deepcopy(entries)
+    sentinel = "SYNTHETIC_EVALUATION_SENTINEL"
+    manifest_path = tmp_path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    if location == "entry":
+        entries[-1]["value"] = sentinel
+    elif location == "origin_descriptor":
+        entries[-1]["method_origin"]["value"] = sentinel
+    elif location in ("method", "method_nested"):
+        path = tmp_path / "method6.json"
+        method = json.loads(path.read_text())
+        if location == "method":
+            method["value"] = sentinel
+        else:
+            method["assay_parameters"] = [{"value": sentinel}]
+        _write_json(path, method)
+        entries[-1]["method_origin"]["sha256"] = common.file_sha(path)
+    elif location in ("bibliography", "bibliography_nested"):
+        path = tmp_path / "bibliography6.json"
+        bibliography = {"uid": "123", "pubtype": ["Journal Article"]}
+        if location == "bibliography":
+            bibliography["value"] = sentinel
+        else:
+            bibliography["pubtype"].append({"value": sentinel})
+        _write_json(path, bibliography)
+        entries[-1]["bibliography_origin"] = {
+            "path": str(path), "sha256": common.file_sha(path),
+        }
+    elif location in ("manifest", "manifest_descriptor"):
+        if location == "manifest":
+            manifest["value"] = sentinel
+        else:
+            manifest["scope"]["value"] = sentinel
+        _write_json(manifest_path, manifest)
+    else:
+        path = tmp_path / "scope.json"
+        scope = json.loads(path.read_text())
+        if location == "scope":
+            scope["value"] = sentinel
+        else:
+            scope["chemistry_scope"]["value"] = sentinel
+        _write_json(path, scope)
+        manifest["scope"]["sha256"] = common.file_sha(path)
+        _write_json(manifest_path, manifest)
+    poisoned_reference = _rebuild_resealed_source(
+        tmp_path, source, reference, entries,
+    )
+    with pytest.raises(ValueError, match="outcome_or_nonmetadata_field_in_" + error):
+        installed.verify_source(poisoned_reference)
+
+
 def test_summary_rejects_embedded_outcome(bounded_source):
     _, source, reference, _ = bounded_source
     path = source / "summary.json"

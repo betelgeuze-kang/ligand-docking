@@ -95,7 +95,9 @@ def _verified_intake(reference: dict) -> tuple[dict, dict, list[dict]]:
         "path": summary["manifest_path"],
         "sha256": summary["manifest_sha256"],
     })
+    receptor.validate_manifest(manifest)
     scope = bound.bound_json(manifest["scope"])
+    receptor.validate_scope(scope)
     if scope.get("target_annotation") != primary.TARGET:
         raise ValueError("unsupported_installed_native_v4_target")
     # This rederives the entire supplied graph and every cached row from bound

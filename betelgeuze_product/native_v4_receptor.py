@@ -24,6 +24,139 @@ from . import native_v4_primary as primary
 KIND = "native_chembl_receptor_research_v4"
 SUBTYPE = "receptor_radioligand_binding_Ki"
 
+_ORIGIN_FIELDS = {"path", "sha256", "format", "pointer"}
+_ENTRY_REQUIRED = {
+    "activity_id", "node_id", "metadata_origin", "role_origin", "document_origin",
+}
+_ENTRY_ORIGINS = {
+    "metadata_origin", "role_origin", "activity_origin", "method_origin",
+    "document_origin", "primary_origin", "bibliography_origin",
+}
+_SCOPE_REQUIRED = {
+    "intake_source_kind", "endpoint", "endpoint_subtype",
+    "source_database_license", "evidence_scope",
+    "physical_target_state_verified", "resplit_after_exclusions",
+    "target_annotation", "positive_threshold_negative_log10_molar",
+    "top_fraction", "chemistry_scope",
+}
+_SCOPE_OPTIONAL = {
+    "customer_execution", "numeric_annotation_policy", "primary_units_policy",
+    "scientific_validation", "source1_bibliography_policy",
+    "source_license_reference",
+}
+_CHEMISTRY_FIELDS = {
+    "heavy_atoms_min", "heavy_atoms_max", "fragment_count", "elements",
+    "isotope_atoms", "radical_electrons",
+}
+_METHOD_REQUIRED = {
+    "assay_chembl_id", "document_chembl_id", "target_chembl_id",
+    "assay_type", "assay_tax_id", "confidence_score", "description",
+}
+_METHOD_FIELDS = _METHOD_REQUIRED | {
+    "aidx", "assay_category", "assay_cell_type", "assay_classifications",
+    "assay_group", "assay_organism", "assay_parameters", "assay_strain",
+    "assay_subcellular_fraction", "assay_test_type", "assay_tissue",
+    "assay_type_description", "bao_format", "bao_label", "cell_chembl_id",
+    "confidence_description", "relationship_description", "relationship_type",
+    "src_assay_id", "src_id", "tissue_chembl_id", "variant_sequence",
+} | set(components.POLICY_FIELDS)
+
+
+def _source_origin(origin, *, required=True):
+    if (type(origin) is not dict or not {"path", "sha256"} <= set(origin)
+            or set(origin) - _ORIGIN_FIELDS
+            or any(type(value) is not str for value in origin.values())):
+        raise ValueError("outcome_or_nonmetadata_field_in_source_origin")
+    if required and (not origin["path"] or not origin["sha256"]):
+        raise ValueError("invalid_source_origin")
+
+
+def validate_manifest(manifest):
+    if (type(manifest) is not dict or set(manifest) != {
+        "schema_version", "scope", "metadata_records", "identity_context",
+    } or type(manifest["schema_version"]) is not str):
+        raise ValueError("outcome_or_nonmetadata_field_in_receptor_manifest")
+    for field in ("scope", "metadata_records", "identity_context"):
+        origin = manifest[field]
+        if (type(origin) is not dict
+                or not {"path", "sha256"} <= set(origin)
+                or set(origin) - _ORIGIN_FIELDS
+                or any(type(value) is not str for value in origin.values())):
+            raise ValueError("outcome_or_nonmetadata_field_in_receptor_manifest")
+
+
+def validate_scope(scope):
+    if (type(scope) is not dict or not _SCOPE_REQUIRED <= set(scope)
+            or set(scope) - _SCOPE_REQUIRED - _SCOPE_OPTIONAL):
+        raise ValueError("outcome_or_nonmetadata_field_in_receptor_scope")
+    chemistry = scope["chemistry_scope"]
+    if (type(chemistry) is not dict or set(chemistry) != _CHEMISTRY_FIELDS
+            or any(type(chemistry[key]) is not int
+                   for key in _CHEMISTRY_FIELDS - {"elements"})
+            or type(chemistry["elements"]) is not list
+            or any(type(element) is not str for element in chemistry["elements"])):
+        raise ValueError("outcome_or_nonmetadata_field_in_receptor_scope")
+    strings = _SCOPE_REQUIRED - {
+        "physical_target_state_verified", "resplit_after_exclusions",
+        "positive_threshold_negative_log10_molar", "top_fraction",
+        "chemistry_scope",
+    }
+    strings |= _SCOPE_OPTIONAL - {"customer_execution", "scientific_validation"}
+    if (any(type(scope[key]) is not str for key in strings if key in scope)
+            or any(type(scope[key]) is not bool for key in (
+                "physical_target_state_verified", "resplit_after_exclusions",
+                "customer_execution", "scientific_validation",
+            ) if key in scope)
+            or any(type(scope[key]) not in (int, float) for key in (
+                "positive_threshold_negative_log10_molar", "top_fraction",
+            ))):
+        raise ValueError("outcome_or_nonmetadata_field_in_receptor_scope")
+
+
+def validate_entry(entry):
+    if (type(entry) is not dict or not _ENTRY_REQUIRED <= set(entry)
+            or set(entry) - _ENTRY_REQUIRED - _ENTRY_ORIGINS
+            or type(entry["activity_id"]) is not int
+            or type(entry["node_id"]) is not str):
+        raise ValueError("outcome_or_nonmetadata_field_in_receptor_entry")
+    for field in _ENTRY_ORIGINS:
+        origin = entry.get(field)
+        if origin is None:
+            if field in {"metadata_origin", "role_origin", "document_origin"}:
+                raise ValueError("missing_receptor_source_origin")
+            continue
+        _source_origin(origin)
+
+
+def method_projection(source):
+    """Keep only the bounded ChEMBL assay metadata shapes used by v4."""
+    error = "outcome_or_nonmetadata_field_in_method_origin"
+    if type(source) is not dict:
+        raise ValueError(error)
+    if not source:
+        return source
+    if (not _METHOD_REQUIRED <= set(source) or set(source) - _METHOD_FIELDS
+            or any(type(value) not in (str, int, float, bool, type(None))
+                   for key, value in source.items()
+                   if key not in {"assay_classifications", "assay_parameters"})
+            or any(type(source[key]) is not list or source[key]
+                   for key in ("assay_classifications", "assay_parameters")
+                   if key in source)):
+        raise ValueError(error)
+    return source
+
+
+def bibliography_projection(source):
+    error = "outcome_or_nonmetadata_field_in_bibliography_origin"
+    if (type(source) is not dict or set(source) - {"uid", "pubtype"}
+            or ("uid" in source and type(source["uid"]) is not str)
+            or ("pubtype" in source and (
+                type(source["pubtype"]) is not list
+                or any(type(item) is not str for item in source["pubtype"])
+            ))):
+        raise ValueError(error)
+    return source
+
 
 def resolve(entry, cache):
     """Hash-bound raw JSON with a strict JSON pointer; no default/last-row join."""
@@ -342,7 +475,9 @@ def method_supported(method, activity, document):
 
 def derive(manifest_path, manifest_sha256):
     manifest = bound.bound_json({"path": str(manifest_path), "sha256": manifest_sha256})
+    validate_manifest(manifest)
     scope = bound.bound_json(manifest["scope"])
+    validate_scope(scope)
     if (
         scope.get("intake_source_kind") != KIND
         or scope.get("endpoint") != "Ki"
@@ -359,6 +494,8 @@ def derive(manifest_path, manifest_sha256):
     ):
         raise ValueError("unsupported_receptor_manifest")
     inputs = bound.bound_jsonl(manifest["metadata_records"])
+    for entry in inputs:
+        validate_entry(entry)
     indexed = bound.unique_index(inputs, "activity_id")
     context_bytes = bound.read_bound(
         manifest["identity_context"]["path"], manifest["identity_context"]["sha256"]
@@ -459,7 +596,7 @@ def derive(manifest_path, manifest_sha256):
             if set(native) != bound.ACTIVITY_FIELDS:
                 raise ValueError("incomplete_or_extra_native_capture_fields")
         observation = measurement.normalize_measurement(native) if native else None
-        method = (
+        method = method_projection(
             resolve(entry["method_origin"], cache) if entry.get("method_origin") else {}
         )
         document = document_projection(resolve(entry["document_origin"], cache))
@@ -501,16 +638,15 @@ def derive(manifest_path, manifest_sha256):
                 )
             else:
                 issues.append("activity_comment_requires_individual_resolution")
+        bibliography = bibliography_projection(
+            resolve(entry["bibliography_origin"], cache)
+            if entry.get("bibliography_origin") else {}
+        )
         profile = {
             "evidence_scope": scope["evidence_scope"],
             "evidence_kind": "experimental_label",
             "source_id": metadata["src_id"],
-            "document_kind": document_kind(
-                document,
-                resolve(entry["bibliography_origin"], cache)
-                if entry.get("bibliography_origin")
-                else {},
-            ),
+            "document_kind": document_kind(document, bibliography),
             "citation_identity_status": "resolved"
             if document.get("document_chembl_id") == metadata["document_chembl_id"]
             else "unresolved",
