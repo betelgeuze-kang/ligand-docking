@@ -3,7 +3,7 @@
   "record_id": "human_brd4_bd1_3mxf_jq1_enantiomer_source_candidate",
   "recorded_date": "2026-09-28",
   "status": "SOURCE_CANDIDATE_ONLY_PREPARATION_AND_ADMISSION_BLOCKED",
-  "scope": "Read-only public-source candidate record with three hash-bound official structural files; no assay paper or supplement downloads, prepared molecular states, physical evaluation, fit/evaluation role assignment, or scientific admission.",
+  "scope": "Read-only public-source candidate record with three hash-bound official structural files and a derived PubChem identity projection; no assay paper or supplement downloads, prepared molecular states, physical evaluation, fit/evaluation role assignment, or scientific admission.",
   "source_refs": {
     "pdb_3mxf": {
       "url": "https://www.rcsb.org/structure/3MXF",
@@ -46,6 +46,16 @@
       "cid": 49871818,
       "role": "public_chemical_identity_metadata_not_experimental_measurement"
     },
+    "pubchem_jq1_cation_49867179": {
+      "url": "https://pubchem.ncbi.nlm.nih.gov/compound/49867179",
+      "cid": 49867179,
+      "role": "public_cationic_identity_metadata_not_experimental_microstate"
+    },
+    "pubchem_jq1_cation_144913635": {
+      "url": "https://pubchem.ncbi.nlm.nih.gov/compound/144913635",
+      "cid": 144913635,
+      "role": "public_cationic_identity_metadata_not_experimental_microstate"
+    },
     "pdb_usage_policy": {
       "url": "https://www.rcsb.org/pages/usage-policy",
       "role": "pdb_archive_data_cc0_policy_only"
@@ -76,9 +86,24 @@
   ],
   "source_geometry_receipt": {
     "relative_path": "source_geometry.v1.json",
-    "size_bytes": 67787,
-    "sha256": "3ee4b1330a40569a3905eefd6f0096ecda609dbb489f935b486a4e5c596cf84c",
+    "size_bytes": 70257,
+    "sha256": "c4f76d48147d4a976e5d99a8f297e5d27c045ae8799785a16b2fae09f0450695",
     "evidence_class": "unprepared_archive_coordinate_and_ccd_observation",
+    "prepared_state_or_assay_microstate_proven": false
+  },
+  "pubchem_structure_projection_receipt": {
+    "relative_path": "pubchem_jq1_structure_projection.v1.json",
+    "size_bytes": 21589,
+    "sha256": "de411616d5ac55c32e9e2788ab13bafb9c68d43d560ca1c728489b8e9fb81957",
+    "evidence_class": "derived_pubchem_standardized_structure_not_assay_material",
+    "raw_pubchem_record_redistributed": false,
+    "product_source_rights_reviewed": false
+  },
+  "jq1_chemical_lineage_receipt": {
+    "relative_path": "jq1_chemical_lineage.v1.json",
+    "size_bytes": 12497,
+    "sha256": "5ffc73217aa8ff7dacb27d5ab544405fdbc187ee986bd0f346a011263bcfed5c",
+    "evidence_class": "ccd_dictionary_and_pubchem_standardized_identity_contrast_not_experimental_microstate",
     "prepared_state_or_assay_microstate_proven": false
   },
   "structure_observation": {
@@ -212,7 +237,7 @@
     {
       "id": "crystal_components_and_geometry",
       "status": "unresolved",
-      "required_evidence": "Review 208 water oxygens, iodide, DMS, EDO, protein altlocs, and wwPDB ligand geometry outliers; record explicit retain/exclude decisions and source atom lineage."
+      "required_evidence": "Review 208 water oxygens, iodide, DMS, EDO, protein altlocs, the declared unobserved LYS141 CD/CE/NZ atoms, and wwPDB ligand geometry outliers; record explicit retain/exclude and reconstruction decisions with source atom lineage."
     },
     {
       "id": "assay_censoring_and_method",

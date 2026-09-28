@@ -34,8 +34,18 @@ SOURCE_FILES = {
 }
 GEOMETRY_RECEIPT = (
     "source_geometry.v1.json",
-    67787,
-    "3ee4b1330a40569a3905eefd6f0096ecda609dbb489f935b486a4e5c596cf84c",
+    70257,
+    "c4f76d48147d4a976e5d99a8f297e5d27c045ae8799785a16b2fae09f0450695",
+)
+PUBCHEM_PROJECTION_RECEIPT = (
+    "pubchem_jq1_structure_projection.v1.json",
+    21589,
+    "de411616d5ac55c32e9e2788ab13bafb9c68d43d560ca1c728489b8e9fb81957",
+)
+CHEMICAL_LINEAGE_RECEIPT = (
+    "jq1_chemical_lineage.v1.json",
+    12497,
+    "5ffc73217aa8ff7dacb27d5ab544405fdbc187ee986bd0f346a011263bcfed5c",
 )
 
 
@@ -81,6 +91,8 @@ def validate(manifest: dict[str, object]) -> int:
             "tanaka_2016_supplement",
             "pubchem_s_jq1",
             "pubchem_r_jq1",
+            "pubchem_jq1_cation_49867179",
+            "pubchem_jq1_cation_144913635",
             "pdb_usage_policy",
         },
         "unexpected_source_refs",
@@ -100,6 +112,35 @@ def validate(manifest: dict[str, object]) -> int:
         and sources["tanaka_2016_supplement"]["direct_file_access_verified"] is False,
         "assay_source_changed_or_access_overclaimed",
     )
+    for source_key, cid, role in (
+        (
+            "pubchem_s_jq1",
+            46907787,
+            "public_chemical_identity_metadata_not_experimental_measurement",
+        ),
+        (
+            "pubchem_r_jq1",
+            49871818,
+            "public_chemical_identity_metadata_not_experimental_measurement",
+        ),
+        (
+            "pubchem_jq1_cation_49867179",
+            49867179,
+            "public_cationic_identity_metadata_not_experimental_microstate",
+        ),
+        (
+            "pubchem_jq1_cation_144913635",
+            144913635,
+            "public_cationic_identity_metadata_not_experimental_microstate",
+        ),
+    ):
+        require(
+            sources[source_key]["cid"] == cid
+            and sources[source_key]["url"]
+            == f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid}"
+            and sources[source_key]["role"] == role,
+            "pubchem_source_identity_changed",
+        )
 
     structure = manifest["structure_observation"]
     require(
@@ -257,6 +298,46 @@ def validate(manifest: dict[str, object]) -> int:
         and sha256(actual_geometry_path) == geometry_digest,
         "source_geometry_receipt_bytes_changed",
     )
+    for field, expected, evidence_class, extra in (
+        (
+            "pubchem_structure_projection_receipt",
+            PUBCHEM_PROJECTION_RECEIPT,
+            "derived_pubchem_standardized_structure_not_assay_material",
+            {
+                "raw_pubchem_record_redistributed": False,
+                "product_source_rights_reviewed": False,
+            },
+        ),
+        (
+            "jq1_chemical_lineage_receipt",
+            CHEMICAL_LINEAGE_RECEIPT,
+            "ccd_dictionary_and_pubchem_standardized_identity_contrast_not_experimental_microstate",
+            {"prepared_state_or_assay_microstate_proven": False},
+        ),
+    ):
+        relative, size, digest = expected
+        require(
+            manifest[field]
+            == {
+                "relative_path": relative,
+                "size_bytes": size,
+                "sha256": digest,
+                "evidence_class": evidence_class,
+                **extra,
+            },
+            f"{field}_changed_or_overclaimed",
+        )
+        path = ROOT / relative
+        require(
+            path.is_file()
+            and not path.is_symlink()
+            and path.resolve().is_relative_to(ROOT.resolve()),
+            f"{field}_missing_or_outside_packet",
+        )
+        require(
+            path.stat().st_size == size and sha256(path) == digest,
+            f"{field}_bytes_changed",
+        )
     decisions = manifest["unresolved_decisions"]
     require(
         len(decisions) == 7

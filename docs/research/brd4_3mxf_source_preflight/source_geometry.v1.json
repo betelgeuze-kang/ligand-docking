@@ -1737,6 +1737,101 @@
   "protein_source_scope": {
     "assay_construct_equivalence_inferred": false,
     "chain_label_asym_id": "A",
+    "declared_unobserved_atom_count": 3,
+    "declared_unobserved_atom_rows": [
+      {
+        "source_line": 3832,
+        "values": {
+          "auth_asym_id": "A",
+          "auth_atom_id": "CD",
+          "auth_comp_id": "LYS",
+          "auth_seq_id": "141",
+          "id": "1",
+          "label_alt_id": "?",
+          "label_asym_id": "A",
+          "label_atom_id": "CD",
+          "label_comp_id": "LYS",
+          "label_seq_id": "100",
+          "occupancy_flag": "1",
+          "pdb_ins_code": "?",
+          "pdb_model_num": "1",
+          "polymer_flag": "Y"
+        }
+      },
+      {
+        "source_line": 3833,
+        "values": {
+          "auth_asym_id": "A",
+          "auth_atom_id": "CE",
+          "auth_comp_id": "LYS",
+          "auth_seq_id": "141",
+          "id": "2",
+          "label_alt_id": "?",
+          "label_asym_id": "A",
+          "label_atom_id": "CE",
+          "label_comp_id": "LYS",
+          "label_seq_id": "100",
+          "occupancy_flag": "1",
+          "pdb_ins_code": "?",
+          "pdb_model_num": "1",
+          "polymer_flag": "Y"
+        }
+      },
+      {
+        "source_line": 3834,
+        "values": {
+          "auth_asym_id": "A",
+          "auth_atom_id": "NZ",
+          "auth_comp_id": "LYS",
+          "auth_seq_id": "141",
+          "id": "3",
+          "label_alt_id": "?",
+          "label_asym_id": "A",
+          "label_atom_id": "NZ",
+          "label_comp_id": "LYS",
+          "label_seq_id": "100",
+          "occupancy_flag": "1",
+          "pdb_ins_code": "?",
+          "pdb_model_num": "1",
+          "polymer_flag": "Y"
+        }
+      }
+    ],
+    "declared_unobserved_residue_count": 0,
+    "declared_zero_occupancy_atom_count": 0,
+    "lys141_observed_atom_site_ids_and_names": [
+      {
+        "atom_site_id": "855",
+        "auth_atom_id": "N",
+        "label_atom_id": "N"
+      },
+      {
+        "atom_site_id": "856",
+        "auth_atom_id": "CA",
+        "label_atom_id": "CA"
+      },
+      {
+        "atom_site_id": "857",
+        "auth_atom_id": "C",
+        "label_atom_id": "C"
+      },
+      {
+        "atom_site_id": "858",
+        "auth_atom_id": "O",
+        "label_atom_id": "O"
+      },
+      {
+        "atom_site_id": "859",
+        "auth_atom_id": "CB",
+        "label_atom_id": "CB"
+      },
+      {
+        "atom_site_id": "860",
+        "auth_atom_id": "CG",
+        "label_atom_id": "CG"
+      }
+    ],
+    "lys141_sidechain_reconstruction_performed": false,
     "poly_seq_scheme_residue_count": 127,
     "protein_altloc_rows": [
       {

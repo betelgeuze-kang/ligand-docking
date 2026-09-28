@@ -32,6 +32,11 @@ class BRD4ManifestTests(unittest.TestCase):
             PACKET / VERIFIER.GEOMETRY_RECEIPT[0],
             self.root / VERIFIER.GEOMETRY_RECEIPT[0],
         )
+        for relative, _, _ in (
+            VERIFIER.PUBCHEM_PROJECTION_RECEIPT,
+            VERIFIER.CHEMICAL_LINEAGE_RECEIPT,
+        ):
+            shutil.copyfile(PACKET / relative, self.root / relative)
         self.manifest = json.loads(
             (PACKET / "source_manifest.v1.json").read_text(encoding="utf-8")
         )
@@ -75,6 +80,14 @@ class BRD4ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "roles_or_rights_overclaimed"):
             VERIFIER.validate(altered)
 
+    def test_pubchem_identity_promoted_to_assay_source_rejects(self) -> None:
+        altered = copy.deepcopy(self.manifest)
+        altered["source_refs"]["pubchem_jq1_cation_49867179"]["role"] = (
+            "experimental_assay_material"
+        )
+        with self.assertRaisesRegex(ValueError, "pubchem_source_identity_changed"):
+            VERIFIER.validate(altered)
+
     def test_coordinated_geometry_receipt_and_manifest_hash_tamper_rejects(
         self,
     ) -> None:
@@ -87,6 +100,28 @@ class BRD4ManifestTests(unittest.TestCase):
             ValueError, "source_geometry_receipt_changed_or_overclaimed"
         ):
             VERIFIER.validate(altered)
+
+    def test_coordinated_chemical_receipt_and_manifest_hash_tamper_rejects(
+        self,
+    ) -> None:
+        for field, expected in (
+            (
+                "pubchem_structure_projection_receipt",
+                VERIFIER.PUBCHEM_PROJECTION_RECEIPT,
+            ),
+            ("jq1_chemical_lineage_receipt", VERIFIER.CHEMICAL_LINEAGE_RECEIPT),
+        ):
+            with self.subTest(field=field):
+                altered = copy.deepcopy(self.manifest)
+                path = self.root / expected[0]
+                original = path.read_bytes()
+                path.write_bytes(original[:-1] + bytes([original[-1] ^ 1]))
+                altered[field]["sha256"] = VERIFIER.sha256(path)
+                with self.assertRaisesRegex(
+                    ValueError, f"{field}_changed_or_overclaimed"
+                ):
+                    VERIFIER.validate(altered)
+                path.write_bytes(original)
 
 
 if __name__ == "__main__":

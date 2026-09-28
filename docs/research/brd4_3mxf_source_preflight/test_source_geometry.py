@@ -47,6 +47,17 @@ class SourceGeometryReceiptTests(unittest.TestCase):
         self.assertEqual(protein["source_residues_42_43"][1]["mon_id"], "MET")
         self.assertEqual(protein["source_core_residues_44_168_count"], 125)
         self.assertEqual(len(protein["protein_altloc_rows"]), 30)
+        self.assertEqual(protein["declared_unobserved_atom_count"], 3)
+        self.assertEqual(
+            {
+                row["values"]["auth_atom_id"]
+                for row in protein["declared_unobserved_atom_rows"]
+            },
+            {"CD", "CE", "NZ"},
+        )
+        self.assertEqual(protein["declared_zero_occupancy_atom_count"], 0)
+        self.assertEqual(protein["declared_unobserved_residue_count"], 0)
+        self.assertFalse(protein["lys141_sidechain_reconstruction_performed"])
         environment = self.observation["jq1_source_environment"]
         self.assertEqual(
             {
@@ -77,6 +88,49 @@ class SourceGeometryReceiptTests(unittest.TestCase):
         self.assertEqual(MODULE.verify()["status"], "PASS_SOURCE_GEOMETRY_ONLY")
         self.assertNotIn("betelgeuze_engine_v2", sys.modules)
 
+    def test_unobserved_lys141_declaration_boundaries(self):
+        protein = self.observation["protein_source_scope"]
+        declared = protein["declared_unobserved_atom_rows"]
+        observed = protein["lys141_observed_atom_site_ids_and_names"]
+        self.assertEqual(
+            MODULE._missing_atom_scope(declared, observed, False)[
+                "declared_unobserved_atom_count"
+            ],
+            3,
+        )
+        for mutation, reason in (
+            (lambda rows: rows.pop(), "unobserved_atom_declarations_changed"),
+            (
+                lambda rows: rows[0]["values"].__setitem__("auth_atom_id", "CG"),
+                "unobserved_atom_declarations_changed",
+            ),
+            (
+                lambda rows: rows[0]["values"].__setitem__("occupancy_flag", "0"),
+                "unobserved_atom_declarations_changed",
+            ),
+            (
+                lambda rows: rows[0]["values"].__setitem__("auth_seq_id", "142"),
+                "unobserved_atom_declarations_changed",
+            ),
+        ):
+            with self.subTest(mutation=reason):
+                altered = deepcopy(declared)
+                mutation(altered)
+                with self.assertRaisesRegex(ValueError, reason):
+                    MODULE._missing_atom_scope(altered, observed, False)
+        with self.assertRaisesRegex(
+            ValueError, "unobserved_residue_declarations_changed"
+        ):
+            MODULE._missing_atom_scope(declared, observed, True)
+        altered_observed = deepcopy(observed)
+        altered_observed.append(
+            {"atom_site_id": "9999", "auth_atom_id": "CD", "label_atom_id": "CD"}
+        )
+        with self.assertRaisesRegex(
+            ValueError, "unobserved_atom_present_in_atom_sites"
+        ):
+            MODULE._missing_atom_scope(declared, altered_observed, False)
+
     def test_selection_distance_and_prepared_claim_tamper_reject(self):
         changes = [
             (("jq1_source_and_ccd_lineage", "selection", "label_asym_id"), "C"),
@@ -86,6 +140,7 @@ class SourceGeometryReceiptTests(unittest.TestCase):
                 "2.0",
             ),
             (("eligibility", "receptor_prepared"), True),
+            (("protein_source_scope", "declared_unobserved_atom_count"), 2),
         ]
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

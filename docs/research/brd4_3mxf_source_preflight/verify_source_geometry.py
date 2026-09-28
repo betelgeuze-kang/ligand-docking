@@ -106,6 +106,12 @@ def _rows(block, category: str):
     ]
 
 
+def _has_category(block, category: str) -> bool:
+    return any(category in loop.categories for loop in block.loops) or any(
+        key.startswith(category + ".") for key in block.scalar_values
+    )
+
+
 def _select(rows, selection: dict[str, str]):
     return [
         row
@@ -162,6 +168,57 @@ def _atom(row):
         "coordinate_angstrom_source_tokens": [
             row["values"]["cartn_" + axis] for axis in "xyz"
         ],
+    }
+
+
+def _missing_atom_scope(unobserved_atoms, lys141_observed, residue_category_present):
+    require(
+        not residue_category_present,
+        "unobserved_residue_declarations_changed",
+    )
+    expected_fields = {
+        "pdb_model_num": "1",
+        "polymer_flag": "Y",
+        "occupancy_flag": "1",
+        "auth_asym_id": "A",
+        "auth_comp_id": "LYS",
+        "auth_seq_id": "141",
+        "pdb_ins_code": "?",
+        "label_alt_id": "?",
+        "label_asym_id": "A",
+        "label_comp_id": "LYS",
+        "label_seq_id": "100",
+    }
+    require(
+        len(unobserved_atoms) == 3
+        and {row["values"]["auth_atom_id"] for row in unobserved_atoms}
+        == {"CD", "CE", "NZ"}
+        and all(
+            all(
+                row["values"].get(key) == value
+                for key, value in expected_fields.items()
+            )
+            and row["values"]["label_atom_id"] == row["values"]["auth_atom_id"]
+            for row in unobserved_atoms
+        ),
+        "unobserved_atom_declarations_changed",
+    )
+    require(
+        bool(lys141_observed)
+        and not any(
+            row["auth_atom_id"] in {"CD", "CE", "NZ"}
+            or row["label_atom_id"] in {"CD", "CE", "NZ"}
+            for row in lys141_observed
+        ),
+        "unobserved_atom_present_in_atom_sites",
+    )
+    return {
+        "declared_unobserved_atom_rows": unobserved_atoms,
+        "declared_unobserved_atom_count": len(unobserved_atoms),
+        "declared_zero_occupancy_atom_count": 0,
+        "declared_unobserved_residue_count": 0,
+        "lys141_observed_atom_site_ids_and_names": lys141_observed,
+        "lys141_sidechain_reconstruction_performed": False,
     }
 
 
@@ -273,6 +330,30 @@ def build_observation(root: Path = ROOT):
     protein = _select(
         sites, {"group_pdb": "ATOM", "label_asym_id": "A", "label_entity_id": "1"}
     )
+    unobserved_atoms = _rows(coordinate_block, "_pdbx_unobs_or_zero_occ_atoms")
+    lys141_sites = _select(
+        protein,
+        {
+            "auth_asym_id": "A",
+            "auth_comp_id": "LYS",
+            "auth_seq_id": "141",
+            "label_seq_id": "100",
+            "pdbx_pdb_model_num": "1",
+        },
+    )
+    lys141_observed = [
+        {
+            "atom_site_id": row["values"]["id"],
+            "auth_atom_id": row["values"]["auth_atom_id"],
+            "label_atom_id": row["values"]["label_atom_id"],
+        }
+        for row in lys141_sites
+    ]
+    missing_atom_scope = _missing_atom_scope(
+        unobserved_atoms,
+        lys141_observed,
+        _has_category(coordinate_block, "_pdbx_unobs_or_zero_occ_residues"),
+    )
     sequence = _select(
         _rows(coordinate_block, "_pdbx_poly_seq_scheme"), {"asym_id": "A"}
     )
@@ -368,6 +449,7 @@ def build_observation(root: Path = ROOT):
             "source_core_residues_44_168_count": len(sequence[2:]),
             "protein_atom_site_count": len(protein),
             "protein_altloc_rows": [_atom(row) for row in altloc],
+            **missing_atom_scope,
             "assay_construct_equivalence_inferred": False,
         },
         "jq1_source_environment": {
