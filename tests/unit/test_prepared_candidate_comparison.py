@@ -244,6 +244,42 @@ def integrity_run(tmp_path_factory):
 
 
 @pytest.mark.parametrize(
+    "change,error",
+    [
+        ("order", "priority_order_prediction_mismatch"),
+        ("prediction", "priority_model_prediction_mismatch"),
+    ],
+)
+def test_resealed_priority_and_comparison_cannot_forge_selector_order(
+    integrity_run, change, error
+):
+    root, frozen, result = integrity_run
+    priority_path = root / "ai_engine/priority.json"
+    comparison_path = root / "comparison.json"
+    original_priority = priority_path.read_bytes()
+    original_comparison = comparison_path.read_bytes()
+    try:
+        priority = comparison.read(priority_path)
+        if change == "order":
+            assert len(priority["order"]) >= 2
+            priority["order"][:2] = reversed(priority["order"][:2])
+        else:
+            priority["predictions"][priority["order"][-1]] += 10.0
+            priority["order"] = comparison._prediction_order(
+                frozen, priority["predictions"]
+            )
+        priority_path.write_text(comparison.canonical(priority) + "\n")
+        resealed = copy.deepcopy(result)
+        resealed["arms"]["ai_engine"]["worker_observations"]["priority.json"] = priority
+        comparison_path.write_text(comparison.canonical(resealed) + "\n")
+        with pytest.raises(ValueError, match=error):
+            comparison.run(frozen["protocol"], root, resume=True)
+    finally:
+        priority_path.write_bytes(original_priority)
+        comparison_path.write_bytes(original_comparison)
+
+
+@pytest.mark.parametrize(
     "arm,rid,change,error",
     [
         ("similarity", "a", "score", "similarity_score_prediction_mismatch"),
@@ -369,22 +405,27 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
                 "deadline": time.monotonic() - 1,
             },
         )
+    order, predictions, setup = comparison._priority(
+        frozen, "similarity", directory / "similarity"
+    )
+    rid = order[0]
     retained = {
-        "record_id": "a",
+        "record_id": rid,
         "arm": "similarity",
         "binding": binding,
-        "score": 1.0,
+        "score": predictions[rid],
+        "prediction": predictions[rid],
         "status": "evaluated",
         "completed_monotonic": time.monotonic() - 10,
     }
     comparison.publish(
-        directory / "similarity" / (comparison.sha("a") + ".row.json"),
+        directory / "similarity" / (comparison.sha(rid) + ".row.json"),
         {"payload": retained, "sha256": comparison.sha(retained)},
     )
     comparison.publish(
         directory / "similarity/priority.json",
-        {"binding": binding, "arm": "similarity", "order": list("abcd"),
-         "predictions": dict.fromkeys("abcd", 1.0), "setup_cost": {},
+        {"binding": binding, "arm": "similarity", "order": order,
+         "predictions": predictions, "setup_cost": setup,
          "evaluation_labels_read": 0},
     )
     with (directory / "similarity/worker.lock").open("a") as lease:
@@ -399,7 +440,8 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
     assert result["arms"]["similarity"]["denominator"] == {
         "requested": 4,
         "evaluated": 1,
-        "not_processed": 3,
+        "not_processed": 2,
+        "unsupported": 1,
     }
     assert all(
         a["denominator"] == {"requested": 4, "not_processed": 4}
