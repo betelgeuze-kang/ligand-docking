@@ -662,7 +662,7 @@ def worker(run_dir, arm, deadline):
 
 
 def _replayed_priority_predictions(frozen, arm, priority):
-    """Re-evaluate saved predictions from frozen fit rows or the bound model."""
+    """Replay selectors from frozen fit rows, including the AI model fit."""
     from tools.product.train_public_assay_selector import features
     import numpy as np
 
@@ -670,10 +670,10 @@ def _replayed_priority_predictions(frozen, arm, priority):
     pool = frozen["pool"]
     candidates = {row["record_id"]: row for row in rows if row["record_id"] in pool}
     valid = [rid for rid in pool if candidates[rid]["smiles"]]
-    if not valid:
-        return {}
     smiles = [candidates[rid]["smiles"] for rid in valid]
     if arm in ("similarity", "similarity_engine"):
+        if not valid:
+            return {}
         selected = [
             row for row in rows
             if row["role"] == "fit" and row["fit_value"] is not None and row["smiles"]
@@ -695,39 +695,113 @@ def _replayed_priority_predictions(frozen, arm, priority):
             )
             values.append(float(fy[similarity == similarity.max()].mean()))
     elif arm == "ai_engine":
+        from sklearn.linear_model import Ridge
+
         reference = priority["setup_cost"].get("model_reference")
         if reference is None:
             raise ValueError("missing_priority_model_reference")
+        if (frozen["reused_ai_model"] is not None
+                and reference != frozen["reused_ai_model"]["reference"]):
+            raise ValueError("priority_model_source_mismatch")
         payload = bound(reference)
+        selected = [
+            row for row in rows
+            if row["role"] == "fit" and row["fit_value"] is not None and row["smiles"]
+        ]
+        x = features([row["smiles"] for row in selected])
+        y = np.asarray([row["fit_value"] for row in selected], dtype=np.float64)
+        weights = None
         if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
-            from tools.product.train_public_chembl_selector import predict_checkpoint
+            from tools.product import public_chembl_assay_dataset as intake
+            from tools.product.train_public_chembl_selector import (
+                FEATURES, implementation_hashes, predict_checkpoint,
+            )
 
-            target = bound(payload["protocol"])["target_annotation_sha256"]
+            source = frozen["protocol"]["source"]
+            summary = bound({
+                "path": str(Path(source["input_dir"]) / "summary.json"),
+                "sha256": source["summary_sha256"],
+            })
+            training = bound(payload["protocol"])
+            checkpoint = bound(payload["checkpoint"])
+            use_component = summary["schema_version"] == intake.SCHEMA_V4
+            expected_weighting = (
+                "inverse_count_per_connected_source_component_and_canonical_isomeric_structure"
+                if use_component else
+                "inverse_count_per_source_assay_and_canonical_isomeric_structure"
+            )
+            if (
+                payload["evaluation_values_read"] != 0
+                or payload["split_plan_sha256"] != frozen["provenance"]["split_plan_sha256"]
+                or payload["intake_scope_sha256"] != frozen["provenance"]["intake_scope_sha256"]
+                or training["intake_summary_sha256"] != source["summary_sha256"]
+                or training["split_plan_sha256"] != frozen["provenance"]["split_plan_sha256"]
+                or training["intake_scope_sha256"] != frozen["provenance"]["intake_scope_sha256"]
+                or training["fit_record_ids"] != [row["record_id"] for row in selected]
+                or training["ridge_alpha"] != 10.0
+                or training["fit_replicate_weighting"] != expected_weighting
+                or training["features"] != FEATURES
+                or training["hyperparameter_search"] is not False
+                or training["implementation_hashes"] != implementation_hashes()
+                or checkpoint["training_protocol_sha256"] != payload["protocol"]["sha256"]
+                or checkpoint["split_plan_sha256"] != frozen["provenance"]["split_plan_sha256"]
+                or checkpoint["intake_scope_sha256"] != frozen["provenance"]["intake_scope_sha256"]
+                or checkpoint["endpoint"] != frozen["provenance"]["endpoint"]
+                or checkpoint["target_annotation_sha256"] != training["target_annotation_sha256"]
+                or checkpoint["implementation_hashes"] != implementation_hashes()
+            ):
+                raise ValueError("priority_model_source_mismatch")
+            group = "component_id" if use_component else "assay_id"
+            repetitions = Counter((row[group], row["smiles"]) for row in selected)
+            weights = np.asarray([
+                1.0 / repetitions[(row[group], row["smiles"])] for row in selected
+            ])
+            saved_weights = checkpoint["coefficients"]
+            saved_intercept = checkpoint["intercept"]
+        else:
+            if (
+                set(payload) != {
+                    "coefficients", "intercept", "evidence_kind",
+                    "fit_record_ids", "source_rows_sha256",
+                }
+                or payload["evidence_kind"] != "synthetic_constants"
+                or payload["fit_record_ids"] != [row["record_id"] for row in selected]
+                or payload["source_rows_sha256"] != sha(rows)
+            ):
+                raise ValueError("priority_model_source_mismatch")
+            saved_weights = payload["coefficients"]
+            saved_intercept = payload["intercept"]
+        model = Ridge(alpha=10.0, solver="cholesky").fit(x, y, sample_weight=weights)
+        saved = np.asarray(saved_weights, dtype=np.float64)
+        if (
+            saved.shape != (1024,)
+            or not np.isfinite(saved).all()
+            or not np.allclose(saved, model.coef_, rtol=1e-12, atol=1e-12)
+            or not math.isclose(_number(saved_intercept), float(model.intercept_),
+                                rel_tol=1e-12, abs_tol=1e-12)
+        ):
+            raise ValueError("priority_model_fit_mismatch")
+        if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
+            # Preserve cold per-row and reused batch inference rounding after
+            # independently validating the serialized model against the fit.
             queries = (
-                [smiles]
-                if frozen["reused_ai_model"] is not None
+                [smiles] if frozen["reused_ai_model"] is not None
                 else [[smile] for smile in smiles]
             )
+            if not queries:
+                queries = [[selected[0]["smiles"]]]
             values = [
-                value
-                for query in queries
+                value for query in queries
                 for value in predict_checkpoint(
-                    payload["checkpoint"]["path"],
-                    payload["checkpoint"]["sha256"],
-                    query,
-                    target,
+                    payload["checkpoint"]["path"], payload["checkpoint"]["sha256"],
+                    query, training["target_annotation_sha256"],
                     endpoint=frozen["provenance"]["endpoint"],
                 )
             ]
+            if not valid:
+                values = []
         else:
-            weights = np.asarray(payload["coefficients"], dtype=np.float64)
-            if (
-                weights.shape != (1024,)
-                or not np.isfinite(weights).all()
-                or payload["source_rows_sha256"] != sha(rows)
-            ):
-                raise ValueError("invalid_reused_synthetic_model")
-            values = features(smiles) @ weights + _number(payload["intercept"])
+            values = features(smiles) @ saved + _number(saved_intercept) if valid else []
     else:
         raise ValueError("invalid_priority_arm")
     return {rid: _number(float(value)) for rid, value in zip(valid, values)}
@@ -931,6 +1005,7 @@ def run(protocol, output_dir, *, resume=False):
         else:
             publish(output_dir / "frozen.json", envelope)
         arms = {}
+        receipt_verification_seconds = {}
         for arm in _execution_order(protocol):
             directory = output_dir / arm
             directory.mkdir(exist_ok=resume)
@@ -1031,9 +1106,13 @@ def run(protocol, output_dir, *, resume=False):
             completion = read(directory / "completion.json")
             if completion["binding"] != binding:
                 raise ValueError("completion_binding_mismatch")
+            verification_started = time.perf_counter()
             arms[arm] = _arm_summary(directory, frozen, binding, completion)
+            receipt_verification_seconds[arm] = time.perf_counter() - verification_started
         # Recheck every bound input and all code before publishing completed comparison.
+        source_recheck_started = time.perf_counter()
         refreshed, _ = freeze(protocol)
+        source_recheck_seconds = time.perf_counter() - source_recheck_started
         if refreshed != frozen:
             raise ValueError("inputs_changed_during_comparison")
         result = {
@@ -1048,6 +1127,12 @@ def run(protocol, output_dir, *, resume=False):
             "same_prepared_assay_state_verified": False,
             "end_to_end_cost_measured": False,
             "common_validation_seconds": setup_seconds,
+            "receipt_verification_cost": {
+                "arm_wall_seconds": receipt_verification_seconds,
+                "final_source_recheck_wall_seconds": source_recheck_seconds,
+                "scope": "read_only_receipt_and_fit_replay_after_each_worker_outside_equal_worker_deadlines",
+                "completed_run_only": True,
+            },
             "orchestrator_wall_seconds": time.perf_counter() - started,
             "cost_scope": frozen["scope"],
             "upstream_cost": None,

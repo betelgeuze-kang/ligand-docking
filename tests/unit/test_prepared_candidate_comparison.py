@@ -102,6 +102,17 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path, monkeypatch
     result = comparison.run(protocol, output)
     assert set(result["arms"]) == set(comparison.ARMS)
     assert result["pool"] == list("abcd")
+    verification = result["receipt_verification_cost"]
+    assert set(verification["arm_wall_seconds"]) == set(comparison.ARMS)
+    assert verification["completed_run_only"] is True
+    assert all(value >= 0 for value in verification["arm_wall_seconds"].values())
+    assert verification["final_source_recheck_wall_seconds"] >= 0
+    assert (
+        sum(verification["arm_wall_seconds"].values())
+        + verification["final_source_recheck_wall_seconds"]
+        + result["common_validation_seconds"]
+        <= result["orchestrator_wall_seconds"]
+    )
     for name, arm in result["arms"].items():
         assert arm["cost"]["status"] == "complete", (
             name,
@@ -277,6 +288,51 @@ def test_resealed_priority_and_comparison_cannot_forge_selector_order(
     finally:
         priority_path.write_bytes(original_priority)
         comparison_path.write_bytes(original_comparison)
+
+
+def test_resealed_model_priority_rows_and_comparison_cannot_forge_fit(integrity_run):
+    root, frozen, result = integrity_run
+    directory = root / "ai_engine"
+    priority_path = directory / "priority.json"
+    comparison_path = root / "comparison.json"
+    priority = comparison.read(priority_path)
+    model_path = Path(priority["setup_cost"]["model_reference"]["path"])
+    rows = [directory / (comparison.sha(rid) + ".row.json") for rid in frozen["pool"]]
+    paths = [model_path, priority_path, comparison_path, *rows]
+    original = {path: path.read_bytes() for path in paths if path.exists()}
+    try:
+        model = comparison.read(model_path)
+        model["intercept"] += 0.25
+        model_path.write_text(comparison.canonical(model) + "\n")
+        priority["setup_cost"]["model_reference"] = comparison.file_ref(model_path)
+        priority["predictions"] = {
+            rid: value + 0.25 for rid, value in priority["predictions"].items()
+        }
+        assert priority["order"] == comparison._prediction_order(
+            frozen, priority["predictions"]
+        )
+        priority_path.write_text(comparison.canonical(priority) + "\n")
+        resealed = copy.deepcopy(result)
+        arm = resealed["arms"]["ai_engine"]
+        arm["worker_observations"]["priority.json"] = priority
+        for path in rows:
+            if not path.exists():
+                continue
+            wrapped = comparison.read(path)
+            item = wrapped["payload"]
+            if item["record_id"] in priority["predictions"]:
+                item["prediction"] = priority["predictions"][item["record_id"]]
+            wrapped["sha256"] = comparison.sha(item)
+            path.write_text(comparison.canonical(wrapped) + "\n")
+            for summary_row in arm["rows"]:
+                if summary_row["record_id"] == item["record_id"]:
+                    summary_row["prediction"] = item["prediction"]
+        comparison_path.write_text(comparison.canonical(resealed) + "\n")
+        with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
+            comparison.run(frozen["protocol"], root, resume=True)
+    finally:
+        for path, content in original.items():
+            path.write_bytes(content)
 
 
 @pytest.mark.parametrize(
@@ -531,6 +587,26 @@ def test_native_shaped_synthetic_intake_preserves_roles_and_reuses_actual_traine
     assert saved["evaluation_values_read"] == 0
     assert saved["split_plan_sha256"] == provenance["split_plan_sha256"]
     assert cost["mode"] == "cold_fit_included"
+    priority = {"setup_cost": copy.deepcopy(cost)}
+    replayed = comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+    assert set(replayed) == set(predicted)
+    checkpoint_path = directory / "model/selector.json"
+    frozen_fit_path = directory / "model/frozen-fit.json"
+    saved_checkpoint = checkpoint_path.read_bytes()
+    saved_frozen_fit = frozen_fit_path.read_bytes()
+    try:
+        checkpoint = comparison.read(checkpoint_path)
+        checkpoint["intercept"] += 0.25
+        checkpoint_path.write_text(comparison.canonical(checkpoint) + "\n")
+        frozen_fit = comparison.read(frozen_fit_path)
+        frozen_fit["checkpoint"] = comparison.file_ref(checkpoint_path)
+        frozen_fit_path.write_text(comparison.canonical(frozen_fit) + "\n")
+        priority["setup_cost"]["model_reference"] = comparison.file_ref(frozen_fit_path)
+        with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
+            comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+    finally:
+        checkpoint_path.write_bytes(saved_checkpoint)
+        frozen_fit_path.write_bytes(saved_frozen_fit)
     # Exercise the complete native-shaped route with synthetic API data only.
     run_dir = source["root"] / "native-run"
     result = comparison.run(protocol, run_dir)
