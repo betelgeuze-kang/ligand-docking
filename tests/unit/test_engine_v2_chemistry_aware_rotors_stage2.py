@@ -56,6 +56,10 @@ def _system(
                 atom_j=max(first, second),
                 order=order,
                 stereo=stereo,
+                metadata=(
+                    {"sdf_v2000_stereo_first_atom_index": first}
+                    if stereo in {"up", "down", "either"} else {}
+                ),
             )
             for index, (first, second, order, stereo) in enumerate(bonds)
         ),
