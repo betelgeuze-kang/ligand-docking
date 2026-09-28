@@ -135,6 +135,27 @@
     "reported_greater_than_5_uM_treated_as_exact_value": false,
     "ic50_converted_to_ki_kd_or_binding_free_energy": false
   },
+  "bounded_metadata_screen": {
+    "status": "BLOCKED_IDENTITY_REVIEW_REQUIRED",
+    "scope": "Two public PubChem InChIKey identities and the Tanaka DOI against frozen identity metadata; not a complete connected source-family review",
+    "pubchem_identity_api_sha256": "52f8a2d8842bff5304c5c8da533fde93d49ff4a04c85e2c96d9052bb19923a63",
+    "context_sha256": "f34b50ecb797e2800716728992730e10f19eb48bec7d15d24214c676a1df47d1",
+    "candidates_sha256": "f1eef8c71314642089ba45bbea09f71a5fc02bde9d7cc93d7dcfe8819232f667",
+    "preflight_sha256": "e7fd2d4f983a29988c6c31d3f8094e421e5fe4ce69fd80ee180dbc235d6942bc",
+    "diagnostic_sha256": "91fcacd26726e26d39f6ebfd9aa6a0045b3d88b338bdab3669e704922c36360e",
+    "candidate_count": 2,
+    "blocked_identity_count": 2,
+    "component_node_count": 148913,
+    "reserved_nodes_count": 1336,
+    "unknown_policy_nodes_count": 41,
+    "direct_reserved_or_unknown_key_overlaps": 0,
+    "shortest_indirect_path_edge_types": ["inchikey_connectivity", "document", "scaffold"],
+    "diagnostic_complete_for_supplied_context": true,
+    "complete_family_clearance": false,
+    "chemical_equivalence_or_leakage_proven": false,
+    "protected_outcome_values_accessed": false,
+    "source_roles_granted": false
+  },
   "protection_and_roles": {
     "protected_outcomes_accessed": false,
     "identity_component_and_reservation_screen_completed": false,

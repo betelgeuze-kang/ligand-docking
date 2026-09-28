@@ -2,7 +2,7 @@
 
 `source_manifest.v1.json` records a **candidate source pair**, not a prepared receptor, a prepared ligand pair, an admitted assay set, or a numerical result. Its state is `SOURCE_CANDIDATE_ONLY_PREPARATION_AND_ADMISSION_BLOCKED`. Three official structural files were downloaded and hash-bound; the assay paper and supplement remain URL-only. No protected outcome was opened and no fit, calibration, or evaluation role was assigned.
 
-The manifest's `source_file_receipts` bind each file's official download URL, exact path, byte size, and SHA-256. The downloaded files are [3MXF mmCIF](official_sources/coordinates-3mxf.cif) (287,430 bytes), [CCD JQ1 CIF](official_sources/chemcomp-jq1.cif) (10,889 bytes), and the [wwPDB validation PDF](official_sources/3mxf_full_validation.pdf) (908,684 bytes). These bytes support source inspection and repeatable hashing only. The [PDB archive usage policy](https://www.rcsb.org/pages/usage-policy) states CC0 for archive data; no article or supplement use right is inferred from that policy.
+The manifest's `source_file_receipts` bind each file's official download URL, exact path, byte size, and SHA-256; the verifier independently pins those identities. The downloaded files are [3MXF mmCIF](official_sources/coordinates-3mxf.cif) (287,430 bytes), [CCD JQ1 CIF](official_sources/chemcomp-jq1.cif) (10,889 bytes), and the [wwPDB validation PDF](official_sources/3mxf_full_validation.pdf) (908,684 bytes). These bytes support source inspection and repeatable hashing only. The [PDB archive usage policy](https://www.rcsb.org/pages/usage-policy) states CC0 for archive data. This packet does not establish that the separate validation PDF has the same redistribution status, or any article or supplement use right; product redistribution remains blocked pending review.
 
 ## Primary evidence and its scope
 
@@ -13,6 +13,8 @@ The [3MXF deposition](https://www.rcsb.org/structure/3MXF) is a 1.60 Å crystal 
 The deposited JQ1 is the 6S species, but its [CCD record](https://www.rcsb.org/ligand/JQ1) and 3MXF display a cationic `C23H26ClN4O2S` component with iodide. Public PubChem identity records for [S JQ1, CID 46907787](https://pubchem.ncbi.nlm.nih.gov/compound/46907787) and [R JQ1, CID 49871818](https://pubchem.ncbi.nlm.nih.gov/compound/49871818) describe the neutral `C23H25ClN4O2S` stereoisomers. PubChem supplies chemical identity metadata; it is not the primary assay source. An assay microstate, force-field parameters, source-atom map, and a separately prepared R conformer remain unresolved. The R enantiomer has no observed bound pose in 3MXF.
 
 The assay's 44–168 domain overlaps the 3MXF core, but the assayed His tag, the crystal's extra residues 42–43, the A43 discrepancy, and treatment of crystallographic components have not been reconciled. This is why construct equivalence and prepared-input eligibility remain false. A two-enantiomer contrast can support a bounded test only after an IC50 protocol is frozen; it cannot establish general ranking quality. The installed native-v4 radioligand-binding Ki contract does not admit this AlphaScreen IC50.
+
+A bounded, outcome-free identity screen used the two [PubChem](https://pubchem.ncbi.nlm.nih.gov/) enantiomer InChIKeys and the Tanaka DOI against frozen protected identity metadata. Both candidates returned `blocked_identity` in the current policy's transitive component (148,913 nodes; 1,336 reserved and 41 unknown-policy nodes). Neither candidate directly shared a key with a reserved or unknown-policy node. The shortest witness instead traversed InChIKey connectivity, document and scaffold keys; this does not prove chemical equivalence or leakage. The manifest pins the input and receipt hashes. The full connected source family and source-use rights are still unreviewed; no protected outcomes were read and no source role was granted.
 
 ## Required before any admission
 
@@ -28,6 +30,7 @@ Run from the repository root:
 
 ```sh
 python3 -I -B docs/research/brd4_3mxf_source_preflight/verify_manifest.py
+python3 -I -S -B docs/research/brd4_3mxf_source_preflight/test_verify_manifest.py
 ```
 
-The verifier reads this JSON manifest and the three files named in `source_file_receipts`. It checks each path, declared official URL, byte size, and SHA-256, and rejects a changed endpoint/censoring record, populated roles, enabled admission flags, or a preparation claim. It does not decode the assay paper, access the network, or open a protected context. A passing check confirms file integrity and the packet's blocked-state contract only; it does not establish scientific preparation, rights, or assay equivalence.
+The verifier reads this JSON manifest and the three files named in `source_file_receipts`. It checks each path, declared official URL, byte size, and SHA-256 against independent pinned values, and rejects a changed endpoint/censoring record, deleted or enabled admission gates, populated roles, or a preparation claim. The negative controls test coordinated file-plus-manifest tampering and gate deletion. It does not decode the assay paper, access the network, or open a protected context. A passing check confirms file integrity and the packet's blocked-state contract only; it does not establish scientific preparation, rights, or assay equivalence.

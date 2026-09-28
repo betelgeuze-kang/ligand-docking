@@ -26,7 +26,10 @@ ALLOWED_FILES = {
     ".gitattributes",
     "README.md",
     "source_manifest.v1.json",
+    "source_geometry.v1.json",
+    "test_source_geometry.py",
     "verify_manifest.py",
+    "verify_source_geometry.py",
     *(item[0] for item in SOURCE_FILES.values()),
 }
 
@@ -77,6 +80,35 @@ def verify() -> dict[str, object]:
         and source_refs["primary_article"]["doi"] == "10.1021/acs.jmedchem.5b01890",
         "source_or_archive_policy_changed",
     )
+    supplement = source_refs["acs_supplement_metadata"]
+    require(
+        set(supplement) == {"csv", "pdf"}
+        and supplement["csv"]
+        == {
+            "api_url": "https://api.figshare.com/v2/articles/3208402",
+            "public_url": "https://acs.figshare.com/articles/dataset/Discovery_and_Characterization_of_a_Highly_Potent_and_Selective_Aminopyrazoline_Based_in_Vivo_Probe_BAY_598_for_the_Protein_Lysine_Methyltransferase_SMYD2/3208402",
+            "doi": "10.1021/acs.jmedchem.5b01890.s002",
+            "filename": "jm5b01890_si_002.csv",
+            "file_id": 5037607,
+            "size_bytes": 2520,
+            "sha256": "90d3af3c34c5575c07c162ed34735db6f394be7625ebb391b7fe6359a780496e",
+            "license": "CC BY-NC 4.0",
+            "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        }
+        and supplement["pdf"]
+        == {
+            "api_url": "https://api.figshare.com/v2/articles/3208399",
+            "public_url": "https://acs.figshare.com/articles/journal_contribution/Discovery_and_Characterization_of_a_Highly_Potent_and_Selective_Aminopyrazoline_Based_in_Vivo_Probe_BAY_598_for_the_Protein_Lysine_Methyltransferase_SMYD2/3208399",
+            "doi": "10.1021/acs.jmedchem.5b01890.s001",
+            "filename": "jm5b01890_si_001.pdf",
+            "file_id": 5037604,
+            "size_bytes": 1344845,
+            "sha256": "958bfab7555582cc2bcce7883a07cd0556be0fb8d2c571448e5c5610db66981d",
+            "license": "CC BY-NC 4.0",
+            "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        },
+        "supplement_license_metadata_changed",
+    )
     receipts = manifest["source_file_receipts"]
     require(
         len(receipts) == 2
@@ -112,6 +144,23 @@ def verify() -> dict[str, object]:
             and hashlib.sha256(path.read_bytes()).hexdigest() == digest,
             "archive_bytes_changed",
         )
+
+    geometry = manifest["source_geometry_receipt"]
+    require(
+        geometry
+        == {
+            "relative_path": "source_geometry.v1.json",
+            "sha256": "6742487cd3146331346b3ada339652017a650586017810ca17d4c6a0df089e41",
+            "status": "SOURCE_GEOMETRY_OBSERVED_PREPARATION_AND_ADMISSION_BLOCKED",
+            "prepared_state_created": False,
+            "source_atom_coordinates_modified": False,
+        }
+        and not (ROOT / geometry["relative_path"]).is_symlink()
+        and (ROOT / geometry["relative_path"]).resolve().is_relative_to(ROOT)
+        and hashlib.sha256((ROOT / geometry["relative_path"]).read_bytes()).hexdigest()
+        == geometry["sha256"],
+        "source_geometry_receipt_changed",
+    )
 
     external = manifest["external_source_audit"]
     require(
@@ -156,6 +205,7 @@ def verify() -> dict[str, object]:
                 "censored": True,
             },
         ]
+        and observations["matched_experimental_batch_verified"] is False
         and observations["ic50_converted_to_ki_kd_or_binding_free_energy"] is False
         and observations["physical_comparison_performed"] is False,
         "assay_pair_or_censoring_changed",
@@ -198,10 +248,17 @@ def verify() -> dict[str, object]:
 
     rights = manifest["rights"]
     require(
-        rights["pdb_archive_license"] == "CC0-1.0"
-        and rights["publisher_supplement_per_file_reuse_verified"] is False
-        and rights["intended_use_rights_review_complete"] is False
-        and rights["free_access_treated_as_reuse_permission"] is False,
+        rights
+        == {
+            "pdb_archive_license": "CC0-1.0",
+            "article_xml_reports_cc_by": True,
+            "acs_supplement_csv_pdf_license_identified": True,
+            "acs_supplement_csv_pdf_license": "CC BY-NC 4.0",
+            "publisher_supplement_commercial_reuse_verified": False,
+            "intended_use_rights_review_complete": False,
+            "commercial_supplement_reuse_authorized": False,
+            "free_access_treated_as_reuse_permission": False,
+        },
         "rights_overclaimed",
     )
     require(
@@ -253,6 +310,7 @@ def verify() -> dict[str, object]:
         == {
             "public_source_audit": True,
             "archive_bytes_recorded": True,
+            "source_geometry_observation": True,
             "publisher_files_imported_into_packet": False,
             "receptor_prepared": False,
             "ligands_prepared": False,

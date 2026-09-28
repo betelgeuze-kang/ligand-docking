@@ -1,0 +1,746 @@
+{
+  "disulfide_annotation_and_nearby_zinc": {
+    "annotation_adjudicated": false,
+    "coordination_or_covalence_inferred": false,
+    "interpretation": "the_deposited_disulf_annotation_and_Zn_S_proximity_are_preserved_separately_without_selecting_chemical_state",
+    "source_annotated_partner_distance": {
+      "atoms": [
+        {
+          "coordinate_angstrom_source_tokens": [
+            "-20.370",
+            "2.175",
+            "-0.975"
+          ],
+          "source_identity_and_annotations": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "SG",
+            "auth_comp_id": "CYS",
+            "auth_seq_id": "209",
+            "group_pdb": "ATOM",
+            "id": "1653",
+            "label_alt_id": ".",
+            "label_asym_id": "A",
+            "label_atom_id": "SG",
+            "label_comp_id": "CYS",
+            "label_entity_id": "1",
+            "label_seq_id": "209",
+            "occupancy": "1.00",
+            "pdbx_formal_charge": "?",
+            "pdbx_pdb_ins_code": "?",
+            "pdbx_pdb_model_num": "1",
+            "type_symbol": "S"
+          },
+          "source_line": 4876
+        },
+        {
+          "coordinate_angstrom_source_tokens": [
+            "-20.902",
+            "3.171",
+            "1.067"
+          ],
+          "source_identity_and_annotations": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "SG",
+            "auth_comp_id": "CYS",
+            "auth_seq_id": "267",
+            "group_pdb": "ATOM",
+            "id": "2126",
+            "label_alt_id": ".",
+            "label_asym_id": "A",
+            "label_atom_id": "SG",
+            "label_comp_id": "CYS",
+            "label_entity_id": "1",
+            "label_seq_id": "267",
+            "occupancy": "1.00",
+            "pdbx_formal_charge": "?",
+            "pdbx_pdb_ins_code": "?",
+            "pdbx_pdb_model_num": "1",
+            "type_symbol": "S"
+          },
+          "source_line": 5349
+        }
+      ],
+      "distance_angstrom": "2.333410379680"
+    },
+    "source_struct_conn_annotation": {
+      "source_line": 1745,
+      "values": {
+        "conn_type_id": "disulf",
+        "details": "?",
+        "id": "disulf1",
+        "pdbx_dist_value": "2.333",
+        "pdbx_leaving_atom_flag": "?",
+        "pdbx_pdb_id": "?",
+        "pdbx_ptnr1_label_alt_id": "?",
+        "pdbx_ptnr1_pdb_ins_code": "?",
+        "pdbx_ptnr1_standard_comp_id": "?",
+        "pdbx_ptnr2_label_alt_id": "?",
+        "pdbx_ptnr2_pdb_ins_code": "?",
+        "pdbx_ptnr3_label_alt_id": "?",
+        "pdbx_ptnr3_label_asym_id": "?",
+        "pdbx_ptnr3_label_atom_id": "?",
+        "pdbx_ptnr3_label_comp_id": "?",
+        "pdbx_ptnr3_label_seq_id": "?",
+        "pdbx_ptnr3_pdb_ins_code": "?",
+        "pdbx_role": "?",
+        "pdbx_value_order": "?",
+        "ptnr1_auth_asym_id": "A",
+        "ptnr1_auth_comp_id": "CYS",
+        "ptnr1_auth_seq_id": "209",
+        "ptnr1_label_asym_id": "A",
+        "ptnr1_label_atom_id": "SG",
+        "ptnr1_label_comp_id": "CYS",
+        "ptnr1_label_seq_id": "209",
+        "ptnr1_symmetry": "1_555",
+        "ptnr2_auth_asym_id": "A",
+        "ptnr2_auth_comp_id": "CYS",
+        "ptnr2_auth_seq_id": "267",
+        "ptnr2_label_asym_id": "A",
+        "ptnr2_label_atom_id": "SG",
+        "ptnr2_label_comp_id": "CYS",
+        "ptnr2_label_seq_id": "267",
+        "ptnr2_symmetry": "1_555"
+      }
+    },
+    "zinc_to_sulfur_distances": [
+      {
+        "atoms": [
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-22.523",
+              "2.650",
+              "-0.433"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "ZN",
+              "auth_comp_id": "ZN",
+              "auth_seq_id": "1003",
+              "group_pdb": "HETATM",
+              "id": "3473",
+              "label_alt_id": ".",
+              "label_asym_id": "B",
+              "label_atom_id": "ZN",
+              "label_comp_id": "ZN",
+              "label_entity_id": "2",
+              "label_seq_id": ".",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "2",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "ZN"
+            },
+            "source_line": 6696
+          },
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-20.370",
+              "2.175",
+              "-0.975"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "SG",
+              "auth_comp_id": "CYS",
+              "auth_seq_id": "209",
+              "group_pdb": "ATOM",
+              "id": "1653",
+              "label_alt_id": ".",
+              "label_asym_id": "A",
+              "label_atom_id": "SG",
+              "label_comp_id": "CYS",
+              "label_entity_id": "1",
+              "label_seq_id": "209",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "?",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "S"
+            },
+            "source_line": 4876
+          }
+        ],
+        "distance_angstrom": "2.270418023184"
+      },
+      {
+        "atoms": [
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-22.523",
+              "2.650",
+              "-0.433"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "ZN",
+              "auth_comp_id": "ZN",
+              "auth_seq_id": "1003",
+              "group_pdb": "HETATM",
+              "id": "3473",
+              "label_alt_id": ".",
+              "label_asym_id": "B",
+              "label_atom_id": "ZN",
+              "label_comp_id": "ZN",
+              "label_entity_id": "2",
+              "label_seq_id": ".",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "2",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "ZN"
+            },
+            "source_line": 6696
+          },
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-23.528",
+              "4.321",
+              "-1.856"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "SG",
+              "auth_comp_id": "CYS",
+              "auth_seq_id": "262",
+              "group_pdb": "ATOM",
+              "id": "2087",
+              "label_alt_id": ".",
+              "label_asym_id": "A",
+              "label_atom_id": "SG",
+              "label_comp_id": "CYS",
+              "label_entity_id": "1",
+              "label_seq_id": "262",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "?",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "S"
+            },
+            "source_line": 5310
+          }
+        ],
+        "distance_angstrom": "2.413958367495"
+      },
+      {
+        "atoms": [
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-22.523",
+              "2.650",
+              "-0.433"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "ZN",
+              "auth_comp_id": "ZN",
+              "auth_seq_id": "1003",
+              "group_pdb": "HETATM",
+              "id": "3473",
+              "label_alt_id": ".",
+              "label_asym_id": "B",
+              "label_atom_id": "ZN",
+              "label_comp_id": "ZN",
+              "label_entity_id": "2",
+              "label_seq_id": ".",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "2",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "ZN"
+            },
+            "source_line": 6696
+          },
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-23.994",
+              "0.808",
+              "-0.353"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "SG",
+              "auth_comp_id": "CYS",
+              "auth_seq_id": "264",
+              "group_pdb": "ATOM",
+              "id": "2102",
+              "label_alt_id": ".",
+              "label_asym_id": "A",
+              "label_atom_id": "SG",
+              "label_comp_id": "CYS",
+              "label_entity_id": "1",
+              "label_seq_id": "264",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "?",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "S"
+            },
+            "source_line": 5325
+          }
+        ],
+        "distance_angstrom": "2.358644737980"
+      },
+      {
+        "atoms": [
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-22.523",
+              "2.650",
+              "-0.433"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "ZN",
+              "auth_comp_id": "ZN",
+              "auth_seq_id": "1003",
+              "group_pdb": "HETATM",
+              "id": "3473",
+              "label_alt_id": ".",
+              "label_asym_id": "B",
+              "label_atom_id": "ZN",
+              "label_comp_id": "ZN",
+              "label_entity_id": "2",
+              "label_seq_id": ".",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "2",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "ZN"
+            },
+            "source_line": 6696
+          },
+          {
+            "coordinate_angstrom_source_tokens": [
+              "-20.902",
+              "3.171",
+              "1.067"
+            ],
+            "source_identity_and_annotations": {
+              "auth_asym_id": "A",
+              "auth_atom_id": "SG",
+              "auth_comp_id": "CYS",
+              "auth_seq_id": "267",
+              "group_pdb": "ATOM",
+              "id": "2126",
+              "label_alt_id": ".",
+              "label_asym_id": "A",
+              "label_atom_id": "SG",
+              "label_comp_id": "CYS",
+              "label_entity_id": "1",
+              "label_seq_id": "267",
+              "occupancy": "1.00",
+              "pdbx_formal_charge": "?",
+              "pdbx_pdb_ins_code": "?",
+              "pdbx_pdb_model_num": "1",
+              "type_symbol": "S"
+            },
+            "source_line": 5349
+          }
+        ],
+        "distance_angstrom": "2.269158875002"
+      }
+    ]
+  },
+  "eligibility": {
+    "calibration_admitted": false,
+    "chemical_state_selected": false,
+    "customer_execution": false,
+    "independent_evaluation_admitted": false,
+    "ligands_prepared": false,
+    "parameters_assigned": false,
+    "physical_evaluations": 0,
+    "prepared_input_executable": false,
+    "receptor_prepared": false,
+    "scientifically_validated": false,
+    "source_roles_assigned": false,
+    "training_admitted": false
+  },
+  "evidence_class": "unprepared_archive_coordinate_observation",
+  "h41_completeness": {
+    "ccd_declared_atom_count": 55,
+    "interpretation": "atom_name_and_element_coverage_against_CCD_only_not_complete_preparation_or_assay_microstate_equivalence",
+    "missing_heavy_atom_names": [],
+    "missing_hydrogen_atom_names": [
+      "H1",
+      "H131",
+      "H132",
+      "H15",
+      "H17",
+      "H18",
+      "H19",
+      "H21",
+      "H23",
+      "H311",
+      "H312",
+      "H32",
+      "H341",
+      "H342",
+      "H351",
+      "H352",
+      "H353",
+      "H4",
+      "H8",
+      "H9"
+    ],
+    "observed_atom_site_ids": [
+      "3476",
+      "3477",
+      "3478",
+      "3479",
+      "3480",
+      "3481",
+      "3482",
+      "3483",
+      "3484",
+      "3485",
+      "3486",
+      "3487",
+      "3488",
+      "3489",
+      "3490",
+      "3491",
+      "3492",
+      "3493",
+      "3494",
+      "3495",
+      "3496",
+      "3497",
+      "3498",
+      "3499",
+      "3500",
+      "3501",
+      "3502",
+      "3503",
+      "3504",
+      "3505",
+      "3506",
+      "3507",
+      "3508",
+      "3509",
+      "3510"
+    ],
+    "observed_heavy_atom_count": 35,
+    "observed_heavy_atom_names": [
+      "C1",
+      "C13",
+      "C14",
+      "C16",
+      "C17",
+      "C18",
+      "C19",
+      "C2",
+      "C20",
+      "C21",
+      "C23",
+      "C27",
+      "C3",
+      "C30",
+      "C31",
+      "C34",
+      "C35",
+      "C4",
+      "C5",
+      "C6",
+      "C8",
+      "C9",
+      "CL10",
+      "CL7",
+      "F24",
+      "F25",
+      "N11",
+      "N12",
+      "N15",
+      "N26",
+      "N28",
+      "N29",
+      "O22",
+      "O32",
+      "O33"
+    ],
+    "observed_hydrogen_atom_count": 0,
+    "selection": {
+      "auth_asym_id": "A",
+      "auth_comp_id": "H41",
+      "auth_seq_id": "1432",
+      "entry_id": "5ARG",
+      "group_pdb": "HETATM",
+      "label_asym_id": "E",
+      "label_comp_id": "H41",
+      "label_entity_id": "3",
+      "pdbx_pdb_model_num": "1"
+    },
+    "source_atom_site_unknown_formal_charge_count": 35
+  },
+  "h41_environment": {
+    "all_nonpoly_component_atom_site_counts": {
+      "GOL": 6,
+      "H41": 35,
+      "HOH": 137,
+      "SAM": 27,
+      "ZN": 3
+    },
+    "nearest_protein_heavy_atom_pair": {
+      "atoms": [
+        {
+          "coordinate_angstrom_source_tokens": [
+            "-12.419",
+            "0.848",
+            "-15.152"
+          ],
+          "source_identity_and_annotations": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "O32",
+            "auth_comp_id": "H41",
+            "auth_seq_id": "1432",
+            "group_pdb": "HETATM",
+            "id": "3493",
+            "label_alt_id": ".",
+            "label_asym_id": "E",
+            "label_atom_id": "O32",
+            "label_comp_id": "H41",
+            "label_entity_id": "3",
+            "label_seq_id": ".",
+            "occupancy": "1.00",
+            "pdbx_formal_charge": "?",
+            "pdbx_pdb_ins_code": "?",
+            "pdbx_pdb_model_num": "1",
+            "type_symbol": "O"
+          },
+          "source_line": 6716
+        },
+        {
+          "coordinate_angstrom_source_tokens": [
+            "-11.431",
+            "2.109",
+            "-17.167"
+          ],
+          "source_identity_and_annotations": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "O",
+            "auth_comp_id": "THR",
+            "auth_seq_id": "185",
+            "group_pdb": "ATOM",
+            "id": "1468",
+            "label_alt_id": ".",
+            "label_asym_id": "A",
+            "label_atom_id": "O",
+            "label_comp_id": "THR",
+            "label_entity_id": "1",
+            "label_seq_id": "185",
+            "occupancy": "1.00",
+            "pdbx_formal_charge": "?",
+            "pdbx_pdb_ins_code": "?",
+            "pdbx_pdb_model_num": "1",
+            "type_symbol": "O"
+          },
+          "source_line": 4691
+        }
+      ],
+      "distance_angstrom": "2.574196962161"
+    },
+    "nearest_sam_heavy_atom_pair": {
+      "atoms": [
+        {
+          "coordinate_angstrom_source_tokens": [
+            "-18.710",
+            "7.425",
+            "-14.818"
+          ],
+          "source_identity_and_annotations": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "CL10",
+            "auth_comp_id": "H41",
+            "auth_seq_id": "1432",
+            "group_pdb": "HETATM",
+            "id": "3478",
+            "label_alt_id": ".",
+            "label_asym_id": "E",
+            "label_atom_id": "CL10",
+            "label_comp_id": "H41",
+            "label_entity_id": "3",
+            "label_seq_id": ".",
+            "occupancy": "1.00",
+            "pdbx_formal_charge": "?",
+            "pdbx_pdb_ins_code": "?",
+            "pdbx_pdb_model_num": "1",
+            "type_symbol": "CL"
+          },
+          "source_line": 6701
+        },
+        {
+          "coordinate_angstrom_source_tokens": [
+            "-21.183",
+            "9.492",
+            "-13.641"
+          ],
+          "source_identity_and_annotations": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "CE",
+            "auth_comp_id": "SAM",
+            "auth_seq_id": "1434",
+            "group_pdb": "HETATM",
+            "id": "3525",
+            "label_alt_id": ".",
+            "label_asym_id": "G",
+            "label_atom_id": "CE",
+            "label_comp_id": "SAM",
+            "label_entity_id": "5",
+            "label_seq_id": ".",
+            "occupancy": "1.00",
+            "pdbx_formal_charge": "?",
+            "pdbx_pdb_ins_code": "?",
+            "pdbx_pdb_model_num": "1",
+            "type_symbol": "C"
+          },
+          "source_line": 6748
+        }
+      ],
+      "distance_angstrom": "3.431260264101"
+    },
+    "protein_altloc_rows_retained": 88,
+    "protein_heavy_atom_rows": 3472,
+    "protein_selection": {
+      "group_pdb": "ATOM",
+      "label_asym_id": "A",
+      "label_entity_id": "1",
+      "pdbx_pdb_model_num": "1"
+    },
+    "sam_heavy_atom_rows": 27,
+    "sam_selection": {
+      "auth_asym_id": "A",
+      "auth_seq_id": "1434",
+      "label_asym_id": "G",
+      "label_comp_id": "SAM",
+      "pdbx_pdb_model_num": "1"
+    },
+    "water_oxygen_rows": 137,
+    "water_oxygen_selection": {
+      "label_asym_id": "H",
+      "label_comp_id": "HOH",
+      "pdbx_pdb_model_num": "1",
+      "type_symbol": "O"
+    },
+    "water_oxygens_within_radius": 13,
+    "within_radius_water_nearest_pairs": [
+      {
+        "distance_angstrom": "3.479472086395",
+        "nearest_h41_atom_site_id": "3505",
+        "water_atom_site_id": "3588",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2045"
+      },
+      {
+        "distance_angstrom": "3.574064353086",
+        "nearest_h41_atom_site_id": "3500",
+        "water_atom_site_id": "3604",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2061"
+      },
+      {
+        "distance_angstrom": "3.510978353679",
+        "nearest_h41_atom_site_id": "3489",
+        "water_atom_site_id": "3609",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2066"
+      },
+      {
+        "distance_angstrom": "3.458798057129",
+        "nearest_h41_atom_site_id": "3493",
+        "water_atom_site_id": "3612",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2069"
+      },
+      {
+        "distance_angstrom": "3.884871812557",
+        "nearest_h41_atom_site_id": "3489",
+        "water_atom_site_id": "3613",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2070"
+      },
+      {
+        "distance_angstrom": "3.061310340361",
+        "nearest_h41_atom_site_id": "3499",
+        "water_atom_site_id": "3623",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2080"
+      },
+      {
+        "distance_angstrom": "3.446296127729",
+        "nearest_h41_atom_site_id": "3492",
+        "water_atom_site_id": "3628",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2085"
+      },
+      {
+        "distance_angstrom": "3.079057648048",
+        "nearest_h41_atom_site_id": "3492",
+        "water_atom_site_id": "3632",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2089"
+      },
+      {
+        "distance_angstrom": "3.390795334431",
+        "nearest_h41_atom_site_id": "3481",
+        "water_atom_site_id": "3638",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2095"
+      },
+      {
+        "distance_angstrom": "3.452779315276",
+        "nearest_h41_atom_site_id": "3488",
+        "water_atom_site_id": "3639",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2096"
+      },
+      {
+        "distance_angstrom": "3.749408219973",
+        "nearest_h41_atom_site_id": "3494",
+        "water_atom_site_id": "3641",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2098"
+      },
+      {
+        "distance_angstrom": "3.828059038207",
+        "nearest_h41_atom_site_id": "3489",
+        "water_atom_site_id": "3643",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2100"
+      },
+      {
+        "distance_angstrom": "3.378476283771",
+        "nearest_h41_atom_site_id": "3495",
+        "water_atom_site_id": "3650",
+        "water_auth_asym_id": "A",
+        "water_auth_seq_id": "2107"
+      }
+    ]
+  },
+  "method": {
+    "alternate_locations_resolved": false,
+    "cif_syntax_parser": "betelgeuze_engine_v2/molecular/mmcif_syntax.py",
+    "coordinate_frame": "deposited_model_1_asymmetric_unit",
+    "distance_definition": "Euclidean_distance_from_printed_Cartesian_coordinates",
+    "distance_encoding": "angstrom_decimal_string_12_places_round_half_even",
+    "interpretation": "distances_and_source_annotations_only_not_a_calibrated_clash_or_coordination_test",
+    "periodic_minimum_image_applied": false,
+    "protein_altloc_policy": "retain_all_source_rows_including_A_and_B_for_nearest_pair_observation",
+    "symmetry_or_assembly_transform_applied": false,
+    "water_radius_angstrom": "4.0",
+    "water_radius_boundary": "inclusive"
+  },
+  "qualification": "NOT_QUALIFIED",
+  "schema_version": "smyd2_5arg_source_geometry_observation_v1",
+  "sources": {
+    "ccd_h41": {
+      "relative_path": "official_sources/chemcomp-h41.cif",
+      "sha256": "41f1ec80e2fd231ad561c370ec01cf7290bea32f1cb69cdca15b7a185ab9e651",
+      "size_bytes": 10621
+    },
+    "coordinates": {
+      "relative_path": "official_sources/coordinates-5arg.cif",
+      "sha256": "ba33c3dc604445e1d49cf549b9738abcfd7f5727ef900e4f3d1f946a8d26ff74",
+      "size_bytes": 744344
+    }
+  },
+  "status": "SOURCE_GEOMETRY_OBSERVED_PREPARATION_AND_ADMISSION_BLOCKED"
+}
