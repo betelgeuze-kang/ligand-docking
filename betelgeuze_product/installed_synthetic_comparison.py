@@ -442,6 +442,23 @@ def _read_report(run_dir: Path, arm: str, rid: str, ref: dict):
     return _json(raw)
 
 
+def _check_geometry_authority(observation) -> None:
+    _require(type(observation) is dict
+             and observation.get("physical_validity_assessed") is False
+             and observation.get("affects_score_or_admission") is False
+             and observation.get("scientifically_validated", False) is False,
+             "installed_pose_report_authority_claim")
+
+
+def _inside_declared_pocket(coordinates, pocket_center: list, pocket_radius: float) -> bool:
+    """Match the producer's CPU float64 predicate, including the exact boundary."""
+    import torch
+
+    center = torch.tensor(pocket_center, dtype=torch.float64, device="cpu")
+    return not bool((torch.linalg.vector_norm(
+        coordinates[0] - center, dim=-1) > pocket_radius).any())
+
+
 def _check_pose_report_request(report: dict, request: dict, source_inputs: list) -> None:
     """Bind scored poses to the frozen request without repeating the energy work."""
     from dataclasses import replace
@@ -478,6 +495,25 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
                  and row["request_index"] == index
                  and row.get("case_id") == (pose_id if type(pose_id) is str else None),
                  reason)
+        _check_geometry_authority(row.get("pose_geometry_observation"))
+        if "result" in row:
+            result = row["result"]
+            _require(type(result) is dict
+                     and result.get("scientifically_validated") is False
+                     and result.get("customer_execution") is False
+                     and result.get("external_solver_called") is False
+                     and "uncertainty" in result and result["uncertainty"] is None
+                     and result.get("uncertainty_calibrated") is False,
+                     "installed_pose_report_authority_claim")
+            quantities = result.get("quantities")
+            _require(type(quantities) is dict
+                     and all(key in quantities and quantities[key] is None for key in (
+                         "internal_energy", "strain", "solvation", "residual", "affinity")),
+                     "installed_pose_report_authority_claim")
+    shared = report.get("preparation")
+    if shared is not None:
+        _require(type(shared) is dict, reason)
+        _check_geometry_authority(shared.get("source_geometry_observation"))
     evaluated = [row for row in report["rows"] if row["status"] == "evaluated"]
     if not evaluated:
         return
@@ -502,7 +538,6 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
             request["prepared_input"])
         _require(provenance["source_hashes_postflight_verified"] is True, reason)
         parent = canonical_system_sha256(ligand)
-        shared = report.get("preparation")
         _require(type(shared) is dict
                  and shared.get("preparation_provenance") == provenance
                  and shared.get("receptor_system_sha256") == canonical_system_sha256(receptor)
@@ -525,8 +560,12 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
             "minimum_pair_distance_angstrom": MINIMUM_PAIR_DISTANCE_ANGSTROM,
             "minimum_distance_scope": "all source atoms; admission independent of tile order",
         }
-        pocket = {"center_angstrom": evaluation["pocket_center_angstrom"],
-                  "radius_angstrom": float(evaluation["pocket_radius_angstrom"])}
+        pocket_center = evaluation["pocket_center_angstrom"]
+        pocket_radius = evaluation["pocket_radius_angstrom"]
+        _require(type(pocket_center) is list and len(pocket_center) == 3
+                 and all(_finite(value) for value in pocket_center)
+                 and _finite(pocket_radius) and pocket_radius > 0, reason)
+        pocket = {"center_angstrom": pocket_center, "radius_angstrom": float(pocket_radius)}
         for row in evaluated:
             pose = poses[row["request_index"]]
             rotation, translation = pose_adapter._transform(pose)
@@ -534,6 +573,8 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
                 coordinates = ligand.coordinates + translation
             else:
                 coordinates = (ligand.coordinates - center) @ rotation.T + center + translation
+            _require(_inside_declared_pocket(coordinates, pocket_center, pocket_radius),
+                     "installed_pose_outside_declared_pocket")
             derivation = {
                 "pose_id": pose["pose_id"], "rotation_matrix": rotation.tolist(),
                 "translation_angstrom": translation.tolist(),
