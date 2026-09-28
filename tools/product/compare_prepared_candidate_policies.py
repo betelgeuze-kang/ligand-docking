@@ -661,6 +661,78 @@ def worker(run_dir, arm, deadline):
     )
 
 
+def _replayed_priority_predictions(frozen, arm, priority):
+    """Re-evaluate saved predictions from frozen fit rows or the bound model."""
+    from tools.product.train_public_assay_selector import features
+    import numpy as np
+
+    rows = frozen["rows"]
+    pool = frozen["pool"]
+    candidates = {row["record_id"]: row for row in rows if row["record_id"] in pool}
+    valid = [rid for rid in pool if candidates[rid]["smiles"]]
+    if not valid:
+        return {}
+    smiles = [candidates[rid]["smiles"] for rid in valid]
+    if arm in ("similarity", "similarity_engine"):
+        selected = [
+            row for row in rows
+            if row["role"] == "fit" and row["fit_value"] is not None and row["smiles"]
+        ]
+        x = features([row["smiles"] for row in selected])
+        z = features(smiles)
+        y = np.asarray([row["fit_value"] for row in selected])
+        unique = {}
+        for index, row in enumerate(selected):
+            unique.setdefault(row["smiles"], []).append(index)
+        fx = x[[indices[0] for indices in unique.values()]]
+        fy = np.asarray([y[indices].mean() for indices in unique.values()])
+        values = []
+        for query in z:
+            intersection = fx @ query
+            union = fx.sum(axis=1) + query.sum() - intersection
+            similarity = np.divide(
+                intersection, union, out=np.ones_like(union), where=union != 0
+            )
+            values.append(float(fy[similarity == similarity.max()].mean()))
+    elif arm == "ai_engine":
+        reference = priority["setup_cost"].get("model_reference")
+        if reference is None:
+            raise ValueError("missing_priority_model_reference")
+        payload = bound(reference)
+        if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
+            from tools.product.train_public_chembl_selector import predict_checkpoint
+
+            target = bound(payload["protocol"])["target_annotation_sha256"]
+            queries = (
+                [smiles]
+                if frozen["reused_ai_model"] is not None
+                else [[smile] for smile in smiles]
+            )
+            values = [
+                value
+                for query in queries
+                for value in predict_checkpoint(
+                    payload["checkpoint"]["path"],
+                    payload["checkpoint"]["sha256"],
+                    query,
+                    target,
+                    endpoint=frozen["provenance"]["endpoint"],
+                )
+            ]
+        else:
+            weights = np.asarray(payload["coefficients"], dtype=np.float64)
+            if (
+                weights.shape != (1024,)
+                or not np.isfinite(weights).all()
+                or payload["source_rows_sha256"] != sha(rows)
+            ):
+                raise ValueError("invalid_reused_synthetic_model")
+            values = features(smiles) @ weights + _number(payload["intercept"])
+    else:
+        raise ValueError("invalid_priority_arm")
+    return {rid: _number(float(value)) for rid, value in zip(valid, values)}
+
+
 def _arm_summary(directory, frozen, binding, completion):
     observations = {}
     for name in ("priority.json", "worker-complete.json"):
@@ -676,6 +748,43 @@ def _arm_summary(directory, frozen, binding, completion):
             observations[name] = observation
     priority = observations.get("priority.json")
     worker_complete = observations.get("worker-complete.json")
+    if priority is not None:
+        if (
+            priority["arm"] != directory.name
+            or priority["evaluation_labels_read"] != 0
+            or type(priority["order"]) is not list
+            or type(priority["predictions"]) is not dict
+        ):
+            raise ValueError("invalid_priority_observation")
+        predictions = priority["predictions"]
+        if directory.name == "engine":
+            expected_order = frozen["pool"]
+            expected_predictions = set()
+        else:
+            expected_predictions = {
+                row["record_id"]
+                for row in frozen["rows"]
+                if row["record_id"] in frozen["pool"] and row["smiles"]
+            }
+            if set(predictions) != expected_predictions:
+                raise ValueError("priority_prediction_pool_mismatch")
+            for predicted in predictions.values():
+                _number(predicted)
+            expected_order = _prediction_order(frozen, predictions)
+        if set(predictions) != expected_predictions or priority["order"] != expected_order:
+            raise ValueError("priority_order_prediction_mismatch")
+        if directory.name != "engine":
+            # This is read-only receipt verification outside the worker deadline.
+            replayed = _replayed_priority_predictions(frozen, directory.name, priority)
+            if (
+                set(replayed) != set(predictions)
+                or any(
+                    not math.isclose(predictions[rid], replayed[rid], rel_tol=1e-12, abs_tol=1e-12)
+                    for rid in predictions
+                )
+                or _prediction_order(frozen, replayed) != priority["order"]
+            ):
+                raise ValueError("priority_model_prediction_mismatch")
     stop_reason = None if worker_complete is None else worker_complete["stop_reason"]
     if stop_reason not in (None, "order_exhausted", "deadline", "engine_call_cap"):
         raise ValueError("invalid_worker_stop_reason")
@@ -685,6 +794,7 @@ def _arm_summary(directory, frozen, binding, completion):
     ):
         raise ValueError("invalid_engine_call_cap_observation")
     rows = []
+    committed_order = []
     for rid in frozen["pool"]:
         path = directory / (sha(rid) + ".row.json")
         value = {
@@ -703,6 +813,11 @@ def _arm_summary(directory, frozen, binding, completion):
                 or item["arm"] != directory.name
             ):
                 raise ValueError("committed_comparison_row_mismatch")
+            if priority is None:
+                raise ValueError("committed_row_without_priority")
+            if item.get("prediction") != priority["predictions"].get(rid):
+                raise ValueError("committed_row_prediction_mismatch")
+            committed_order.append((_number(item["completed_monotonic"]), rid))
             if item["completed_monotonic"] <= completion["deadline"]:
                 value = item
             else:
@@ -758,6 +873,10 @@ def _arm_summary(directory, frozen, binding, completion):
               and value["status"] == "evaluated"):
             raise ValueError("D3_evaluated_row_missing_report")
         rows.append(value)
+    if priority is not None:
+        observed_order = [rid for _, rid in sorted(committed_order)]
+        if observed_order != priority["order"][:len(observed_order)]:
+            raise ValueError("committed_row_priority_sequence_mismatch")
     direction = -1 if directory.name == "similarity" else 1
     ranked = sorted(
         (r for r in rows if r["status"] == "evaluated"),
