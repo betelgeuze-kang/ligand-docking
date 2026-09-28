@@ -281,12 +281,12 @@ def _gro(raw: bytes, label: str) -> tuple[list[dict], list[float]]:
 
 
 def _sdf_projection(raw: bytes, *, bracketed_unit_headers: bool = False) -> tuple[bytes, dict]:
-    """Separate inert SD data fields without changing the original mol block."""
+    """Validate and discard SD data fields without changing the original mol block."""
     lines = raw.decode("utf-8").splitlines(keepends=True)
     ends = [index for index, line in enumerate(lines) if line.strip() == "M  END"]
     _require(len(ends) == 1, "ligand SDF must contain one mol block")
     end = ends[0]
-    fields = {}
+    fields = set()
     current = None
     closed = False
     for line in lines[end + 1:]:
@@ -309,16 +309,15 @@ def _sdf_projection(raw: bytes, *, bracketed_unit_headers: bool = False) -> tupl
             name = match.group(1)
             _require(bool(name.strip()) and name == name.strip(), "unsupported ligand SDF data header name")
             _require(name not in fields, "duplicate ligand SDF data field")
-            fields[name] = []
+            fields.add(name)
             current = name
         else:
             _require(current is not None and not value.startswith("M  "), "unbound ligand SDF metadata")
-            fields[current].append(value)
     projected = "".join(lines[:end + 1]).encode("utf-8")
     return projected, {"original_sha256": hashlib.sha256(raw).hexdigest(),
                        "mol_block_sha256": hashlib.sha256(projected).hexdigest(),
-                       "mol_block_bytes_unchanged": True, "data_fields": fields,
-                       "source_data_tail": "".join(lines[end + 1:]),
+                       "mol_block_bytes_unchanged": True,
+                       "data_field_count": len(fields), "data_field_content_retained": False,
                        "data_fields_interpreted_as_chemistry": False}
 
 

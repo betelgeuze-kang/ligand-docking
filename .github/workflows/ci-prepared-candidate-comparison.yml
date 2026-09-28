@@ -317,6 +317,7 @@ jobs:
           root = pathlib.Path.cwd()
           files = sorted(root.glob('betelgeuze_product/*native_v4*.py'))
           files += [root / 'betelgeuze_product/installed_synthetic_comparison.py']
+          files += [root / 'betelgeuze_engine/product/prepared_gromacs_input.py']
           files += sorted(root.glob('tests/unit/test_installed_native_v4_*.py'))
           files += [root / 'tests/ci/native_v4_wheel_probe.py']
           files += [root / 'tools/analysis/native_v4_comparison_readiness.py', root / 'tests/unit/test_native_v4_comparison_readiness.py']
@@ -364,6 +365,14 @@ jobs:
             echo 'unlinked prepared candidate unexpectedly ran' >&2
             exit 1
           fi
+          env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$cli/betelgeuze-native-v4-comparison" preflight-v2 --protocol "$probe/two-linked-draft.json" --output-protocol "$probe/two-linked-protocol.json" > "$probe/two-linked-preflight.json"
+          env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$cli/betelgeuze-native-v4-comparison" run --protocol "$probe/two-linked-protocol.json" --run-dir "$probe/two-linked-run" > "$probe/two-linked-run.json"
+          env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$cli/betelgeuze-native-v4-comparison" verify-run --protocol "$probe/two-linked-protocol.json" --run-dir "$probe/two-linked-run" > "$probe/two-linked-verify.json"
+          env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$cli/betelgeuze-native-v4-comparison" resume --protocol "$probe/two-linked-protocol.json" --run-dir "$probe/two-linked-run" > "$probe/two-linked-resume.json"
+          if env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$cli/betelgeuze-native-v4-comparison" preflight-v2 --protocol "$probe/linked-protocol.json" --output-protocol "$probe/one-linked-must-not-exist.json" > "$probe/one-linked-preflight.json"; then
+            echo 'one-candidate preflight unexpectedly passed' >&2
+            exit 1
+          fi
           env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$cli/python" -I "$GITHUB_WORKSPACE/tests/ci/native_v4_wheel_probe.py" check "$probe"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -382,6 +391,11 @@ jobs:
             ${{ runner.temp }}/native-v4-wheel-probe/run.json
             ${{ runner.temp }}/native-v4-wheel-probe/verify.json
             ${{ runner.temp }}/native-v4-wheel-probe/resume.json
+            ${{ runner.temp }}/native-v4-wheel-probe/two-linked-preflight.json
+            ${{ runner.temp }}/native-v4-wheel-probe/two-linked-run.json
+            ${{ runner.temp }}/native-v4-wheel-probe/two-linked-verify.json
+            ${{ runner.temp }}/native-v4-wheel-probe/two-linked-resume.json
+            ${{ runner.temp }}/native-v4-wheel-probe/one-linked-preflight.json
             ${{ runner.temp }}/native-v4-wheel-probe/source-reference.json
             ${{ runner.temp }}/native-v4-wheel-probe/linked-protocol.json
             ${{ runner.temp }}/native-v4-wheel-probe/unlinked-protocol.json

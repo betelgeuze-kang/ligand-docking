@@ -266,7 +266,10 @@ def test_explicit_units_zeros_coordinates_and_provenance(request_doc):
     assert provenance["defaults_by_source"]["ligand_defaults"]["fudge_lj"] == 1.
     assert provenance["cross_lennard_jones_scale"] == 1.
     assert not provenance["within_molecule_gen_pairs_and_fudge_values_applied"]
-    assert provenance["sdf_data_field_projection"]["data_fields"] == {"source_identity": ["synthetic-001"]}
+    assert provenance["sdf_data_field_projection"]["data_field_count"] == 1
+    assert provenance["sdf_data_field_projection"]["data_field_content_retained"] is False
+    assert "data_fields" not in provenance["sdf_data_field_projection"]
+    assert "source_data_tail" not in provenance["sdf_data_field_projection"]
     assert provenance["sdf_data_field_projection"]["original_sha256"] == request_doc["ligand_sdf"]["sha256"]
     charge = provenance["ligand_source_net_charge_observation"]
     assert charge["selected_atom_count"] == 3
@@ -570,13 +573,14 @@ def test_unknown_defaults_include_is_never_silently_skipped(request_doc):
 
 
 @pytest.mark.parametrize("header", [">  <source_identity>  (1) ", ">  <chiral flag>  (1) "])
-def test_published_sdf_inert_header_variants_preserved(request_doc, header):
+def test_published_sdf_inert_header_variants_accepted_without_content_retention(request_doc, header):
     _change(request_doc["ligand_sdf"], lambda value: value.replace("> <source_identity>", header))
     _, ligand, _, _, provenance = parser.load_prepared_gromacs_components(request_doc)
     assert ligand.atom_count == 3
     projection = provenance["sdf_data_field_projection"]
-    assert header in projection["source_data_tail"]
-    assert list(projection["data_fields"].values()) == [["synthetic-001"]]
+    assert projection["data_field_count"] == 1
+    assert projection["data_field_content_retained"] is False
+    assert "data_fields" not in projection and "source_data_tail" not in projection
     assert not projection["data_fields_interpreted_as_chemistry"]
 
 
@@ -586,11 +590,10 @@ def test_sdf_metadata_cannot_declare_a_second_record(request_doc):
         parser.load_prepared_gromacs_components(request_doc)
 
 
-# Captured from the exact parent synthetic reader, with only temporary source paths
-# normalized to filenames for the evidence hash. New additive observations are
-# excluded below so these hashes still pin the exact preexisting evidence bytes.
-# No physical result is involved.
-_LEGACY_HASHES = {'v1': {'ligand_sha256': '25ceffb61e2f4f6a2d082857e9854bc97459e02200ada0dc18bdde14b915bf41', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'cd93021607d9c80f6ea5038a45033d980ecd6c4d047b5cb46c89753585051a54', 'receptor_sha256': '3daf09cf7efbc6b5a04e1c46381036f74e5b6c64d4ede9b372d51e02031deb0d', 'rparams_sha256': '97cc50485e59db0920a655d164be9ccb7adb5e658099463519d31fb0e05ee77c'}, 'v2_A': {'ligand_sha256': '130568cdef74933d4068dc514bac38905e23b498d41726575a12ccb3b900e17b', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'af5fec38ac62465fa0bbd3f3478885058cf5d69745d0e1d197b48be2841257d4', 'receptor_sha256': '68b64152a9230407e7d99e7614599031ef453e06d77cd02ca6101205efa6b5a5', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}, 'v2_blank': {'ligand_sha256': '80c5980514a399d228551adb8afba3d8c7ae203b838c86bc1078175d73dc51fb', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'b78ef03e115fa76377b96ba7d887688f44e42001924393f1afcb87a8fd3f8160', 'receptor_sha256': 'b2cc41481417b18f7b3d4f64c85e6b17e8ef96deae3d5a5a000d95fb4508307a', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}}
+# Synthetic output hashes are intentionally migrated when SD field contents stop
+# entering provenance and the canonical ligand-system digest. Temporary source
+# paths are normalized to filenames; no physical result is involved.
+_REDACTED_HASHES = {'v1': {'ligand_sha256': 'd887a4f4ed55755290ea7493cac39a34dbf80dcaa50fe8cae7f5f6bb78ed8157', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': '5c0f3b4c4b843e64ae4f84e05c815b04a3e03c16dfe94ba05af907dededa9cdc', 'receptor_sha256': '3daf09cf7efbc6b5a04e1c46381036f74e5b6c64d4ede9b372d51e02031deb0d', 'rparams_sha256': '97cc50485e59db0920a655d164be9ccb7adb5e658099463519d31fb0e05ee77c'}, 'v2_A': {'ligand_sha256': '913e3552d4334fcbd34f22940e032bfc593d35f250456d541885a7184ae1fe94', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': '79455327a42b3afef2a11ec6a4d72b5a886d077c484c691517ba5b552e1981c0', 'receptor_sha256': '68b64152a9230407e7d99e7614599031ef453e06d77cd02ca6101205efa6b5a5', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}, 'v2_blank': {'ligand_sha256': '286ba9ba40bce8442d4ee75682f34dccc0f56e76eebc189a17fbbc0a6a453d89', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'd8ecad448b7601ef9e9b841b1971d8a59975ab1b5d4ab5e6e74337dd40df735d', 'receptor_sha256': 'b2cc41481417b18f7b3d4f64c85e6b17e8ef96deae3d5a5a000d95fb4508307a', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}}
 
 
 def _json_hash(value):
@@ -598,7 +601,7 @@ def _json_hash(value):
 
 
 @pytest.mark.parametrize("version", ["v1", "v2_blank", "v2_A"])
-def test_legacy_reader_canonical_and_preexisting_evidence_hashes_unchanged(request_doc, version):
+def test_reader_redacted_canonical_and_evidence_hashes(request_doc, version):
     request = request_doc if version == "v1" else _ordered_bonded_molecules(request_doc, "" if version == "v2_blank" else "A")
     receptor, ligand, rparams, lparams, evidence = parser.load_prepared_gromacs_components(request)
     normalized = copy.deepcopy(evidence)
@@ -612,7 +615,7 @@ def test_legacy_reader_canonical_and_preexisting_evidence_hashes_unchanged(reque
         "lparams_sha256": _json_hash(lparams),
         "normalized_provenance_sha256": _json_hash(normalized),
     }
-    assert actual == _LEGACY_HASHES[version]
+    assert actual == _REDACTED_HASHES[version]
     assert "protein_residue_identifier_policy" not in evidence
     assert all("insertion_code" not in atom.metadata["prepared_gromacs_source"]
                and "residue_number_token" not in atom.metadata["prepared_gromacs_source"] for atom in receptor.atoms)
@@ -754,7 +757,7 @@ def test_v3_same_residue_tuple_cannot_be_split_between_molecule_sources(request_
 
 
 @pytest.mark.parametrize("name", ["IC50[uM]", "assay Ki[nM]"])
-def test_sdf_unit_extension_v3_preserves_inert_original_metadata(request_doc, name):
+def test_sdf_unit_extension_v3_preserves_hashes_without_retaining_field_content(request_doc, name):
     request = _insertion_request(request_doc)
     header = f">  <{name}>  (1) "
     _change(request["ligand_sdf"], lambda text: text.replace("> <source_identity>", header))
@@ -765,8 +768,9 @@ def test_sdf_unit_extension_v3_preserves_inert_original_metadata(request_doc, na
     projection = evidence["sdf_data_field_projection"]
     assert ligand.atom_count == 3 and request == before
     assert Path(request["ligand_sdf"]["path"]).read_bytes() == raw
-    assert projection["source_data_tail"].encode() == raw[len(mol_block):]
-    assert projection["data_fields"] == {name: ["synthetic-001"]}
+    assert projection["data_field_count"] == 1
+    assert projection["data_field_content_retained"] is False
+    assert "data_fields" not in projection and "source_data_tail" not in projection
     assert projection["original_sha256"] == hashlib.sha256(raw).hexdigest()
     assert projection["mol_block_sha256"] == hashlib.sha256(mol_block).hexdigest()
     assert projection["mol_block_bytes_unchanged"] is True
@@ -787,8 +791,9 @@ def test_sdf_unit_extension_label_strings_do_not_change_kernel_inputs(request_do
         raw_inputs.append(raw)
         assert Path(request["ligand_sdf"]["path"]).read_bytes() == raw
         projection = outputs[-1][-1]["sdf_data_field_projection"]
-        assert projection["data_fields"] == {"IC50[uM]": [value]}
-        assert projection["source_data_tail"] == tail
+        assert projection["data_field_count"] == 1
+        assert projection["data_field_content_retained"] is False
+        assert "data_fields" not in projection and "source_data_tail" not in projection
         assert parser._sdf_projection(raw, bracketed_unit_headers=True)[0] == mol_block
     first_receptor, first_ligand, rparams, lparams, _ = outputs[0]
     for receptor, ligand, actual_rparams, actual_lparams, evidence in outputs[1:]:
@@ -800,10 +805,65 @@ def test_sdf_unit_extension_label_strings_do_not_change_kernel_inputs(request_do
         assert actual_rparams == rparams and actual_lparams == lparams
         assert evidence["sdf_data_field_projection"]["mol_block_sha256"] == hashlib.sha256(mol_block).hexdigest()
     assert len({item[-1]["sdf_data_field_projection"]["original_sha256"] for item in outputs}) == 3
-    assert len({item[-1]["sdf_data_field_projection"]["source_data_tail"] for item in outputs}) == 3
     assert [item[-1]["sources"]["ligand_sdf"]["sha256"] for item in outputs] == [hashlib.sha256(raw).hexdigest() for raw in raw_inputs]
     # Canonical hashes include changed source provenance; they are not falsely held fixed.
     assert len({item[-1]["ligand_system_sha256"] for item in outputs}) == 3
+
+
+def test_synthetic_sd_value_is_absent_from_reporter_provenance_and_journal(request_doc, tmp_path):
+    import sqlite3
+
+    from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
+    from tools.product import score_prepared_cross_interactions as consumer
+
+    request = _insertion_request(request_doc)
+    sentinel = "SYNTHETIC_PRIVATE_SD_VALUE_DO_NOT_EXPORT"
+    _change(request["ligand_sdf"], lambda text: text.replace(
+        "> <source_identity>\nsynthetic-001", f">  <IC50[uM]>  (1) \n{sentinel}"))
+    raw = Path(request["ligand_sdf"]["path"]).read_bytes()
+    mol_block = raw[:raw.index(b"M  END\n") + len(b"M  END\n")]
+    evaluation = {
+        "pocket_center_angstrom": [2.0, 1.0, 0.0],
+        "pocket_radius_angstrom": 10.0,
+        "cutoff_angstrom": 10.0,
+        "switch_start_angstrom": 8.0,
+        "dielectric": 1.0,
+        "screening_kappa_per_angstrom": 0.0,
+    }
+    report = consumer.evaluate_request({"schema_version": consumer.SCHEMA, "cases": [{
+        "case_id": "synthetic-sd-redaction",
+        "prepared_input": request,
+        "evaluation": evaluation,
+    }]})
+    row = report["rows"][0]
+    assert row["status"] == "evaluated"
+    projection = row["preparation_provenance"]["sdf_data_field_projection"]
+    assert projection["original_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert projection["mol_block_sha256"] == hashlib.sha256(mol_block).hexdigest()
+    assert projection["data_field_count"] == 1
+    assert projection["data_field_content_retained"] is False
+    assert "data_fields" not in projection and "source_data_tail" not in projection
+    assert sentinel not in json.dumps(report, sort_keys=True)
+
+    journal = tmp_path / "redacted-pose-journal"
+    rigid_report = evaluate_rigid_pose_request({
+        "schema_version": "prepared_rigid_pose_cross_request_v1",
+        "prepared_input": request,
+        "evaluation": evaluation,
+        "execution": {"projection_partition": "source_order_v1",
+                      "preparation_reuse": "request"},
+        "poses": [{"pose_id": "synthetic-fixed-pose",
+                   "rotation_matrix": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
+                                       [0.0, 0.0, 1.0]],
+                   "translation_angstrom": [0.0, 0.0, 0.0]}],
+    }, checkpoint_dir=journal)
+    assert rigid_report["rows"][0]["status"] == "evaluated"
+    assert rigid_report["preparation"]["preparation_provenance"]["sdf_data_field_projection"]["original_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert sentinel not in json.dumps(rigid_report, sort_keys=True)
+    with sqlite3.connect(journal / "completion.sqlite3") as connection:
+        saved = [value for (value,) in connection.execute("SELECT value FROM meta")]
+        saved.extend(value for (value,) in connection.execute("SELECT payload FROM poses"))
+    assert all(sentinel not in value for value in saved)
 
 
 @pytest.mark.parametrize("schema", ["prepared_gromacs_components_v1", "prepared_gromacs_components_v2"])

@@ -1,0 +1,643 @@
+{
+  "schema_version": "pfkfb3_openff_primary_structure_crosswalk_v1",
+  "status": "SOURCE_ONLY_PARTIAL_PRIMARY_STRUCTURE_CROSSWALK_BLOCKED",
+  "sources": {
+    "openff_commit": "fe6f96916b2e28f9c14398d77c838d6515e931b0",
+    "openff_inventory_sha256": "23345cfcb902ee7d0009ee630760797a6212ed7047f273eb4edef9487bc56e13",
+    "primary_paper_doi": "10.1002/cmdc.201800569",
+    "author_posted_accepted_manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+    "publisher_url": "https://chemistry-europe.onlinelibrary.wiley.com/doi/abs/10.1002/cmdc.201800569",
+    "publisher_supplement_filename": "cmdc201800569-sup-0001-misc_information.pdf",
+    "supplement_download_observation": "HTTP_403_FORBIDDEN_2026-09-29",
+    "patent_url_for_separate_example_numbering": "https://patents.google.com/patent/WO2016180537A1/en",
+    "openff_ligands_yml_per_ligand_comment_fields": 0
+  },
+  "boundary": {
+    "source_only": true,
+    "experimental_values_recorded": false,
+    "source_bytes_bundled": false,
+    "external_sources_rechecked_by_static_verifier": false,
+    "paper_or_sdf_rechecked_by_static_verifier": false,
+    "all_40_primary_structures_verified": false,
+    "prepared_state_equivalence_verified": false,
+    "comparison_eligible": false
+  },
+  "counts": {
+    "candidate_count": 40,
+    "direct_primary_anchor_count": 4,
+    "primary_text_motif_match_count": 14,
+    "unverified_count": 22
+  },
+  "local_manuscript_discrepancies": [
+    "The manuscript's compound 20/38 substituent prose conflicts with its synthesis and crystallographic anchors; do not generalize this local discrepancy.",
+    "One paragraph calls para-bromophenyl compound 43; the pinned lig_43 SDF is meta-bromophenyl and lig_44 is para-bromophenyl. Treat this as a possible local prose numbering error; neither row is promoted here."
+  ],
+  "records": [
+    {
+      "ligand_id": "lig_19",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/crd/lig_19.sdf",
+        "sha256": "bd8e7d3138d4b34f0cb947cc0ee7be125b2bb56e6d6eb161ed99dac55c1c9b90",
+        "bytes": 3911
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 3,
+        "sentence_locator": "Chemistry; Scheme 1 paragraph on the aniline coupling",
+        "structure_description": "Phenylamino compound 19 made from aniline on the 1-methylindole series.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Phenylamino quinoxaline bearing 1-methylindole.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_20",
+      "evidence_grade": "direct_primary_anchor",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/crd/lig_20.sdf",
+        "sha256": "cd1736e71550175a1b2bf8cef4085c2621f3c4660886aa9f7b4ee87391636f1a",
+        "bytes": 4078
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 3,
+        "sentence_locator": "Chemistry; final paragraph before Results and Discussion",
+        "structure_description": "Compound 20 made with 3-methoxyphenylboronic acid; Figure 6 depicts its crystal overlay.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Meta-methoxyphenyl quinoxaline.",
+      "interpretation_limit": "Structure-specific primary evidence supports this number; assay state, prepared-state equivalence, and comparison eligibility remain unverified."
+    },
+    {
+      "ligand_id": "lig_23",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/crd/lig_23.sdf",
+        "sha256": "f745347aad1b60069f8d31718144ac7fa640a2edc4def90025ba9bdddc3fc557",
+        "bytes": 3841
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 5,
+        "sentence_locator": "Results and Discussion; paragraph after Table 1 on pyridyl isomers",
+        "structure_description": "Compound 23 replaces the phenylamino group with 3-pyridyl.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "3-pyridylamino quinoxaline bearing 1-methylindole.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_24",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/crd/lig_24.sdf",
+        "sha256": "fa373359423367ed782c5e684d62f0e1954e17e801d2154ffefb0c25ae576422",
+        "bytes": 3994
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_26",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/crd/lig_26.sdf",
+        "sha256": "c6fb2b4d5dd30c1ceb7519e0ea593e471a4a8a60ef4887cab58a3931b21538d6",
+        "bytes": 4242
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_29",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/crd/lig_29.sdf",
+        "sha256": "766cf585d85239be27f4efecb51ffa236253b55f3906fc525e1befaaa491592f",
+        "bytes": 4424
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_30",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/crd/lig_30.sdf",
+        "sha256": "52040e470b4d205a2ea2bc6267a14f4323227facb9ec6e811aade7a8afc7b6f7",
+        "bytes": 4174
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_31",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/crd/lig_31.sdf",
+        "sha256": "6112891923f7bc59678890a97ae5abbdf6a3e6a83dc27195e1058d81c3f00d7e",
+        "bytes": 4160
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_33",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/crd/lig_33.sdf",
+        "sha256": "5f5a1521f457eba6ae5e3f5e73b3000fe0b7374b7564a06dfc3ecce05b023c47",
+        "bytes": 3925
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_34",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/crd/lig_34.sdf",
+        "sha256": "2c78ff0a42e0b6b82f7aa197b61e149c9bcfe39670e93ce202d7ceb6756728b9",
+        "bytes": 4175
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_35",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/crd/lig_35.sdf",
+        "sha256": "4bbd001fd846901e3b3727973ff97c026f165cc236bf5649dc4217a7f89ab23f",
+        "bytes": 4341
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 5,
+        "sentence_locator": "Results and Discussion; paragraph identifying the best ortho groups",
+        "structure_description": "Compound 35 has an ortho methylsulfone on the arylamino group; the subsequent paragraph identifies a 3-amino-4-methylsulfonylpyridine pendant.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Ortho methylsulfone on 3-pyridylamino; 1-methylindole on quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_36",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/crd/lig_36.sdf",
+        "sha256": "327fc5e8ea1ea7f88ab1351c5206522bf0fb51f4b8a1f3969b6ab65426c3574c",
+        "bytes": 4575
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 5,
+        "sentence_locator": "Results and Discussion; paragraph on bridge methylation",
+        "structure_description": "Compound 36 is the bridging N-methyl analogue of compound 35.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Bridge N-methyl analogue of the lig_35 graph.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_37",
+      "evidence_grade": "direct_primary_anchor",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/crd/lig_37.sdf",
+        "sha256": "f0d1cafe29ced1ea154609a6a89e9ba33dd51add43d1a37459c91b6508386a59",
+        "bytes": 5335
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 5,
+        "sentence_locator": "Results and Discussion; carboxamide crystal paragraph and Figure 4",
+        "structure_description": "Compound 37 is the carboxamide analogue crystallized as PDB 6HVH.",
+        "additional_primary_url": "https://www.rcsb.org/structure/6HVH",
+        "additional_primary_locator": "PDB 6HVH, chemical component GV2"
+      },
+      "observed_sdf_structure": "Carboxamide-substituted pyridylamino quinoxaline with 1-methylindole; agrees with GV2.",
+      "interpretation_limit": "Structure-specific primary evidence supports this number; assay state, prepared-state equivalence, and comparison eligibility remain unverified."
+    },
+    {
+      "ligand_id": "lig_38",
+      "evidence_grade": "direct_primary_anchor",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/crd/lig_38.sdf",
+        "sha256": "407014add44d32a3a3b483aaa01e6799e7fe8350faf82ef720f1eb3d9ea32899",
+        "bytes": 4395
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 7,
+        "sentence_locator": "Figure 6 caption identifying compound 38 and PDB 6HVI",
+        "structure_description": "Compound 38 has the 6HVI crystal structure; the manuscript prose describing its substituent conflicts with its other structure evidence.",
+        "additional_primary_url": "https://www.rcsb.org/structure/6HVI",
+        "additional_primary_locator": "PDB 6HVI, chemical component GV5"
+      },
+      "observed_sdf_structure": "Meta-dimethylaminophenyl quinoxaline; agrees with GV5.",
+      "interpretation_limit": "Structure-specific primary evidence supports this number; assay state, prepared-state equivalence, and comparison eligibility remain unverified."
+    },
+    {
+      "ligand_id": "lig_39",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/crd/lig_39.sdf",
+        "sha256": "522533c5abfa2058aa37b741a4f1204b145a152df7cc75948063e21144e865d1",
+        "bytes": 3911
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_41",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/crd/lig_41.sdf",
+        "sha256": "ac3c5685fd60b68c42b64deb5fda2d25129e09a9c740df5722e9e774ef82ce38",
+        "bytes": 4077
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_42",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/crd/lig_42.sdf",
+        "sha256": "ef1f8c5fb265821cd98fc85a7fe893901cc929c1671c94d3e717f8b4d5357199",
+        "bytes": 4064
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_43",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/crd/lig_43.sdf",
+        "sha256": "ce2887f25de27260e5505355273545c43055178fe62a6bee890ad941a7e5bcb7",
+        "bytes": 3732
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_44",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/crd/lig_44.sdf",
+        "sha256": "880ec9ae9c2bf4dbbc5498a0aba3c24e31511ea80313b9205fa880323bbc9f82",
+        "bytes": 3747
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_46",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/crd/lig_46.sdf",
+        "sha256": "e76d96b6167d0389453f1825051d4a20678027d38478b4283c3830eac4e60b96",
+        "bytes": 3981
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_47",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/crd/lig_47.sdf",
+        "sha256": "b00f77d873caeea4c337e553662dc4e2e003fd87d4f1fb38af3490a94594ecb2",
+        "bytes": 4244
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_48",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/crd/lig_48.sdf",
+        "sha256": "0d0dd1228ed1232fc5f96974c64a76f52b840718212f8c99caa2431a64bc465d",
+        "bytes": 4064
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_49",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/crd/lig_49.sdf",
+        "sha256": "1ac99dc7c0811f00c8d23e48816e364f4a3c53341990d8eb89db28b00ac35736",
+        "bytes": 3898
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_52",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/crd/lig_52.sdf",
+        "sha256": "71b14778d398aefee97a115a3ee356b777b919c470205875a657c72c5970e98d",
+        "bytes": 4575
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 7,
+        "sentence_locator": "Results and Discussion; paragraph on indole N-substitution",
+        "structure_description": "Compound 52 changes the indole N-methyl group to N-ethyl.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "N-ethylindole quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_53",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/crd/lig_53.sdf",
+        "sha256": "01cb200e7f14b4ea9ed8858706f68b8fef3af8de045da2943975b58d28148a20",
+        "bytes": 4837
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_54",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/crd/lig_54.sdf",
+        "sha256": "8fe8a5351fdbc8ae6c47b51d440979871165c9a4dc520c3f32908d396decb5d1",
+        "bytes": 4823
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_55",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/crd/lig_55.sdf",
+        "sha256": "286c45d5919ca5840537eb27815984dfe5f2560f2fb30261d51fbe1a194dd972",
+        "bytes": 4326
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_56",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/crd/lig_56.sdf",
+        "sha256": "3705edc846e98d9c821487688ee037b7afb7cc73e2770699d05a2f7e8b521b85",
+        "bytes": 4590
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_57",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/crd/lig_57.sdf",
+        "sha256": "5ea519c93034b0df6c0fd30c297b25764ac8b95626ba0573d8f520cb0d065ae1",
+        "bytes": 4341
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 7,
+        "sentence_locator": "Results and Discussion; paragraph on indole N-substitution",
+        "structure_description": "Compound 57 changes the indole N-methyl group to N-difluoromethyl.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "N-difluoromethylindole quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_58",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/crd/lig_58.sdf",
+        "sha256": "ec0ad8bf5b16cd2733d0b9f4adcc35a057555a95ee28de6c50eb7b652b77883d",
+        "bytes": 4174
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 7,
+        "sentence_locator": "Results and Discussion; paragraph on distal-ring planarity",
+        "structure_description": "Compound 58 carries a dihydrofuran fused ring.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Dihydrobenzofuran-substituted quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_59",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/crd/lig_59.sdf",
+        "sha256": "db8ccec3030a74d118e441c5806082c71fe8ae3096f2eb3e8e3478fb02d1e643",
+        "bytes": 4256
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 7,
+        "sentence_locator": "Results and Discussion; paragraph on distal-ring planarity",
+        "structure_description": "Compound 59 carries a fused 1,4-dioxine ring.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Saturated two-carbon 1,4-dioxine-derived fused ring on quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_60",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/crd/lig_60.sdf",
+        "sha256": "7b6223d63c2b5b1e70bd3aaec90d96642bf1547531d0d48fdb2c018c05306774",
+        "bytes": 4658
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 7,
+        "sentence_locator": "Results and Discussion; paragraph on distal-ring planarity",
+        "structure_description": "Compound 60 carries a 3,3-dimethyl dihydrofuran fused ring.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "3,3-dimethyl dihydrobenzofuran-substituted quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_62",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/crd/lig_62.sdf",
+        "sha256": "ed50b22b2db03e2c65f2ab60f05e699a67ba43abaa81546161377e4b2fafb59c",
+        "bytes": 3841
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 8,
+        "sentence_locator": "Results and Discussion; first paragraph after Table 2",
+        "structure_description": "Compound 62 carries a benzoxadiazole ring.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Benzoxadiazole-substituted quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_63",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/crd/lig_63.sdf",
+        "sha256": "946d617514cbe5d890a105cada84cde2162e3bb3609402e5fa8d45ca86c7f413",
+        "bytes": 3842
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 8,
+        "sentence_locator": "Results and Discussion; first paragraph after Table 2",
+        "structure_description": "Compound 63 carries a benzothiadiazole ring.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "Benzothiadiazole-substituted quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_64",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/crd/lig_64.sdf",
+        "sha256": "94b6a2e395dce9c31c27e50b1da52084c15e2282f8760e2dddda1af3763833ec",
+        "bytes": 3911
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_65",
+      "evidence_grade": "unverified",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/crd/lig_65.sdf",
+        "sha256": "007c54788778ac77bf3600a16e8e1902fdc9216f386b991a37fcd2de59cae969",
+        "bytes": 3911
+      },
+      "primary_evidence": null,
+      "observed_sdf_structure": null,
+      "interpretation_limit": "No individual primary-paper structure match is established by this receipt."
+    },
+    {
+      "ligand_id": "lig_67",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/crd/lig_67.sdf",
+        "sha256": "8ede22bcf9877e860af1f7aa738ff2b2ad473818ef86e20908b3de3a2f6057a8",
+        "bytes": 4077
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 8,
+        "sentence_locator": "Results and Discussion; paragraph on 2-substituted benzothiazoles",
+        "structure_description": "Compound 67 adds a 2-amino group to the benzothiazole series.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "2-aminobenzothiazole-substituted quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_68",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/crd/lig_68.sdf",
+        "sha256": "d41b5454b6da7bf64846075e92634c53085f342fa56e94b4329be35f84c08794",
+        "bytes": 4175
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 8,
+        "sentence_locator": "Results and Discussion; paragraph replacing benzothiazole",
+        "structure_description": "Compound 68 swaps the 2-aminobenzothiazole ring for a benzothiophene ring.",
+        "additional_primary_url": null,
+        "additional_primary_locator": null
+      },
+      "observed_sdf_structure": "2-aminobenzothiophene-substituted quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_69",
+      "evidence_grade": "primary_text_motif_match",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/crd/lig_69.sdf",
+        "sha256": "81533bbd14efd56b204c0fece77e079c719e8baebf29fd42a0faacb68ce7ed03",
+        "bytes": 4243
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 8,
+        "sentence_locator": "Results and Discussion; paragraph on 3-methyl benzothiophene",
+        "structure_description": "Compound 69 carries 3-methylbenzothiophene; the publisher abstract gives its full systematic name.",
+        "additional_primary_url": "https://patents.google.com/patent/WO2016180537A1/en",
+        "additional_primary_locator": "Patent Example 110 independently names the same chemical graph"
+      },
+      "observed_sdf_structure": "3-methylbenzothiophene and 4-methylsulfonyl-3-pyridylamino quinoxaline.",
+      "interpretation_limit": "The primary text names this motif or relationship, but an individual atom-resolved paper/SI structure check remains outstanding."
+    },
+    {
+      "ligand_id": "lig_70",
+      "evidence_grade": "direct_primary_anchor",
+      "official_sdf": {
+        "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/crd/lig_70.sdf",
+        "sha256": "a84d408578c092dfaf216b4054c95277ce9577d951ecd33467fdc827afd9236a",
+        "bytes": 4258
+      },
+      "primary_evidence": {
+        "manuscript_url": "https://www.researchgate.net/publication/328632054_Discovery_and_Structure-Activity_Relationships_of_N-Aryl_6-Aminoquinoxalines_as_Potent_PFKFB3_Kinase_Inhibitors",
+        "manuscript_page": 8,
+        "sentence_locator": "Results and Discussion; benzofuran paragraph and Figure 7",
+        "structure_description": "Compound 70 is the corresponding benzofuran and is crystallized as PDB 6HVJ.",
+        "additional_primary_url": "https://www.rcsb.org/structure/6HVJ",
+        "additional_primary_locator": "PDB 6HVJ, chemical component GV8"
+      },
+      "observed_sdf_structure": "3-methylbenzofuran quinoxaline; agrees with GV8.",
+      "interpretation_limit": "Structure-specific primary evidence supports this number; assay state, prepared-state equivalence, and comparison eligibility remain unverified."
+    }
+  ]
+}

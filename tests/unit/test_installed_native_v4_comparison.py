@@ -1,6 +1,7 @@
 """Native v4 source-to-installed-selector and four-arm journal contracts."""
 
 import copy
+import gzip
 import json
 import shutil
 from pathlib import Path
@@ -12,13 +13,15 @@ from rdkit.Chem import AllChem
 from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
 from betelgeuze_product import installed_synthetic_comparison as comparison
 from betelgeuze_product import installed_native_v4_comparison as native_cli
+from betelgeuze_product import installed_native_v4_protocol_preflight as preflight
 from betelgeuze_product import installed_native_v4_source as source_verifier
 from betelgeuze_product import installed_native_v4_prepared_binding as binding
 from betelgeuze_product import native_v4_chemical_identity as chemical
 from tools.product import train_public_chembl_selector as checkout_trainer
 from tools.product import public_assay_dataset as common
+from tools.product import public_assay_components as components
 from tools.product import public_chembl_receptor_intake as checkout_intake
-from tests.unit.test_public_chembl_receptor_intake import synthetic_intake
+from tests.unit.test_public_chembl_receptor_intake import synthetic_intake, ref as source_ref
 from tests.unit.test_score_prepared_cross_interactions import _prepared, _case
 
 
@@ -51,16 +54,19 @@ def _protocol(reference):
     }
 
 
-def _bound_request(tmp_path):
+def _bound_request(tmp_path, smiles="C1CCOCC1", sd_value=None):
     prepared = _prepared(tmp_path / "prepared")
-    molecule = Chem.AddHs(Chem.MolFromSmiles("C1CCOCC1"))
+    molecule = Chem.AddHs(Chem.MolFromSmiles(smiles))
     assert AllChem.EmbedMolecule(molecule, randomSeed=17) == 0
     molecule = Chem.RemoveHs(molecule)
     conformer = molecule.GetConformer()
     for index in range(molecule.GetNumAtoms()):
         position = conformer.GetAtomPosition(index)
         conformer.SetAtomPosition(index, (position.x + 4.0, position.y, position.z))
-    sdf = Chem.MolToMolBlock(molecule) + "$$$$\n"
+    sdf = Chem.MolToMolBlock(molecule)
+    if sd_value is not None:
+        sdf += f"> <source_identity>\n{sd_value}\n\n"
+    sdf += "$$$$\n"
     atoms = list(molecule.GetAtoms())
     gro_lines = ["Synthetic prepared ring", str(len(atoms))]
     itp_lines = ["[ moleculetype ]", "LIG 3", "[ atoms ]"]
@@ -132,6 +138,99 @@ def _linked_protocol(bounded_source, tmp_path):
         "path": str(request_path), "sha256": common.file_sha(request_path),
     }
     return protocol, request, candidate
+
+
+def _two_linked_protocol(tmp_path, *, second_frame=False, second_method=False,
+                         second_state=False, missing_origin=False,
+                         second_smiles="CC1CCOCC1", sd_value=None):
+    root = tmp_path / "source"
+    root.mkdir()
+    manifest_ref, entries = synthetic_intake.__wrapped__(root)
+    original = entries[-1]
+    metadata = json.loads(Path(original["metadata_origin"]["path"]).read_text())
+    metadata.update(activity_id=8, record_id=108, molecule_chembl_id="CHEMBL708",
+                    canonical_smiles=second_smiles)
+    role = json.loads(Path(original["role_origin"]["path"]).read_text())
+    role.update(record_id="chembl:activity:8", node_id="synthetic:node:7")
+    added = copy.deepcopy(original)
+    added.update(activity_id=8, node_id=role["node_id"],
+                 metadata_origin=source_ref(root, metadata, "metadata7.json"),
+                 role_origin=source_ref(root, role, "role7.json"))
+    if second_method:
+        method = json.loads(Path(original["method_origin"]["path"]).read_text())
+        method["description"] += " with alternate incubation"
+        added["method_origin"] = source_ref(root, method, "method7.json")
+    entries.append(added)
+    metadata_path = root / "metadata.jsonl"
+    metadata_path.write_text("".join(json.dumps(entry) + "\n" for entry in entries))
+    context_path = root / "context.jsonl.gz"
+    context = [json.loads(line) for line in
+               gzip.decompress(context_path.read_bytes()).decode().splitlines()]
+    context.append(components.node_from_raw(
+        {"ChEMBL Assay ID": metadata["assay_chembl_id"],
+         "ChEMBL Document ID": metadata["document_chembl_id"]},
+        common.chemical_identity(metadata["canonical_smiles"]),
+        node_id=role["node_id"], record_id=role["record_id"],
+        ligand_id="chembl:molecule:" + metadata["molecule_chembl_id"],
+        extra_declarations=[{"role": "development_test"}],
+    ))
+    context_path.write_bytes(gzip.compress(
+        "".join(json.dumps(node) + "\n" for node in context).encode(), mtime=0))
+    manifest_path = Path(manifest_ref["path"])
+    manifest = json.loads(manifest_path.read_text())
+    manifest["metadata_records"]["sha256"] = common.file_sha(metadata_path)
+    manifest["identity_context"]["sha256"] = common.file_sha(context_path)
+    manifest_path.write_text(json.dumps(manifest))
+    source_dir = root / "intake"
+    checkout_intake.build(str(manifest_path), common.file_sha(manifest_path), source_dir)
+    source_reference = {
+        "schema_version": source_verifier.REFERENCE_SCHEMA,
+        "input_dir": str(source_dir),
+        "summary_sha256": common.file_sha(source_dir / "summary.json"),
+        "phase": "fit",
+    }
+    candidate_rows = [row for row in source_verifier._verified_intake(source_reference)[2]
+                      if row["assigned_role"] == "development_test"]
+    assert len(candidate_rows) == 2
+    requests = {}
+    for row in candidate_rows:
+        rid = row["record_id"]
+        if row["prediction_issues"]:
+            requests[rid] = None
+            continue
+        request = _bound_request(tmp_path / rid.replace(":", "-"),
+                                 row["chemical_identity"]["canonical_isomeric_smiles"],
+                                 sd_value=sd_value)
+        if second_frame and rid == "chembl:activity:8":
+            request["prepared_input"]["source_declarations"]["coordinate_frame_id"] = (
+                "synthetic-other-frame"
+            )
+        if second_state and rid == "chembl:activity:8":
+            request["prepared_input"]["source_declarations"]["prepared_state_id"] = (
+                "synthetic-other-ligand-state"
+            )
+        observation = binding.derive_observation(row, request)
+        origin_path = root / (rid.replace(":", "-") + "-prepared-origin.json")
+        origin_path.write_bytes(comparison._canonical(observation) + b"\n")
+        entry = next(item for item in entries if item["activity_id"] == row["activity_id"])
+        if not (missing_origin and rid == "chembl:activity:8"):
+            entry[binding.SOURCE_FIELD] = {
+                "path": str(origin_path), "sha256": common.file_sha(origin_path)}
+        request_path = root / (rid.replace(":", "-") + "-request.json")
+        request_path.write_bytes(comparison._canonical(request) + b"\n")
+        requests[rid] = {"path": str(request_path),
+                         "sha256": common.file_sha(request_path)}
+    metadata_path.write_text("".join(json.dumps(entry) + "\n" for entry in entries))
+    manifest["metadata_records"]["sha256"] = common.file_sha(metadata_path)
+    manifest_path.write_text(json.dumps(manifest))
+    linked_dir = root / "linked-intake"
+    checkout_intake.build(str(manifest_path), common.file_sha(manifest_path), linked_dir)
+    linked_reference = {**source_reference, "input_dir": str(linked_dir),
+                        "summary_sha256": common.file_sha(linked_dir / "summary.json")}
+    protocol = _protocol(linked_reference)
+    protocol["schema_version"] = comparison.NATIVE_PROTOCOL_V2
+    protocol["requests"] = requests
+    return protocol
 
 
 def test_native_fit_selector_matches_checkout_trainer(bounded_source, tmp_path):
@@ -218,6 +317,123 @@ def test_native_v2_synthetic_structural_binding_run_verify_resume(bounded_source
     assert result["arms"]["engine"]["worker_complete"]["engine_calls"] == 1
     assert comparison.verify_run(protocol, root)["status"] == "verified"
     assert comparison.run(protocol, root, resume=True) == result
+
+
+def test_native_v2_preflight_two_linked_chemicals_run_verify_resume(tmp_path, capsys):
+    protocol = _two_linked_protocol(tmp_path)
+    readiness = preflight.preflight_v2(protocol)
+    assert readiness["status"] == "ready"
+    assert readiness["blockers"] == []
+    assert readiness["candidate_count"] == 2
+    assert readiness["distinct_Ki_chemical_identity_count"] == 2
+    assert readiness["assigned_role_counts"] == {
+        "fit": 6, "calibration": 0, "development_test": 2}
+    assert readiness["protocol"] == protocol
+    assert readiness["protocol_sha256"] == comparison._sha(protocol)
+    assert readiness["evaluation_labels_read"] == 0
+    assert readiness["numeric_validation_completed"] is False
+    assert readiness["source_authenticated"] is False
+    assert readiness["same_prepared_assay_state_verified"] is False
+    assert readiness["scientifically_validated"] is False
+    assert readiness["training_admitted"] is False
+    assert readiness["product_ranking_enabled"] is False
+    draft = tmp_path / "draft-protocol.json"
+    draft.write_bytes(comparison._canonical(protocol) + b"\n")
+    admitted = tmp_path / "preflight-protocol.json"
+    assert native_cli.main(["preflight-v2", "--protocol", str(draft),
+                            "--output-protocol", str(admitted)]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    assert printed["status"] == "ready"
+    assert "protocol" not in printed
+    assert comparison._read_protocol(admitted) == protocol
+    run_dir = tmp_path / "two-candidate-run"
+    result = comparison.run(comparison._read_protocol(admitted), run_dir)
+    assert set(result["pool"]) == set(protocol["requests"])
+    assert len(result["pool"]) == 2
+    assert result["budget_seconds_per_arm"] == protocol["budget_seconds_per_arm"]
+    assert result["max_engine_calls_per_arm"] == 2
+    for arm in comparison.ARMS:
+        observed = result["arms"][arm]
+        assert {row["record_id"] for row in observed["rows"]} == set(result["pool"])
+        assert observed["denominator"] == {"requested": 2, "evaluated": 2}
+        assert observed["completion"]["status"] == "complete"
+        assert observed["completion"]["budget_seconds"] == protocol["budget_seconds_per_arm"]
+        assert observed["worker_complete"]["engine_calls"] == (
+            0 if arm == "similarity" else 2
+        )
+        if arm != "similarity":
+            assert all(row["numeric_denominator"]["passed"] == 1
+                       for row in observed["rows"])
+    assert result["evaluation_labels_read"] == 0
+    assert result["scientifically_validated"] is False
+    assert comparison.verify_run(protocol, run_dir)["status"] == "verified"
+    assert comparison.run(protocol, run_dir, resume=True) == result
+
+
+def test_native_v2_preflight_allows_distinct_bound_ligand_state_ids(tmp_path):
+    protocol = _two_linked_protocol(tmp_path, second_state=True)
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "ready"
+    assert receipt["same_prepared_assay_state_verified"] is False
+
+
+@pytest.mark.parametrize("change,blocker", [
+    ("one_identity", "two_distinct_Ki_chemical_identities_required"),
+    ("duplicate_identity", "two_distinct_Ki_chemical_identities_required"),
+    ("unsupported_selector", "candidate_not_Ki_selector_supported"),
+    ("missing_request", "prepared_request_missing"),
+    ("missing_origin", "prepared_source_origin_missing"),
+    ("changed_request", "prepared_source_binding_failed"),
+    ("bad_execution", "prepared_execution_unsupported"),
+    ("different_method", "method_or_receptor_pocket_frame_mismatch"),
+    ("different_frame", "method_or_receptor_pocket_frame_mismatch"),
+    ("short_cap", "engine_call_cap_below_candidate_count"),
+])
+def test_native_v2_preflight_blocks_incomplete_or_crossed_cohort(tmp_path, change, blocker):
+    if change == "one_identity":
+        bounded = bounded_source.__wrapped__(tmp_path)
+        protocol, _, _ = _linked_protocol(bounded, tmp_path)
+    else:
+        protocol = _two_linked_protocol(
+            tmp_path, second_method=change == "different_method",
+            second_frame=change == "different_frame",
+            missing_origin=change == "missing_origin",
+            second_smiles=("C1CCOCC1" if change == "duplicate_identity" else
+                           "C1CCSCC1" if change == "unsupported_selector" else
+                           "CC1CCOCC1"),
+        )
+    if change == "missing_request":
+        protocol["requests"]["chembl:activity:8"] = None
+    elif change == "changed_request":
+        ref = protocol["requests"]["chembl:activity:8"]
+        path = Path(ref["path"])
+        request = json.loads(path.read_text())
+        request["prepared_input"]["source_declarations"]["prepared_state_id"] = "changed"
+        path.write_bytes(comparison._canonical(request) + b"\n")
+        ref["sha256"] = common.file_sha(path)
+    elif change == "bad_execution":
+        ref = protocol["requests"]["chembl:activity:8"]
+        path = Path(ref["path"])
+        request = json.loads(path.read_text())
+        request["execution"]["projection_partition"] = "invalid_partition"
+        path.write_bytes(comparison._canonical(request) + b"\n")
+        ref["sha256"] = common.file_sha(path)
+    elif change == "short_cap":
+        protocol["max_engine_calls_per_arm"] = 1
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "blocked"
+    assert receipt["protocol"] is None
+    assert receipt["protocol_sha256"] is None
+    assert blocker in {item["code"] for item in receipt["blockers"]}
+    assert receipt["scientifically_validated"] is False
+    assert not (tmp_path / "run").exists()
+    if change == "missing_request":
+        draft = tmp_path / "blocked-draft.json"
+        draft.write_bytes(comparison._canonical(protocol) + b"\n")
+        output = tmp_path / "must-not-exist.json"
+        assert native_cli.main(["preflight-v2", "--protocol", str(draft),
+                                "--output-protocol", str(output)]) == 2
+        assert not output.exists()
 
 
 def test_native_v2_resealed_alternate_pose_report_is_rejected(bounded_source, tmp_path):

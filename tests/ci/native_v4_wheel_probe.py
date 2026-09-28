@@ -26,7 +26,7 @@ def _write(path: Path, value: dict) -> None:
 def prepare(root: Path) -> None:
     from betelgeuze_product import installed_synthetic_comparison as comparison
     from tests.unit.test_installed_native_v4_comparison import (
-        _linked_protocol, bounded_source,
+        _linked_protocol, _two_linked_protocol, bounded_source,
     )
 
     root.mkdir(parents=True)
@@ -44,6 +44,11 @@ def prepare(root: Path) -> None:
     _write(root / "unlinked-protocol.json", unlinked)
     _write(root / "source-reference.json", linked["source"])
     _write(root / "probe.json", {"candidate": candidate})
+    two_root = root / "two-candidate"
+    two_root.mkdir()
+    _write(root / "two-linked-draft.json", _two_linked_protocol(
+        two_root, sd_value="SYNTHETIC_PRIVATE_SD_VALUE_DO_NOT_EXPORT",
+    ))
 
 
 def check(root: Path) -> None:
@@ -87,6 +92,38 @@ def check(root: Path) -> None:
 
     assert not (root / "unlinked-run").exists()
     assert "native_prepared_source_link_missing" in (root / "unlinked.stderr").read_text()
+
+    preflight = _read(root / "two-linked-preflight.json")
+    assert preflight["status"] == "ready"
+    assert preflight["candidate_count"] == 2
+    assert preflight["distinct_Ki_chemical_identity_count"] == 2
+    assert preflight["blockers"] == []
+    assert preflight["evaluation_labels_read"] == 0
+    assert preflight["scientifically_validated"] is False
+    assert _read(root / "two-linked-protocol.json") == _read(root / "two-linked-draft.json")
+    two_run = _read(root / "two-linked-run.json")
+    two_verify = _read(root / "two-linked-verify.json")
+    two_resume = _read(root / "two-linked-resume.json")
+    assert two_run == two_resume
+    assert two_run["status"] == "committed"
+    assert two_verify["status"] == "verified"
+    two_result = _read(root / "two-linked-run" / "comparison.json")
+    assert len(two_result["pool"]) == 2
+    for arm in ("similarity", "engine", "ai_engine", "similarity_engine"):
+        assert two_result["arms"][arm]["denominator"] == {
+            "requested": 2, "evaluated": 2,
+        }
+    sentinel = "SYNTHETIC_PRIVATE_SD_VALUE_DO_NOT_EXPORT"
+    pose_reports = list((root / "two-linked-run").rglob("*.poses.json"))
+    assert pose_reports
+    for path in pose_reports:
+        assert sentinel not in path.read_text(encoding="utf-8")
+    blocked = _read(root / "one-linked-preflight.json")
+    assert blocked["status"] == "blocked"
+    assert "two_distinct_Ki_chemical_identities_required" in {
+        item["code"] for item in blocked["blockers"]
+    }
+    assert not (root / "one-linked-must-not-exist.json").exists()
 
 
 def main() -> None:

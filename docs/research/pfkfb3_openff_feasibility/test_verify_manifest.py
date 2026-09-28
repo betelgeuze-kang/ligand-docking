@@ -36,6 +36,9 @@ class FeasibilityReceiptTests(unittest.TestCase):
         self.assertEqual(result["eligible_source_state_join_count"], 0)
         self.assertEqual(result["official_lfs_inventory_file_count"], 202)
         self.assertEqual(result["development_reader_pass_count"], 40)
+        self.assertEqual(result["direct_primary_structure_anchor_count"], 4)
+        self.assertEqual(result["partial_primary_structure_motif_count"], 14)
+        self.assertEqual(result["unverified_primary_structure_count"], 22)
         self.assertFalse(result["loader_reexecuted_by_offline_verifier"])
         self.assertFalse(result["external_archive_or_source_bytes_checked"])
 
@@ -87,6 +90,43 @@ class FeasibilityReceiptTests(unittest.TestCase):
             finally:
                 verify_module.ROOT = original
 
+    def test_primary_structure_crosswalk_and_bytes_cannot_be_resealed(self):
+        self._reject(
+            lambda doc: doc["primary_structure_crosswalk_receipt"].update(
+                sha256="0" * 64
+            )
+        )
+        self._reject(
+            lambda doc: doc["primary_structure_crosswalk_receipt"].update(
+                direct_primary_anchor_count=40
+            )
+        )
+        self._reject(
+            lambda doc: doc["primary_structure_crosswalk_receipt"].update(
+                scientific_comparison_eligible=True
+            )
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            original = verify_module.ROOT
+            verify_module.ROOT = root
+            try:
+                for name in (
+                    verify_module.OFFICIAL_LFS_INVENTORY[0],
+                    verify_module.READER_COMPATIBILITY_RECEIPT[0],
+                    verify_module.PRIMARY_STRUCTURE_CROSSWALK[0],
+                ):
+                    (root / name).write_bytes((original / name).read_bytes())
+                crosswalk = root / verify_module.PRIMARY_STRUCTURE_CROSSWALK[0]
+                raw = crosswalk.read_bytes()
+                crosswalk.write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
+                with self.assertRaisesRegex(
+                    ValueError, "primary_structure_crosswalk_receipt_bytes_changed"
+                ):
+                    verify_module.verify()
+            finally:
+                verify_module.ROOT = original
+
     def test_candidate_denominator_or_identity_cannot_change(self):
         self._reject(lambda doc: doc["candidates"].pop())
         self._reject(lambda doc: doc["candidates"][0].update(ligand_id="lig_999"))
@@ -98,6 +138,33 @@ class FeasibilityReceiptTests(unittest.TestCase):
             )
         )
         self._reject(lambda doc: doc["source"].update(archive_sha256="0" * 64))
+        self._reject(
+            lambda doc: doc["source"]["separate_parameter_record"].update(
+                zenodo_archive_sha256="0" * 64
+            )
+        )
+
+    def test_record_level_license_does_not_promote_file_rights_or_coevality(self):
+        self._reject(
+            lambda doc: doc["source"]["separate_parameter_record"].update(
+                zenodo_record_license_id="cc0-1.0"
+            )
+        )
+        self._reject(
+            lambda doc: doc["source"]["separate_parameter_record"].update(
+                exact_file_version_declared_by_openff=True
+            )
+        )
+        self._reject(
+            lambda doc: doc["source"]["separate_parameter_record"].update(
+                file_specific_rights_reviewed=True
+            )
+        )
+        self._reject(
+            lambda doc: doc["source"]["separate_parameter_record"].update(
+                coevality_verified=True
+            )
+        )
 
     def test_roles_and_eligibility_stay_blocked(self):
         self._reject(lambda doc: doc["candidates"][0].update(fit_role="fit"))

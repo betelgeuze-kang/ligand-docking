@@ -17,6 +17,8 @@ python3 -I -S -B docs/research/pfkfb3_openff_feasibility/verify_openff_lfs_inven
 python3 -I -S -B docs/research/pfkfb3_openff_feasibility/test_verify_openff_lfs_inventory.py
 python3 -I -S -B docs/research/pfkfb3_openff_feasibility/verify_reader_compatibility.py
 python3 -I -S -B docs/research/pfkfb3_openff_feasibility/test_verify_reader_compatibility.py
+python3 -I -S -B docs/research/pfkfb3_openff_feasibility/verify_primary_structure_crosswalk.py
+python3 -I -S -B docs/research/pfkfb3_openff_feasibility/test_verify_primary_structure_crosswalk.py
 ```
 
 `PASS_STATIC_FEASIBILITY_BLOCKED` checks this small manifest and the pinned
@@ -29,6 +31,8 @@ cross-checks the saved 40 parser outcomes and source hashes against that
 inventory. It does not rerun the v3 loader. A clean checkout can reproduce the
 static checks; optional `verify_openff_lfs_inventory.py --live` rechecks all 202
 source files against the official GitHub tree, LFS pointers and media.
+The crosswalk verifier checks a frozen, source-only 40-ID transcription against
+that inventory; it does not refetch the manuscript, supplement, PDB or SDF.
 It cannot reproduce the 2026-09-09 full-request run from this packet alone.
 
 The [pinned OpenFF source](https://github.com/openforcefield/protein-ligand-benchmark/tree/fe6f96916b2e28f9c14398d77c838d6515e931b0)
@@ -50,13 +54,31 @@ Its figure captions identify compounds 37, 38 and 70 with PDB entries 6HVH,
 OpenFF SDF structures; GV5 and `lig_38` are meta-dimethylamino. One
 results/discussion sentence reverses the 20/38 substituent descriptions.
 This is a local manuscript-text discrepancy, not evidence that all 40 IDs are
-misnumbered. These four structure anchors do not establish the other 36
-identities or any assay-to-prepared-state join. The
+misnumbered. The [source-only crosswalk](primary_structure_crosswalk.v1.json)
+records **4 structure-specific primary anchors**, **14 partial motif matches**
+from manuscript prose, and **22 IDs without an individual primary structure
+match**. A motif match is not a complete atom-resolved identity check. Neither
+the four anchors nor the partial matches establish an assay-to-prepared-state
+join. The publisher's supplementary PDF returned HTTP 403; the crosswalk
+retains that access boundary. The
 manuscript's table footnotes say ATP-Glo while its detailed biochemical-assay
 method says ADP-Glo; that discrepancy remains unresolved. The original SDF's
 `IC50[uM]` field was not read or copied here. The two protein-parameter files
 in the historical `lig_38` request came from a separate Zenodo archive; their
 coevality with the OpenFF preparation and intended-use rights are unresolved.
+
+A separate check of [Zenodo record 10495732](https://zenodo.org/records/10495732)
+and its [record API](https://zenodo.org/api/records/10495732) found a
+record-level `cc-by-4.0` license and fixed the 381,220-byte archive identity
+(MD5 `b058f4cf301b0c695f93af16c8fabf36`, SHA-256
+`9ea86b0e1641eb9ca4f691867c62f65b39c010d2a55d8a0adb1fbf7df9668371`).
+Its two parameter members match the saved reader hashes. The OpenFF
+`protein.top` names the Amber forcefield include path, and the Zenodo
+`forcefield.itp` includes `ffnonbonded.itp`, but the pinned OpenFF commit does
+not declare these exact Zenodo file versions. The OpenFF commit predates that
+2024 record, which also lacks file-specific license terms for the forcefield
+members. Record-level licensing does not establish version coevality,
+file-specific third-party rights, or product-use clearance.
 
 The [official LFS inventory](openff_lfs_inventory.v1.json) binds 40 SDF, GRO,
 ligand ITP and atom-type ITP quartets, 40 ligand `.top` files and two common

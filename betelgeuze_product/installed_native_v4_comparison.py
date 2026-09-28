@@ -16,15 +16,32 @@ from . import installed_synthetic_comparison as comparison
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("run", "resume", "verify-run"))
+    parser.add_argument("action", choices=("run", "resume", "verify-run", "preflight-v2"))
     parser.add_argument("--protocol", type=Path, required=True)
-    parser.add_argument("--run-dir", type=Path, required=True)
+    parser.add_argument("--run-dir", type=Path)
+    parser.add_argument("--output-protocol", type=Path)
     args = parser.parse_args(argv)
     protocol = comparison._read_protocol(args.protocol)
     if protocol.get("schema_version") not in {
         comparison.NATIVE_PROTOCOL, comparison.NATIVE_PROTOCOL_V2,
     }:
         raise ValueError("native_v4_comparison_requires_native_protocol")
+    if args.action == "preflight-v2":
+        if args.run_dir is not None:
+            parser.error("preflight-v2 does not use --run-dir")
+        from .installed_native_v4_protocol_preflight import preflight_v2
+
+        outcome = preflight_v2(protocol)
+        if outcome["status"] == "ready" and args.output_protocol is not None:
+            comparison._publish(args.output_protocol, outcome["protocol"])
+            outcome["output_protocol"] = str(args.output_protocol)
+        print(json.dumps(
+            {key: value for key, value in outcome.items() if key != "protocol"},
+            sort_keys=True, allow_nan=False,
+        ))
+        return 0 if outcome["status"] == "ready" else 2
+    if args.run_dir is None or args.output_protocol is not None:
+        parser.error("run, resume, and verify-run require --run-dir and no --output-protocol")
     if args.action == "verify-run":
         outcome = comparison.verify_run(protocol, args.run_dir)
     else:

@@ -30,6 +30,21 @@ prepared state and coordinate-frame declarations, and force-field/charge
 source identifiers and file hashes. Unresolved stereochemistry and a ligand
 identity mismatch reject the request before scoring. A changed source, origin,
 request, or runtime also rejects resume and read-only verification.
+The prepared reader now validates and discards inert SDF data-field contents
+before forming provenance. The full SDF hash remains bound, but the canonical
+ligand-system digest changes from the earlier producer; old prepared origins,
+pose reports, and journals require a fresh binding and cannot be reused as
+current receipts.
+
+`preflight-v2` checks a proposed v2 protocol before creating a run. It
+rederives the source, requires at least two distinct selector-supported Ki
+development chemicals, an origin-bound prepared request for every candidate,
+one exact method/receptor/pocket/evaluation/frame cohort, and an engine-call
+cap covering the pool. A ready receipt can write the canonical runnable
+protocol with `--output-protocol`; a blocked receipt lists candidate-specific
+reasons and creates no protocol file. Readiness only means that a provided-pose
+comparison can be attempted. The current public intake has one distinct Ki
+development chemical and no prepared origins, so it remains blocked.
 
 For strict V2000 SDF, single-bond stereo codes 1, 4, and 6 retain the **first
 bond atom** as the directed wedge endpoint, as specified in the [BIOVIA CTfile
@@ -111,6 +126,9 @@ under the new venv. With a bound `source-reference.json` and the prespecified
 ```bash
 env -u PYTHONPATH -u PYTHONUSERBASE "$AUDIT/replay-venv/bin/betelgeuze-native-v4-source" \
   verify-source source-reference.json > "$AUDIT/source-verification.json"
+env -u PYTHONPATH -u PYTHONUSERBASE "$AUDIT/replay-venv/bin/betelgeuze-native-v4-comparison" \
+  preflight-v2 --protocol v2-draft.json --output-protocol protocol.json \
+  > "$AUDIT/protocol-preflight.json"
 env -u PYTHONPATH -u PYTHONUSERBASE "$AUDIT/replay-venv/bin/betelgeuze-native-v4-comparison" \
   run --protocol protocol.json --run-dir "$AUDIT/comparison"
 env -u PYTHONPATH -u PYTHONUSERBASE "$AUDIT/replay-venv/bin/betelgeuze-native-v4-comparison" \

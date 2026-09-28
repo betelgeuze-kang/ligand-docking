@@ -26,6 +26,11 @@ READER_COMPATIBILITY_RECEIPT = (
     69617,
     "70bfb752447f182f215312ef2cfd8da3e6762525ae9ccfeb812edb76e0725200",
 )
+PRIMARY_STRUCTURE_CROSSWALK = (
+    "primary_structure_crosswalk.v1.json",
+    32944,
+    "bfd3c57f0d3d992d30028a035dc52c9c4733eecf613ceffce2f0f44add636d52",
+)
 MAX_BYTES = 32_768
 IDS = (
     "lig_19",
@@ -148,6 +153,19 @@ def expected_manifest() -> dict:
             "archive_member_manifest_sha256": "c09a6f58f21d5a9c3300b6a358973df4e88a7beb26503b56081f37e2cce3a26f",
             "archive_bundled_in_checkout": False,
             "archive_revalidated_by_offline_verifier": False,
+            "separate_parameter_record": {
+                "zenodo_record_id": 10495732,
+                "zenodo_record_created_date": "2024-01-12",
+                "zenodo_record_license_id": "cc-by-4.0",
+                "zenodo_archive_bytes": 381220,
+                "zenodo_archive_md5": "b058f4cf301b0c695f93af16c8fabf36",
+                "zenodo_archive_sha256": "9ea86b0e1641eb9ca4f691867c62f65b39c010d2a55d8a0adb1fbf7df9668371",
+                "record_metadata_rechecked_by_offline_verifier": False,
+                "archive_bytes_bundled_in_checkout": False,
+                "exact_file_version_declared_by_openff": False,
+                "file_specific_rights_reviewed": False,
+                "coevality_verified": False,
+            },
             "primary_paper_and_supplement_rights_reviewed_for_product": False,
             "separate_protein_parameters_rights_and_coevality_reviewed": False,
         },
@@ -169,6 +187,17 @@ def expected_manifest() -> dict:
             "reader_pass_count": 40,
             "loader_reexecuted_by_offline_feasibility_verifier": False,
             "source_coevality_verified": False,
+            "scientific_comparison_eligible": False,
+        },
+        "primary_structure_crosswalk_receipt": {
+            "relative_path": PRIMARY_STRUCTURE_CROSSWALK[0],
+            "size_bytes": PRIMARY_STRUCTURE_CROSSWALK[1],
+            "sha256": PRIMARY_STRUCTURE_CROSSWALK[2],
+            "direct_primary_anchor_count": 4,
+            "primary_text_motif_match_count": 14,
+            "unverified_count": 22,
+            "external_sources_rechecked_by_offline_feasibility_verifier": False,
+            "prepared_state_assay_equivalence_verified": False,
             "scientific_comparison_eligible": False,
         },
         "archived_context_observation": {
@@ -309,6 +338,15 @@ def verify(path: Path = MANIFEST) -> dict:
         != READER_COMPATIBILITY_RECEIPT[2]
     ):
         raise ValueError("reader_compatibility_receipt_bytes_changed")
+    crosswalk_path = ROOT / PRIMARY_STRUCTURE_CROSSWALK[0]
+    if (
+        not crosswalk_path.is_file()
+        or crosswalk_path.is_symlink()
+        or crosswalk_path.stat().st_size != PRIMARY_STRUCTURE_CROSSWALK[1]
+        or hashlib.sha256(crosswalk_path.read_bytes()).hexdigest()
+        != PRIMARY_STRUCTURE_CROSSWALK[2]
+    ):
+        raise ValueError("primary_structure_crosswalk_receipt_bytes_changed")
     return {
         "status": "PASS_STATIC_FEASIBILITY_BLOCKED",
         "manifest_sha256": digest,
@@ -318,6 +356,9 @@ def verify(path: Path = MANIFEST) -> dict:
         "eligible_source_state_join_count": 0,
         "official_lfs_inventory_file_count": 202,
         "development_reader_pass_count": 40,
+        "direct_primary_structure_anchor_count": 4,
+        "partial_primary_structure_motif_count": 14,
+        "unverified_primary_structure_count": 22,
         "loader_reexecuted_by_offline_verifier": False,
         "external_archive_or_source_bytes_checked": False,
         "experimental_values_or_protected_outcomes_read": False,

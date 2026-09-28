@@ -136,6 +136,7 @@ jobs:
           python -m ruff check docs/research/pfkfb3_openff_feasibility/verify_manifest.py docs/research/pfkfb3_openff_feasibility/test_verify_manifest.py
           python -m ruff check docs/research/pfkfb3_openff_feasibility/verify_openff_lfs_inventory.py docs/research/pfkfb3_openff_feasibility/test_verify_openff_lfs_inventory.py
           python -m ruff check docs/research/pfkfb3_openff_feasibility/verify_reader_compatibility.py docs/research/pfkfb3_openff_feasibility/test_verify_reader_compatibility.py
+          python -m ruff check docs/research/pfkfb3_openff_feasibility/verify_primary_structure_crosswalk.py docs/research/pfkfb3_openff_feasibility/test_verify_primary_structure_crosswalk.py
           python docs/research/prmt3_4ryl_source_preflight/verify_manifest.py
           python -I -B docs/research/brd4_3mxf_source_preflight/verify_manifest.py
           python -I -S -B docs/research/brd4_3mxf_source_preflight/test_verify_manifest.py
@@ -149,6 +150,8 @@ jobs:
           python -I -S -B docs/research/pfkfb3_openff_feasibility/test_verify_openff_lfs_inventory.py
           python -I -S -B docs/research/pfkfb3_openff_feasibility/verify_reader_compatibility.py
           python -I -S -B docs/research/pfkfb3_openff_feasibility/test_verify_reader_compatibility.py
+          python -I -S -B docs/research/pfkfb3_openff_feasibility/verify_primary_structure_crosswalk.py
+          python -I -S -B docs/research/pfkfb3_openff_feasibility/test_verify_primary_structure_crosswalk.py
           python docs/research/smyd2_5arg_source_preflight/verify_manifest.py
           python -I -S -B docs/research/smyd2_5arg_source_preflight/verify_source_geometry.py
           python -I -S -B docs/research/smyd2_5arg_source_preflight/test_source_geometry.py

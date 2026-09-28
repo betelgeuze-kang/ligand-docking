@@ -12,6 +12,19 @@
     "archive_member_manifest_sha256": "c09a6f58f21d5a9c3300b6a358973df4e88a7beb26503b56081f37e2cce3a26f",
     "archive_bundled_in_checkout": false,
     "archive_revalidated_by_offline_verifier": false,
+    "separate_parameter_record": {
+      "zenodo_record_id": 10495732,
+      "zenodo_record_created_date": "2024-01-12",
+      "zenodo_record_license_id": "cc-by-4.0",
+      "zenodo_archive_bytes": 381220,
+      "zenodo_archive_md5": "b058f4cf301b0c695f93af16c8fabf36",
+      "zenodo_archive_sha256": "9ea86b0e1641eb9ca4f691867c62f65b39c010d2a55d8a0adb1fbf7df9668371",
+      "record_metadata_rechecked_by_offline_verifier": false,
+      "archive_bytes_bundled_in_checkout": false,
+      "exact_file_version_declared_by_openff": false,
+      "file_specific_rights_reviewed": false,
+      "coevality_verified": false
+    },
     "primary_paper_and_supplement_rights_reviewed_for_product": false,
     "separate_protein_parameters_rights_and_coevality_reviewed": false
   },
@@ -33,6 +46,17 @@
     "reader_pass_count": 40,
     "loader_reexecuted_by_offline_feasibility_verifier": false,
     "source_coevality_verified": false,
+    "scientific_comparison_eligible": false
+  },
+  "primary_structure_crosswalk_receipt": {
+    "relative_path": "primary_structure_crosswalk.v1.json",
+    "size_bytes": 32944,
+    "sha256": "bfd3c57f0d3d992d30028a035dc52c9c4733eecf613ceffce2f0f44add636d52",
+    "direct_primary_anchor_count": 4,
+    "primary_text_motif_match_count": 14,
+    "unverified_count": 22,
+    "external_sources_rechecked_by_offline_feasibility_verifier": false,
+    "prepared_state_assay_equivalence_verified": false,
     "scientific_comparison_eligible": false
   },
   "archived_context_observation": {
