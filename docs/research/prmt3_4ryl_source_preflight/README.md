@@ -37,12 +37,18 @@ Kaniskan and colleagues' [2015 study](https://doi.org/10.1002/anie.201412154).
 Fresh official downloads matched the supplied temporary files byte for byte.
 Exact URLs, sizes and SHA-256 hashes are in `source_manifest.v1.json`.
 
-The deposited CIF references UniProt Q8WUV3 with alignment numbering 228–548.
+The deposited CIF references UniProt Q8WUV3 residues 228–548. Its first 19
+polymer residues are an expression tag; deposited positions 20–340 exactly
+match both current [Q8WUV3](https://rest.uniprot.org/uniprotkb/Q8WUV3.json)
+residues 228–548 and [O60678](https://rest.uniprot.org/uniprotkb/O60678.json)
+residues 211–531 (321 amino acids; segment SHA-256
+`bbc8b5d4d286141e3998516321d68a12a9fc338fc4f16a00a22527b3281d0899`).
 The [current RCSB polymer API](https://data.rcsb.org/rest/v1/core/polymer_entity/4RYL/1)
-maps the entity to O60678 through SIFTS. Both are recorded; the mapping does not
-establish equivalence of assay and crystal constructs or residue numbering.
-This source-mapping discrepancy remains unresolved. The manifest preserves the
-exact mmCIF/API field paths and does not treat the accessions as equivalent.
+and [PDBe mapping](https://www.ebi.ac.uk/pdbe/api/mappings/uniprot/4ryl)
+agree on the latter segment. Within it, the current O60678 residue number is
+the deposited Q8WUV3 number minus 17. The full accessions are distinct. This
+verified structure-segment mapping does **not** identify the biochemical SPA
+construct or make the assay and crystal preparations equivalent.
 
 ## The identity family is incomplete
 

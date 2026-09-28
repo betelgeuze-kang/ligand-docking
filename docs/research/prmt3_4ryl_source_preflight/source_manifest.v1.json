@@ -4,7 +4,7 @@
   "recorded_date": "2026-09-28",
   "status": "SOURCE_CANDIDATE_ONLY_PREPARATION_AND_ADMISSION_BLOCKED",
   "qualification": "NOT_QUALIFIED",
-  "recorded_against_repository_head": "4ada10ce9126c4d9726697fbdb48cd9b5f7eaeac",
+  "recorded_against_repository_head": "bbc24af9cf1ccd4a5904b95e2ea4447abd04acd9",
   "scope": "Public source and identity audit with two unchanged CC0 archive files. Historical two-candidate identity screening is not full-family or current-head clearance.",
   "source_refs": {
     "pdb_4ryl": {
@@ -135,7 +135,7 @@
     "deposited_reference_alignment_range": "228-548",
     "assay_crystal_reference_numbering_equivalence_verified": false,
     "source_mapping_discrepancy": {
-      "status": "UNRESOLVED",
+      "status": "STRUCTURE_SEGMENT_RECONCILED_ASSAY_CONSTRUCT_UNRESOLVED",
       "deposited_source_url": "https://files.rcsb.org/download/4RYL.cif",
       "deposited_fields": {
         "_struct_ref.db_name": "UNP",
@@ -154,7 +154,22 @@
           "O60678"
         ]
       },
-      "canonical_residue_remapping_verified": false,
+      "pdbe_mapping_url": "https://www.ebi.ac.uk/pdbe/api/mappings/uniprot/4ryl",
+      "current_uniprot_sequence_urls": [
+        "https://rest.uniprot.org/uniprotkb/Q8WUV3.json",
+        "https://rest.uniprot.org/uniprotkb/O60678.json"
+      ],
+      "expression_tag_entity_positions_1_19": "MGSSHHHHHHSSGLVPRGS",
+      "aligned_entity_positions": "20-340",
+      "aligned_deposited_q8wuv3_positions": "228-548",
+      "aligned_current_o60678_positions": "211-531",
+      "aligned_amino_acid_count": 321,
+      "aligned_segment_sha256": "bbc8b5d4d286141e3998516321d68a12a9fc338fc4f16a00a22527b3281d0899",
+      "sequence_segment_equality_verified": true,
+      "o60678_number_equals_q8wuv3_number_minus": 17,
+      "canonical_residue_remapping_verified": true,
+      "full_length_accessions_identical": false,
+      "assay_construct_linkage_verified": false,
       "accessions_treated_as_equivalent": false
     },
     "structure_method": "X-RAY DIFFRACTION",

@@ -119,11 +119,24 @@ def validate(manifest: dict[str, object]) -> int:
     require(structure["assay_crystal_reference_numbering_equivalence_verified"] is False,
             "construct_mapping_overclaimed")
     mapping = structure["source_mapping_discrepancy"]
-    require(mapping["status"] == "UNRESOLVED"
+    require(mapping["status"] ==
+            "STRUCTURE_SEGMENT_RECONCILED_ASSAY_CONSTRUCT_UNRESOLVED"
             and mapping["deposited_fields"]["_struct_ref.pdbx_db_accession"] == "Q8WUV3"
             and mapping["current_api_fields"][
                 "rcsb_polymer_entity_container_identifiers.uniprot_ids"] == ["O60678"]
-            and mapping["canonical_residue_remapping_verified"] is False
+            and mapping["expression_tag_entity_positions_1_19"] ==
+            "MGSSHHHHHHSSGLVPRGS"
+            and mapping["aligned_entity_positions"] == "20-340"
+            and mapping["aligned_deposited_q8wuv3_positions"] == "228-548"
+            and mapping["aligned_current_o60678_positions"] == "211-531"
+            and mapping["aligned_amino_acid_count"] == 321
+            and mapping["aligned_segment_sha256"] ==
+            "bbc8b5d4d286141e3998516321d68a12a9fc338fc4f16a00a22527b3281d0899"
+            and mapping["sequence_segment_equality_verified"] is True
+            and mapping["o60678_number_equals_q8wuv3_number_minus"] == 17
+            and mapping["canonical_residue_remapping_verified"] is True
+            and mapping["full_length_accessions_identical"] is False
+            and mapping["assay_construct_linkage_verified"] is False
             and mapping["accessions_treated_as_equivalent"] is False,
             "source_mapping_discrepancy_erased")
     assay = manifest["experimental_observation"]
