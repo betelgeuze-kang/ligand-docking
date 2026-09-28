@@ -10,6 +10,7 @@ import sys
 import pytest
 
 from tools.product import verify_prepared_cross_numerics as checker
+from betelgeuze_product import prepared_cross_numeric_reference as packaged_checker
 from tests.unit.test_v2_prepared_cross_interaction import _pair, _evaluate
 
 
@@ -45,7 +46,7 @@ def test_scalar_constants_have_independent_closed_form_values():
     assert abs(derivative) < 1e-14
 
 
-@pytest.mark.parametrize("field", ["energy", "force", "pairs", "count", "requested"])
+@pytest.mark.parametrize("field", ["energy", "force", "pairs", "pair_digest", "count", "requested"])
 def test_incorrect_producer_values_cannot_select_reference_work(field):
     report = _report()
     result = report["rows"][0]["result"]
@@ -55,6 +56,8 @@ def test_incorrect_producer_values_cannot_select_reference_work(field):
         result["quantities"]["ligand_cross_forces_kcal_per_mol_angstrom"][0][1] += 1
     elif field == "pairs":
         result["pair_accounting"]["cross_pair_indices"] = []
+    elif field == "pair_digest":
+        result["pair_accounting"]["pair_indices_sha256"] = "0" * 64
     elif field == "count":
         result["pair_accounting"]["within_declared_cutoff"] = 0
     else:
@@ -62,6 +65,22 @@ def test_incorrect_producer_values_cannot_select_reference_work(field):
     row = checker.check_report(report)["rows"][0]
     assert row["comparison_status"] == "failed"
     assert row["reference_pair_count"] == 1
+    if field == "pair_digest":
+        packaged = packaged_checker.check_report(report)
+        assert packaged["rows"][0]["calculation_status"] == "evaluated"
+        assert packaged["rows"][0]["comparison_status"] == "failed"
+        assert packaged["training_admitted"] is False
+
+
+@pytest.mark.parametrize("module", [checker, packaged_checker])
+@pytest.mark.parametrize("invalid_digest", ["0" * 63, "G" * 64, True, None])
+def test_malformed_pair_digest_cannot_pass_evaluated_row(module, invalid_digest):
+    report = _report()
+    report["rows"][0]["result"]["pair_accounting"]["pair_indices_sha256"] = invalid_digest
+    checked = module.check_report(report)
+    assert checked["rows"][0]["calculation_status"] == "evaluated"
+    assert checked["rows"][0]["comparison_status"] == "invalid_or_unsupported"
+    assert checked["training_admitted"] is False
 
 
 @pytest.mark.parametrize("change", ["dtype", "shape", "nan", "parameter_index", "periodic", "model", "force_shape", "negative_epsilon"])

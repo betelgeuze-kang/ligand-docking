@@ -134,6 +134,23 @@ def _checked_pose_report(path, raw_report, check_report):
     return report, checked
 
 
+def _canonical_prepared_system_source(system, parameters):
+    """Bind one intact prepared system without encoding its tensors three times."""
+    from betelgeuze_engine_v2.molecular.serialization import (
+        canonical_json_value, canonical_system_document, sha256_canonical,
+    )
+
+    # The document builder does not itself enforce the object's mutation guard.
+    system.assert_integrity()
+    document = canonical_json_value(canonical_system_document(system))
+    return {
+        "system_sha256": document["system_sha256"],
+        "coordinates_sha256": sha256_canonical(document["system"]["coordinates"]),
+        "system": document,
+        "nonbonded_parameters": parameters,
+    }
+
+
 def _check_pose_report_request(report, request, source_inputs):
     """Bind reported pose arithmetic to the frozen request and prepared sources."""
     from dataclasses import replace
@@ -145,12 +162,7 @@ def _check_pose_report_request(report, request, source_inputs):
     from betelgeuze_engine.product.prepared_pose_journal import _input_binding
     from betelgeuze_engine.product.prepared_validation import prepared_validation_scope
     from betelgeuze_engine.product.v2_cross_interaction import MINIMUM_PAIR_DISTANCE_ANGSTROM
-    from betelgeuze_engine_v2.molecular import (
-        canonical_coordinates_sha256, canonical_system_sha256,
-    )
-    from betelgeuze_engine_v2.molecular.serialization import (
-        canonical_json_value, canonical_system_document,
-    )
+    from betelgeuze_engine_v2.molecular import canonical_system_sha256
 
     def require(condition):
         if not condition:
@@ -181,14 +193,6 @@ def _check_pose_report_request(report, request, source_inputs):
     if not evaluated:
         return
 
-    def source(system, parameters):
-        return {
-            "system_sha256": canonical_system_sha256(system),
-            "coordinates_sha256": canonical_coordinates_sha256(system),
-            "system": canonical_json_value(canonical_system_document(system)),
-            "nonbonded_parameters": parameters,
-        }
-
     def current_source_inputs():
         # Canonical frozen JSON sorts request keys, but the original source
         # binding list retains the request's insertion order.
@@ -213,7 +217,7 @@ def _check_pose_report_request(report, request, source_inputs):
             == ligand.coordinates[0].tolist()
             and report.get("execution") == request["execution"]
         )
-        receptor_source = source(receptor, rp)
+        receptor_source = _canonical_prepared_system_source(receptor, rp)
         center = ligand.coordinates.mean(dim=1, keepdim=True)
         evaluation = request["evaluation"]
         model = {
@@ -279,7 +283,7 @@ def _check_pose_report_request(report, request, source_inputs):
                 and result.get("pocket") == pocket
                 and result.get("sources") == {
                     "receptor": receptor_source,
-                    "ligand": source(candidate, lp),
+                    "ligand": _canonical_prepared_system_source(candidate, lp),
                 }
             )
         require(current_source_inputs() == sorted(source_inputs, key=canonical))

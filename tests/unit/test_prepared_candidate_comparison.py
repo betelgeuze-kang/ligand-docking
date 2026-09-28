@@ -1,6 +1,7 @@
 """Policy, budget and durable-result contracts with separate synthetic labels."""
 
 import copy
+from dataclasses import replace
 import fcntl
 import hashlib
 import json
@@ -67,6 +68,42 @@ def _protocol(tmp_path, *, seconds=20.0, calls=10):
         "max_engine_calls_per_arm": calls,
         "top_k": 2,
     }
+
+
+def test_prepared_source_receipt_reuses_canonical_document_without_changing_identity(tmp_path):
+    from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
+    from betelgeuze_engine.product.prepared_validation import prepared_validation_scope
+    from betelgeuze_engine_v2.molecular import (
+        MolecularIntegrityError, canonical_coordinates_sha256, canonical_system_sha256,
+    )
+    from betelgeuze_engine_v2.molecular.serialization import (
+        CanonicalSerializationError, canonical_json_value, canonical_system_document,
+    )
+
+    request = _request(tmp_path)
+    with prepared_validation_scope():
+        receptor, ligand, receptor_parameters, ligand_parameters, _ = (
+            load_prepared_gromacs_components(request["prepared_input"])
+        )
+    for system, parameters in (
+        (receptor, receptor_parameters),
+        (ligand, ligand_parameters),
+    ):
+        expected = {
+            "system_sha256": canonical_system_sha256(system),
+            "coordinates_sha256": canonical_coordinates_sha256(system),
+            "system": canonical_json_value(canonical_system_document(system)),
+            "nonbonded_parameters": parameters,
+        }
+        assert comparison._canonical_prepared_system_source(system, parameters) == expected
+
+    receptor.coordinates[0, 0, 0] += 0.25
+    with pytest.raises(MolecularIntegrityError, match="changed after construction"):
+        comparison._canonical_prepared_system_source(receptor, receptor_parameters)
+
+    colliding = replace(ligand, metadata={1: "number", "1": "string"})
+    with pytest.raises(CanonicalSerializationError, match="mapping keys collide"):
+        comparison._canonical_prepared_system_source(colliding, ligand_parameters)
 
 
 def test_comparison_morgan_features_match_training_definition():

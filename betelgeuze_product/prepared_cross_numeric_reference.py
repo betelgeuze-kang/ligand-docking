@@ -136,7 +136,18 @@ def check_result(result):
     if (type(declared_pairs) is not list or any(type(pair) is not list or len(pair) != 2
             or any(type(index) is not int for index in pair) for pair in declared_pairs)):
         raise ValueError("invalid_pair_indices")
+    declared_pair_sha256 = accounting["pair_indices_sha256"]
+    if (type(declared_pair_sha256) is not str or len(declared_pair_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in declared_pair_sha256)):
+        raise ValueError("invalid_pair_indices_sha256")
+    # The producer's canonical digest covers the independently enumerated pair
+    # list. Checking the list alone could leave a contradictory digest passing.
+    reference_pair_sha256 = hashlib.sha256(json.dumps(
+        pairs, ensure_ascii=True, allow_nan=False, sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
     pairs_exact = (declared_pairs == pairs
+                   and declared_pair_sha256 == reference_pair_sha256
                    and type(accounting["requested_cross_pairs"]) is int
                    and accounting["requested_cross_pairs"] == len(rp) * len(lp)
                    and type(accounting["within_declared_cutoff"]) is int
