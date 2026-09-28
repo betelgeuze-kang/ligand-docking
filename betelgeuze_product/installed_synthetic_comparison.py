@@ -1,8 +1,8 @@
-"""Installed-wheel, budgeted four-arm comparison on supplied synthetic poses.
+"""Installed-wheel, budgeted four-arm comparison on bounded development inputs.
 
-This is a new checkpoint format. It never opens checkout ``tools`` modules,
-legacy checkpoints, evaluation labels, native intakes, or D3 requests. It is a
-development integrity experiment, not an assay or physical validation claim.
+Synthetic and native v4 fit sources use distinct versioned checkpoints. Native
+v4 has no prepared-structure identity link yet, so every request must be null.
+Neither route opens checkout ``tools`` modules or evaluation outcomes.
 """
 
 from __future__ import annotations
@@ -32,6 +32,10 @@ from .prepared_cross_numeric_reference import MAX_BYTES as MAX_POSE_BYTES, check
 PROTOCOL = "installed_synthetic_prepared_comparison_protocol_v1"
 FROZEN = "installed_synthetic_prepared_comparison_frozen_v1"
 RESULT = "installed_synthetic_prepared_comparison_result_v1"
+NATIVE_PROTOCOL = "installed_native_v4_fit_comparison_protocol_v1"
+NATIVE_FROZEN = "installed_native_v4_fit_comparison_frozen_v1"
+NATIVE_RESULT = "installed_native_v4_fit_comparison_result_v1"
+NATIVE_SOURCE_KIND = "native_chembl_receptor_research_v4_fit"
 MAX_BUDGET_SECONDS = 3600.0
 BOUND_ENVIRONMENT = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
                      "CUDA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES")
@@ -83,10 +87,13 @@ def _rows(source: dict) -> list[dict]:
              and source["kind"] == "synthetic_constants"
              and type(source["rows"]) is list and 1 <= len(source["rows"]) <= MAX_POOL,
              "only_bounded_synthetic_source_supported")
+    return _validate_rows(copy.deepcopy(source["rows"]))
+
+
+def _validate_rows(result: list[dict]) -> list[dict]:
     from rdkit import Chem
 
     seen_ids, component_roles, chemical_roles = set(), {}, {}
-    result = copy.deepcopy(source["rows"])
     for row in result:
         _require(type(row) is dict and set(row) == {
             "record_id", "role", "component_id", "smiles", "fit_value", "assay_id",
@@ -125,6 +132,35 @@ def _rows(source: dict) -> list[dict]:
     return result
 
 
+def _native_rows(reference: dict) -> tuple[list[dict], dict]:
+    """Project only source-derived fit labels and preassigned candidate IDs."""
+    from .installed_native_v4_source import _verified_intake
+
+    receipt, scope, original = _verified_intake(reference)
+    _require(scope["endpoint"] == "Ki" and scope["target_annotation"]
+             and scope["physical_target_state_verified"] is False,
+             "unsupported_native_comparison_scope")
+    rows = []
+    for row in original:
+        role = row["assigned_role"]
+        identity = row["chemical_identity"]
+        issues = row["prediction_issues"]
+        smiles = identity["canonical_isomeric_smiles"] if identity and not issues else None
+        value = (row["observation"]["negative_log10_molar"]
+                 if role == "fit" and row["eligible_for_point_model"] else None)
+        _require(value is None or _finite(value), "invalid_native_fit_point")
+        rows.append({
+            "record_id": row["record_id"], "role": role,
+            "component_id": row["component_id"], "smiles": smiles,
+            "fit_value": value, "assay_id": row["assay_id"],
+        })
+    checked = _validate_rows(rows)
+    selected = [r for r in checked if r["role"] == "fit" and r["fit_value"] is not None]
+    _require(len(selected) >= 5 and len({r["component_id"] for r in selected}) >= 2,
+             "insufficient_supported_native_fit_rows_or_components")
+    return checked, receipt
+
+
 def _features(smiles: list[str]):
     import numpy as np
     from rdkit import Chem
@@ -156,7 +192,13 @@ def _predictions(frozen: dict, arm: str) -> dict[str, float]:
     if arm == "ai_engine":
         from sklearn.linear_model import Ridge
 
-        model = Ridge(alpha=10.0, solver="cholesky").fit(x, y)
+        weights = None
+        if frozen["source_kind"] == NATIVE_SOURCE_KIND:
+            repetitions = Counter((row["component_id"], row["smiles"])
+                                  for row in selected)
+            weights = np.asarray([1.0 / repetitions[(row["component_id"], row["smiles"])]
+                                  for row in selected], dtype=np.float64)
+        model = Ridge(alpha=10.0, solver="cholesky").fit(x, y, sample_weight=weights)
         values = model.predict(z) if valid else []
     else:
         unique = {}
@@ -203,8 +245,9 @@ def freeze(protocol: dict) -> dict:
     _require(type(protocol) is dict and set(protocol) == {
         "schema_version", "source", "requests", "budget_seconds_per_arm",
         "max_engine_calls_per_arm", "arm_order", "selection_seed", "tie_policy",
-    } and protocol["schema_version"] == PROTOCOL,
+    } and protocol["schema_version"] in {PROTOCOL, NATIVE_PROTOCOL},
              "unsupported_installed_comparison_protocol")
+    native = protocol["schema_version"] == NATIVE_PROTOCOL
     budget, cap = protocol["budget_seconds_per_arm"], protocol["max_engine_calls_per_arm"]
     _require(_finite(budget) and 0 < budget <= MAX_BUDGET_SECONDS
              and type(cap) is int and 1 <= cap <= MAX_POOL,
@@ -215,7 +258,8 @@ def freeze(protocol: dict) -> dict:
              and type(protocol["selection_seed"]) is int
              and 0 <= protocol["selection_seed"] < 2**32,
              "invalid_prespecified_comparison_order")
-    rows = _rows(protocol["source"])
+    rows, source_verification = (_native_rows(protocol["source"])
+                                 if native else (_rows(protocol["source"]), None))
     pool = [row["record_id"] for row in rows if row["role"] == "development_test"]
     _require(type(protocol["requests"]) is dict and set(protocol["requests"]) == set(pool),
              "candidate_request_denominator_mismatch")
@@ -224,6 +268,8 @@ def freeze(protocol: dict) -> dict:
     requests, source_inputs = {}, {}
     for rid in pool:
         ref = protocol["requests"][rid]
+        _require(not native or ref is None,
+                 "native_prepared_candidate_identity_link_not_supported")
         request = None if ref is None else _bound_json(ref)
         _require(request is None or (type(request) is dict and request.get("schema_version")
                  == "prepared_rigid_pose_cross_request_v1"),
@@ -232,14 +278,18 @@ def freeze(protocol: dict) -> dict:
         source_inputs[rid] = None if request is None else _input_binding(request)
     runtime = _comparison_runtime()
     frozen = {
-        "schema_version": FROZEN, "protocol": copy.deepcopy(protocol),
+        "schema_version": NATIVE_FROZEN if native else FROZEN,
+        "protocol": copy.deepcopy(protocol),
         "rows": rows, "pool": pool, "requests": requests,
         "source_inputs": source_inputs, "runtime": runtime,
-        "source_kind": "synthetic_constants", "evaluation_labels_read": 0,
+        "source_kind": NATIVE_SOURCE_KIND if native else "synthetic_constants",
+        "evaluation_labels_read": 0,
         "scientifically_validated": False, "source_authenticated": False,
         "same_prepared_assay_state_verified": False,
         "product_ranking_enabled": False,
     }
+    if native:
+        frozen["source_verification"] = source_verification
     _require(len(_canonical(frozen)) <= MAX_JSON_BYTES,
              "frozen_comparison_capacity_exceeded")
     return frozen
@@ -251,7 +301,7 @@ def _envelope(run_dir: Path) -> tuple[dict, str]:
              and type(value["sha256"]) is str
              and HEX.fullmatch(value["sha256"]) is not None
              and type(value["payload"]) is dict
-             and value["payload"].get("schema_version") == FROZEN
+             and value["payload"].get("schema_version") in {FROZEN, NATIVE_FROZEN}
              and _sha(value["payload"]) == value["sha256"],
              "installed_frozen_binding_mismatch")
     return value["payload"], value["sha256"]
@@ -631,6 +681,9 @@ def _read_protocol(path: Path) -> dict:
 
 def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
     protocol = frozen["protocol"]
+    native = frozen["source_kind"] == NATIVE_SOURCE_KIND
+    expected_schema = NATIVE_RESULT if native else RESULT
+    expected_source_kind = NATIVE_SOURCE_KIND if native else "synthetic_constants"
     _require(type(result) is dict and set(result) == {
         "schema_version", "binding", "pool", "arm_order", "arms",
         "budget_seconds_per_arm", "max_engine_calls_per_arm", "source_kind",
@@ -640,14 +693,14 @@ def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
         "common_validation_seconds", "arm_execution_and_summary_wall_seconds",
         "orchestrator_wall_seconds", "cost_scope",
         "upstream_acquisition_preparation_and_pose_generation_measured",
-    } and result["schema_version"] == RESULT
+    } and result["schema_version"] == expected_schema
              and result["binding"] == binding
              and result["pool"] == frozen["pool"]
              and result["arm_order"] == protocol["arm_order"]
              and type(result["arms"]) is dict and set(result["arms"]) == set(ARMS)
              and result["budget_seconds_per_arm"] == protocol["budget_seconds_per_arm"]
              and result["max_engine_calls_per_arm"] == protocol["max_engine_calls_per_arm"]
-             and result["source_kind"] == "synthetic_constants"
+             and result["source_kind"] == expected_source_kind
              and result["evaluation_labels_read"] == 0
              and result["selector_recomputed_locally"] is True
              and result["source_authenticated"] is False
@@ -697,11 +750,13 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
         summary_seconds = time.perf_counter() - summary_started
         _require(freeze(protocol) == frozen, "installed_inputs_changed_during_comparison")
         result = {
-            "schema_version": RESULT, "binding": binding, "pool": frozen["pool"],
+            "schema_version": (NATIVE_RESULT if frozen["source_kind"] == NATIVE_SOURCE_KIND
+                               else RESULT),
+            "binding": binding, "pool": frozen["pool"],
             "arm_order": protocol["arm_order"], "arms": arms,
             "budget_seconds_per_arm": protocol["budget_seconds_per_arm"],
             "max_engine_calls_per_arm": protocol["max_engine_calls_per_arm"],
-            "source_kind": "synthetic_constants", "evaluation_labels_read": 0,
+            "source_kind": frozen["source_kind"], "evaluation_labels_read": 0,
             "selector_recomputed_locally": True, "source_authenticated": False,
             "scientifically_validated": False,
             "same_prepared_assay_state_verified": False,
@@ -721,7 +776,10 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
 def verify_run(protocol: dict, run_dir: Path) -> dict:
     """Read-only checkpoint/result verification with current input/runtime binding."""
     outcome = {
-        "schema_version": "installed_synthetic_comparison_verification_v1",
+        "schema_version": ("installed_native_v4_fit_comparison_verification_v1"
+                           if type(protocol) is dict
+                           and protocol.get("schema_version") == NATIVE_PROTOCOL else
+                           "installed_synthetic_comparison_verification_v1"),
         "status": "invalid", "exit_code": 2, "reason": None,
         "execution_performed": False, "source_authenticated": False,
         "scientifically_validated": False,
@@ -771,7 +829,9 @@ def main(argv=None) -> int:
         outcome = verify_run(protocol, args.run_dir)
     else:
         result = run(protocol, args.run_dir, resume=args.command == "resume")
-        outcome = {"schema_version": "installed_synthetic_comparison_cli_v1",
+        outcome = {"schema_version": ("installed_native_v4_fit_comparison_cli_v1"
+                                      if protocol.get("schema_version") == NATIVE_PROTOCOL else
+                                      "installed_synthetic_comparison_cli_v1"),
                    "status": "committed", "exit_code": 0,
                    "binding": result["binding"], "pool_count": len(result["pool"]),
                    "arms": {arm: result["arms"][arm]["denominator"] for arm in ARMS},

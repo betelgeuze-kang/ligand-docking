@@ -20,6 +20,8 @@ betelgeuze-cleanup = "betelgeuze_cleanup.cli:main"
 betelgeuze-dock = "betelgeuze_engine_v2.standalone_cli:main"
 betelgeuze-comparison-receipt = "betelgeuze_product.comparison_receipts:main"
 betelgeuze-comparison = "betelgeuze_product.installed_synthetic_comparison:main"
+betelgeuze-native-v4-source = "betelgeuze_product.installed_native_v4_source:main"
+betelgeuze-native-v4-comparison = "betelgeuze_product.installed_native_v4_comparison:main"
 
 [tool.setuptools.packages.find]
 include = [
