@@ -53,6 +53,18 @@ def _reseal_source(tmp_path, source, reference, entries, *, context=False):
     return {**reference, "summary_sha256": common.file_sha(summary_path)}
 
 
+def _rebuild_resealed_source(tmp_path, source, reference, entries):
+    resealed = _reseal_source(tmp_path, source, reference, entries)
+    manifest_path = tmp_path / "manifest.json"
+    rebuilt = tmp_path / "rebuilt-intake"
+    checkout.build(str(manifest_path), common.file_sha(manifest_path), rebuilt)
+    return {
+        **resealed,
+        "input_dir": str(rebuilt),
+        "summary_sha256": common.file_sha(rebuilt / "summary.json"),
+    }
+
+
 def test_installed_source_exact_checkout_row_parity(bounded_source):
     _, source, reference, _ = bounded_source
     summary = installed.verify_source(reference)
@@ -145,6 +157,62 @@ def test_nonfit_activity_origin_rejected_before_value_read(bounded_source):
     resealed = _reseal_source(tmp_path, source, reference, entries)
     with pytest.raises(ValueError, match="evaluation_outcome_in_fit_input"):
         installed.verify_source(resealed)
+
+
+@pytest.mark.parametrize("location", ["flat", "nested", "wrapper"])
+def test_nonfit_metadata_origin_rejects_embedded_outcome(bounded_source, location):
+    tmp_path, source, reference, entries = bounded_source
+    entries = deepcopy(entries)
+    path = tmp_path / "metadata6.json"
+    metadata = json.loads(path.read_text())
+    if location == "flat":
+        metadata["value"] = "SYNTHETIC_EVALUATION_SENTINEL"
+    elif location == "nested":
+        metadata = {"activity_metadata": {
+            **metadata, "value": "SYNTHETIC_EVALUATION_SENTINEL",
+        }}
+    else:
+        metadata = {
+            "activity_metadata": metadata,
+            "value": "SYNTHETIC_EVALUATION_SENTINEL",
+        }
+    _write_json(path, metadata)
+    entries[-1]["metadata_origin"]["sha256"] = common.file_sha(path)
+    poisoned_reference = _rebuild_resealed_source(tmp_path, source, reference, entries)
+    with pytest.raises(ValueError, match="outcome_or_nonmetadata_field_in_metadata_origin"):
+        installed.verify_source(poisoned_reference)
+
+
+@pytest.mark.parametrize("origin,name", [
+    ("role_origin", "role6.json"),
+    ("document_origin", "doc6.json"),
+])
+def test_nonfit_role_or_document_origin_rejects_embedded_outcome(
+    bounded_source, origin, name,
+):
+    tmp_path, source, reference, entries = bounded_source
+    entries = deepcopy(entries)
+    path = tmp_path / name
+    payload = json.loads(path.read_text())
+    payload["value"] = "SYNTHETIC_EVALUATION_SENTINEL"
+    _write_json(path, payload)
+    entries[-1][origin]["sha256"] = common.file_sha(path)
+    poisoned_reference = _rebuild_resealed_source(tmp_path, source, reference, entries)
+    with pytest.raises(ValueError, match="outcome_or_nonmetadata_field_in_"):
+        installed.verify_source(poisoned_reference)
+
+
+def test_summary_rejects_embedded_outcome(bounded_source):
+    _, source, reference, _ = bounded_source
+    path = source / "summary.json"
+    summary = json.loads(path.read_text())
+    summary["value"] = "SYNTHETIC_EVALUATION_SENTINEL"
+    _write_json(path, summary)
+    with pytest.raises(ValueError, match="unsupported_installed_native_v4_summary"):
+        installed.verify_source({
+            **reference,
+            "summary_sha256": common.file_sha(path),
+        })
 
 
 def test_rdkit_version_drift_rejects_cached_chemical_identity(bounded_source, monkeypatch):

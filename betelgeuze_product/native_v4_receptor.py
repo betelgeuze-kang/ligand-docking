@@ -83,6 +83,128 @@ def source_policies(*values):
     return declarations
 
 
+def metadata_projection(source):
+    """Accept only the known label-free flat and receptor metadata envelopes."""
+    error = "outcome_or_nonmetadata_field_in_metadata_origin"
+    if type(source) is not dict:
+        raise ValueError(error)
+    rich = {
+        "activity_metadata", "assigned_role", "chemical_identity", "component",
+        "connected_previous_nodes", "fit_admitted", "metadata_issues",
+        "molecule_json_pointer", "molecule_metadata", "molecule_origin",
+        "node_id", "numeric_activity_values_read",
+    }
+    if "activity_metadata" in source and set(source) == rich:
+        chemical_keys = {
+            "canonical_isomeric_smiles", "canonical_isomeric_smiles_sha256",
+            "canonicalization", "connectivity_smiles_sha256", "elements",
+            "formal_charge", "fragment_count", "heavy_atom_count",
+            "isotope_atoms", "radical_electrons", "rdkit_inchikey",
+            "rdkit_version", "scaffold_group", "scaffold_smiles",
+            "stereo_unspecified_count",
+        }
+        molecule = source["molecule_metadata"]
+        if (source["assigned_role"] is not None
+                or source["numeric_activity_values_read"] is not False
+                or type(source["fit_admitted"]) is not bool
+                or type(source["connected_previous_nodes"]) is not int
+                or type(source["metadata_issues"]) is not list
+                or any(type(issue) is not str for issue in source["metadata_issues"])
+                or type(source["node_id"]) is not str
+                or type(source["molecule_json_pointer"]) is not str
+                or type(source["chemical_identity"]) is not dict
+                or set(source["chemical_identity"]) != chemical_keys
+                or type(source["component"]) is not dict
+                or set(source["component"]) != {
+                    "blocked", "component_id", "node_count", "reserved_node_count",
+                    "unknown_policy_node_count",
+                }
+                or type(molecule) is not dict
+                or set(molecule) != {"molecule_chembl_id", "molecule_hierarchy"}
+                or type(molecule["molecule_hierarchy"]) is not dict
+                or set(molecule["molecule_hierarchy"]) != {
+                    "active_chembl_id", "molecule_chembl_id", "parent_chembl_id",
+                }
+                or type(source["molecule_origin"]) is not dict
+                or set(source["molecule_origin"]) != {"source_member", "source_sha256"}):
+            raise ValueError(error)
+        value = source["activity_metadata"]
+    else:
+        value = source
+        for wrapper in ("activity_metadata", "ChEMBL activity metadata"):
+            if type(value) is not dict:
+                raise ValueError(error)
+            if wrapper in value:
+                if any(key != wrapper and key.strip().casefold() not in components.POLICY_FIELDS
+                       for key in value):
+                    raise ValueError(error)
+                value = value[wrapper]
+    allowed = bound.METADATA_FIELDS | {"units", "standard_units", "_origin"}
+    if (type(value) is not dict or not bound.METADATA_FIELDS <= set(value)
+            or any(key not in allowed and key.strip().casefold() not in components.POLICY_FIELDS
+                   for key in value)
+            or ("_origin" in value and (type(value["_origin"]) is not dict
+                or set(value["_origin"]) != {"path", "sha256"}))):
+        raise ValueError(error)
+    return value
+
+
+def role_declaration(source):
+    """Reject outcome fields in a bound, preassigned role record."""
+    required = {"record_id", "node_id", "assigned_role"}
+    allowed = required | {
+        "evaluation_only", "original_policy_declarations", "activity_id",
+        "assay_id", "component_id_before_role_append", "endpoint",
+        "source37_scientific_admission", "source_document",
+    }
+    if (type(source) is not dict or not required <= set(source)
+            or set(source) - allowed
+            or ("evaluation_only" in source and type(source["evaluation_only"]) is not bool)
+            or ("activity_id" in source and type(source["activity_id"]) is not int)
+            or any(type(source[key]) is not str for key in (
+                "assay_id", "component_id_before_role_append", "endpoint", "source_document"
+            ) if key in source)
+            or ("source37_scientific_admission" in source
+                and type(source["source37_scientific_admission"]) is not bool)):
+        raise ValueError("outcome_or_nonmetadata_field_in_role_origin")
+    if "original_policy_declarations" in source:
+        components.reservation_status(source["original_policy_declarations"])
+    return source
+
+
+def document_projection(source):
+    """Accept only the known flat or source-bound document metadata schema."""
+    error = "outcome_or_nonmetadata_field_in_document_origin"
+    rich = {
+        "chemical_state_equivalence", "family_equivalence_inferred",
+        "json_pointer", "native_document", "node_id", "origin",
+        "patent_identity_version", "publication_identity",
+    }
+    if type(source) is not dict:
+        raise ValueError(error)
+    if "native_document" in source:
+        document = source["native_document"]
+        if (set(source) != rich or type(document) is not dict
+                or set(document) != {
+                    "doc_type", "document_chembl_id", "doi", "patent_id",
+                    "pubmed_id", "src_id", "year",
+                }
+                or type(source["origin"]) is not dict
+                or set(source["origin"]) != {"source_member", "source_sha256"}
+                or type(source["chemical_state_equivalence"]) is not bool
+                or type(source["family_equivalence_inferred"]) is not bool
+                or type(source["patent_identity_version"]) is not int):
+            raise ValueError(error)
+        return document
+    allowed = {
+        "doc_type", "document_chembl_id", "doi", "journal",
+        "patent_id", "pubmed_id", "src_id", "title", "year",
+    }
+    if not {"doc_type", "document_chembl_id", "src_id"} <= set(source) or set(source) - allowed:
+        raise ValueError(error)
+    return source
+
+
 def revalidate_primary(evidence, native, cache):
     """Recompute name/value correspondence from bound HTML and native records.
 
@@ -251,11 +373,10 @@ def derive(manifest_path, manifest_sha256):
     # Verify prospective assignments and original identity metadata BEFORE labels.
     for aid, entry in indexed.items():
         metadata_source = resolve(entry["metadata_origin"], cache)
-        metadata = metadata_source.get("activity_metadata", metadata_source)
-        metadata = metadata.get("ChEMBL activity metadata", metadata)
+        metadata = metadata_projection(metadata_source)
         if metadata.get("activity_id") != aid:
             raise ValueError("native_metadata_identity_mismatch")
-        role = resolve(entry["role_origin"], cache)
+        role = role_declaration(resolve(entry["role_origin"], cache))
         if (
             role.get("record_id") != "chembl:activity:" + str(aid)
             or role.get("assigned_role") not in bound.ROLES
@@ -341,8 +462,7 @@ def derive(manifest_path, manifest_sha256):
         method = (
             resolve(entry["method_origin"], cache) if entry.get("method_origin") else {}
         )
-        document = resolve(entry["document_origin"], cache)
-        document = document.get("native_document", document)
+        document = document_projection(resolve(entry["document_origin"], cache))
         if document.get("src_id") != metadata["src_id"]:
             raise ValueError("native_document_source_id_mismatch")
         declarations = source_policies(declarations, method, document)

@@ -78,7 +78,14 @@ def _verified_intake(reference: dict) -> tuple[dict, dict, list[dict]]:
         "path": str(directory / "summary.json"),
         "sha256": reference["summary_sha256"],
     })
+    summary_fields = {
+        "schema_version", "phase", "manifest_path", "manifest_sha256",
+        "records_sha256", "split_plan_sha256", "intake_scope_sha256",
+        "identity_context_sha256", "requested_metadata_rows",
+        "assigned_role_counts", "point_eligible", "exclusions",
+    }
     if (type(summary) is not dict
+            or set(summary) != summary_fields
             or summary.get("schema_version") != bound.SCHEMA_V4
             or summary.get("phase") != "fit"
             or type(summary.get("manifest_path")) is not str
