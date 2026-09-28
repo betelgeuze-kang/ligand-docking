@@ -1,0 +1,209 @@
+{
+  "schema_version": "smyd2_5arg_source_preflight_v1",
+  "record_id": "human_smyd2_5arg_s4_compound25_source_candidate",
+  "recorded_date": "2026-09-28",
+  "recorded_against_repository_head": "a306633d8f5cbbcdd3bfb7395bbf8a022e27dae6",
+  "status": "SOURCE_CANDIDATE_ONLY_PREPARATION_AND_ADMISSION_BLOCKED",
+  "qualification": "NOT_QUALIFIED",
+  "scope": "Public-source observations, two unchanged CC0 PDB archive files and bounded metadata-only graph receipt; no scientific admission.",
+  "source_refs": {
+    "pdb_5arg": {
+      "url": "https://www.rcsb.org/structure/5ARG",
+      "download_url": "https://files.rcsb.org/download/5ARG.cif",
+      "kind": "experimental_archive_structure"
+    },
+    "ccd_h41": {
+      "url": "https://www.rcsb.org/ligand/H41",
+      "download_url": "https://files.rcsb.org/ligands/download/H41.cif",
+      "kind": "archive_chemical_component"
+    },
+    "pdb_archive_policy": {
+      "url": "https://www.rcsb.org/pages/policies",
+      "license": "CC0-1.0",
+      "scope": "PDB archive data; no publisher-file rights implied"
+    },
+    "primary_article": {
+      "url": "https://doi.org/10.1021/acs.jmedchem.5b01890",
+      "doi": "10.1021/acs.jmedchem.5b01890",
+      "pmcid": "PMC4917279",
+      "article_xml_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC4917279/fullTextXML",
+      "supplementary_zip_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC4917279/supplementaryFiles"
+    }
+  },
+  "source_file_receipts": [
+    {
+      "source_ref": "pdb_5arg",
+      "relative_path": "official_sources/coordinates-5arg.cif",
+      "source_url": "https://files.rcsb.org/download/5ARG.cif",
+      "size_bytes": 744344,
+      "sha256": "ba33c3dc604445e1d49cf549b9738abcfd7f5727ef900e4f3d1f946a8d26ff74",
+      "license": "CC0-1.0"
+    },
+    {
+      "source_ref": "ccd_h41",
+      "relative_path": "official_sources/chemcomp-h41.cif",
+      "source_url": "https://files.rcsb.org/ligands/download/H41.cif",
+      "size_bytes": 10621,
+      "sha256": "41f1ec80e2fd231ad561c370ec01cf7290bea32f1cb69cdca15b7a185ab9e651",
+      "license": "CC0-1.0"
+    }
+  ],
+  "external_source_audit": {
+    "receipt_sha256": "bdaa1a3f77c5a0a7a8dcbd2ad9c102a84633ced3bb67b84bedaa851c713524e5",
+    "created_utc": "2026-09-28T14:46:32.288253+00:00",
+    "article_xml": {
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC4917279/fullTextXML",
+      "size_bytes": 220501,
+      "sha256": "35ad06bc91a4edb095df1662dd9cbf644a5ab62e09e5823ec7e62f6b7f03da36",
+      "bytes_in_packet": false
+    },
+    "supplementary_zip": {
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC4917279/supplementaryFiles",
+      "size_bytes": 3101279,
+      "sha256": "306f06f8ca16b53fb0c5b40070f3892ca7ebab4eff36c4438254d02a52db617c",
+      "bytes_in_packet": false
+    },
+    "csv_member": {
+      "archive_member": "jm5b01890_si_002.csv",
+      "size_bytes": 2520,
+      "sha256": "90d3af3c34c5575c07c162ed34735db6f394be7625ebb391b7fe6359a780496e",
+      "bytes_in_packet": false,
+      "admitted_as_labels": false
+    },
+    "publisher_pdf_or_images_in_packet": false
+  },
+  "chemical_identity_observation": {
+    "h41_ccd_formula": "C22 H20 Cl2 F2 N6 O3",
+    "h41_ccd_formal_charge": 0,
+    "h41_ccd_inchikey": "OTTJIRVZJJGFTK-SFHVURJKSA-N",
+    "csv_s4_calculated_inchikey": "OTTJIRVZJJGFTK-SFHVURJKSA-N",
+    "stereospecific_standard_inchikey_match": true,
+    "racemic_4_calculated_inchikey": "OTTJIRVZJJGFTK-UHFFFAOYSA-N",
+    "r4_calculated_inchikey": "OTTJIRVZJJGFTK-GOSISDBHSA-N",
+    "inactive_25_calculated_inchikey": "OEYJKIQNPLLSFW-UHFFFAOYSA-N",
+    "assay_crystal_microstate_equivalence_verified": false
+  },
+  "experimental_observation": {
+    "target": "human SMYD2",
+    "endpoint": "IC50",
+    "endpoint_subtype": "SMYD2_p53_peptide_methylation_scintillation_proximity_assay_IC50",
+    "assay_protein": "full-length N-terminal His6 SMYD2 expressed in Escherichia coli",
+    "same_assay_pair": [
+      {
+        "compound": "(S)-4",
+        "source_locus": "Table 4",
+        "operator": "=",
+        "value_uM": 0.027,
+        "censored": false
+      },
+      {
+        "compound": "25",
+        "source_locus": "Table 3",
+        "operator": ">",
+        "value_uM": 20,
+        "censored": true
+      }
+    ],
+    "ic50_converted_to_ki_kd_or_binding_free_energy": false,
+    "physical_comparison_performed": false
+  },
+  "source_family_audit": {
+    "measured_id_row_count": 29,
+    "csv_ids_match_tables_1_to_4_measured_ids": true,
+    "connected_family_complete": false,
+    "synthetic_intermediates_complete": false,
+    "full_family_identity_graph_screened": false,
+    "csv_admitted_as_labels": false,
+    "csv_discrepancies": [
+      "compound 29 SMYD2 IC50: CSV 0.42 uM, Table 3 and narrative 4.2 uM",
+      "PAR1: CSV substitutes SMYD2 BEI for compounds 12, 13, 14, 16, 18",
+      "PAR1: CSV blanks for compounds 15 and 17 despite Table 1 values 0.01 and 0.03 uM",
+      "Caco2 efflux: CSV and Table 4 exchange (S)-32 values 10 versus 4 and (S)-33 values 4 versus 10"
+    ],
+    "discrepancies_adjudicated": false
+  },
+  "structure_observation": {
+    "pdb_id": "5ARG",
+    "method": "X-RAY DIFFRACTION",
+    "resolution_angstrom": 1.99,
+    "asymmetric_unit": "monomer",
+    "crystal_protein": "human SMYD2 Q9NRG4 residues 2-433 expressed in Sf9; TEV-cleaved tag",
+    "assay_crystal_construct_equivalence_verified": false,
+    "deposited_protein_residues": 433,
+    "modeled_protein_residues": 426,
+    "atom_site_rows": 3680,
+    "h41_heavy_atom_rows": 35,
+    "sam_atom_rows": 27,
+    "water_atom_rows": 137,
+    "zinc_atom_rows": 3,
+    "protein_ab_altloc_atom_rows": 88,
+    "protein_ab_altloc_residue_count": 8,
+    "deposited_hydrogen_atom_rows": 0,
+    "preparation_state": "UNPREPARED_ARCHIVE_BYTES"
+  },
+  "rights": {
+    "pdb_archive_license": "CC0-1.0",
+    "article_xml_reports_cc_by": true,
+    "publisher_supplement_per_file_reuse_verified": false,
+    "intended_use_rights_review_complete": false,
+    "free_access_treated_as_reuse_permission": false
+  },
+  "graph_screen": {
+    "status": "BLOCKED_IDENTITY_REVIEW_REQUIRED",
+    "receipt_sha256": "2d5cc7c0251377b8c0bbbb07357dc14224a3f7894c45da5eee11f54238ffa2d8",
+    "executed_repository_head": "a306633d8f5cbbcdd3bfb7395bbf8a022e27dae6",
+    "candidate_count": 29,
+    "blocked_identity_count": 29,
+    "component_node_count": 148940,
+    "reserved_nodes_count": 1336,
+    "unknown_policy_nodes_count": 41,
+    "direct_reserved_or_unknown_key_overlaps": 0,
+    "shortest_indirect_path_edge_types": ["connectivity", "document", "scaffold"],
+    "chemical_equivalence_or_leakage_proven": false,
+    "global_family_completeness": false,
+    "complete_family_clearance": false,
+    "protected_identity_metadata_read_by_separate_screen": true,
+    "protected_outcome_values_read_by_separate_screen": false,
+    "protected_context_bytes_imported_into_packet": false
+  },
+  "protection_and_roles": {
+    "protected_outcomes_accessed": false,
+    "protected_identity_metadata_read_by_separate_screen": true,
+    "protected_context_bytes_imported_into_packet": false,
+    "source_component_role": null,
+    "fit_role": null,
+    "calibration_role": null,
+    "evaluation_role": null
+  },
+  "eligibility": {
+    "prepared_input_executable": false,
+    "numeric_comparison_executable": false,
+    "training_admitted": false,
+    "calibration_admitted": false,
+    "independent_evaluation_admitted": false,
+    "product_ranking_enabled": false,
+    "customer_execution": false,
+    "scientifically_validated": false
+  },
+  "performed_actions": {
+    "public_source_audit": true,
+    "archive_bytes_recorded": true,
+    "publisher_files_imported_into_packet": false,
+    "receptor_prepared": false,
+    "ligands_prepared": false,
+    "roles_assigned": false,
+    "admitted_rows": 0,
+    "prepared_pairs_created": 0,
+    "physical_evaluations": 0
+  },
+  "unresolved_decisions": [
+    "complete connected chemical and document family and reservation coverage",
+    "blocked metadata graph result adjudication and complete-family review",
+    "publisher supplement per-file rights and intended-use rights",
+    "CSV discrepancies and original assay records",
+    "assay/crystal construct and chemical microstate linkage",
+    "missing residues, alternate conformers, waters, zinc, hydrogens and parameters",
+    "frozen same-assay comparison and censoring protocol",
+    "source role and execution authority"
+  ]
+}

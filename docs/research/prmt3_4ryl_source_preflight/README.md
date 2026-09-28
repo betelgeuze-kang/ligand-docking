@@ -83,9 +83,20 @@ The supplied historical screen covered **two chemical candidates in one
 four-node component**, with zero reserved/unknown-policy nodes in that limited
 input. It ran at `67e65a87a5b1a77cf13b47c7c3fbee17b4be8d79`, before this packet's
 recorded repository base. Its result was `identity_clear_review_required`.
-There is no current-head revalidation or full-family/global clearance. All
-admitted-row and prepared-pair counts remain zero. The packet records a receipt
-hash and summary, not protected context bytes or outcomes.
+That historical pair result does not apply to the wider candidate family.
+A separate read-only, metadata-only screen at `a306633d8f5cbbcdd3bfb7395bbf8a022e27dae6`
+joined the pair with 41 identities from the later SAR CSV against the unchanged
+182,433-node frozen context. Under the current transitive source/identity policy,
+all **43/43** candidates were `blocked_identity` in a 148,956-node component
+containing 1,336 reserved and 41 unknown-policy nodes. The result receipt SHA-256
+is `5a00a4769a6b60b093924710685df192f5a31981da69a7d5911eeaabd7b539c4`.
+An independent edge audit found **zero direct reserved/unknown-policy key overlaps**
+for these candidates; their block follows indirect mixed chemical/document/source
+links. This is a conservative policy result, not evidence that 43 compounds are
+chemically identical or that protected outcome values were accessed. The earlier
+2015 greater-than-100 family remains incomplete, and no role, prepared pair or
+scientific admission was created. The manifest preserves the earlier static
+snapshot; its offline verifier does not rerun this later graph screen.
 
 ## Rights and access boundaries
 
