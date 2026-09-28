@@ -1,0 +1,483 @@
+{
+  "schema_version": "prmt3_4ryl_source_preflight_v1",
+  "record_id": "human_prmt3_4ryl_sgc707_xy1_source_candidate",
+  "recorded_date": "2026-09-28",
+  "status": "SOURCE_CANDIDATE_ONLY_PREPARATION_AND_ADMISSION_BLOCKED",
+  "qualification": "NOT_QUALIFIED",
+  "recorded_against_repository_head": "4ada10ce9126c4d9726697fbdb48cd9b5f7eaeac",
+  "scope": "Public source and identity audit with two unchanged CC0 archive files. Historical two-candidate identity screening is not full-family or current-head clearance.",
+  "source_refs": {
+    "pdb_4ryl": {
+      "url": "https://www.rcsb.org/structure/4RYL",
+      "download_url": "https://files.rcsb.org/download/4RYL.cif",
+      "kind": "experimental_archive_structure",
+      "access": "direct_official_file_bytes_verified"
+    },
+    "ccd_3zg": {
+      "url": "https://www.rcsb.org/ligand/3ZG",
+      "download_url": "https://files.rcsb.org/ligands/download/3ZG.cif",
+      "kind": "archive_chemical_component",
+      "access": "direct_official_file_bytes_verified"
+    },
+    "pdb_archive_policy": {
+      "url": "https://www.rcsb.org/pages/policies",
+      "kind": "archive_data_rights",
+      "access": "direct_official_page_verified",
+      "license": "CC0-1.0",
+      "scope": "PDB archive data; does not license publisher content or integrated external data"
+    },
+    "sgc707_probe": {
+      "url": "https://www.thesgc.org/chemical-probes/sgc707",
+      "kind": "originating_group_probe_identity_and_summary",
+      "access": "direct_official_page_verified",
+      "license": "CC-BY-4.0",
+      "license_scope": "Site content except where otherwise noted; not a license for linked publications"
+    },
+    "kaniskan_2015": {
+      "url": "https://doi.org/10.1002/anie.201412154",
+      "doi": "10.1002/anie.201412154",
+      "pmid": "25728001",
+      "pmcid": "PMC4400258",
+      "kind": "primary_publication",
+      "access": "publisher_abstract_and_indexed_primary_text",
+      "full_text_file_downloaded": false
+    },
+    "kaniskan_2015_edition_alias": {
+      "url": "https://doi.org/10.1002/ange.201412154",
+      "doi": "10.1002/ange.201412154",
+      "kind": "parallel_journal_edition_identity",
+      "access": "indexed_publisher_metadata",
+      "byte_identical_to_international_edition": null
+    },
+    "europe_pmc_metadata": {
+      "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1002%2Fanie.201412154&format=json&resultType=core",
+      "kind": "source_access_metadata",
+      "access": "direct_official_api_verified",
+      "is_open_access": "N",
+      "in_pmc": "Y",
+      "has_supplement": "Y"
+    },
+    "parent_2012": {
+      "url": "https://doi.org/10.1016/j.str.2012.06.001",
+      "doi": "10.1016/j.str.2012.06.001",
+      "pmid": "22795084",
+      "pdb_id": "3SMQ",
+      "kind": "precursor_publication",
+      "access": "primary_abstract_and_official_pdb_identity"
+    },
+    "parent_2013": {
+      "url": "https://doi.org/10.1021/jm3018332",
+      "doi": "10.1021/jm3018332",
+      "pmid": "23445220",
+      "pdb_id": "4HSG",
+      "kind": "precursor_sar_publication",
+      "access": "indexed_primary_text_and_official_pdb_identity"
+    },
+    "later_sar_2018": {
+      "url": "https://doi.org/10.1021/acs.jmedchem.7b01674",
+      "doi": "10.1021/acs.jmedchem.7b01674",
+      "pmid": "29244490",
+      "pmcid": "PMC5808361",
+      "kind": "related_sar_publication",
+      "access": "indexed_primary_text_and_official_supplement_metadata"
+    },
+    "later_sar_csv_metadata": {
+      "url": "https://api.figshare.com/v2/articles/5760351",
+      "doi": "10.1021/acs.jmedchem.7b01674.s002",
+      "kind": "external_identity_list_provenance",
+      "access": "direct_official_metadata_and_public_identity_column_projection",
+      "license": "CC-BY-NC-4.0",
+      "download_url": "https://ndownloader.figshare.com/files/10148919",
+      "file_name": "jm7b01674_si_002.csv",
+      "size_bytes": 2255,
+      "sha256": "c2ee6f9e333ee38c6b19af51b2868e45ad0d7b9d5c4de81c5eab119ee698f1e9",
+      "bytes_included_in_packet": false
+    },
+    "later_sar_pdf_metadata": {
+      "url": "https://api.figshare.com/v2/articles/5760354",
+      "doi": "10.1021/acs.jmedchem.7b01674.s001",
+      "kind": "external_supplement_provenance",
+      "access": "direct_official_metadata_only",
+      "license": "CC-BY-NC-4.0",
+      "file_name": "jm7b01674_si_001.pdf",
+      "file_downloaded": false,
+      "bytes_included_in_packet": false
+    }
+  },
+  "source_file_receipts": [
+    {
+      "source_ref": "pdb_4ryl",
+      "source_url": "https://files.rcsb.org/download/4RYL.cif",
+      "relative_path": "official_sources/coordinates-4ryl.cif",
+      "size_bytes": 320006,
+      "sha256": "327c5d3a8784516648f6094f041b791ab7d42db64557f19d2faebc29e33ac0df",
+      "license": "CC0-1.0",
+      "official_url_bytes_match": true
+    },
+    {
+      "source_ref": "ccd_3zg",
+      "source_url": "https://files.rcsb.org/ligands/download/3ZG.cif",
+      "relative_path": "official_sources/chemcomp-3zg.cif",
+      "size_bytes": 8516,
+      "sha256": "6fc81e374e082f4bcf2c39bd7aa9bf1d3f7a4a80e50fec210fb3587baf6dc618",
+      "license": "CC0-1.0",
+      "official_url_bytes_match": true
+    }
+  ],
+  "structure_observation": {
+    "pdb_id": "4RYL",
+    "primary_doi": "10.1002/anie.201412154",
+    "organism": "Homo sapiens",
+    "uniprot_id": "O60678",
+    "current_uniprot_mapping_source_url": "https://data.rcsb.org/rest/v1/core/polymer_entity/4RYL/1",
+    "current_uniprot_mapping_provenance": "SIFTS",
+    "deposited_uniprot_accession": "Q8WUV3",
+    "deposited_reference_alignment_range": "228-548",
+    "assay_crystal_reference_numbering_equivalence_verified": false,
+    "source_mapping_discrepancy": {
+      "status": "UNRESOLVED",
+      "deposited_source_url": "https://files.rcsb.org/download/4RYL.cif",
+      "deposited_fields": {
+        "_struct_ref.db_name": "UNP",
+        "_struct_ref.db_code": "Q8WUV3_HUMAN",
+        "_struct_ref.pdbx_db_accession": "Q8WUV3",
+        "_struct_ref_seq.pdbx_db_accession": "Q8WUV3",
+        "_struct_ref_seq.db_align_beg": 228,
+        "_struct_ref_seq.db_align_end": 548
+      },
+      "current_api_url": "https://data.rcsb.org/rest/v1/core/polymer_entity/4RYL/1",
+      "current_api_fields": {
+        "rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers[0].database_accession": "O60678",
+        "rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers[0].database_name": "UniProt",
+        "rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers[0].provenance_source": "SIFTS",
+        "rcsb_polymer_entity_container_identifiers.uniprot_ids": [
+          "O60678"
+        ]
+      },
+      "canonical_residue_remapping_verified": false,
+      "accessions_treated_as_equivalent": false
+    },
+    "structure_method": "X-RAY DIFFRACTION",
+    "resolution_angstrom": 2.1,
+    "asymmetric_unit_polymer_label_chain": "A",
+    "deposited_polymer_residue_count": 340,
+    "observed_polymer_residue_count": 300,
+    "atom_site_rows": 2582,
+    "deposited_hydrogen_atom_rows": 0,
+    "water_oxygen_atom_rows": 172,
+    "unknown_atom_or_ion_rows": 2,
+    "assembly_id": "1",
+    "assembly_description": "author and PISA defined dimer",
+    "assembly_operations": "1,2",
+    "assembly_asym_ids": "A,B,C,D,E",
+    "deposited_ligand_ccd": "3ZG",
+    "deposited_ligand_formula": "C16H18N4O2",
+    "ccd_formal_charge": 0,
+    "deposited_ligand_heavy_atom_rows": 22,
+    "ccd_heavy_atom_count": 22,
+    "ccd_hydrogen_count": 18,
+    "deposited_ligand_atom_names_complete_against_ccd": true,
+    "ligand_altloc": ".",
+    "ligand_occupancy": 1,
+    "ligand_inchikey": "DMIDPTCQPIJYFE-UHFFFAOYSA-N",
+    "preparation_state": "UNPREPARED_ARCHIVE_BYTES",
+    "source_refs": [
+      "pdb_4ryl",
+      "ccd_3zg"
+    ],
+    "limitations": "Counts describe deposited asymmetric-unit bytes. Dimer generation, missing protein atoms/residues, alternate conformers, waters/UNX, hydrogens, protonation and parameters are unresolved."
+  },
+  "chemical_identity_observations": [
+    {
+      "compound": "SGC707",
+      "inchikey": "DMIDPTCQPIJYFE-UHFFFAOYSA-N",
+      "smiles": "O=C(N1CCCC1)CNC(NC2=CC3=CC=NC=C3C=C2)=O",
+      "ccd_id": "3ZG",
+      "later_sar_2018_compound_id": "4",
+      "source_refs": [
+        "sgc707_probe",
+        "ccd_3zg",
+        "later_sar_2018"
+      ]
+    },
+    {
+      "compound": "XY1",
+      "inchikey": "GSQHGSRPQHBTTP-UHFFFAOYSA-N",
+      "smiles": "O=C(N1CCCC1)CNC(NC2=CC3=CC=CC=C3C=C2)=O",
+      "ccd_id": null,
+      "later_sar_2018_compound_id": "51",
+      "source_refs": [
+        "sgc707_probe",
+        "later_sar_2018"
+      ]
+    },
+    {
+      "compound": "Compound 1 in the 2012 precursor publication",
+      "inchikey": "GGXCUZHEJUJACD-UHFFFAOYSA-N",
+      "pdb_id": "3SMQ",
+      "ccd_id": "TDU",
+      "source_url": "https://www.rcsb.org/structure/3SMQ",
+      "family_screened": false
+    },
+    {
+      "compound": "Compound 14u in the 2013 precursor publication",
+      "inchikey": "PKHSKYFMULMNOC-UHFFFAOYSA-N",
+      "pdb_id": "4HSG",
+      "ccd_id": "KTD",
+      "source_url": "https://www.rcsb.org/structure/4HSG",
+      "later_sar_2018_compound_id": "2",
+      "family_screened": false
+    }
+  ],
+  "experimental_observation": {
+    "target": "human PRMT3",
+    "endpoint": "IC50",
+    "endpoint_subtype": "PRMT3_biochemical_scintillation_proximity_assay_IC50",
+    "source_locus": "2015 main text and Figure 2A; SGC probe summary independently supplies the pair values",
+    "assay_method": "scintillation proximity assay (SPA)",
+    "assay_condition_summary": "substrate and cofactor concentrations reported at their respective Km values",
+    "biochemical_construct": null,
+    "assay_protein_concentration_nM": null,
+    "complete_assay_protocol_verified": false,
+    "measurements": [
+      {
+        "compound": "SGC707",
+        "operator": "=",
+        "value_nM": 31,
+        "reported_plus_minus_nM": 2,
+        "uncertainty_kind": null,
+        "reported_n": 3,
+        "censored": false
+      },
+      {
+        "compound": "XY1",
+        "operator": ">",
+        "value_nM": 100000,
+        "reported_plus_minus_nM": null,
+        "uncertainty_kind": null,
+        "reported_n": null,
+        "censored": true,
+        "interpretation": "reported inactive at highest tested concentration; no finite fitted IC50 asserted"
+      }
+    ],
+    "source_refs": [
+      "kaniskan_2015",
+      "sgc707_probe"
+    ],
+    "evidence_limits": "Factual source observations only. Primary full-text/SI files and complete protocol were not verified; no engine prediction or experimental comparison was performed.",
+    "excluded_endpoint_equivalences": [
+      "LC-MS biochemical IC50",
+      "ITC KD",
+      "SPR KD and kinetic rates",
+      "jump-dilution residence time",
+      "cellular InCELL Hunter EC50",
+      "cellular endogenous or exogenous H4R3me2a IC50",
+      "off-target panel percent inhibition and 5HT2B Ki",
+      "cell viability",
+      "mouse pharmacokinetics",
+      "crystal occupancy or pose"
+    ],
+    "ic50_converted_to_ki_kd_or_binding_free_energy": false
+  },
+  "source_family_audit": {
+    "completeness": false,
+    "full_family_identity_graph_screened": false,
+    "article_reports_more_than_100_designed_synthesized_tested_analogues": true,
+    "exact_total_tested_compounds": null,
+    "all_2015_measured_compound_identities": null,
+    "primary_2015_si_file_name": "anie_201412154_sm_miscellaneous_information.pdf",
+    "primary_2015_si_archive_file_alias": "NIHMS673239-supplement-Supporting_Information.pdf",
+    "primary_2015_si_content_verified": false,
+    "primary_2015_si_bytes_imported": false,
+    "direct_access_limits": [
+      "PMC HTML returned reCAPTCHA; challenge was not bypassed",
+      "Publisher supplement click failed; direct publisher page returned HTTP 403",
+      "Europe PMC free-PDF URL returned HTTP 403",
+      "PMC OA skill used a legacy service URL that returned HTTP 404; this error is not a rights determination"
+    ],
+    "document_identity_aliases": [
+      "10.1002/anie.201412154",
+      "10.1002/ange.201412154",
+      "PMID:25728001",
+      "PMCID:PMC4400258",
+      "NIHMS:673239"
+    ],
+    "source_family_links_requiring_review": [
+      "10.1016/j.str.2012.06.001",
+      "10.1021/jm3018332",
+      "10.1021/acs.jmedchem.7b01674"
+    ],
+    "later_sar_identity_projection": {
+      "source_ref": "later_sar_csv_metadata",
+      "row_count": 41,
+      "compound_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "38",
+        "39",
+        "40",
+        "49",
+        "50",
+        "51"
+      ],
+      "columns_emitted": [
+        "Compound _ID",
+        "SMILES"
+      ],
+      "outcome_column_not_emitted": "IC50 (nM)",
+      "raw_file_contains_outcomes": true,
+      "raw_file_opened_for_projection": true,
+      "raw_bytes_imported": false,
+      "encoding_observed": "CP1252 with CR line endings",
+      "does_not_establish_2015_family_completeness": true
+    },
+    "numbered_identifiers_must_be_document_qualified": true,
+    "patent_family_coverage": null,
+    "synthetic_intermediate_coverage": null,
+    "inference": "The connected precursor and later-SAR documents require identity graph review. The 41-row later file cannot establish complete coverage of the earlier greater-than-100 analogue campaign."
+  },
+  "historical_pair_screen": {
+    "receipt_sha256": "05b39fd925b38adbb932265b34ffb8c124328d2a522b79ffd39bbd292d19b42b",
+    "created_utc": "2026-09-28T13:51:33.236370+00:00",
+    "executed_repository_head": "67e65a87a5b1a77cf13b47c7c3fbee17b4be8d79",
+    "candidates_screened": [
+      "SGC707",
+      "XY1"
+    ],
+    "chemical_candidate_count": 2,
+    "component_count": 1,
+    "component_node_count": 4,
+    "result_status": "identity_clear_review_required",
+    "reserved_nodes_count": 0,
+    "unknown_policy_nodes_count": 0,
+    "scope": "Two supplied chemical identities and their supplied document identity only; counts are historical receipt metadata, not a complete-source-family review.",
+    "source_family_completeness": false,
+    "current_head_revalidated": false,
+    "current_global_clearance": false,
+    "training_rows_admitted": 0,
+    "calibration_rows_admitted": 0,
+    "evaluation_rows_admitted": 0,
+    "prepared_pairs_created": 0,
+    "protected_outcomes_read_by_receipt": false,
+    "protected_context_bytes_imported": false,
+    "comparison_with_current_protected_context_performed": false
+  },
+  "source_rights_observation": {
+    "archive_file_reuse_basis_verified": true,
+    "archive_file_license": "CC0-1.0",
+    "sgc_page_license": "CC-BY-4.0",
+    "publisher_2015_article_use_specific_permission": null,
+    "publisher_2015_si_use_specific_permission": null,
+    "later_sar_supplement_license": "CC-BY-NC-4.0",
+    "source_family_training_or_product_use_review_complete": false,
+    "free_reading_treated_as_open_reuse_permission": false
+  },
+  "protection_and_roles": {
+    "protected_outcomes_accessed": false,
+    "protected_context_opened": false,
+    "source_component_role": null,
+    "fit_role": null,
+    "calibration_role": null,
+    "evaluation_role": null
+  },
+  "eligibility": {
+    "prepared_input_executable": false,
+    "numeric_comparison_executable": false,
+    "experimental_comparison_eligible": false,
+    "training_admitted": false,
+    "calibration_admitted": false,
+    "independent_evaluation_admitted": false,
+    "product_ranking_enabled": false,
+    "customer_execution": false,
+    "scientifically_validated": false
+  },
+  "performed_actions": {
+    "public_source_audit": true,
+    "archive_bytes_recorded": true,
+    "publisher_si_bytes_imported": false,
+    "receptor_prepared": false,
+    "ligands_prepared": false,
+    "fit_or_evaluation_roles_assigned": false,
+    "physical_evaluations": 0
+  },
+  "unresolved_decisions": [
+    {
+      "id": "complete_source_family",
+      "status": "unresolved",
+      "needed": "Enumerate and resolve all measured compounds, controls, precursor analogues and synthetic intermediates; reconcile the 2015 campaign with related publications and missing identities."
+    },
+    {
+      "id": "document_alias_patent_and_reservation_coverage",
+      "status": "unresolved",
+      "needed": "Review both journal editions, public aliases and applicable patents, then screen the complete source/chemical component at the relevant current revision without protected outcome access."
+    },
+    {
+      "id": "source_use_specific_rights",
+      "status": "unresolved",
+      "needed": "Resolve intended-use rights for article/SI and connected sources; archive CC0 and SGC page licensing do not grant publisher rights."
+    },
+    {
+      "id": "assay_and_structure_construct_linkage",
+      "status": "unresolved",
+      "needed": "Verify biochemical construct, source mutation numbering, conditions and correspondence to the 4RYL sequence; reconcile deposited Q8WUV3 numbering with current O60678 mapping."
+    },
+    {
+      "id": "assembly_and_protein_preparation",
+      "status": "unresolved",
+      "needed": "Review dimer assembly, missing residues and side chains, alternate conformers and any repaired coordinates before preparation."
+    },
+    {
+      "id": "waters_ions_and_hydrogens",
+      "status": "unresolved",
+      "needed": "Choose and justify waters, both UNX sites and hydrogen placement without silently assigning unknown atom identities."
+    },
+    {
+      "id": "paired_ligand_microstates_and_parameters",
+      "status": "unresolved",
+      "needed": "Choose compatible SGC707/XY1 protonation, tautomer and parameter states; CCD neutral formula alone does not prove assay microstate."
+    },
+    {
+      "id": "frozen_spa_protocol_and_comparison",
+      "status": "unresolved",
+      "needed": "Freeze a reviewed same-SPA endpoint, censoring policy and comparison threshold; do not convert IC50 to Ki, KD or binding free energy."
+    },
+    {
+      "id": "role_and_execution_authority",
+      "status": "unresolved",
+      "needed": "Keep all roles null and preparation/admission disabled until family, rights, protection and scientific prerequisites are resolved."
+    }
+  ]
+}
