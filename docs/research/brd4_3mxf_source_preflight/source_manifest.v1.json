@@ -1,0 +1,204 @@
+{
+  "schema_version": "brd4_3mxf_source_preflight_v1",
+  "record_id": "human_brd4_bd1_3mxf_jq1_enantiomer_source_candidate",
+  "recorded_date": "2026-09-28",
+  "status": "SOURCE_CANDIDATE_ONLY_PREPARATION_AND_ADMISSION_BLOCKED",
+  "scope": "Read-only public-source candidate record with three hash-bound official structural files; no assay paper or supplement downloads, prepared molecular states, physical evaluation, fit/evaluation role assignment, or scientific admission.",
+  "source_refs": {
+    "pdb_3mxf": {
+      "url": "https://www.rcsb.org/structure/3MXF",
+      "download_url": "https://files.rcsb.org/download/3MXF.cif",
+      "role": "experimental_structure_coordinates_and_deposition_metadata"
+    },
+    "pdb_3mxf_validation": {
+      "url": "https://files.rcsb.org/validation/view/3mxf_full_validation.pdf",
+      "download_url": "https://files.rcsb.org/validation/view/3mxf_full_validation.pdf",
+      "role": "wwpdb_structure_validation"
+    },
+    "ccd_jq1": {
+      "url": "https://www.rcsb.org/ligand/JQ1",
+      "download_url": "https://files.rcsb.org/ligands/download/JQ1.cif",
+      "role": "deposited_ligand_component_dictionary_not_assay_microstate_proof"
+    },
+    "filippakopoulos_2010": {
+      "url": "https://doi.org/10.1038/nature09504",
+      "pmcid": "PMC3010259",
+      "role": "primary_3mxf_structure_publication_and_stereoisomer_context"
+    },
+    "tanaka_2016": {
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5117811/",
+      "doi": "10.1038/nchembio.2209",
+      "pmid": "27775715",
+      "role": "primary_brd4_bd1_alphascreen_measurement_and_construct_methods"
+    },
+    "tanaka_2016_supplement": {
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/instance/5117811/bin/NIHMS807910-supplement-2.pdf",
+      "role": "primary_supplementary_assay_curves",
+      "direct_file_access_verified": false
+    },
+    "pubchem_s_jq1": {
+      "url": "https://pubchem.ncbi.nlm.nih.gov/compound/46907787",
+      "cid": 46907787,
+      "role": "public_chemical_identity_metadata_not_experimental_measurement"
+    },
+    "pubchem_r_jq1": {
+      "url": "https://pubchem.ncbi.nlm.nih.gov/compound/49871818",
+      "cid": 49871818,
+      "role": "public_chemical_identity_metadata_not_experimental_measurement"
+    },
+    "pdb_usage_policy": {
+      "url": "https://www.rcsb.org/pages/usage-policy",
+      "role": "pdb_archive_data_cc0_policy_only"
+    }
+  },
+  "source_file_receipts": [
+    {
+      "source_ref": "pdb_3mxf",
+      "source_url": "https://files.rcsb.org/download/3MXF.cif",
+      "relative_path": "official_sources/coordinates-3mxf.cif",
+      "size_bytes": 287430,
+      "sha256": "fb123201edb59709d14b64c5cb4296a90b6d35c45505baba48600d04e4cdd401"
+    },
+    {
+      "source_ref": "ccd_jq1",
+      "source_url": "https://files.rcsb.org/ligands/download/JQ1.cif",
+      "relative_path": "official_sources/chemcomp-jq1.cif",
+      "size_bytes": 10889,
+      "sha256": "9652a88ed9dd1f78e4dbfd2fcd127e40a9643fc5b111d84d8e615adc399213e5"
+    },
+    {
+      "source_ref": "pdb_3mxf_validation",
+      "source_url": "https://files.rcsb.org/validation/view/3mxf_full_validation.pdf",
+      "relative_path": "official_sources/3mxf_full_validation.pdf",
+      "size_bytes": 908684,
+      "sha256": "0dc0ed30c51996ff5712996b6a43a57049be3736ab601cf58b417975cdbb8ac8"
+    }
+  ],
+  "structure_observation": {
+    "pdb_id": "3MXF",
+    "organism": "Homo sapiens",
+    "uniprot_id": "O60885",
+    "protein_label_chain": "A",
+    "modelled_residue_range": "42-168",
+    "modelled_residue_count": 127,
+    "resolution_angstrom": 1.6,
+    "deposited_ligand_ccd": "JQ1",
+    "deposited_ligand_stereochemistry": "6S",
+    "deposited_ligand_formula": "C23H26ClN4O2S",
+    "deposited_ligand_charge_description": "triazolodiazepin-10-ium; iodide is also present",
+    "deposited_ligand_heavy_atom_count": 31,
+    "deposited_hydrogen_count": 0,
+    "water_oxygen_count": 208,
+    "other_components": ["IOD", "DMS", "EDO"],
+    "protein_residues_with_altloc_count": 4,
+    "sequence_conflict": "A43 MET in model versus THR in UniProt O60885; outside the assay's declared 44-168 domain but not silently discarded",
+    "source_refs": ["pdb_3mxf", "pdb_3mxf_validation", "ccd_jq1"]
+  },
+  "experimental_observation": {
+    "target": "human BRD4 first bromodomain (BRD4(1))",
+    "assay_construct": "His-BRD4(1), residues 44-168, expressed in Escherichia coli BL21(DE3)",
+    "assay_method": "BRD4(1) AlphaScreen competitive inhibition",
+    "assay_protein_concentration_nM": 20,
+    "endpoint": "IC50",
+    "endpoint_subtype": "BRD4_BD1_AlphaScreen_competitive_inhibition_IC50",
+    "assay_equivalence_scope": "S and R enantiomers were reported in the same BRD4(1) AlphaScreen assay in Tanaka et al. 2016; cellular, FP, ITC, BROMOscan, Ki and Kd observations are separate endpoints",
+    "measurements": [
+      {
+        "compound": "(S)-(+)-JQ1",
+        "pubchem_cid": 46907787,
+        "operator": "=",
+        "value_nM": 21,
+        "censored": false,
+        "reported_interpretation": "active"
+      },
+      {
+        "compound": "(R)-(-)-JQ1",
+        "pubchem_cid": 49871818,
+        "operator": ">",
+        "value_nM": 5000,
+        "censored": true,
+        "reported_interpretation": "inactive_at_tested_concentrations"
+      }
+    ],
+    "source_refs": ["tanaka_2016", "tanaka_2016_supplement"]
+  },
+  "comparison_boundaries": {
+    "common_core_residues_44_168_source_consistent": true,
+    "exact_assay_and_crystal_construct_equivalence_verified": false,
+    "assay_his_tag_in_crystal_resolved": false,
+    "extra_crystal_residues_42_43_treatment_resolved": false,
+    "pdb_cation_vs_neutral_pubchem_assay_microstate_resolved": false,
+    "r_enantiomer_experimental_bound_pose_available": false,
+    "r_enantiomer_source_bound_stereochemical_identity_recorded": true,
+    "ligand_pair_prepared_in_one_reviewed_microstate": false,
+    "same_assay_ic50_contrast_observed": true,
+    "reported_greater_than_5_uM_treated_as_exact_value": false,
+    "ic50_converted_to_ki_kd_or_binding_free_energy": false
+  },
+  "protection_and_roles": {
+    "protected_outcomes_accessed": false,
+    "identity_component_and_reservation_screen_completed": false,
+    "source_component_role": null,
+    "fit_role": null,
+    "calibration_role": null,
+    "evaluation_role": null,
+    "source_rights_use_specific_review_completed": false
+  },
+  "eligibility": {
+    "prepared_input_executable": false,
+    "numeric_comparison_executable": false,
+    "experimental_comparison_eligible": false,
+    "installed_native_v4_receptor_radioligand_binding_Ki_applicable": false,
+    "training_admitted": false,
+    "product_ranking_enabled": false,
+    "customer_execution": false,
+    "scientifically_validated": false
+  },
+  "performed_actions": {
+    "public_source_metadata_reviewed": true,
+    "source_files_downloaded": true,
+    "receptor_prepared": false,
+    "s_ligand_prepared": false,
+    "r_ligand_prepared": false,
+    "physical_evaluations": 0,
+    "fit_or_evaluation_roles_assigned": false,
+    "protected_evaluation_access": false
+  },
+  "unresolved_decisions": [
+    {
+      "id": "construct_and_residue_mapping",
+      "status": "unresolved",
+      "required_evidence": "Review chain A 42-168 against assay His-BRD4(1) 44-168, A43 MET/THR conflict, tag, termini, and any pocket-relevant atoms before selecting a receptor state."
+    },
+    {
+      "id": "ligand_stereo_and_microstate",
+      "status": "unresolved",
+      "required_evidence": "Map CCD JQ1 6S atoms to PubChem CID 46907787, independently bind CID 49871818 to the paper's 6R control, and decide protonation, charge, counterion, tautomer and parameters for a common assay comparison."
+    },
+    {
+      "id": "r_ligand_conformer_and_prepared_files",
+      "status": "unresolved",
+      "required_evidence": "Provide reviewed 3D conformer and complete PDB/SDF/GRO/ITP, hydrogens, atom mapping, charges and parameter sources; the inactive 6R compound has no observed bound pose in 3MXF."
+    },
+    {
+      "id": "crystal_components_and_geometry",
+      "status": "unresolved",
+      "required_evidence": "Review 208 water oxygens, iodide, DMS, EDO, protein altlocs, and wwPDB ligand geometry outliers; record explicit retain/exclude decisions and source atom lineage."
+    },
+    {
+      "id": "assay_censoring_and_method",
+      "status": "unresolved",
+      "required_evidence": "Preserve 21 nM exact and >5000 nM right-censored AlphaScreen IC50, inspect supplementary curves and assay conditions, and freeze any binary threshold before computational results."
+    },
+    {
+      "id": "source_rights_and_independent_roles",
+      "status": "unresolved",
+      "required_evidence": "Review article and supplement use-specific rights independently of PDB CC0; screen source identity components and reservations without opening protected outcomes, then assign any roles separately."
+    },
+    {
+      "id": "endpoint_lane_and_comparison_protocol",
+      "status": "unresolved",
+      "required_evidence": "Select an authorized IC50 comparison lane and freeze model, denominators, endpoints and evaluation protocol; the native-v4 radioligand-binding Ki contract is inapplicable."
+    }
+  ]
+}
