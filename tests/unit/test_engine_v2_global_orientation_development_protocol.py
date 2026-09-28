@@ -427,10 +427,11 @@ def test_verifier_runs_outside_checkout_without_pythonpath(tmp_path: Path) -> No
         text=True,
     )
     assert direct.returncode != 0
-    assert direct.stderr.strip().splitlines()[-1] == (
-        "__main__.GlobalOrientationDevelopmentProtocolError: "
-        "pre-import ScorerV1 source manifest drifted"
-    )
+    exception_line = direct.stderr.strip().splitlines()[-1]
+    exception_type, separator, message = exception_line.partition(": ")
+    assert separator == ": "
+    assert exception_type.rsplit(".", 1)[-1] == "GlobalOrientationDevelopmentProtocolError"
+    assert message == "pre-import ScorerV1 source manifest drifted"
 
     completed = subprocess.run(
         [sys.executable, str(_REPO_ROOT / "tests/unit/frozen_engine_v2_historical_sources.py")],
