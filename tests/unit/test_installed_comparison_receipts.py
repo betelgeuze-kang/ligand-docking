@@ -123,3 +123,16 @@ def test_reseal_cannot_change_numeric_denominator(exported, tmp_path):
         row["numeric_denominator"]["passed"] += 1
     _rewrite_result(copied, change)
     assert receipts.verify_run(copied)["reason"] == "pose_report_denominator_mismatch"
+
+
+def test_prespecified_v2_arm_order_is_preserved(tmp_path):
+    protocol = _protocol(tmp_path / "inputs")
+    protocol.update(schema_version=comparison.ORDERED_SCHEMA,
+                    selection_seed=17, tie_policy="seeded_pool_order",
+                    arm_order=["ai_engine", "similarity", "engine", "similarity_engine"])
+    comparison.run(protocol, tmp_path / "legacy")
+    exported = tmp_path / "portable"
+    assert receipts.export_legacy_synthetic(tmp_path / "legacy", exported)["status"] == "verified"
+    result = json.loads((exported / "result.json").read_text())
+    assert result["arm_order"] == protocol["arm_order"]
+    assert receipts.verify_run(exported)["status"] == "verified"
