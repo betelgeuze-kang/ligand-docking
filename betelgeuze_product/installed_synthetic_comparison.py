@@ -28,6 +28,8 @@ from .comparison_receipts import (
     _finite, _json, _load, _private_dir, _regular_file, _require, _sha,
 )
 from .prepared_cross_numeric_reference import MAX_BYTES as MAX_POSE_BYTES, check_report
+from . import prepared_hard_overlap_screen as overlap_screen
+from .prepared_hard_overlap_screen import hard_overlap_screen, screened_pose_selection
 
 PROTOCOL = "installed_synthetic_prepared_comparison_protocol_v1"
 FROZEN = "installed_synthetic_prepared_comparison_frozen_v1"
@@ -239,6 +241,8 @@ def _comparison_runtime() -> dict:
     runtime = _runtime_binding()
     runtime["comparison_selector_dependencies"] = {
         name: importlib.metadata.version(name) for name in ("scikit-learn", "scipy")}
+    runtime["comparison_hard_overlap_screen_sha256"] = _digest(
+        Path(overlap_screen.__file__).read_bytes())
     runtime["comparison_environment"] = {
         name: os.environ.get(name) for name in BOUND_ENVIRONMENT}
     return runtime
@@ -410,9 +414,13 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
                            pose_report=ref, pose_denominator=report["denominator"],
                            numeric_denominator=checked["denominator"])
                 if checked["status"] == "passed":
-                    row.update(status="evaluated", reason=None,
-                               score=min(item["result"]["quantities"]["cross_total_kcal_per_mol"]
-                                         for item in report["rows"]))
+                    screen = hard_overlap_screen(report)
+                    selected = screened_pose_selection(report, screen)
+                    row.update(hard_overlap_screen=screen, selected_pose=selected)
+                    if selected is None:
+                        row["reason"] = "no_hard_overlap_screen_eligible_pose"
+                    else:
+                        row.update(status="evaluated", reason=None, score=selected["score"])
         except Exception as exc:
             row.update(status="failed", score=None,
                        reason=type(exc).__name__ + ":" + str(exc))
@@ -732,12 +740,25 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
                      and value.get("numeric_denominator") == checked["denominator"],
                      "installed_pose_report_denominator_mismatch")
             if checked["status"] == "passed":
-                expected = min(item["result"]["quantities"]["cross_total_kcal_per_mol"]
-                               for item in report["rows"])
-                _require(value["status"] == "evaluated" and value["score"] == expected,
-                         "installed_pose_report_score_mismatch")
+                screen = hard_overlap_screen(report)
+                selected = screened_pose_selection(report, screen)
+                _require(value.get("hard_overlap_screen") == screen
+                         and value.get("selected_pose", "missing") == selected,
+                         "installed_pose_report_hard_overlap_screen_mismatch")
+                if selected is None:
+                    _require(value["status"] == "failed" and value["score"] is None
+                             and value["reason"] == "no_hard_overlap_screen_eligible_pose",
+                             "installed_pose_report_hard_overlap_status_mismatch")
+                else:
+                    _require(value["status"] == "evaluated"
+                             and value["score"] == selected["score"]
+                             and value["reason"] is None,
+                             "installed_pose_report_score_mismatch")
             else:
-                _require(value["status"] == "failed", "installed_pose_report_status_mismatch")
+                _require(value["status"] == "failed"
+                         and "hard_overlap_screen" not in value
+                         and "selected_pose" not in value,
+                         "installed_pose_report_status_mismatch")
         elif arm != "similarity" and value["status"] == "evaluated":
             raise ValueError("installed_evaluated_row_missing_pose_report")
         if arm == "similarity" and value["status"] == "evaluated":

@@ -12,7 +12,8 @@ import pytest
 from betelgeuze_engine.product.prepared_pose_journal import _input_binding
 from betelgeuze_product import installed_synthetic_comparison as installed
 from tools.product import compare_prepared_candidate_policies as research
-from tests.unit.test_prepared_candidate_comparison import _protocol
+from tests.unit.test_prepared_candidate_comparison import _protocol, _zero_lj_source
+from tests.unit.test_prepared_rigid_poses import _pose, _request
 
 
 def _installed_protocol(tmp_path):
@@ -76,6 +77,63 @@ def test_same_synthetic_v2_policy_matches_checkout_comparator(completed):
         assert actual["denominator"] == expected["denominator"]
         assert [(row["record_id"], row["status"], row["score"]) for row in actual["rows"]] == [
             (row["record_id"], row["status"], row["score"]) for row in expected["rows"]]
+
+
+def test_installed_screen_excludes_numeric_zero_lj_overlap_and_rejects_reselection(tmp_path):
+    protocol = _installed_protocol(tmp_path / "inputs")
+    mixed = _request(tmp_path / "mixed-source")
+    _zero_lj_source(mixed)
+    mixed["poses"] = [_pose("near", -3.2), _pose("far")]
+    overlap_only = _request(tmp_path / "overlap-source")
+    _zero_lj_source(overlap_only)
+    overlap_only["poses"] = [_pose("near-only", -3.2)]
+    for rid, request in (("a", mixed), ("b", overlap_only)):
+        path = tmp_path / f"{rid}.screened-request.json"
+        path.write_bytes(installed._canonical(request) + b"\n")
+        protocol["requests"][rid] = {
+            "path": str(path), "sha256": installed._digest(path.read_bytes())}
+
+    root = tmp_path / "run"
+    result = installed.run(protocol, root)
+    rows = {row["record_id"]: row for row in result["arms"]["engine"]["rows"]}
+    report_a = installed._read_report(root, "engine", "a", rows["a"]["pose_report"])
+    report_b = installed._read_report(root, "engine", "b", rows["b"]["pose_report"])
+    assert installed.check_report(report_a)["status"] == "passed"
+    assert installed.check_report(report_b)["status"] == "passed"
+    near, far = [item["result"]["quantities"]["cross_total_kcal_per_mol"]
+                 for item in report_a["rows"]]
+    assert near < far
+    assert rows["a"]["hard_overlap_screen"]["poses"][0]["minimum_cross_distance_angstrom"] == pytest.approx(0.8)
+    assert [pose["status"] for pose in rows["a"]["hard_overlap_screen"]["poses"]] == [
+        "hard_overlap", "eligible"]
+    assert rows["a"]["selected_pose"] == {
+        "request_index": 1, "pose_id": "far", "score": far}
+    assert rows["a"]["score"] == far
+    assert rows["b"]["status"] == "failed" and rows["b"]["score"] is None
+    assert rows["b"]["reason"] == "no_hard_overlap_screen_eligible_pose"
+    assert rows["b"]["selected_pose"] is None
+    assert installed.verify_run(protocol, root)["status"] == "verified"
+
+    copied = tmp_path / "resealed-overlap"
+    shutil.copytree(root, copied)
+    row_path = copied / "engine" / f"{installed._sha('a')}.row.json"
+    wrapped = installed._json(row_path.read_bytes())
+    tampered = wrapped["payload"]
+    tampered.update(score=near, selected_pose={
+        "request_index": 0, "pose_id": "near", "score": near})
+    wrapped["sha256"] = installed._sha(tampered)
+    row_path.write_bytes(installed._canonical(wrapped) + b"\n")
+    result_path = copied / "comparison.json"
+    resealed = installed._json(result_path.read_bytes())
+    arm = resealed["arms"]["engine"]
+    arm["rows"] = [tampered if row["record_id"] == "a" else row for row in arm["rows"]]
+    arm["ranked_record_ids"] = [row["record_id"] for row in sorted(
+        (row for row in arm["rows"] if row["status"] == "evaluated"),
+        key=lambda row: (row["score"], row["record_id"]),
+    )]
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    assert installed.verify_run(protocol, copied)["reason"] == (
+        "installed_pose_report_hard_overlap_screen_mismatch")
 
 
 def test_resealed_priority_and_result_still_rejected(completed, tmp_path):

@@ -25,6 +25,11 @@ import sys
 import time
 import uuid
 
+from betelgeuze_product.prepared_hard_overlap_screen import (
+    hard_overlap_screen as _hard_overlap_screen,
+    screened_pose_selection as _screened_pose_selection,
+)
+
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "prepared_candidate_comparison_protocol_v1"
 ORDERED_SCHEMA = "prepared_candidate_comparison_protocol_v2"
@@ -780,14 +785,13 @@ def worker(run_dir, arm, deadline):
                     },
                 )
                 if checked["status"] == "passed":
-                    result.update(
-                        status="evaluated",
-                        reason=None,
-                        score=min(
-                            row["result"]["quantities"]["cross_total_kcal_per_mol"]
-                            for row in report["rows"]
-                        ),
-                    )
+                    screen = _hard_overlap_screen(report)
+                    selected = _screened_pose_selection(report, screen)
+                    result.update(hard_overlap_screen=screen, selected_pose=selected)
+                    if selected is None:
+                        result["reason"] = "no_hard_overlap_screen_eligible_pose"
+                    else:
+                        result.update(status="evaluated", reason=None, score=selected["score"])
         except Exception as exc:
             result.update(status="failed", reason=type(exc).__name__ + ":" + str(exc))
         result.update(
@@ -1086,11 +1090,20 @@ def _arm_summary(directory, frozen, binding, completion):
                     or value.get("numeric_denominator") != checked["denominator"]):
                 raise ValueError("pose_report_denominator_mismatch")
             if checked["status"] == "passed":
-                expected = min(row["result"]["quantities"]["cross_total_kcal_per_mol"]
-                               for row in report["rows"])
-                if value["status"] != "evaluated" or value["score"] != expected:
+                screen = _hard_overlap_screen(report)
+                selected = _screened_pose_selection(report, screen)
+                if (value.get("hard_overlap_screen") != screen
+                        or value.get("selected_pose", "missing") != selected):
+                    raise ValueError("pose_report_hard_overlap_screen_mismatch")
+                if selected is None:
+                    if (value["status"] != "failed" or value["score"] is not None
+                            or value["reason"] != "no_hard_overlap_screen_eligible_pose"):
+                        raise ValueError("pose_report_hard_overlap_status_mismatch")
+                elif (value["status"] != "evaluated" or value["score"] != selected["score"]
+                      or value["reason"] is not None):
                     raise ValueError("pose_report_score_mismatch")
-            elif value["status"] != "failed":
+            elif (value["status"] != "failed" or "hard_overlap_screen" in value
+                  or "selected_pose" in value):
                 raise ValueError("pose_report_numeric_status_mismatch")
         elif (frozen["protocol"]["schema_version"] != D3_SCHEMA
               and directory.name != "similarity" and value["status"] == "evaluated"):

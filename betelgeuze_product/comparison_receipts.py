@@ -1,10 +1,12 @@
 """Portable, read-only receipts for completed synthetic four-arm comparisons.
 
-This is a new result contract. It exports a *completed* checkout research run
+This is a versioned result contract. It exports a *completed* checkout research run
 without migrating its checkpoint, and verifies the exported copy without the
 checkout, original prepared inputs, engine, selector, or evaluation labels.
 Selector predictions are checked against committed rows but are not refitted.
-The receipt establishes local integrity, not source authenticity or fitness.
+V1 retains the historical numeric-minimum rule; V2 verifies the fixed overlap
+screen against source-bound report geometry. Neither version establishes source
+authenticity or fitness.
 """
 from __future__ import annotations
 
@@ -20,9 +22,14 @@ import stat
 from typing import Any
 
 from .prepared_cross_numeric_reference import MAX_BYTES as MAX_POSE_BYTES, check_report
+from .prepared_hard_overlap_screen import (
+    hard_overlap_screen, require_report_geometry_source_binding,
+    screened_pose_selection,
+)
 
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "installed_synthetic_prepared_comparison_receipt_v1"
+SCREENED_SCHEMA = "installed_synthetic_prepared_comparison_receipt_v2"
 MANIFEST_SCHEMA = "installed_synthetic_prepared_comparison_manifest_v1"
 MAX_JSON_BYTES = 32 * 1024 * 1024
 MAX_POOL = 10000
@@ -112,8 +119,9 @@ def _private_dir(path: Path) -> None:
 
 
 def _validate_result(result: dict, report_reader) -> list[dict]:
-    _require(type(result) is dict and result.get("schema_version") == SCHEMA,
+    _require(type(result) is dict and result.get("schema_version") in {SCHEMA, SCREENED_SCHEMA},
              "unsupported_receipt_schema")
+    screened_receipt = result["schema_version"] == SCREENED_SCHEMA
     _require(result.get("source_kind") == "synthetic_constants"
              and result.get("legacy_protocol_version") in {
                  "prepared_candidate_comparison_protocol_v1",
@@ -225,12 +233,34 @@ def _validate_result(result: dict, report_reader) -> list[dict]:
                          and row.get("numeric_denominator") == checked["denominator"],
                          "pose_report_denominator_mismatch")
                 if checked["status"] == "passed":
-                    expected = min(item["result"]["quantities"]["cross_total_kcal_per_mol"]
-                                   for item in report["rows"])
-                    _require(status == "evaluated" and score == expected,
-                             "pose_report_score_mismatch")
+                    if screened_receipt:
+                        require_report_geometry_source_binding(report)
+                        screen = hard_overlap_screen(report)
+                        selected = screened_pose_selection(report, screen)
+                        _require(row.get("hard_overlap_screen") == screen
+                                 and row.get("selected_pose", "missing") == selected,
+                                 "pose_report_hard_overlap_screen_mismatch")
+                        if selected is None:
+                            _require(status == "failed" and score is None
+                                     and row.get("reason")
+                                     == "no_hard_overlap_screen_eligible_pose",
+                                     "pose_report_hard_overlap_status_mismatch")
+                        else:
+                            _require(status == "evaluated" and score == selected["score"]
+                                     and row.get("reason") is None,
+                                     "pose_report_score_mismatch")
+                    else:
+                        expected = min(
+                            item["result"]["quantities"]["cross_total_kcal_per_mol"]
+                            for item in report["rows"])
+                        _require(status == "evaluated" and score == expected,
+                                 "pose_report_score_mismatch")
                 else:
                     _require(status == "failed", "pose_report_numeric_status_mismatch")
+                    if screened_receipt:
+                        _require("hard_overlap_screen" not in row
+                                 and "selected_pose" not in row,
+                                 "pose_report_hard_overlap_screen_mismatch")
                 references.append(ref)
                 pose_report_count += 1
             elif arm != "similarity" and status == "evaluated":
@@ -264,7 +294,8 @@ def verify_run(run_dir: Path) -> dict:
               "status": "invalid", "exit_code": 2, "reason": None,
               "execution_performed": False, "selector_recomputed": False,
               "source_authenticated": False, "scientifically_validated": False,
-              "resume_authorized": False, "pose_reports_checked": 0}
+              "resume_authorized": False, "pose_reports_checked": 0,
+              "hard_overlap_screen_verified": False}
     try:
         root = Path(run_dir).absolute()
         _private_dir(root)
@@ -309,6 +340,7 @@ def verify_run(run_dir: Path) -> dict:
         result.update(status="verified", exit_code=0, reason=None,
                       result_sha256=manifest["result"]["sha256"],
                       pose_reports_checked=len(references),
+                      hard_overlap_screen_verified=(data["schema_version"] == SCREENED_SCHEMA),
                       pool_count=len(data["pool"]), arms_verified=list(ARMS))
     except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
         result["reason"] = str(exc) if type(exc) is ValueError else type(exc).__name__
@@ -387,8 +419,21 @@ def export_legacy_synthetic(source_run: Path, output_dir: Path) -> dict:
             "completion": completion, "score_quantity": old["score_quantity"],
             "combined_assay_energy_score": old["combined_assay_energy_score"],
         }
+    screened_rows = []
+    for arm in ARMS:
+        for row in arms[arm]["rows"]:
+            ref = row.get("pose_report")
+            if ref is None:
+                continue
+            if check_report(_json(reports[ref["path"]]))["status"] == "passed":
+                screened_rows.append(row)
+    screen_fields = ["hard_overlap_screen" in row and "selected_pose" in row
+                     for row in screened_rows]
+    _require(not any(screen_fields) or all(screen_fields),
+             "mixed_legacy_screen_receipts")
+    schema = SCREENED_SCHEMA if screen_fields and all(screen_fields) else SCHEMA
     result = {
-        "schema_version": SCHEMA, "source_kind": "synthetic_constants",
+        "schema_version": schema, "source_kind": "synthetic_constants",
         "legacy_protocol_version": protocol["schema_version"],
         "legacy_binding": envelope["sha256"], "pool": frozen["pool"],
         "arm_order": (list(ARMS) if protocol["schema_version"].endswith("_v1")

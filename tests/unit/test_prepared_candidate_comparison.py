@@ -13,7 +13,7 @@ import pytest
 from tools.product import compare_prepared_candidate_policies as comparison
 from tools.product.comparison_morgan_features import features as comparison_features
 from tools.product.train_public_assay_selector import features as training_features
-from tests.unit.test_prepared_rigid_poses import _request
+from tests.unit.test_prepared_rigid_poses import _pose, _request
 from tests.unit import test_public_chembl_staged_intake as native_fixture
 
 
@@ -68,6 +68,87 @@ def _protocol(tmp_path, *, seconds=20.0, calls=10):
         "max_engine_calls_per_arm": calls,
         "top_k": 2,
     }
+
+
+def _zero_lj_source(request):
+    for name in ("protein_atomtypes", "ligand_atomtypes"):
+        source = request["prepared_input"][name]
+        path = Path(source["path"])
+        path.write_text(path.read_text().replace("0.300000 0.836800", "0.300000 0.000000"))
+        source["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_hard_overlap_screen_excludes_numerically_passing_attractive_pose(tmp_path):
+    from tools.product.verify_prepared_cross_numerics import check_report
+
+    protocol = _protocol(tmp_path / "input")
+    mixed = _request(tmp_path / "mixed-source")
+    _zero_lj_source(mixed)
+    mixed["poses"] = [_pose("near", -3.2), _pose("far")]
+    protocol["requests"]["a"] = _ref(tmp_path / "mixed.request.json", mixed)
+    overlap_only = _request(tmp_path / "overlap-source")
+    _zero_lj_source(overlap_only)
+    overlap_only["poses"] = [_pose("near-only", -3.2)]
+    protocol["requests"]["b"] = _ref(tmp_path / "overlap.request.json", overlap_only)
+
+    output = tmp_path / "run"
+    result = comparison.run(protocol, output)
+    engine = {row["record_id"]: row for row in result["arms"]["engine"]["rows"]}
+    mixed_row = engine["a"]
+    report = comparison.read(mixed_row["pose_report"]["path"])
+    assert report["denominator"]["evaluated"] == 2
+    assert check_report(report)["status"] == "passed"
+    near_energy, far_energy = [
+        row["result"]["quantities"]["cross_total_kcal_per_mol"] for row in report["rows"]
+    ]
+    assert near_energy < far_energy
+    assert [pose["status"] for pose in mixed_row["hard_overlap_screen"]["poses"]] == [
+        "hard_overlap", "eligible"
+    ]
+    assert mixed_row["hard_overlap_screen"]["poses"][0]["minimum_cross_distance_angstrom"] == pytest.approx(0.8)
+    assert mixed_row["selected_pose"] == {"request_index": 1, "pose_id": "far", "score": far_energy}
+    assert mixed_row["status"] == "evaluated" and mixed_row["score"] == far_energy
+
+    blocked = engine["b"]
+    blocked_report = comparison.read(blocked["pose_report"]["path"])
+    assert blocked_report["denominator"]["evaluated"] == 1
+    assert check_report(blocked_report)["status"] == "passed"
+    assert blocked["status"] == "failed" and blocked["score"] is None
+    assert blocked["reason"] == "no_hard_overlap_screen_eligible_pose"
+    assert blocked["selected_pose"] is None
+
+    row_path = output / "engine" / (comparison.sha("a") + ".row.json")
+    saved = row_path.read_bytes()
+    try:
+        wrapped = comparison.read(row_path)
+        tampered = wrapped["payload"]
+        tampered["hard_overlap_screen"]["poses"][0]["status"] = "eligible"
+        tampered["hard_overlap_screen"]["eligible_pose_count"] = 2
+        tampered["selected_pose"] = {"request_index": 0, "pose_id": "near", "score": near_energy}
+        tampered["score"] = near_energy
+        row_path.write_text(comparison.canonical({"payload": tampered, "sha256": comparison.sha(tampered)}))
+        with pytest.raises(ValueError, match="pose_report_hard_overlap_screen_mismatch"):
+            comparison._arm_summary(
+                output / "engine", comparison.read(output / "frozen.json")["payload"],
+                result["binding"], result["arms"]["engine"]["cost"],
+            )
+    finally:
+        row_path.write_bytes(saved)
+
+
+def test_hard_overlap_screen_fails_closed_on_unavailable_coordinates():
+    report = {"preparation": {"source_receptor_coordinates_angstrom": [[0.0, 0.0, 0.0]]},
+              "rows": [{"case_id": "near", "evaluated_ligand_coordinates_angstrom": [[0.8, 0.0, 0.0]]},
+                       {"case_id": "edge", "evaluated_ligand_coordinates_angstrom": [[1.0, 0.0, 0.0]]}]}
+    screen = comparison._hard_overlap_screen(report)
+    assert [row["status"] for row in screen["poses"]] == ["hard_overlap", "eligible"]
+    report["rows"][1]["evaluated_ligand_coordinates_angstrom"][0][0] = float("nan")
+    screen = comparison._hard_overlap_screen(report)
+    assert [row["status"] for row in screen["poses"]] == ["hard_overlap", "unavailable"]
+    assert screen["eligible_pose_count"] == 0
+    report["preparation"]["source_receptor_coordinates_angstrom"] = None
+    screen = comparison._hard_overlap_screen(report)
+    assert [row["status"] for row in screen["poses"]] == ["unavailable", "unavailable"]
 
 
 def test_prepared_source_receipt_reuses_canonical_document_without_changing_identity(tmp_path):

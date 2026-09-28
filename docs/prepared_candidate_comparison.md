@@ -47,11 +47,29 @@ charges, poses or negative assay observations are invented. The caller still
 needs an independently verified assay/chemical/prepared-state link before any
 scientific interpretation: this runner does not supply that link.
 
+After the numeric check, the rigid-pose comparison exhaustively recomputes each
+pose's minimum receptor–ligand distance from the bound coordinates. A pose with
+a cross distance below 1.0 Å, or unavailable or nonfinite coordinates, cannot
+contribute to the candidate's minimum-energy rank. If no pose remains eligible,
+the candidate is failed while its calculation and numeric results stay recorded.
+The completed-receipt verifier repeats this screen and checks the selected pose.
+This is a fixed hard-overlap ranking rule, not a calibrated clash or physical
+validity assessment.
+
+The installed synthetic and native-v4 prepared comparison paths apply the same
+rule when a prepared request is scored, and their run verifier recomputes the
+selection before accepting a completed row. New portable synthetic exports use
+receipt v2, which binds the displayed coordinates to the numeric source tensors
+and repeats the screen. Historical portable receipt v1 keeps its original
+minimum-energy meaning and reports `hard_overlap_screen_verified=false`; it
+must not be read as evidence that this new rule was applied. Existing installed
+checkpoints from before the rule change need their original runtime to resume.
+
 When assembling or rechecking a completed result, the similarity arm's scored
 value must match its committed priority prediction. Each scored rigid-engine row
 must have a hash-matched pose report whose independent scalar check passes,
-whose denominators match the row, and whose minimum cross energy equals the
-recorded score. The scored report's poses, prepared source documents, evaluation
+whose denominators match the row, and whose minimum eligible cross energy equals
+the recorded score. The scored report's poses, prepared source documents, evaluation
 model and pocket must also match the frozen candidate request and source bytes;
 a report for a different candidate input cannot be reassigned by resealing the row.
 Failed and unsupported rows cannot carry a score. This verification runs before
