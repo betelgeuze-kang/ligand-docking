@@ -15,6 +15,26 @@
     "primary_paper_and_supplement_rights_reviewed_for_product": false,
     "separate_protein_parameters_rights_and_coevality_reviewed": false
   },
+  "official_openff_lfs_inventory": {
+    "relative_path": "openff_lfs_inventory.v1.json",
+    "size_bytes": 102836,
+    "sha256": "23345cfcb902ee7d0009ee630760797a6212ed7047f273eb4edef9487bc56e13",
+    "ligand_id_count": 40,
+    "official_source_file_count": 202,
+    "source_bytes_bundled_in_checkout": false,
+    "external_source_rechecked_by_offline_feasibility_verifier": false,
+    "prepared_state_assay_equivalence_verified": false
+  },
+  "reader_compatibility_receipt": {
+    "relative_path": "reader_compatibility.v1.json",
+    "size_bytes": 69617,
+    "sha256": "70bfb752447f182f215312ef2cfd8da3e6762525ae9ccfeb812edb76e0725200",
+    "reader_candidate_count": 40,
+    "reader_pass_count": 40,
+    "loader_reexecuted_by_offline_feasibility_verifier": false,
+    "source_coevality_verified": false,
+    "scientific_comparison_eligible": false
+  },
   "archived_context_observation": {
     "candidate_count": 40,
     "single_study_component_count": 1,

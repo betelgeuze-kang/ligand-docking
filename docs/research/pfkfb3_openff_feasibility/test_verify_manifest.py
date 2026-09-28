@@ -34,7 +34,58 @@ class FeasibilityReceiptTests(unittest.TestCase):
         self.assertEqual(result["status"], "PASS_STATIC_FEASIBILITY_BLOCKED")
         self.assertEqual(result["candidate_count"], 40)
         self.assertEqual(result["eligible_source_state_join_count"], 0)
+        self.assertEqual(result["official_lfs_inventory_file_count"], 202)
+        self.assertEqual(result["development_reader_pass_count"], 40)
+        self.assertFalse(result["loader_reexecuted_by_offline_verifier"])
         self.assertFalse(result["external_archive_or_source_bytes_checked"])
+
+    def test_inventory_receipt_and_bytes_cannot_be_resealed(self):
+        self._reject(
+            lambda doc: doc["official_openff_lfs_inventory"].update(sha256="0" * 64)
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            original = verify_module.ROOT
+            verify_module.ROOT = root
+            try:
+                name = verify_module.OFFICIAL_LFS_INVENTORY[0]
+                raw = (original / name).read_bytes()
+                (root / name).write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
+                with self.assertRaisesRegex(
+                    ValueError, "official_lfs_inventory_bytes_changed"
+                ):
+                    verify_module.verify()
+            finally:
+                verify_module.ROOT = original
+
+    def test_reader_receipt_and_bytes_cannot_be_resealed(self):
+        self._reject(
+            lambda doc: doc["reader_compatibility_receipt"].update(sha256="0" * 64)
+        )
+        self._reject(
+            lambda doc: doc["reader_compatibility_receipt"].update(
+                scientific_comparison_eligible=True
+            )
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            original = verify_module.ROOT
+            verify_module.ROOT = root
+            try:
+                for name in (
+                    verify_module.OFFICIAL_LFS_INVENTORY[0],
+                    verify_module.READER_COMPATIBILITY_RECEIPT[0],
+                ):
+                    (root / name).write_bytes((original / name).read_bytes())
+                reader = root / verify_module.READER_COMPATIBILITY_RECEIPT[0]
+                raw = reader.read_bytes()
+                reader.write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
+                with self.assertRaisesRegex(
+                    ValueError, "reader_compatibility_receipt_bytes_changed"
+                ):
+                    verify_module.verify()
+            finally:
+                verify_module.ROOT = original
 
     def test_candidate_denominator_or_identity_cannot_change(self):
         self._reject(lambda doc: doc["candidates"].pop())

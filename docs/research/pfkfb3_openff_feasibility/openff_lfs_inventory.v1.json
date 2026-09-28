@@ -1,0 +1,2057 @@
+{
+  "schema_version": "pfkfb3_openff_lfs_inventory_v1",
+  "status": "PINNED_PREPARED_FILE_BYTES_VERIFIED_SOURCE_ROLE_BLOCKED",
+  "source": {
+    "repository": "openforcefield/protein-ligand-benchmark",
+    "commit": "fe6f96916b2e28f9c14398d77c838d6515e931b0",
+    "directory": "data/2020-07-06_pfkfb3",
+    "git_tree_url": "https://api.github.com/repos/openforcefield/protein-ligand-benchmark/git/trees/fe6f96916b2e28f9c14398d77c838d6515e931b0?recursive=1",
+    "lfs_pointer_url_prefix": "https://raw.githubusercontent.com/openforcefield/protein-ligand-benchmark/fe6f96916b2e28f9c14398d77c838d6515e931b0/",
+    "lfs_media_url_prefix": "https://media.githubusercontent.com/media/openforcefield/protein-ligand-benchmark/fe6f96916b2e28f9c14398d77c838d6515e931b0/",
+    "data_license_url": "https://raw.githubusercontent.com/openforcefield/protein-ligand-benchmark/fe6f96916b2e28f9c14398d77c838d6515e931b0/LICENSE_DATA",
+    "git_root_tree_sha1": "077690dd0efb405133b0f1b133ad27071af7fad1",
+    "ligands_tree_sha1": "c43590caa90f74d4c9894a447532f6c8e02702bf",
+    "ligands_directory": "data/2020-07-06_pfkfb3/02_ligands"
+  },
+  "audit": {
+    "ligand_count": 40,
+    "file_count": 202,
+    "total_download_bytes": 4949134,
+    "raw_prepared_bytes_bundled_in_checkout": false,
+    "protected_evaluation_outcomes_read": false,
+    "experimental_assay_values_read": false,
+    "prepared_state_assay_equivalence_verified": false,
+    "scientific_comparison_eligible": false,
+    "training_admitted": false,
+    "core_ligand_file_count": 160,
+    "support_file_count": 42,
+    "core_ligand_download_bytes": 1289478,
+    "support_download_bytes": 3659656,
+    "core_ligand_path_oid_size_manifest_sha256": "08c1b8ff17dafe1d1f36ba47eef73808fcfea84edb5860668ce2fc4e15a902a4",
+    "support_path_oid_size_manifest_sha256": "3c93701e1773c8d450074401ebebc2abb6395ace9cec2f0f3e3ea61b42ccb809"
+  },
+  "files": [
+    {
+      "ligand_id": "lig_19",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/crd/lig_19.sdf",
+      "git_pointer_blob_sha1": "e5878b1f8ba25756876c277b612084b4a771117f",
+      "lfs_oid_sha256": "bd8e7d3138d4b34f0cb947cc0ee7be125b2bb56e6d6eb161ed99dac55c1c9b90",
+      "lfs_size_bytes": 3911,
+      "observed_download_sha256": "bd8e7d3138d4b34f0cb947cc0ee7be125b2bb56e6d6eb161ed99dac55c1c9b90",
+      "observed_download_size_bytes": 3911
+    },
+    {
+      "ligand_id": "lig_19",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/lig_19.gro",
+      "git_pointer_blob_sha1": "5be447625556676065a43f8daa31acf4153be259",
+      "lfs_oid_sha256": "45af551ab0a89934ddd422c0e3b2711706202a1318968bf51d259c613b69f865",
+      "lfs_size_bytes": 2779,
+      "observed_download_sha256": "45af551ab0a89934ddd422c0e3b2711706202a1318968bf51d259c613b69f865",
+      "observed_download_size_bytes": 2779
+    },
+    {
+      "ligand_id": "lig_19",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/lig_19.itp",
+      "git_pointer_blob_sha1": "9760824916211ad415857a04abf7938486af1ed3",
+      "lfs_oid_sha256": "812d6890705c2ecfcb03f479a4b8d390563bf517b4f1d5ea03eca3ed484502b4",
+      "lfs_size_bytes": 23711,
+      "observed_download_sha256": "812d6890705c2ecfcb03f479a4b8d390563bf517b4f1d5ea03eca3ed484502b4",
+      "observed_download_size_bytes": 23711
+    },
+    {
+      "ligand_id": "lig_19",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/fflig_19.itp",
+      "git_pointer_blob_sha1": "854963617d10d6af9a6a4911c3bec17021fe777e",
+      "lfs_oid_sha256": "6379dd41c231148598b78aeca4a49fbbb81cf88cbc596e82bc8913bbf04ac93a",
+      "lfs_size_bytes": 469,
+      "observed_download_sha256": "6379dd41c231148598b78aeca4a49fbbb81cf88cbc596e82bc8913bbf04ac93a",
+      "observed_download_size_bytes": 469
+    },
+    {
+      "ligand_id": "lig_20",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/crd/lig_20.sdf",
+      "git_pointer_blob_sha1": "913655d88c5fe9b1db9c760272d898aef09c1d6d",
+      "lfs_oid_sha256": "cd1736e71550175a1b2bf8cef4085c2621f3c4660886aa9f7b4ee87391636f1a",
+      "lfs_size_bytes": 4078,
+      "observed_download_sha256": "cd1736e71550175a1b2bf8cef4085c2621f3c4660886aa9f7b4ee87391636f1a",
+      "observed_download_size_bytes": 4078
+    },
+    {
+      "ligand_id": "lig_20",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/lig_20.gro",
+      "git_pointer_blob_sha1": "a237873ee8279c9ccbc8d26c1ef2749181150f09",
+      "lfs_oid_sha256": "cd5ebfbb87110bafc8229216246cfd464f026b4a1d91aa3c4e3ca0f721fcd66c",
+      "lfs_size_bytes": 2899,
+      "observed_download_sha256": "cd5ebfbb87110bafc8229216246cfd464f026b4a1d91aa3c4e3ca0f721fcd66c",
+      "observed_download_size_bytes": 2899
+    },
+    {
+      "ligand_id": "lig_20",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/lig_20.itp",
+      "git_pointer_blob_sha1": "f8d51dc1434d0af0f1b462a6d448fe386827e192",
+      "lfs_oid_sha256": "7cb4f96128db74279b96100c1956be10ccd8c1054374a6d557298bb0aa030aea",
+      "lfs_size_bytes": 22521,
+      "observed_download_sha256": "7cb4f96128db74279b96100c1956be10ccd8c1054374a6d557298bb0aa030aea",
+      "observed_download_size_bytes": 22521
+    },
+    {
+      "ligand_id": "lig_20",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/fflig_20.itp",
+      "git_pointer_blob_sha1": "2be853444e2106886895a0b785e9a2a472ca2b33",
+      "lfs_oid_sha256": "4f87d1c405868a62bf3652489928dd0ce00ad610d27b95cf6d42335e969c3cdc",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "4f87d1c405868a62bf3652489928dd0ce00ad610d27b95cf6d42335e969c3cdc",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_23",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/crd/lig_23.sdf",
+      "git_pointer_blob_sha1": "cfe9bb23c9be7738fbbef211667da51294038251",
+      "lfs_oid_sha256": "f745347aad1b60069f8d31718144ac7fa640a2edc4def90025ba9bdddc3fc557",
+      "lfs_size_bytes": 3841,
+      "observed_download_sha256": "f745347aad1b60069f8d31718144ac7fa640a2edc4def90025ba9bdddc3fc557",
+      "observed_download_size_bytes": 3841
+    },
+    {
+      "ligand_id": "lig_23",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/lig_23.gro",
+      "git_pointer_blob_sha1": "4e24c2b3f6d81719dfaeb51c48d95aa1b8f6012f",
+      "lfs_oid_sha256": "8a783d4ddf161ca77f1db81ec080166783db2a355411a9f289094ab24b9cce5a",
+      "lfs_size_bytes": 2719,
+      "observed_download_sha256": "8a783d4ddf161ca77f1db81ec080166783db2a355411a9f289094ab24b9cce5a",
+      "observed_download_size_bytes": 2719
+    },
+    {
+      "ligand_id": "lig_23",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/lig_23.itp",
+      "git_pointer_blob_sha1": "a9bc7edc8e4dd45e30c7cfd3e4d97d5338b39e29",
+      "lfs_oid_sha256": "70a3de42ffb386416dbcb45156e8b5cb4fd13072e6d1caef8aa0f35d263c60ee",
+      "lfs_size_bytes": 22978,
+      "observed_download_sha256": "70a3de42ffb386416dbcb45156e8b5cb4fd13072e6d1caef8aa0f35d263c60ee",
+      "observed_download_size_bytes": 22978
+    },
+    {
+      "ligand_id": "lig_23",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/fflig_23.itp",
+      "git_pointer_blob_sha1": "0a873f55566d7717e416c36ad3ba4b9e66755f9f",
+      "lfs_oid_sha256": "6e739277c864ed487e0e87b43c1885d620543bcdbc1549fccdd9cce258b813c1",
+      "lfs_size_bytes": 469,
+      "observed_download_sha256": "6e739277c864ed487e0e87b43c1885d620543bcdbc1549fccdd9cce258b813c1",
+      "observed_download_size_bytes": 469
+    },
+    {
+      "ligand_id": "lig_24",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/crd/lig_24.sdf",
+      "git_pointer_blob_sha1": "e894fdf980075824b9e30ca8310517e84cbcfa19",
+      "lfs_oid_sha256": "fa373359423367ed782c5e684d62f0e1954e17e801d2154ffefb0c25ae576422",
+      "lfs_size_bytes": 3994,
+      "observed_download_sha256": "fa373359423367ed782c5e684d62f0e1954e17e801d2154ffefb0c25ae576422",
+      "observed_download_size_bytes": 3994
+    },
+    {
+      "ligand_id": "lig_24",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/lig_24.gro",
+      "git_pointer_blob_sha1": "8f820a8ea5d6796e06f836fb5f7a3ddd3f5c257e",
+      "lfs_oid_sha256": "7cdd018e0a29adf5f9b75b5736d05dbe5eed4c6668fa855eeac3f25d94059ce0",
+      "lfs_size_bytes": 2839,
+      "observed_download_sha256": "7cdd018e0a29adf5f9b75b5736d05dbe5eed4c6668fa855eeac3f25d94059ce0",
+      "observed_download_size_bytes": 2839
+    },
+    {
+      "ligand_id": "lig_24",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/lig_24.itp",
+      "git_pointer_blob_sha1": "a19400f44e1dcea8e00707cdbf0577f9e0955dfd",
+      "lfs_oid_sha256": "53efe128b1de8ecf36c090fe9e20ba40b31901a1f280330aa9b2554f04cb1365",
+      "lfs_size_bytes": 24030,
+      "observed_download_sha256": "53efe128b1de8ecf36c090fe9e20ba40b31901a1f280330aa9b2554f04cb1365",
+      "observed_download_size_bytes": 24030
+    },
+    {
+      "ligand_id": "lig_24",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/fflig_24.itp",
+      "git_pointer_blob_sha1": "1595bff8608b13dfc2ca201d47913b8cd7371f8c",
+      "lfs_oid_sha256": "b81dcd1183dab0541fb9882420c9b03817589a94bbb8da219681930ab2f9a6da",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "b81dcd1183dab0541fb9882420c9b03817589a94bbb8da219681930ab2f9a6da",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_26",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/crd/lig_26.sdf",
+      "git_pointer_blob_sha1": "af2624b38cdf2b465f348228fbeed45c9a4dbafd",
+      "lfs_oid_sha256": "c6fb2b4d5dd30c1ceb7519e0ea593e471a4a8a60ef4887cab58a3931b21538d6",
+      "lfs_size_bytes": 4242,
+      "observed_download_sha256": "c6fb2b4d5dd30c1ceb7519e0ea593e471a4a8a60ef4887cab58a3931b21538d6",
+      "observed_download_size_bytes": 4242
+    },
+    {
+      "ligand_id": "lig_26",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/lig_26.gro",
+      "git_pointer_blob_sha1": "5ae70aa3f55f06f390fdf98b29df16084870a57c",
+      "lfs_oid_sha256": "40f2c718e83a6f5e41c523d67628d918e63671813e217bed606f6b60c9a82c64",
+      "lfs_size_bytes": 3019,
+      "observed_download_sha256": "40f2c718e83a6f5e41c523d67628d918e63671813e217bed606f6b60c9a82c64",
+      "observed_download_size_bytes": 3019
+    },
+    {
+      "ligand_id": "lig_26",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/lig_26.itp",
+      "git_pointer_blob_sha1": "a943c75b5f01ccef51cb4286838cd52e1d60450a",
+      "lfs_oid_sha256": "6564cc9e53551dda9f2783dc972b1aafa67f9a263a77efdd62f88f8d6edc35e8",
+      "lfs_size_bytes": 25612,
+      "observed_download_sha256": "6564cc9e53551dda9f2783dc972b1aafa67f9a263a77efdd62f88f8d6edc35e8",
+      "observed_download_size_bytes": 25612
+    },
+    {
+      "ligand_id": "lig_26",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/fflig_26.itp",
+      "git_pointer_blob_sha1": "4ed9c0fda6f354aae311fe46ab96be56f848d7c2",
+      "lfs_oid_sha256": "deaa3ce4b97ab74d8218d4b21bfdac15de0bfadd4009128d235680d3b0fb24c7",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "deaa3ce4b97ab74d8218d4b21bfdac15de0bfadd4009128d235680d3b0fb24c7",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_29",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/crd/lig_29.sdf",
+      "git_pointer_blob_sha1": "c26f84d530711cdf837ba9d464e7d8ea8af4e3c2",
+      "lfs_oid_sha256": "766cf585d85239be27f4efecb51ffa236253b55f3906fc525e1befaaa491592f",
+      "lfs_size_bytes": 4424,
+      "observed_download_sha256": "766cf585d85239be27f4efecb51ffa236253b55f3906fc525e1befaaa491592f",
+      "observed_download_size_bytes": 4424
+    },
+    {
+      "ligand_id": "lig_29",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/lig_29.gro",
+      "git_pointer_blob_sha1": "a9101329e3a327a8695723af6d244b9fcf60d643",
+      "lfs_oid_sha256": "a6d0c4947d15a71eb3d2465c25938b5da3df0dc1a2ec867fa5181250ef87e4b0",
+      "lfs_size_bytes": 3139,
+      "observed_download_sha256": "a6d0c4947d15a71eb3d2465c25938b5da3df0dc1a2ec867fa5181250ef87e4b0",
+      "observed_download_size_bytes": 3139
+    },
+    {
+      "ligand_id": "lig_29",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/lig_29.itp",
+      "git_pointer_blob_sha1": "ced92f516e14d0e18846d2e7146338d622692aa7",
+      "lfs_oid_sha256": "2fa352d6466176f21124aa806db8bc2d24a1a70b282fd46ff36a071a8fdc76ae",
+      "lfs_size_bytes": 26246,
+      "observed_download_sha256": "2fa352d6466176f21124aa806db8bc2d24a1a70b282fd46ff36a071a8fdc76ae",
+      "observed_download_size_bytes": 26246
+    },
+    {
+      "ligand_id": "lig_29",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/fflig_29.itp",
+      "git_pointer_blob_sha1": "8946feb4c5e5d93bcf6657d7aaee309831c0da5c",
+      "lfs_oid_sha256": "462add6715b32e18407eeba56f742d7d24c84860332705263a7ada02e3538983",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "462add6715b32e18407eeba56f742d7d24c84860332705263a7ada02e3538983",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_30",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/crd/lig_30.sdf",
+      "git_pointer_blob_sha1": "a3b166da997ec063cca320fc6904973526ef8b3e",
+      "lfs_oid_sha256": "52040e470b4d205a2ea2bc6267a14f4323227facb9ec6e811aade7a8afc7b6f7",
+      "lfs_size_bytes": 4174,
+      "observed_download_sha256": "52040e470b4d205a2ea2bc6267a14f4323227facb9ec6e811aade7a8afc7b6f7",
+      "observed_download_size_bytes": 4174
+    },
+    {
+      "ligand_id": "lig_30",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/lig_30.gro",
+      "git_pointer_blob_sha1": "dfd06bb8a80cfac279343767391569c391670131",
+      "lfs_oid_sha256": "9c0be6154db64361da0ae0ad5c6f16b0f9cd6a922e284fd854683049c6fc68a8",
+      "lfs_size_bytes": 2959,
+      "observed_download_sha256": "9c0be6154db64361da0ae0ad5c6f16b0f9cd6a922e284fd854683049c6fc68a8",
+      "observed_download_size_bytes": 2959
+    },
+    {
+      "ligand_id": "lig_30",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/lig_30.itp",
+      "git_pointer_blob_sha1": "aa0ae75da48b950bb06d5611ce0e2752a5269660",
+      "lfs_oid_sha256": "a760956ddbfd6bd865de708e189d82fa06f15374845c931fea90bdee2d04453a",
+      "lfs_size_bytes": 24205,
+      "observed_download_sha256": "a760956ddbfd6bd865de708e189d82fa06f15374845c931fea90bdee2d04453a",
+      "observed_download_size_bytes": 24205
+    },
+    {
+      "ligand_id": "lig_30",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/fflig_30.itp",
+      "git_pointer_blob_sha1": "65d461fb676f5bc6d12481ec19023714c20836fa",
+      "lfs_oid_sha256": "28f6702d61461c5986f20a9cc862053475aa43b25d531df9e67095455105b300",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "28f6702d61461c5986f20a9cc862053475aa43b25d531df9e67095455105b300",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_31",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/crd/lig_31.sdf",
+      "git_pointer_blob_sha1": "f82375f933dff8577cf057217866de2bc517c84e",
+      "lfs_oid_sha256": "6112891923f7bc59678890a97ae5abbdf6a3e6a83dc27195e1058d81c3f00d7e",
+      "lfs_size_bytes": 4160,
+      "observed_download_sha256": "6112891923f7bc59678890a97ae5abbdf6a3e6a83dc27195e1058d81c3f00d7e",
+      "observed_download_size_bytes": 4160
+    },
+    {
+      "ligand_id": "lig_31",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/lig_31.gro",
+      "git_pointer_blob_sha1": "f729202d40276e4908f0e648af64c1be0230671c",
+      "lfs_oid_sha256": "e812694ad874d570618e6cade821b762b6d07408eacf206460dede5043f5554e",
+      "lfs_size_bytes": 2959,
+      "observed_download_sha256": "e812694ad874d570618e6cade821b762b6d07408eacf206460dede5043f5554e",
+      "observed_download_size_bytes": 2959
+    },
+    {
+      "ligand_id": "lig_31",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/lig_31.itp",
+      "git_pointer_blob_sha1": "de4a28da95a25152a853d041ace486bc3f9c62cb",
+      "lfs_oid_sha256": "17e0317be4e67b8cc81727634fa1dd6dd0514760191fb70d6d8726d026afb975",
+      "lfs_size_bytes": 24205,
+      "observed_download_sha256": "17e0317be4e67b8cc81727634fa1dd6dd0514760191fb70d6d8726d026afb975",
+      "observed_download_size_bytes": 24205
+    },
+    {
+      "ligand_id": "lig_31",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/fflig_31.itp",
+      "git_pointer_blob_sha1": "a0e5bab693f6792d9ce294f1024efe5035279be5",
+      "lfs_oid_sha256": "85cea78649a698ba77b9765df5b1e82c925f0d7a0bd45fbeb6f96fc98464b3be",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "85cea78649a698ba77b9765df5b1e82c925f0d7a0bd45fbeb6f96fc98464b3be",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_33",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/crd/lig_33.sdf",
+      "git_pointer_blob_sha1": "231bde453f7df0f7a60abc33a577fd6ee5fea678",
+      "lfs_oid_sha256": "5f5a1521f457eba6ae5e3f5e73b3000fe0b7374b7564a06dfc3ecce05b023c47",
+      "lfs_size_bytes": 3925,
+      "observed_download_sha256": "5f5a1521f457eba6ae5e3f5e73b3000fe0b7374b7564a06dfc3ecce05b023c47",
+      "observed_download_size_bytes": 3925
+    },
+    {
+      "ligand_id": "lig_33",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/lig_33.gro",
+      "git_pointer_blob_sha1": "ff200acdd1c2e20195c13e741cf250722c029aab",
+      "lfs_oid_sha256": "7feaafd6a9fe4fdaea20f436546d4b81a09d1aaeed1f3faf622e29a572bcc154",
+      "lfs_size_bytes": 2779,
+      "observed_download_sha256": "7feaafd6a9fe4fdaea20f436546d4b81a09d1aaeed1f3faf622e29a572bcc154",
+      "observed_download_size_bytes": 2779
+    },
+    {
+      "ligand_id": "lig_33",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/lig_33.itp",
+      "git_pointer_blob_sha1": "ddaa1bb39c90259251562815ccef5a67f8e84877",
+      "lfs_oid_sha256": "07e32cc2117dc4bbad2742ce3fd53523f95a2c64aa1b548e96b23687110896c2",
+      "lfs_size_bytes": 23297,
+      "observed_download_sha256": "07e32cc2117dc4bbad2742ce3fd53523f95a2c64aa1b548e96b23687110896c2",
+      "observed_download_size_bytes": 23297
+    },
+    {
+      "ligand_id": "lig_33",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/fflig_33.itp",
+      "git_pointer_blob_sha1": "628aa96e2b63009cca7b8de84d30f4dcff4d7479",
+      "lfs_oid_sha256": "f34836e06453b3eb1c143451201d94ba03c2c4f094a62e8d20473e5d3f50ee46",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "f34836e06453b3eb1c143451201d94ba03c2c4f094a62e8d20473e5d3f50ee46",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_34",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/crd/lig_34.sdf",
+      "git_pointer_blob_sha1": "951b23927b031fda7da046e6e950fba8a48e2763",
+      "lfs_oid_sha256": "2c78ff0a42e0b6b82f7aa197b61e149c9bcfe39670e93ce202d7ceb6756728b9",
+      "lfs_size_bytes": 4175,
+      "observed_download_sha256": "2c78ff0a42e0b6b82f7aa197b61e149c9bcfe39670e93ce202d7ceb6756728b9",
+      "observed_download_size_bytes": 4175
+    },
+    {
+      "ligand_id": "lig_34",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/lig_34.gro",
+      "git_pointer_blob_sha1": "b14797dd5ed5ea27acbfd2cb2f8016e83cadc7b6",
+      "lfs_oid_sha256": "52354d4e3eb3f4db1113ad72e1461d4a5aa85d37b9e3e72f78addf8c1ff725d1",
+      "lfs_size_bytes": 2959,
+      "observed_download_sha256": "52354d4e3eb3f4db1113ad72e1461d4a5aa85d37b9e3e72f78addf8c1ff725d1",
+      "observed_download_size_bytes": 2959
+    },
+    {
+      "ligand_id": "lig_34",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/lig_34.itp",
+      "git_pointer_blob_sha1": "7f162f5637de5ea2e2147bce6460f33a8eb8c420",
+      "lfs_oid_sha256": "3879287dd7ffb3237101e814d2168970d1b9c6c46b38d884ddebd711537bc81e",
+      "lfs_size_bytes": 24879,
+      "observed_download_sha256": "3879287dd7ffb3237101e814d2168970d1b9c6c46b38d884ddebd711537bc81e",
+      "observed_download_size_bytes": 24879
+    },
+    {
+      "ligand_id": "lig_34",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/fflig_34.itp",
+      "git_pointer_blob_sha1": "bf7d8e51ee16b23087527e6b66867da7a4367f65",
+      "lfs_oid_sha256": "10e7f17f82959a56c3e8156f44d20b88b02ece87ce3941f2e828596db746abb6",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "10e7f17f82959a56c3e8156f44d20b88b02ece87ce3941f2e828596db746abb6",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_35",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/crd/lig_35.sdf",
+      "git_pointer_blob_sha1": "a8bcce23fcc40dd10554f0c93fb5d5b9e6a6bed1",
+      "lfs_oid_sha256": "4bbd001fd846901e3b3727973ff97c026f165cc236bf5649dc4217a7f89ab23f",
+      "lfs_size_bytes": 4341,
+      "observed_download_sha256": "4bbd001fd846901e3b3727973ff97c026f165cc236bf5649dc4217a7f89ab23f",
+      "observed_download_size_bytes": 4341
+    },
+    {
+      "ligand_id": "lig_35",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/lig_35.gro",
+      "git_pointer_blob_sha1": "a01979b5c4f848ce19241537d907a6f40b046344",
+      "lfs_oid_sha256": "dcf273bf65fcea7b7b87a323f49f5994c0402c4574872030a59319c87473c797",
+      "lfs_size_bytes": 3079,
+      "observed_download_sha256": "dcf273bf65fcea7b7b87a323f49f5994c0402c4574872030a59319c87473c797",
+      "observed_download_size_bytes": 3079
+    },
+    {
+      "ligand_id": "lig_35",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/lig_35.itp",
+      "git_pointer_blob_sha1": "5424f2bb2e7cd7dc010ab0e42393ea47be1e71f0",
+      "lfs_oid_sha256": "5a670f8b9a3f5fa9508dfd33d3fa036de007916d80b25c189db7d65e8991aaab",
+      "lfs_size_bytes": 25513,
+      "observed_download_sha256": "5a670f8b9a3f5fa9508dfd33d3fa036de007916d80b25c189db7d65e8991aaab",
+      "observed_download_size_bytes": 25513
+    },
+    {
+      "ligand_id": "lig_35",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/fflig_35.itp",
+      "git_pointer_blob_sha1": "ec77c9ff8df90368e13650911e48a6aa85cfb35a",
+      "lfs_oid_sha256": "5b1ce9caddc50ce073cb25161f18268c2b5bdc8e725216fcccc13f9afa9bf6bc",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "5b1ce9caddc50ce073cb25161f18268c2b5bdc8e725216fcccc13f9afa9bf6bc",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_36",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/crd/lig_36.sdf",
+      "git_pointer_blob_sha1": "b886791a057e60d95754bf26372771c6f983f7a6",
+      "lfs_oid_sha256": "327fc5e8ea1ea7f88ab1351c5206522bf0fb51f4b8a1f3969b6ab65426c3574c",
+      "lfs_size_bytes": 4575,
+      "observed_download_sha256": "327fc5e8ea1ea7f88ab1351c5206522bf0fb51f4b8a1f3969b6ab65426c3574c",
+      "observed_download_size_bytes": 4575
+    },
+    {
+      "ligand_id": "lig_36",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/lig_36.gro",
+      "git_pointer_blob_sha1": "0be6cc0660a9b5a6e4fe54c3a52239dace94193e",
+      "lfs_oid_sha256": "fe8af519012625ec9b5743a461c0878fe25369a20455c3ce6ec75b2d6f360548",
+      "lfs_size_bytes": 3259,
+      "observed_download_sha256": "fe8af519012625ec9b5743a461c0878fe25369a20455c3ce6ec75b2d6f360548",
+      "observed_download_size_bytes": 3259
+    },
+    {
+      "ligand_id": "lig_36",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/lig_36.itp",
+      "git_pointer_blob_sha1": "c6f96fe57a851bd4729e335e7878754f04520dba",
+      "lfs_oid_sha256": "ad11ba4082f9453e1fb07e0cd325bcfe5eb011b7371e121dc22b49f7b1cce68c",
+      "lfs_size_bytes": 27030,
+      "observed_download_sha256": "ad11ba4082f9453e1fb07e0cd325bcfe5eb011b7371e121dc22b49f7b1cce68c",
+      "observed_download_size_bytes": 27030
+    },
+    {
+      "ligand_id": "lig_36",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/fflig_36.itp",
+      "git_pointer_blob_sha1": "a0ab941276e5631550ad103fb662c6b73cd5fab8",
+      "lfs_oid_sha256": "508f26e17cda92758e82ebcfe28e66c2f2aacd8b0cc385eeff23e59d2d2e5b2d",
+      "lfs_size_bytes": 534,
+      "observed_download_sha256": "508f26e17cda92758e82ebcfe28e66c2f2aacd8b0cc385eeff23e59d2d2e5b2d",
+      "observed_download_size_bytes": 534
+    },
+    {
+      "ligand_id": "lig_37",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/crd/lig_37.sdf",
+      "git_pointer_blob_sha1": "7f51d69fffd6e4a6a23fb0f67ab61d6ce914579a",
+      "lfs_oid_sha256": "f0d1cafe29ced1ea154609a6a89e9ba33dd51add43d1a37459c91b6508386a59",
+      "lfs_size_bytes": 5335,
+      "observed_download_sha256": "f0d1cafe29ced1ea154609a6a89e9ba33dd51add43d1a37459c91b6508386a59",
+      "observed_download_size_bytes": 5335
+    },
+    {
+      "ligand_id": "lig_37",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/lig_37.gro",
+      "git_pointer_blob_sha1": "01189c0181cea66f09b9762b4d50c81a4112e90a",
+      "lfs_oid_sha256": "823e9a5d11be95c102bfc831018b207763a15a75d21da2d4da9faac9bc1ce27f",
+      "lfs_size_bytes": 3799,
+      "observed_download_sha256": "823e9a5d11be95c102bfc831018b207763a15a75d21da2d4da9faac9bc1ce27f",
+      "observed_download_size_bytes": 3799
+    },
+    {
+      "ligand_id": "lig_37",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/lig_37.itp",
+      "git_pointer_blob_sha1": "9c190b24a3d7299926ceec6f661ef5c6bd9e2abe",
+      "lfs_oid_sha256": "e6188690cd61a3ecfbc8b96126a2578168560bd6349da35bb3b6a9a313d91ebd",
+      "lfs_size_bytes": 33155,
+      "observed_download_sha256": "e6188690cd61a3ecfbc8b96126a2578168560bd6349da35bb3b6a9a313d91ebd",
+      "observed_download_size_bytes": 33155
+    },
+    {
+      "ligand_id": "lig_37",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/fflig_37.itp",
+      "git_pointer_blob_sha1": "61e3ad4ebb2b97808c334c002fe68a07460e28f6",
+      "lfs_oid_sha256": "2192364a5dc1871ab063b74f49a685cf2f70af53a14af108ff15cc0e20f94853",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "2192364a5dc1871ab063b74f49a685cf2f70af53a14af108ff15cc0e20f94853",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_38",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/crd/lig_38.sdf",
+      "git_pointer_blob_sha1": "b106e0d9f4d5c24480ecb36df97ec3ef96a19836",
+      "lfs_oid_sha256": "407014add44d32a3a3b483aaa01e6799e7fe8350faf82ef720f1eb3d9ea32899",
+      "lfs_size_bytes": 4395,
+      "observed_download_sha256": "407014add44d32a3a3b483aaa01e6799e7fe8350faf82ef720f1eb3d9ea32899",
+      "observed_download_size_bytes": 4395
+    },
+    {
+      "ligand_id": "lig_38",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.gro",
+      "git_pointer_blob_sha1": "4115ef4fad11311a78f69b144106bff1b3d56b96",
+      "lfs_oid_sha256": "33f82c3310153536aba0eb65d0c93e8548fd914cd3da4da8bf6f801544b25d0e",
+      "lfs_size_bytes": 3139,
+      "observed_download_sha256": "33f82c3310153536aba0eb65d0c93e8548fd914cd3da4da8bf6f801544b25d0e",
+      "observed_download_size_bytes": 3139
+    },
+    {
+      "ligand_id": "lig_38",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.itp",
+      "git_pointer_blob_sha1": "8bc6519257ac3246f604a802314630761a7a72bd",
+      "lfs_oid_sha256": "a2684ba2c58cccf8bb2eaafa25da5450ec633932eafd08e20a6888f83d457d59",
+      "lfs_size_bytes": 25219,
+      "observed_download_sha256": "a2684ba2c58cccf8bb2eaafa25da5450ec633932eafd08e20a6888f83d457d59",
+      "observed_download_size_bytes": 25219
+    },
+    {
+      "ligand_id": "lig_38",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/fflig_38.itp",
+      "git_pointer_blob_sha1": "1b7db91d7a10545c2d4730b40e0461fb43dc8b4d",
+      "lfs_oid_sha256": "48fef9061ce0d08ae363c190816ac60d32407fbd3664078d32b65b170da4dc90",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "48fef9061ce0d08ae363c190816ac60d32407fbd3664078d32b65b170da4dc90",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_39",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/crd/lig_39.sdf",
+      "git_pointer_blob_sha1": "0002da207b3774fddb620b781d33e5ede7c9fc50",
+      "lfs_oid_sha256": "522533c5abfa2058aa37b741a4f1204b145a152df7cc75948063e21144e865d1",
+      "lfs_size_bytes": 3911,
+      "observed_download_sha256": "522533c5abfa2058aa37b741a4f1204b145a152df7cc75948063e21144e865d1",
+      "observed_download_size_bytes": 3911
+    },
+    {
+      "ligand_id": "lig_39",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/lig_39.gro",
+      "git_pointer_blob_sha1": "11e12d777c523ae60864f1e110378def7bc95f4c",
+      "lfs_oid_sha256": "2a9e2d07f740d4c20ff5b93a40c33d947ac895553229b017e6333f35ee891c2f",
+      "lfs_size_bytes": 2779,
+      "observed_download_sha256": "2a9e2d07f740d4c20ff5b93a40c33d947ac895553229b017e6333f35ee891c2f",
+      "observed_download_size_bytes": 2779
+    },
+    {
+      "ligand_id": "lig_39",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/lig_39.itp",
+      "git_pointer_blob_sha1": "f2328f8cac54a733ba93a24ad097664add23c4c8",
+      "lfs_oid_sha256": "0adf9b2a45a4f22787fb65911d881b1a6e3624ce9a749f120089c03a52de6899",
+      "lfs_size_bytes": 22184,
+      "observed_download_sha256": "0adf9b2a45a4f22787fb65911d881b1a6e3624ce9a749f120089c03a52de6899",
+      "observed_download_size_bytes": 22184
+    },
+    {
+      "ligand_id": "lig_39",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/fflig_39.itp",
+      "git_pointer_blob_sha1": "52097d653cc22775e7b7f3a4124b14d6f5c4a2e4",
+      "lfs_oid_sha256": "fe5e3b8e7b485d3f964037ca1a5099e52dd033c9a58fc44e6c280907b6d97c0f",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "fe5e3b8e7b485d3f964037ca1a5099e52dd033c9a58fc44e6c280907b6d97c0f",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_41",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/crd/lig_41.sdf",
+      "git_pointer_blob_sha1": "9db052d4f8abdb2d9dc3203c597ef27af50cde90",
+      "lfs_oid_sha256": "ac3c5685fd60b68c42b64deb5fda2d25129e09a9c740df5722e9e774ef82ce38",
+      "lfs_size_bytes": 4077,
+      "observed_download_sha256": "ac3c5685fd60b68c42b64deb5fda2d25129e09a9c740df5722e9e774ef82ce38",
+      "observed_download_size_bytes": 4077
+    },
+    {
+      "ligand_id": "lig_41",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/lig_41.gro",
+      "git_pointer_blob_sha1": "d38ce2e23de833e69b4354c1bddec1e94e6dfc52",
+      "lfs_oid_sha256": "5b2c09c453ac781f2d7a7e2ee82518d17907f288c69bad7c1d5d71f95f7a4e1f",
+      "lfs_size_bytes": 2899,
+      "observed_download_sha256": "5b2c09c453ac781f2d7a7e2ee82518d17907f288c69bad7c1d5d71f95f7a4e1f",
+      "observed_download_size_bytes": 2899
+    },
+    {
+      "ligand_id": "lig_41",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/lig_41.itp",
+      "git_pointer_blob_sha1": "9d93ea35281d61eb4aa4cc092821ff434b92df59",
+      "lfs_oid_sha256": "722bfc16cc0023d06907e2f6f0139506be989b90edc4aed301c7e8739acf3b96",
+      "lfs_size_bytes": 22518,
+      "observed_download_sha256": "722bfc16cc0023d06907e2f6f0139506be989b90edc4aed301c7e8739acf3b96",
+      "observed_download_size_bytes": 22518
+    },
+    {
+      "ligand_id": "lig_41",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/fflig_41.itp",
+      "git_pointer_blob_sha1": "dad34020a1c9609f000192e7506904e1d3835e3f",
+      "lfs_oid_sha256": "62720576b4b613556cf4c7e8ff0630abb6c225c23d5ebc620376fe12c76a99f8",
+      "lfs_size_bytes": 729,
+      "observed_download_sha256": "62720576b4b613556cf4c7e8ff0630abb6c225c23d5ebc620376fe12c76a99f8",
+      "observed_download_size_bytes": 729
+    },
+    {
+      "ligand_id": "lig_42",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/crd/lig_42.sdf",
+      "git_pointer_blob_sha1": "579d440131875b2568e583a9b83846c80ebc418a",
+      "lfs_oid_sha256": "ef1f8c5fb265821cd98fc85a7fe893901cc929c1671c94d3e717f8b4d5357199",
+      "lfs_size_bytes": 4064,
+      "observed_download_sha256": "ef1f8c5fb265821cd98fc85a7fe893901cc929c1671c94d3e717f8b4d5357199",
+      "observed_download_size_bytes": 4064
+    },
+    {
+      "ligand_id": "lig_42",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/lig_42.gro",
+      "git_pointer_blob_sha1": "255a833ef99a6f856fdf24d24535e7ac53ae077a",
+      "lfs_oid_sha256": "53db8472d2cb5773e6e93d15374796c51e0810297fb63887f178347b42a516e3",
+      "lfs_size_bytes": 2899,
+      "observed_download_sha256": "53db8472d2cb5773e6e93d15374796c51e0810297fb63887f178347b42a516e3",
+      "observed_download_size_bytes": 2899
+    },
+    {
+      "ligand_id": "lig_42",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/lig_42.itp",
+      "git_pointer_blob_sha1": "0078841edc7e9601a2350c2491c228f74a259e14",
+      "lfs_oid_sha256": "666ac58942b02d2f7ced6248580b72dce700c8e9f0c85bf2694df1a5a83dd840",
+      "lfs_size_bytes": 22516,
+      "observed_download_sha256": "666ac58942b02d2f7ced6248580b72dce700c8e9f0c85bf2694df1a5a83dd840",
+      "observed_download_size_bytes": 22516
+    },
+    {
+      "ligand_id": "lig_42",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/fflig_42.itp",
+      "git_pointer_blob_sha1": "8b86f154fbb40ddc7c61269d160df692be645617",
+      "lfs_oid_sha256": "ab28664e0e7473e705fa4db186cf6cf5a94eb38a76f99a44f90695f2e8958676",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "ab28664e0e7473e705fa4db186cf6cf5a94eb38a76f99a44f90695f2e8958676",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_43",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/crd/lig_43.sdf",
+      "git_pointer_blob_sha1": "4d9a12b61cd25b1c716e15511580b964016c9aee",
+      "lfs_oid_sha256": "ce2887f25de27260e5505355273545c43055178fe62a6bee890ad941a7e5bcb7",
+      "lfs_size_bytes": 3732,
+      "observed_download_sha256": "ce2887f25de27260e5505355273545c43055178fe62a6bee890ad941a7e5bcb7",
+      "observed_download_size_bytes": 3732
+    },
+    {
+      "ligand_id": "lig_43",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/lig_43.gro",
+      "git_pointer_blob_sha1": "e8ebc6178d2061b61224f13f8ee4153052cb7cb0",
+      "lfs_oid_sha256": "67b537e7b066593735b800977d52555aa736ed3f4d1d8eeb047b422eebfd81b6",
+      "lfs_size_bytes": 2659,
+      "observed_download_sha256": "67b537e7b066593735b800977d52555aa736ed3f4d1d8eeb047b422eebfd81b6",
+      "observed_download_size_bytes": 2659
+    },
+    {
+      "ligand_id": "lig_43",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/lig_43.itp",
+      "git_pointer_blob_sha1": "c9ab4a6d95d82fd50b87b905685c22948a5af778",
+      "lfs_oid_sha256": "cd8d3a5412965a1d9cbec4ec8daf52f62b7e5ba386e02a2ffea263302db835c0",
+      "lfs_size_bytes": 21293,
+      "observed_download_sha256": "cd8d3a5412965a1d9cbec4ec8daf52f62b7e5ba386e02a2ffea263302db835c0",
+      "observed_download_size_bytes": 21293
+    },
+    {
+      "ligand_id": "lig_43",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/fflig_43.itp",
+      "git_pointer_blob_sha1": "afff4b2b311e6aa106c8947bb606587aa4f9810a",
+      "lfs_oid_sha256": "fa47468bb40635908fab64535e6c1f70af5c4b72d59cadb49b8c691b518013ec",
+      "lfs_size_bytes": 665,
+      "observed_download_sha256": "fa47468bb40635908fab64535e6c1f70af5c4b72d59cadb49b8c691b518013ec",
+      "observed_download_size_bytes": 665
+    },
+    {
+      "ligand_id": "lig_44",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/crd/lig_44.sdf",
+      "git_pointer_blob_sha1": "a999fee5f3f215721bcb59240f1547c17040ae38",
+      "lfs_oid_sha256": "880ec9ae9c2bf4dbbc5498a0aba3c24e31511ea80313b9205fa880323bbc9f82",
+      "lfs_size_bytes": 3747,
+      "observed_download_sha256": "880ec9ae9c2bf4dbbc5498a0aba3c24e31511ea80313b9205fa880323bbc9f82",
+      "observed_download_size_bytes": 3747
+    },
+    {
+      "ligand_id": "lig_44",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/lig_44.gro",
+      "git_pointer_blob_sha1": "99de49523333041a6efde924d0a2880f0e65aa95",
+      "lfs_oid_sha256": "23c7f0b59f44359eae08b809ede1937c83e705d39da8027051d1e84407f6d928",
+      "lfs_size_bytes": 2659,
+      "observed_download_sha256": "23c7f0b59f44359eae08b809ede1937c83e705d39da8027051d1e84407f6d928",
+      "observed_download_size_bytes": 2659
+    },
+    {
+      "ligand_id": "lig_44",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/lig_44.itp",
+      "git_pointer_blob_sha1": "e02aa42563394753b1bfac5ef79adc25cf65ce5a",
+      "lfs_oid_sha256": "1dbeb01a5fd912de18d4dc99e21772472f570f01419e077ad71e7c57d0687962",
+      "lfs_size_bytes": 21293,
+      "observed_download_sha256": "1dbeb01a5fd912de18d4dc99e21772472f570f01419e077ad71e7c57d0687962",
+      "observed_download_size_bytes": 21293
+    },
+    {
+      "ligand_id": "lig_44",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/fflig_44.itp",
+      "git_pointer_blob_sha1": "2a4aadcda143f094234f5d52660369168ed76eff",
+      "lfs_oid_sha256": "dc6b35cab7a89d6226517999c70549742ec858b8ebd8e6a71d9b5e701d85aa16",
+      "lfs_size_bytes": 665,
+      "observed_download_sha256": "dc6b35cab7a89d6226517999c70549742ec858b8ebd8e6a71d9b5e701d85aa16",
+      "observed_download_size_bytes": 665
+    },
+    {
+      "ligand_id": "lig_46",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/crd/lig_46.sdf",
+      "git_pointer_blob_sha1": "cab5ac8c79c36879bc0c7138d33bbb3285453892",
+      "lfs_oid_sha256": "e76d96b6167d0389453f1825051d4a20678027d38478b4283c3830eac4e60b96",
+      "lfs_size_bytes": 3981,
+      "observed_download_sha256": "e76d96b6167d0389453f1825051d4a20678027d38478b4283c3830eac4e60b96",
+      "observed_download_size_bytes": 3981
+    },
+    {
+      "ligand_id": "lig_46",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/lig_46.gro",
+      "git_pointer_blob_sha1": "02019d8199afe156dfa67c3d24a9884b54142659",
+      "lfs_oid_sha256": "32f39460c08f5712e04f7651dd5a949ea40ed489a0c984f46cdc5b7ecd88eee4",
+      "lfs_size_bytes": 2839,
+      "observed_download_sha256": "32f39460c08f5712e04f7651dd5a949ea40ed489a0c984f46cdc5b7ecd88eee4",
+      "observed_download_size_bytes": 2839
+    },
+    {
+      "ligand_id": "lig_46",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/lig_46.itp",
+      "git_pointer_blob_sha1": "be95bdc0aec1d79242f7afe8c6cdae78c3ab2c9f",
+      "lfs_oid_sha256": "3bb88f765b901a7282b771cc4ac63daf4451ff792dab5207c81d7bd9d7d3e5ed",
+      "lfs_size_bytes": 22436,
+      "observed_download_sha256": "3bb88f765b901a7282b771cc4ac63daf4451ff792dab5207c81d7bd9d7d3e5ed",
+      "observed_download_size_bytes": 22436
+    },
+    {
+      "ligand_id": "lig_46",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/fflig_46.itp",
+      "git_pointer_blob_sha1": "e428ebf995077ccc52e003392f29e0aba0cfc4c1",
+      "lfs_oid_sha256": "48ba78a8bb83a6e036f07a6e61cf96294f88274beef109085b84c87f04ae2434",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "48ba78a8bb83a6e036f07a6e61cf96294f88274beef109085b84c87f04ae2434",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_47",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/crd/lig_47.sdf",
+      "git_pointer_blob_sha1": "c629ab7006c2565accc9c82b1563c6678c6f7b77",
+      "lfs_oid_sha256": "b00f77d873caeea4c337e553662dc4e2e003fd87d4f1fb38af3490a94594ecb2",
+      "lfs_size_bytes": 4244,
+      "observed_download_sha256": "b00f77d873caeea4c337e553662dc4e2e003fd87d4f1fb38af3490a94594ecb2",
+      "observed_download_size_bytes": 4244
+    },
+    {
+      "ligand_id": "lig_47",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/lig_47.gro",
+      "git_pointer_blob_sha1": "a0dd86fa2413d03c1eb0cf06cf787cd52890c571",
+      "lfs_oid_sha256": "edb12bbebb9555b6b6b17e55ccd8af82e87c924105d0288e96efaa78e8046ce4",
+      "lfs_size_bytes": 3019,
+      "observed_download_sha256": "edb12bbebb9555b6b6b17e55ccd8af82e87c924105d0288e96efaa78e8046ce4",
+      "observed_download_size_bytes": 3019
+    },
+    {
+      "ligand_id": "lig_47",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/lig_47.itp",
+      "git_pointer_blob_sha1": "7e573dbc0a5ef520caef2551c6f0fbcfddc66186",
+      "lfs_oid_sha256": "a03c4cf1f5e52536a27850bd8df0a465e2d4bafcf06a07834b7048ed3e4a83fd",
+      "lfs_size_bytes": 23831,
+      "observed_download_sha256": "a03c4cf1f5e52536a27850bd8df0a465e2d4bafcf06a07834b7048ed3e4a83fd",
+      "observed_download_size_bytes": 23831
+    },
+    {
+      "ligand_id": "lig_47",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/fflig_47.itp",
+      "git_pointer_blob_sha1": "12413798bc68624472019eec12cbed5ec7251c5e",
+      "lfs_oid_sha256": "f7ee884420a92ad510e0542eb9606d047d02cb32166ea16c40c71e4f50185f68",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "f7ee884420a92ad510e0542eb9606d047d02cb32166ea16c40c71e4f50185f68",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_48",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/crd/lig_48.sdf",
+      "git_pointer_blob_sha1": "4565d3c2409f80f1e139ebaf0291955ec5de80bf",
+      "lfs_oid_sha256": "0d0dd1228ed1232fc5f96974c64a76f52b840718212f8c99caa2431a64bc465d",
+      "lfs_size_bytes": 4064,
+      "observed_download_sha256": "0d0dd1228ed1232fc5f96974c64a76f52b840718212f8c99caa2431a64bc465d",
+      "observed_download_size_bytes": 4064
+    },
+    {
+      "ligand_id": "lig_48",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/lig_48.gro",
+      "git_pointer_blob_sha1": "68bdc063815115feddf28174231eea278d30f526",
+      "lfs_oid_sha256": "9b3b53b397de06fe63660e9644a40cd98ced97df557eff89eabb55be3c3c1833",
+      "lfs_size_bytes": 2899,
+      "observed_download_sha256": "9b3b53b397de06fe63660e9644a40cd98ced97df557eff89eabb55be3c3c1833",
+      "observed_download_size_bytes": 2899
+    },
+    {
+      "ligand_id": "lig_48",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/lig_48.itp",
+      "git_pointer_blob_sha1": "03eba17669225649e374f5cecd13fd193396fd1b",
+      "lfs_oid_sha256": "31c96ab068a81696441a5ec861fe82654466658af543b46d6c2537affeabad27",
+      "lfs_size_bytes": 22521,
+      "observed_download_sha256": "31c96ab068a81696441a5ec861fe82654466658af543b46d6c2537affeabad27",
+      "observed_download_size_bytes": 22521
+    },
+    {
+      "ligand_id": "lig_48",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/fflig_48.itp",
+      "git_pointer_blob_sha1": "6662c2ea4758f581eed9a37b569603de12ac8d54",
+      "lfs_oid_sha256": "df525292abdcc7bbea08334e294ecc5c79c3b916f1b6b128444d07048cc8b945",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "df525292abdcc7bbea08334e294ecc5c79c3b916f1b6b128444d07048cc8b945",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_49",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/crd/lig_49.sdf",
+      "git_pointer_blob_sha1": "40b099a4929f9dd3f4634965bdd330f52e82f302",
+      "lfs_oid_sha256": "1ac99dc7c0811f00c8d23e48816e364f4a3c53341990d8eb89db28b00ac35736",
+      "lfs_size_bytes": 3898,
+      "observed_download_sha256": "1ac99dc7c0811f00c8d23e48816e364f4a3c53341990d8eb89db28b00ac35736",
+      "observed_download_size_bytes": 3898
+    },
+    {
+      "ligand_id": "lig_49",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/lig_49.gro",
+      "git_pointer_blob_sha1": "ee7e7571150331eee4dbd558289b66f53dfe27a7",
+      "lfs_oid_sha256": "1c036dfb428e5c870c9825f19d1c11e8524cf2da6dfb4616a21b041621699cbe",
+      "lfs_size_bytes": 2779,
+      "observed_download_sha256": "1c036dfb428e5c870c9825f19d1c11e8524cf2da6dfb4616a21b041621699cbe",
+      "observed_download_size_bytes": 2779
+    },
+    {
+      "ligand_id": "lig_49",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/lig_49.itp",
+      "git_pointer_blob_sha1": "7ca7c5d28800dce732965eb7f2c39147e1fead41",
+      "lfs_oid_sha256": "4571056e11c1c90858f9c275a4d5a0df9aeb8c007938ad2c680fd33d8ccb2e37",
+      "lfs_size_bytes": 22184,
+      "observed_download_sha256": "4571056e11c1c90858f9c275a4d5a0df9aeb8c007938ad2c680fd33d8ccb2e37",
+      "observed_download_size_bytes": 22184
+    },
+    {
+      "ligand_id": "lig_49",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/fflig_49.itp",
+      "git_pointer_blob_sha1": "3ba1765da5c395f0df80bbc3f072cb7972a6d83b",
+      "lfs_oid_sha256": "62cb3969e69f7235319879e724d045c61e6408999c3e7d3c8b4883441d8b34ee",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "62cb3969e69f7235319879e724d045c61e6408999c3e7d3c8b4883441d8b34ee",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_52",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/crd/lig_52.sdf",
+      "git_pointer_blob_sha1": "589aed00130f5ad4a044c97ae169009e2d338b22",
+      "lfs_oid_sha256": "71b14778d398aefee97a115a3ee356b777b919c470205875a657c72c5970e98d",
+      "lfs_size_bytes": 4575,
+      "observed_download_sha256": "71b14778d398aefee97a115a3ee356b777b919c470205875a657c72c5970e98d",
+      "observed_download_size_bytes": 4575
+    },
+    {
+      "ligand_id": "lig_52",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/lig_52.gro",
+      "git_pointer_blob_sha1": "6bf062973d8ab9627f1f43a8e5a444c06f1499a6",
+      "lfs_oid_sha256": "67e4c02cf135d1f1ea89b5c1436d79712430297234a993456c2cfd89dd5ee32d",
+      "lfs_size_bytes": 3259,
+      "observed_download_sha256": "67e4c02cf135d1f1ea89b5c1436d79712430297234a993456c2cfd89dd5ee32d",
+      "observed_download_size_bytes": 3259
+    },
+    {
+      "ligand_id": "lig_52",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/lig_52.itp",
+      "git_pointer_blob_sha1": "35e30dd2c4ad0b086556f3fd2cd4507f59a60eba",
+      "lfs_oid_sha256": "fe37408e659923ca5bfcff8b0448e440df740d5d8579baf0fc0f009191321df7",
+      "lfs_size_bytes": 26905,
+      "observed_download_sha256": "fe37408e659923ca5bfcff8b0448e440df740d5d8579baf0fc0f009191321df7",
+      "observed_download_size_bytes": 26905
+    },
+    {
+      "ligand_id": "lig_52",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/fflig_52.itp",
+      "git_pointer_blob_sha1": "a84a624a5ebe552bababc33b3b08f6a5f03da6cd",
+      "lfs_oid_sha256": "271d998d5138eb2ff8ae6516c2f7440b862c56f171565e7754ea758d3f045a90",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "271d998d5138eb2ff8ae6516c2f7440b862c56f171565e7754ea758d3f045a90",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_53",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/crd/lig_53.sdf",
+      "git_pointer_blob_sha1": "6075c0ee47a897f652bf61974805d4a7d3105be7",
+      "lfs_oid_sha256": "01cb200e7f14b4ea9ed8858706f68b8fef3af8de045da2943975b58d28148a20",
+      "lfs_size_bytes": 4837,
+      "observed_download_sha256": "01cb200e7f14b4ea9ed8858706f68b8fef3af8de045da2943975b58d28148a20",
+      "observed_download_size_bytes": 4837
+    },
+    {
+      "ligand_id": "lig_53",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/lig_53.gro",
+      "git_pointer_blob_sha1": "f0487beee93971f41c942ce08589e249a1093dbe",
+      "lfs_oid_sha256": "b45417a130aff175f22d21599b6622266d1d6473a86d0979084f43d74baa16c1",
+      "lfs_size_bytes": 3439,
+      "observed_download_sha256": "b45417a130aff175f22d21599b6622266d1d6473a86d0979084f43d74baa16c1",
+      "observed_download_size_bytes": 3439
+    },
+    {
+      "ligand_id": "lig_53",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/lig_53.itp",
+      "git_pointer_blob_sha1": "5a94e49e601061d2f197720d09d54f627f5ff267",
+      "lfs_oid_sha256": "3857a696bd3322f9ca04df12e8409aae338ca4018f463054bfff321eaa558d9e",
+      "lfs_size_bytes": 28297,
+      "observed_download_sha256": "3857a696bd3322f9ca04df12e8409aae338ca4018f463054bfff321eaa558d9e",
+      "observed_download_size_bytes": 28297
+    },
+    {
+      "ligand_id": "lig_53",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/fflig_53.itp",
+      "git_pointer_blob_sha1": "4d125c83a573f2c4a8031082278db6a98f7191c2",
+      "lfs_oid_sha256": "3720364abe83e7ac7e94f3a3e1903586428d5751cd50b3cc288a93c06b82c692",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "3720364abe83e7ac7e94f3a3e1903586428d5751cd50b3cc288a93c06b82c692",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_54",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/crd/lig_54.sdf",
+      "git_pointer_blob_sha1": "7337d48d3020ce54b601c55169ce9172907a2df7",
+      "lfs_oid_sha256": "8fe8a5351fdbc8ae6c47b51d440979871165c9a4dc520c3f32908d396decb5d1",
+      "lfs_size_bytes": 4823,
+      "observed_download_sha256": "8fe8a5351fdbc8ae6c47b51d440979871165c9a4dc520c3f32908d396decb5d1",
+      "observed_download_size_bytes": 4823
+    },
+    {
+      "ligand_id": "lig_54",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/lig_54.gro",
+      "git_pointer_blob_sha1": "4b0f6a3872269ebc07cab9476d44646ccd9233ca",
+      "lfs_oid_sha256": "0bcd03210240d9b3d2e635f6ee97c74227e10b15f7698647fc45cc97278181f5",
+      "lfs_size_bytes": 3439,
+      "observed_download_sha256": "0bcd03210240d9b3d2e635f6ee97c74227e10b15f7698647fc45cc97278181f5",
+      "observed_download_size_bytes": 3439
+    },
+    {
+      "ligand_id": "lig_54",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/lig_54.itp",
+      "git_pointer_blob_sha1": "b5dd7fea29d509f8998068052a40fb0bf8db7661",
+      "lfs_oid_sha256": "7e2dc0bed2f2aeb0fc03e1c762263954d4921e1a18d04fc2f316b62a9c6215dc",
+      "lfs_size_bytes": 28297,
+      "observed_download_sha256": "7e2dc0bed2f2aeb0fc03e1c762263954d4921e1a18d04fc2f316b62a9c6215dc",
+      "observed_download_size_bytes": 28297
+    },
+    {
+      "ligand_id": "lig_54",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/fflig_54.itp",
+      "git_pointer_blob_sha1": "b743b23e67cbd0ba981afaefddf601f02b5a5d7a",
+      "lfs_oid_sha256": "2b47835d4dbc9292ab36849e546a35666f6c931141d21af203d4a688c04110d5",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "2b47835d4dbc9292ab36849e546a35666f6c931141d21af203d4a688c04110d5",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_55",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/crd/lig_55.sdf",
+      "git_pointer_blob_sha1": "a3e4d3ae7a230775b08506db653e4f0b78aa9ed7",
+      "lfs_oid_sha256": "286c45d5919ca5840537eb27815984dfe5f2560f2fb30261d51fbe1a194dd972",
+      "lfs_size_bytes": 4326,
+      "observed_download_sha256": "286c45d5919ca5840537eb27815984dfe5f2560f2fb30261d51fbe1a194dd972",
+      "observed_download_size_bytes": 4326
+    },
+    {
+      "ligand_id": "lig_55",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/lig_55.gro",
+      "git_pointer_blob_sha1": "808e36851b294c9ac2410c30ce6489d35b691699",
+      "lfs_oid_sha256": "e39dc96b387c17a860a1d71c335ab653244897a3991064f7c3df86a5d98c6139",
+      "lfs_size_bytes": 3079,
+      "observed_download_sha256": "e39dc96b387c17a860a1d71c335ab653244897a3991064f7c3df86a5d98c6139",
+      "observed_download_size_bytes": 3079
+    },
+    {
+      "ligand_id": "lig_55",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/lig_55.itp",
+      "git_pointer_blob_sha1": "278faa1b25eb4cab9ce9f9d61079af4feeab086f",
+      "lfs_oid_sha256": "d27b3788da8bc1c065269054eff1d6139f7d4f9fcbe4e1d9e8b1749faa8c9074",
+      "lfs_size_bytes": 25513,
+      "observed_download_sha256": "d27b3788da8bc1c065269054eff1d6139f7d4f9fcbe4e1d9e8b1749faa8c9074",
+      "observed_download_size_bytes": 25513
+    },
+    {
+      "ligand_id": "lig_55",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/fflig_55.itp",
+      "git_pointer_blob_sha1": "cb35efd5dd856cfc58d33ac89d27ef4205e420f2",
+      "lfs_oid_sha256": "09c4d4cd2ce85b1da2cc820d8438323239abe0192c5288a701ec93019c04adab",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "09c4d4cd2ce85b1da2cc820d8438323239abe0192c5288a701ec93019c04adab",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_56",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/crd/lig_56.sdf",
+      "git_pointer_blob_sha1": "50ced209b7869704b801eef8ffaca4e3a2380618",
+      "lfs_oid_sha256": "3705edc846e98d9c821487688ee037b7afb7cc73e2770699d05a2f7e8b521b85",
+      "lfs_size_bytes": 4590,
+      "observed_download_sha256": "3705edc846e98d9c821487688ee037b7afb7cc73e2770699d05a2f7e8b521b85",
+      "observed_download_size_bytes": 4590
+    },
+    {
+      "ligand_id": "lig_56",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/lig_56.gro",
+      "git_pointer_blob_sha1": "62bf7f5e30822b07557f4129d03d4a2ae4d5bbd8",
+      "lfs_oid_sha256": "e0162782b74dd31d5c435d2f76ca36ee8fbd272d2597537c2c1daf97f10eaf32",
+      "lfs_size_bytes": 3259,
+      "observed_download_sha256": "e0162782b74dd31d5c435d2f76ca36ee8fbd272d2597537c2c1daf97f10eaf32",
+      "observed_download_size_bytes": 3259
+    },
+    {
+      "ligand_id": "lig_56",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/lig_56.itp",
+      "git_pointer_blob_sha1": "2cc24c7c2d7001b4bd8fdacacf1893716e3634c7",
+      "lfs_oid_sha256": "414fc69f2c500a961fe543afc21839089e9a8fdd3726a9063b310341ae8cb3d0",
+      "lfs_size_bytes": 26658,
+      "observed_download_sha256": "414fc69f2c500a961fe543afc21839089e9a8fdd3726a9063b310341ae8cb3d0",
+      "observed_download_size_bytes": 26658
+    },
+    {
+      "ligand_id": "lig_56",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/fflig_56.itp",
+      "git_pointer_blob_sha1": "b63d43e68dd3c11b91b79b8c9df3a3f44baa27ea",
+      "lfs_oid_sha256": "3beb64f3471932236e22f00b71d2d87e2aecb6c5604599f861370ae99eaec3cf",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "3beb64f3471932236e22f00b71d2d87e2aecb6c5604599f861370ae99eaec3cf",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_57",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/crd/lig_57.sdf",
+      "git_pointer_blob_sha1": "ed14ebc141022daab1683a46f69a1a0a8f2f0cc6",
+      "lfs_oid_sha256": "5ea519c93034b0df6c0fd30c297b25764ac8b95626ba0573d8f520cb0d065ae1",
+      "lfs_size_bytes": 4341,
+      "observed_download_sha256": "5ea519c93034b0df6c0fd30c297b25764ac8b95626ba0573d8f520cb0d065ae1",
+      "observed_download_size_bytes": 4341
+    },
+    {
+      "ligand_id": "lig_57",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/lig_57.gro",
+      "git_pointer_blob_sha1": "03459e320e1816c5beafd252d19e761e02f18a05",
+      "lfs_oid_sha256": "faf236c5a66daa7e6ffa7ab54226a6222b6c31067f8032b28320da74108432c8",
+      "lfs_size_bytes": 3079,
+      "observed_download_sha256": "faf236c5a66daa7e6ffa7ab54226a6222b6c31067f8032b28320da74108432c8",
+      "observed_download_size_bytes": 3079
+    },
+    {
+      "ligand_id": "lig_57",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/lig_57.itp",
+      "git_pointer_blob_sha1": "40e7145b48e55bec81bfa4dfaa37237b5861b5b4",
+      "lfs_oid_sha256": "5d576701309cf319bbfbe75917990ed555dcf9f750901fb8fa5c7b771b1c99da",
+      "lfs_size_bytes": 25511,
+      "observed_download_sha256": "5d576701309cf319bbfbe75917990ed555dcf9f750901fb8fa5c7b771b1c99da",
+      "observed_download_size_bytes": 25511
+    },
+    {
+      "ligand_id": "lig_57",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/fflig_57.itp",
+      "git_pointer_blob_sha1": "619ed7dd5648632d96eccf256babea95373691b6",
+      "lfs_oid_sha256": "9fc0df21a54ff49905cb2d4817595915c9c4bd9816b374643129acb7dbf8dfd4",
+      "lfs_size_bytes": 729,
+      "observed_download_sha256": "9fc0df21a54ff49905cb2d4817595915c9c4bd9816b374643129acb7dbf8dfd4",
+      "observed_download_size_bytes": 729
+    },
+    {
+      "ligand_id": "lig_58",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/crd/lig_58.sdf",
+      "git_pointer_blob_sha1": "5269a4a6c9d13acc643afde4bbd8678ceebc86f0",
+      "lfs_oid_sha256": "ec0ad8bf5b16cd2733d0b9f4adcc35a057555a95ee28de6c50eb7b652b77883d",
+      "lfs_size_bytes": 4174,
+      "observed_download_sha256": "ec0ad8bf5b16cd2733d0b9f4adcc35a057555a95ee28de6c50eb7b652b77883d",
+      "observed_download_size_bytes": 4174
+    },
+    {
+      "ligand_id": "lig_58",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/lig_58.gro",
+      "git_pointer_blob_sha1": "bbdbedf86e3c4ff74bdd9e0aa9efa9c5bdc39c45",
+      "lfs_oid_sha256": "92a707b99a8fc30e5dfd41be34037a1661e1c66fe774c8007d7072f593fd4369",
+      "lfs_size_bytes": 2959,
+      "observed_download_sha256": "92a707b99a8fc30e5dfd41be34037a1661e1c66fe774c8007d7072f593fd4369",
+      "observed_download_size_bytes": 2959
+    },
+    {
+      "ligand_id": "lig_58",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/lig_58.itp",
+      "git_pointer_blob_sha1": "a83fc64b2463a0106858dcc04875f63adc847810",
+      "lfs_oid_sha256": "71f286e217f12d1d2f4cf64d64ed2c92ed3665036e3303adcb9ef9721b0bf6d0",
+      "lfs_size_bytes": 24293,
+      "observed_download_sha256": "71f286e217f12d1d2f4cf64d64ed2c92ed3665036e3303adcb9ef9721b0bf6d0",
+      "observed_download_size_bytes": 24293
+    },
+    {
+      "ligand_id": "lig_58",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/fflig_58.itp",
+      "git_pointer_blob_sha1": "14794aa232faeed6e3b03f250fcb883cc294897e",
+      "lfs_oid_sha256": "7f11dfc60c581f608ab99cd935587ca5b7a8d7237d52de614ccd5fae3f99f26a",
+      "lfs_size_bytes": 729,
+      "observed_download_sha256": "7f11dfc60c581f608ab99cd935587ca5b7a8d7237d52de614ccd5fae3f99f26a",
+      "observed_download_size_bytes": 729
+    },
+    {
+      "ligand_id": "lig_59",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/crd/lig_59.sdf",
+      "git_pointer_blob_sha1": "7a7706a549dbdabd40f6cb712863f463d277be14",
+      "lfs_oid_sha256": "db8ccec3030a74d118e441c5806082c71fe8ae3096f2eb3e8e3478fb02d1e643",
+      "lfs_size_bytes": 4256,
+      "observed_download_sha256": "db8ccec3030a74d118e441c5806082c71fe8ae3096f2eb3e8e3478fb02d1e643",
+      "observed_download_size_bytes": 4256
+    },
+    {
+      "ligand_id": "lig_59",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/lig_59.gro",
+      "git_pointer_blob_sha1": "e4f21cdc1c89272516f9d82c168c8a931b04618f",
+      "lfs_oid_sha256": "700af9b9d1100f782e2de71d744f035733ebf8e4d46ab0afec9c404bf76c3ebe",
+      "lfs_size_bytes": 3019,
+      "observed_download_sha256": "700af9b9d1100f782e2de71d744f035733ebf8e4d46ab0afec9c404bf76c3ebe",
+      "observed_download_size_bytes": 3019
+    },
+    {
+      "ligand_id": "lig_59",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/lig_59.itp",
+      "git_pointer_blob_sha1": "250b04e4a30045040624c3329eac940b3b038ed6",
+      "lfs_oid_sha256": "b14442f84553750208a120ad965086998c906f2d96a655c233d15ba039068310",
+      "lfs_size_bytes": 24667,
+      "observed_download_sha256": "b14442f84553750208a120ad965086998c906f2d96a655c233d15ba039068310",
+      "observed_download_size_bytes": 24667
+    },
+    {
+      "ligand_id": "lig_59",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/fflig_59.itp",
+      "git_pointer_blob_sha1": "9e37f13fbecd8c7f390b3c41fcc007d024cad6f3",
+      "lfs_oid_sha256": "bfd71d18daee8e0115b44e509d170ac2d9923d50161d764a9eca3fb44dec5451",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "bfd71d18daee8e0115b44e509d170ac2d9923d50161d764a9eca3fb44dec5451",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_60",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/crd/lig_60.sdf",
+      "git_pointer_blob_sha1": "15f7c0a7b1226d6f9e7bbae7d1ba0de9f0866d6e",
+      "lfs_oid_sha256": "7b6223d63c2b5b1e70bd3aaec90d96642bf1547531d0d48fdb2c018c05306774",
+      "lfs_size_bytes": 4658,
+      "observed_download_sha256": "7b6223d63c2b5b1e70bd3aaec90d96642bf1547531d0d48fdb2c018c05306774",
+      "observed_download_size_bytes": 4658
+    },
+    {
+      "ligand_id": "lig_60",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/lig_60.gro",
+      "git_pointer_blob_sha1": "2737ba0c1c5759f460ffd0529f5af2d69901e877",
+      "lfs_oid_sha256": "c267e313c5dbeb32e76720372457b85a4b1562d7a4271e3cc3a4652f31b464a1",
+      "lfs_size_bytes": 3319,
+      "observed_download_sha256": "c267e313c5dbeb32e76720372457b85a4b1562d7a4271e3cc3a4652f31b464a1",
+      "observed_download_size_bytes": 3319
+    },
+    {
+      "ligand_id": "lig_60",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/lig_60.itp",
+      "git_pointer_blob_sha1": "32f380d2fc3ef13e4e742462fcda5fa1d7f54d9d",
+      "lfs_oid_sha256": "3d17ac269f03dc144a556f5a6018131fcdc0d536287aa6a71b9ee4644b876d11",
+      "lfs_size_bytes": 26955,
+      "observed_download_sha256": "3d17ac269f03dc144a556f5a6018131fcdc0d536287aa6a71b9ee4644b876d11",
+      "observed_download_size_bytes": 26955
+    },
+    {
+      "ligand_id": "lig_60",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/fflig_60.itp",
+      "git_pointer_blob_sha1": "6e3f240277172c291c3ca46f12222f1716732973",
+      "lfs_oid_sha256": "aad23f78cb86d8f59fc98d3d66c959826852ff6ce57b32e5f352f47f304b3c88",
+      "lfs_size_bytes": 729,
+      "observed_download_sha256": "aad23f78cb86d8f59fc98d3d66c959826852ff6ce57b32e5f352f47f304b3c88",
+      "observed_download_size_bytes": 729
+    },
+    {
+      "ligand_id": "lig_62",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/crd/lig_62.sdf",
+      "git_pointer_blob_sha1": "863d0b6e83fb0c2bf01e9b152487fcf7928e103a",
+      "lfs_oid_sha256": "ed50b22b2db03e2c65f2ab60f05e699a67ba43abaa81546161377e4b2fafb59c",
+      "lfs_size_bytes": 3841,
+      "observed_download_sha256": "ed50b22b2db03e2c65f2ab60f05e699a67ba43abaa81546161377e4b2fafb59c",
+      "observed_download_size_bytes": 3841
+    },
+    {
+      "ligand_id": "lig_62",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/lig_62.gro",
+      "git_pointer_blob_sha1": "4642c5752068b3852c30ee54145fc51cd201b3a5",
+      "lfs_oid_sha256": "6e3d50c194843e994293569d7b4d8918b0ddedf3aa47567c15a0dd4e9d5b929b",
+      "lfs_size_bytes": 2719,
+      "observed_download_sha256": "6e3d50c194843e994293569d7b4d8918b0ddedf3aa47567c15a0dd4e9d5b929b",
+      "observed_download_size_bytes": 2719
+    },
+    {
+      "ligand_id": "lig_62",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/lig_62.itp",
+      "git_pointer_blob_sha1": "9c8f5b07cec6934551863c12cd3499af21fa9bde",
+      "lfs_oid_sha256": "be70bebf30c774bdb8335ab37f26258ab6fdbc2705336c5826141aff08303367",
+      "lfs_size_bytes": 21992,
+      "observed_download_sha256": "be70bebf30c774bdb8335ab37f26258ab6fdbc2705336c5826141aff08303367",
+      "observed_download_size_bytes": 21992
+    },
+    {
+      "ligand_id": "lig_62",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/fflig_62.itp",
+      "git_pointer_blob_sha1": "68609bd55fdcaab413c3988113bb70ad7dff1b39",
+      "lfs_oid_sha256": "d4db72fac546e722cf139b909c94625904c6b877248a2b02eb0aa8f330d0641d",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "d4db72fac546e722cf139b909c94625904c6b877248a2b02eb0aa8f330d0641d",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_63",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/crd/lig_63.sdf",
+      "git_pointer_blob_sha1": "8390f4db300620edacdbf896c630c1aa359a3b72",
+      "lfs_oid_sha256": "946d617514cbe5d890a105cada84cde2162e3bb3609402e5fa8d45ca86c7f413",
+      "lfs_size_bytes": 3842,
+      "observed_download_sha256": "946d617514cbe5d890a105cada84cde2162e3bb3609402e5fa8d45ca86c7f413",
+      "observed_download_size_bytes": 3842
+    },
+    {
+      "ligand_id": "lig_63",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/lig_63.gro",
+      "git_pointer_blob_sha1": "1ac3bab14270f867872fe16753e77719286c8e4b",
+      "lfs_oid_sha256": "6ba9b9db028fd184dcf43a12822773b6d9d714e8c8c619693694b9d83a1e1eb4",
+      "lfs_size_bytes": 2719,
+      "observed_download_sha256": "6ba9b9db028fd184dcf43a12822773b6d9d714e8c8c619693694b9d83a1e1eb4",
+      "observed_download_size_bytes": 2719
+    },
+    {
+      "ligand_id": "lig_63",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/lig_63.itp",
+      "git_pointer_blob_sha1": "cc6adf62d66dd1255c869fb2e2ff40f768d1d96e",
+      "lfs_oid_sha256": "6ae4466fe29a5d1748eebbeae16358bd741b2ad73281193afd7bb74eb9c0baad",
+      "lfs_size_bytes": 21992,
+      "observed_download_sha256": "6ae4466fe29a5d1748eebbeae16358bd741b2ad73281193afd7bb74eb9c0baad",
+      "observed_download_size_bytes": 21992
+    },
+    {
+      "ligand_id": "lig_63",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/fflig_63.itp",
+      "git_pointer_blob_sha1": "6d9356722020680326a510e2b104297753e7096c",
+      "lfs_oid_sha256": "08e3089c509de4ab23f9aaa8733e3b5f9ac4f563eb7f1d1111079849cecaac87",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "08e3089c509de4ab23f9aaa8733e3b5f9ac4f563eb7f1d1111079849cecaac87",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_64",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/crd/lig_64.sdf",
+      "git_pointer_blob_sha1": "8ecd4bd4dfe48076905f1340af2f66ecd42b0311",
+      "lfs_oid_sha256": "94b6a2e395dce9c31c27e50b1da52084c15e2282f8760e2dddda1af3763833ec",
+      "lfs_size_bytes": 3911,
+      "observed_download_sha256": "94b6a2e395dce9c31c27e50b1da52084c15e2282f8760e2dddda1af3763833ec",
+      "observed_download_size_bytes": 3911
+    },
+    {
+      "ligand_id": "lig_64",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/lig_64.gro",
+      "git_pointer_blob_sha1": "93166998ef65013d0f94fcbac2a17f2512284c08",
+      "lfs_oid_sha256": "0a87ed8839c5d4b19abdf9814c6e32dd9c5dd40c2771c6c2a97706067d929830",
+      "lfs_size_bytes": 2779,
+      "observed_download_sha256": "0a87ed8839c5d4b19abdf9814c6e32dd9c5dd40c2771c6c2a97706067d929830",
+      "observed_download_size_bytes": 2779
+    },
+    {
+      "ligand_id": "lig_64",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/lig_64.itp",
+      "git_pointer_blob_sha1": "61dc57ede605bd968c76965362fc31c84bc345de",
+      "lfs_oid_sha256": "cdbbd0ddd281274697479ea2b3da3e9c561dd1160f4240359cee7bd62e007e51",
+      "lfs_size_bytes": 22548,
+      "observed_download_sha256": "cdbbd0ddd281274697479ea2b3da3e9c561dd1160f4240359cee7bd62e007e51",
+      "observed_download_size_bytes": 22548
+    },
+    {
+      "ligand_id": "lig_64",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/fflig_64.itp",
+      "git_pointer_blob_sha1": "295c56591e05c0a16438bf954e2dead6813ee0f7",
+      "lfs_oid_sha256": "f56148a864faa8175488760da5fba0ef5051ffb654456df50ba2ce77eb26ca5c",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "f56148a864faa8175488760da5fba0ef5051ffb654456df50ba2ce77eb26ca5c",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_65",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/crd/lig_65.sdf",
+      "git_pointer_blob_sha1": "ad5585f70cad0eb448451cd15c28e98d38162f01",
+      "lfs_oid_sha256": "007c54788778ac77bf3600a16e8e1902fdc9216f386b991a37fcd2de59cae969",
+      "lfs_size_bytes": 3911,
+      "observed_download_sha256": "007c54788778ac77bf3600a16e8e1902fdc9216f386b991a37fcd2de59cae969",
+      "observed_download_size_bytes": 3911
+    },
+    {
+      "ligand_id": "lig_65",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/lig_65.gro",
+      "git_pointer_blob_sha1": "b9e4623d52366cd723d2f6fcfd5a914b1b15e111",
+      "lfs_oid_sha256": "546598c4de97b58e89fadafa1bca3de47284b905545f3135083aff00541d1cd5",
+      "lfs_size_bytes": 2779,
+      "observed_download_sha256": "546598c4de97b58e89fadafa1bca3de47284b905545f3135083aff00541d1cd5",
+      "observed_download_size_bytes": 2779
+    },
+    {
+      "ligand_id": "lig_65",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/lig_65.itp",
+      "git_pointer_blob_sha1": "d4d3cb2242b41a5a44a9fbb285ea52020e4a8469",
+      "lfs_oid_sha256": "55dc46f96607cc19f87f4d886e2d37a308e5ee9ce340d0e2ba1d7c14837c7358",
+      "lfs_size_bytes": 22548,
+      "observed_download_sha256": "55dc46f96607cc19f87f4d886e2d37a308e5ee9ce340d0e2ba1d7c14837c7358",
+      "observed_download_size_bytes": 22548
+    },
+    {
+      "ligand_id": "lig_65",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/fflig_65.itp",
+      "git_pointer_blob_sha1": "141fc19ad77742166d8acade90d99d1ec9a1137b",
+      "lfs_oid_sha256": "c8ce92aa241777cfed34819136c4b31b483210a61cdd561bee64b141d66bf8ab",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "c8ce92aa241777cfed34819136c4b31b483210a61cdd561bee64b141d66bf8ab",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_67",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/crd/lig_67.sdf",
+      "git_pointer_blob_sha1": "4ff05b4ff3995103ebed4ddfc2ffab0268112756",
+      "lfs_oid_sha256": "8ede22bcf9877e860af1f7aa738ff2b2ad473818ef86e20908b3de3a2f6057a8",
+      "lfs_size_bytes": 4077,
+      "observed_download_sha256": "8ede22bcf9877e860af1f7aa738ff2b2ad473818ef86e20908b3de3a2f6057a8",
+      "observed_download_size_bytes": 4077
+    },
+    {
+      "ligand_id": "lig_67",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/lig_67.gro",
+      "git_pointer_blob_sha1": "0931ad21926cd8f16b12ae8136ef1bfeaa4bce80",
+      "lfs_oid_sha256": "dbcbd8a864d6afc5dbb943e3791813d0dce13b8b9c7c7aa1ca7ed193d7d704eb",
+      "lfs_size_bytes": 2899,
+      "observed_download_sha256": "dbcbd8a864d6afc5dbb943e3791813d0dce13b8b9c7c7aa1ca7ed193d7d704eb",
+      "observed_download_size_bytes": 2899
+    },
+    {
+      "ligand_id": "lig_67",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/lig_67.itp",
+      "git_pointer_blob_sha1": "3e916154009c80a6ceac3e0b5729bbd14f4c56bf",
+      "lfs_oid_sha256": "0e1b76616e9e3a7e71d7bb04e0421990d88954412794df60738d4b148a95602c",
+      "lfs_size_bytes": 23551,
+      "observed_download_sha256": "0e1b76616e9e3a7e71d7bb04e0421990d88954412794df60738d4b148a95602c",
+      "observed_download_size_bytes": 23551
+    },
+    {
+      "ligand_id": "lig_67",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/fflig_67.itp",
+      "git_pointer_blob_sha1": "42f3f9ac4edad894f3f2c7eae5d305f3358ecf65",
+      "lfs_oid_sha256": "d0499da1fc9625c26b3813b7ae4f457ea3b8fca637db419d3a5f531a5df45791",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "d0499da1fc9625c26b3813b7ae4f457ea3b8fca637db419d3a5f531a5df45791",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_68",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/crd/lig_68.sdf",
+      "git_pointer_blob_sha1": "f5d8b657e1462a15e011d1e80d736643cddd85db",
+      "lfs_oid_sha256": "d41b5454b6da7bf64846075e92634c53085f342fa56e94b4329be35f84c08794",
+      "lfs_size_bytes": 4175,
+      "observed_download_sha256": "d41b5454b6da7bf64846075e92634c53085f342fa56e94b4329be35f84c08794",
+      "observed_download_size_bytes": 4175
+    },
+    {
+      "ligand_id": "lig_68",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/lig_68.gro",
+      "git_pointer_blob_sha1": "133ee62ebeea286ef8ad21bd9fe8ef57b31f674f",
+      "lfs_oid_sha256": "0418f4caebeb01470a02bbbc0f9dfce2e2ca8694df8a49fb06e73c5810ec7bae",
+      "lfs_size_bytes": 2959,
+      "observed_download_sha256": "0418f4caebeb01470a02bbbc0f9dfce2e2ca8694df8a49fb06e73c5810ec7bae",
+      "observed_download_size_bytes": 2959
+    },
+    {
+      "ligand_id": "lig_68",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/lig_68.itp",
+      "git_pointer_blob_sha1": "45745e031d77adad8d624a21de29f72c1c237508",
+      "lfs_oid_sha256": "99f859faae72458498e3f305c596b14cb8e62466d3a280abebc5921f1891d85d",
+      "lfs_size_bytes": 24169,
+      "observed_download_sha256": "99f859faae72458498e3f305c596b14cb8e62466d3a280abebc5921f1891d85d",
+      "observed_download_size_bytes": 24169
+    },
+    {
+      "ligand_id": "lig_68",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/fflig_68.itp",
+      "git_pointer_blob_sha1": "50a0735d7a2fbc2609bfb301927c30699983f2a9",
+      "lfs_oid_sha256": "e6fdc100683eed350bfc998b2e2a0ebb59a84913512799bed76d64c3968a18d2",
+      "lfs_size_bytes": 599,
+      "observed_download_sha256": "e6fdc100683eed350bfc998b2e2a0ebb59a84913512799bed76d64c3968a18d2",
+      "observed_download_size_bytes": 599
+    },
+    {
+      "ligand_id": "lig_69",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/crd/lig_69.sdf",
+      "git_pointer_blob_sha1": "fe45c9db5fea46a6de0ed5a363bfc5d096b91347",
+      "lfs_oid_sha256": "81533bbd14efd56b204c0fece77e079c719e8baebf29fd42a0faacb68ce7ed03",
+      "lfs_size_bytes": 4243,
+      "observed_download_sha256": "81533bbd14efd56b204c0fece77e079c719e8baebf29fd42a0faacb68ce7ed03",
+      "observed_download_size_bytes": 4243
+    },
+    {
+      "ligand_id": "lig_69",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/lig_69.gro",
+      "git_pointer_blob_sha1": "8144a1c3b8250234db8416f8b10d713c0e563c64",
+      "lfs_oid_sha256": "c9db6a2961e5c678d20b1cae0c9408a7c96ba948160e22dc15c8f39385af3a08",
+      "lfs_size_bytes": 3019,
+      "observed_download_sha256": "c9db6a2961e5c678d20b1cae0c9408a7c96ba948160e22dc15c8f39385af3a08",
+      "observed_download_size_bytes": 3019
+    },
+    {
+      "ligand_id": "lig_69",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/lig_69.itp",
+      "git_pointer_blob_sha1": "291af460155c7ebcbab716f3327057411793902b",
+      "lfs_oid_sha256": "f35c0d4b57dbd29a8dda28a62860255522e17809fc29c71ee5890bb413826db5",
+      "lfs_size_bytes": 24785,
+      "observed_download_sha256": "f35c0d4b57dbd29a8dda28a62860255522e17809fc29c71ee5890bb413826db5",
+      "observed_download_size_bytes": 24785
+    },
+    {
+      "ligand_id": "lig_69",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/fflig_69.itp",
+      "git_pointer_blob_sha1": "952c3acafd79cd19753c4887f4f1e7f4c49f549e",
+      "lfs_oid_sha256": "4980eb3aea1e233746b8cde602f9791825de348b4d4f2529edbe5e75b3a1360f",
+      "lfs_size_bytes": 664,
+      "observed_download_sha256": "4980eb3aea1e233746b8cde602f9791825de348b4d4f2529edbe5e75b3a1360f",
+      "observed_download_size_bytes": 664
+    },
+    {
+      "ligand_id": "lig_70",
+      "kind": "sdf",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/crd/lig_70.sdf",
+      "git_pointer_blob_sha1": "3907009e8dad97b9252258b75c2fcc302b2f6ab5",
+      "lfs_oid_sha256": "a84d408578c092dfaf216b4054c95277ce9577d951ecd33467fdc827afd9236a",
+      "lfs_size_bytes": 4258,
+      "observed_download_sha256": "a84d408578c092dfaf216b4054c95277ce9577d951ecd33467fdc827afd9236a",
+      "observed_download_size_bytes": 4258
+    },
+    {
+      "ligand_id": "lig_70",
+      "kind": "gro",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/lig_70.gro",
+      "git_pointer_blob_sha1": "401b988b986eadab66b1a222bcb99d0a65536d45",
+      "lfs_oid_sha256": "3efe98a9dd2c2b682fee130d152168fc5aa34756430cfc0bbbf6254bdfa46f87",
+      "lfs_size_bytes": 3019,
+      "observed_download_sha256": "3efe98a9dd2c2b682fee130d152168fc5aa34756430cfc0bbbf6254bdfa46f87",
+      "observed_download_size_bytes": 3019
+    },
+    {
+      "ligand_id": "lig_70",
+      "kind": "ligand_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/lig_70.itp",
+      "git_pointer_blob_sha1": "1b1ddc9a46df46f3f6845bdcfd3b2b60efd758c5",
+      "lfs_oid_sha256": "cc6360cde9c15eac1e882cec59295775942b8d4e0dfbff4cdab69d0eeb82dbb7",
+      "lfs_size_bytes": 24792,
+      "observed_download_sha256": "cc6360cde9c15eac1e882cec59295775942b8d4e0dfbff4cdab69d0eeb82dbb7",
+      "observed_download_size_bytes": 24792
+    },
+    {
+      "ligand_id": "lig_70",
+      "kind": "atomtypes_itp",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/fflig_70.itp",
+      "git_pointer_blob_sha1": "bd052a4a356359d7240607d9c5a466a5d0629dbc",
+      "lfs_oid_sha256": "419754caa7e8e690f6c3f4f3fe8fcb06cf23efa6614f2e1de861dcf30c84e036",
+      "lfs_size_bytes": 729,
+      "observed_download_sha256": "419754caa7e8e690f6c3f4f3fe8fcb06cf23efa6614f2e1de861dcf30c84e036",
+      "observed_download_size_bytes": 729
+    }
+  ],
+  "support_files": [
+    {
+      "ligand_id": "lig_19",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/lig_19.top",
+      "git_pointer_blob_sha1": "9472ef9ae12c0239a4484cc7b906c7536b9c430b",
+      "lfs_oid_sha256": "48a752445303b65f23748c7b9584d4eb25cad998b7401c18a0f22bce75d70855",
+      "lfs_size_bytes": 29066,
+      "observed_download_sha256": "48a752445303b65f23748c7b9584d4eb25cad998b7401c18a0f22bce75d70855",
+      "observed_download_size_bytes": 29066
+    },
+    {
+      "ligand_id": "lig_20",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/lig_20.top",
+      "git_pointer_blob_sha1": "cb29a8f850d99c6ac8ff1d80ecdeec2222de0e27",
+      "lfs_oid_sha256": "5ed7e67e21c1614dcffd971f8d79e0913a11d4395bd3934a315777c5edbf1be0",
+      "lfs_size_bytes": 28060,
+      "observed_download_sha256": "5ed7e67e21c1614dcffd971f8d79e0913a11d4395bd3934a315777c5edbf1be0",
+      "observed_download_size_bytes": 28060
+    },
+    {
+      "ligand_id": "lig_23",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/lig_23.top",
+      "git_pointer_blob_sha1": "d3406ead2ebff82ca033893631cd16937c6973ed",
+      "lfs_oid_sha256": "119f5a2c11113822ffe0d4625d3971b7f887333ccd028112de1674633539d180",
+      "lfs_size_bytes": 28222,
+      "observed_download_sha256": "119f5a2c11113822ffe0d4625d3971b7f887333ccd028112de1674633539d180",
+      "observed_download_size_bytes": 28222
+    },
+    {
+      "ligand_id": "lig_24",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/lig_24.top",
+      "git_pointer_blob_sha1": "434fe4ce462869b0f9a41a339dc7ae5a49b6a174",
+      "lfs_oid_sha256": "925bd693096549ed94331806436a36cd8b69506359760d127b52d252664620aa",
+      "lfs_size_bytes": 29545,
+      "observed_download_sha256": "925bd693096549ed94331806436a36cd8b69506359760d127b52d252664620aa",
+      "observed_download_size_bytes": 29545
+    },
+    {
+      "ligand_id": "lig_26",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/lig_26.top",
+      "git_pointer_blob_sha1": "77dfe0dcb269d76b14c0fdace3dbaf7dacf4fd29",
+      "lfs_oid_sha256": "cdbff7b37af0025e09938229a0d46a783784af7f1331a64e08dbfad4728b7894",
+      "lfs_size_bytes": 31340,
+      "observed_download_sha256": "cdbff7b37af0025e09938229a0d46a783784af7f1331a64e08dbfad4728b7894",
+      "observed_download_size_bytes": 31340
+    },
+    {
+      "ligand_id": "lig_29",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/lig_29.top",
+      "git_pointer_blob_sha1": "59a2030a4e93461c5db5d6297835e6eed83176dc",
+      "lfs_oid_sha256": "e739b1b443de5cdf5b0cd8c9c26b7b394a7629748826001dfbdf208590e89178",
+      "lfs_size_bytes": 32232,
+      "observed_download_sha256": "e739b1b443de5cdf5b0cd8c9c26b7b394a7629748826001dfbdf208590e89178",
+      "observed_download_size_bytes": 32232
+    },
+    {
+      "ligand_id": "lig_30",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/lig_30.top",
+      "git_pointer_blob_sha1": "e082bf1a737321115bb525d9da9980afc3c38622",
+      "lfs_oid_sha256": "beb90aa46310760ca3d1027fa2c3b63a12be3f216b6f54d5231ba04ad3ece78e",
+      "lfs_size_bytes": 29720,
+      "observed_download_sha256": "beb90aa46310760ca3d1027fa2c3b63a12be3f216b6f54d5231ba04ad3ece78e",
+      "observed_download_size_bytes": 29720
+    },
+    {
+      "ligand_id": "lig_31",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/lig_31.top",
+      "git_pointer_blob_sha1": "ed4af65236c802c130cbae1635902c1cb7caa00a",
+      "lfs_oid_sha256": "0eef4ab5e312f05f88781e4a2594a06d7e983ffc73a56f89f4895a939b5adaa1",
+      "lfs_size_bytes": 29719,
+      "observed_download_sha256": "0eef4ab5e312f05f88781e4a2594a06d7e983ffc73a56f89f4895a939b5adaa1",
+      "observed_download_size_bytes": 29719
+    },
+    {
+      "ligand_id": "lig_33",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/lig_33.top",
+      "git_pointer_blob_sha1": "b556d1836dba9dfd63b5316776f2f3b1d402e501",
+      "lfs_oid_sha256": "d25c68207ba88eb9bd8e7780d3dca2124a8e5951a05cd1a6a0650f608255e65f",
+      "lfs_size_bytes": 28690,
+      "observed_download_sha256": "d25c68207ba88eb9bd8e7780d3dca2124a8e5951a05cd1a6a0650f608255e65f",
+      "observed_download_size_bytes": 28690
+    },
+    {
+      "ligand_id": "lig_34",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/lig_34.top",
+      "git_pointer_blob_sha1": "d8192a492d01d4e4da50d999feb37b39970d2804",
+      "lfs_oid_sha256": "884b41bb329c17f2b25c48a0e980fb3ac7c8549b4c9cba9bfa301caed6d2faad",
+      "lfs_size_bytes": 30485,
+      "observed_download_sha256": "884b41bb329c17f2b25c48a0e980fb3ac7c8549b4c9cba9bfa301caed6d2faad",
+      "observed_download_size_bytes": 30485
+    },
+    {
+      "ligand_id": "lig_35",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/lig_35.top",
+      "git_pointer_blob_sha1": "21b6b871a1902a6b40b8e4093cce7ac44f3aff80",
+      "lfs_oid_sha256": "e1a0363cfd045a3a9432309924fc3084de15f2d8b9f517d0ea0a74ea52af18ae",
+      "lfs_size_bytes": 31363,
+      "observed_download_sha256": "e1a0363cfd045a3a9432309924fc3084de15f2d8b9f517d0ea0a74ea52af18ae",
+      "observed_download_size_bytes": 31363
+    },
+    {
+      "ligand_id": "lig_36",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/lig_36.top",
+      "git_pointer_blob_sha1": "a26ebc17d9d29bc2b23568874ac3e188d447d0aa",
+      "lfs_oid_sha256": "d97e9ddd0f78496bb213234b00da303a6a82f715dba9c9e651a2252faecf0d17",
+      "lfs_size_bytes": 33009,
+      "observed_download_sha256": "d97e9ddd0f78496bb213234b00da303a6a82f715dba9c9e651a2252faecf0d17",
+      "observed_download_size_bytes": 33009
+    },
+    {
+      "ligand_id": "lig_37",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/lig_37.top",
+      "git_pointer_blob_sha1": "3ba44be4cc317150c99830d30a390420ad87165e",
+      "lfs_oid_sha256": "8d5cceabda82f2ced14af91dd0a50a11cc1547ad4723435c17ae797457db6126",
+      "lfs_size_bytes": 40237,
+      "observed_download_sha256": "8d5cceabda82f2ced14af91dd0a50a11cc1547ad4723435c17ae797457db6126",
+      "observed_download_size_bytes": 40237
+    },
+    {
+      "ligand_id": "lig_38",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.top",
+      "git_pointer_blob_sha1": "aa782a488f97ccc2c85a1677f060a2990b7ce8ab",
+      "lfs_oid_sha256": "63e850a807c4485015c988fbbf900244adfd9dc6f1660176435c75337d703c0e",
+      "lfs_size_bytes": 31022,
+      "observed_download_sha256": "63e850a807c4485015c988fbbf900244adfd9dc6f1660176435c75337d703c0e",
+      "observed_download_size_bytes": 31022
+    },
+    {
+      "ligand_id": "lig_39",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/lig_39.top",
+      "git_pointer_blob_sha1": "0528e7bd887a5b76b91d97b6d03775938c3d8476",
+      "lfs_oid_sha256": "f4dbeb15981b6560892ab7a4957807981417eb05666ebf32a153ee71e2f2d2f2",
+      "lfs_size_bytes": 27599,
+      "observed_download_sha256": "f4dbeb15981b6560892ab7a4957807981417eb05666ebf32a153ee71e2f2d2f2",
+      "observed_download_size_bytes": 27599
+    },
+    {
+      "ligand_id": "lig_41",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/lig_41.top",
+      "git_pointer_blob_sha1": "0fc54ff3c8fc5da68cf62cc784f53052b05b68d2",
+      "lfs_oid_sha256": "b654476c54b8c0b045727360fb4b8d11c6ed02ee98c885972bbb556a28124914",
+      "lfs_size_bytes": 28137,
+      "observed_download_sha256": "b654476c54b8c0b045727360fb4b8d11c6ed02ee98c885972bbb556a28124914",
+      "observed_download_size_bytes": 28137
+    },
+    {
+      "ligand_id": "lig_42",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/lig_42.top",
+      "git_pointer_blob_sha1": "664eb4ef75955b08e41815e6230fd7ce2664c4b7",
+      "lfs_oid_sha256": "428725d4a927a45940248777fc56e96a34776f9d9d236d2b844cf1fb501777c3",
+      "lfs_size_bytes": 27989,
+      "observed_download_sha256": "428725d4a927a45940248777fc56e96a34776f9d9d236d2b844cf1fb501777c3",
+      "observed_download_size_bytes": 27989
+    },
+    {
+      "ligand_id": "lig_43",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/lig_43.top",
+      "git_pointer_blob_sha1": "49ed68384247fb258af75c7860106e17aa5d91d0",
+      "lfs_oid_sha256": "e9a93f5d74f8b9abfb202e83ea858b6c5d3412aee0fc44385991e8f2ae8b0186",
+      "lfs_size_bytes": 26636,
+      "observed_download_sha256": "e9a93f5d74f8b9abfb202e83ea858b6c5d3412aee0fc44385991e8f2ae8b0186",
+      "observed_download_size_bytes": 26636
+    },
+    {
+      "ligand_id": "lig_44",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/lig_44.top",
+      "git_pointer_blob_sha1": "82d8d1afeea9b352154b80bcc2d9f4fbe899c7bf",
+      "lfs_oid_sha256": "89c62d25464f674164659acee115a7b6aec79eccdf0e4170edcd9f4bf7202a02",
+      "lfs_size_bytes": 26638,
+      "observed_download_sha256": "89c62d25464f674164659acee115a7b6aec79eccdf0e4170edcd9f4bf7202a02",
+      "observed_download_size_bytes": 26638
+    },
+    {
+      "ligand_id": "lig_46",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/lig_46.top",
+      "git_pointer_blob_sha1": "9ab12f96b7eabc430cd7d606798026aa7393ea74",
+      "lfs_oid_sha256": "a4da2efa923f31cc71b3056c3d2082e7cee0bbc5b838c88297fad8510a044c69",
+      "lfs_size_bytes": 27981,
+      "observed_download_sha256": "a4da2efa923f31cc71b3056c3d2082e7cee0bbc5b838c88297fad8510a044c69",
+      "observed_download_size_bytes": 27981
+    },
+    {
+      "ligand_id": "lig_47",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/lig_47.top",
+      "git_pointer_blob_sha1": "6cf59fcaff71e4942172995d19499b5e1ab01af2",
+      "lfs_oid_sha256": "1af92d4bc9c400291dd50b4af400f40bf38998d4497fbfea20077a310ad7cfdd",
+      "lfs_size_bytes": 29634,
+      "observed_download_sha256": "1af92d4bc9c400291dd50b4af400f40bf38998d4497fbfea20077a310ad7cfdd",
+      "observed_download_size_bytes": 29634
+    },
+    {
+      "ligand_id": "lig_48",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/lig_48.top",
+      "git_pointer_blob_sha1": "b6a5d2b8137eff3aca95e8f7addb04b30ea48042",
+      "lfs_oid_sha256": "ec07b07f7fe61ee49048e3c257a1bae8fe12be52393a9d09b94adeeedb7fc4c2",
+      "lfs_size_bytes": 28061,
+      "observed_download_sha256": "ec07b07f7fe61ee49048e3c257a1bae8fe12be52393a9d09b94adeeedb7fc4c2",
+      "observed_download_size_bytes": 28061
+    },
+    {
+      "ligand_id": "lig_49",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/lig_49.top",
+      "git_pointer_blob_sha1": "317fa6d56f68f0a372c1d37f908058f001603ec0",
+      "lfs_oid_sha256": "0fe48c81f7cfec830e3fc994e154659a336e6dbb16a282806e3bf9d0d7d012be",
+      "lfs_size_bytes": 27599,
+      "observed_download_sha256": "0fe48c81f7cfec830e3fc994e154659a336e6dbb16a282806e3bf9d0d7d012be",
+      "observed_download_size_bytes": 27599
+    },
+    {
+      "ligand_id": "lig_52",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/lig_52.top",
+      "git_pointer_blob_sha1": "c67c112986b1ca0f83fda0e068e8083ffa92dade",
+      "lfs_oid_sha256": "02bbaf49a64756a3b789456f1b10537519e9d643343ff2c44280fd9ed20f5b59",
+      "lfs_size_bytes": 33100,
+      "observed_download_sha256": "02bbaf49a64756a3b789456f1b10537519e9d643343ff2c44280fd9ed20f5b59",
+      "observed_download_size_bytes": 33100
+    },
+    {
+      "ligand_id": "lig_53",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/lig_53.top",
+      "git_pointer_blob_sha1": "191e610f39b4645772155a32ea656db14c2c4145",
+      "lfs_oid_sha256": "78b49362f73eeff7c9d035e8bf112a4ff85ead1609ca6538956536437a6e747c",
+      "lfs_size_bytes": 34758,
+      "observed_download_sha256": "78b49362f73eeff7c9d035e8bf112a4ff85ead1609ca6538956536437a6e747c",
+      "observed_download_size_bytes": 34758
+    },
+    {
+      "ligand_id": "lig_54",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/lig_54.top",
+      "git_pointer_blob_sha1": "8ae186c972ba2fe2d2dd3029d4de2b8745421b9c",
+      "lfs_oid_sha256": "238b54e53934983a0d5e0f0dc8dd7ffec5cb9aa97da294c779f2a74b52916613",
+      "lfs_size_bytes": 34756,
+      "observed_download_sha256": "238b54e53934983a0d5e0f0dc8dd7ffec5cb9aa97da294c779f2a74b52916613",
+      "observed_download_size_bytes": 34756
+    },
+    {
+      "ligand_id": "lig_55",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/lig_55.top",
+      "git_pointer_blob_sha1": "b4aeef6785025b6b60748a96fc4cbe9c9091cd3e",
+      "lfs_oid_sha256": "b16d129a7c2681b87bdd2868e662e4eacff79e89c3255c9298b98021df37a173",
+      "lfs_size_bytes": 31442,
+      "observed_download_sha256": "b16d129a7c2681b87bdd2868e662e4eacff79e89c3255c9298b98021df37a173",
+      "observed_download_size_bytes": 31442
+    },
+    {
+      "ligand_id": "lig_56",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/lig_56.top",
+      "git_pointer_blob_sha1": "0a166ef39ccf2b28b33ca120f32a480b6b8af5c0",
+      "lfs_oid_sha256": "c57579755be7925057b06ad3ebf3b762f799aa7180f9a710c83541cef12d7639",
+      "lfs_size_bytes": 32786,
+      "observed_download_sha256": "c57579755be7925057b06ad3ebf3b762f799aa7180f9a710c83541cef12d7639",
+      "observed_download_size_bytes": 32786
+    },
+    {
+      "ligand_id": "lig_57",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/lig_57.top",
+      "git_pointer_blob_sha1": "a221ce9834ccaf098e3bda2ca35a07188fecbbc6",
+      "lfs_oid_sha256": "9bef20a2a55679e0f2f202d265e8cb93108ac7451ea387870c98951dd221d974",
+      "lfs_size_bytes": 31519,
+      "observed_download_sha256": "9bef20a2a55679e0f2f202d265e8cb93108ac7451ea387870c98951dd221d974",
+      "observed_download_size_bytes": 31519
+    },
+    {
+      "ligand_id": "lig_58",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/lig_58.top",
+      "git_pointer_blob_sha1": "e13bcc8510261839428c0f06cc92f61609320b60",
+      "lfs_oid_sha256": "35f937507fc18705308f5fce781f5ea5cb3d0caca5447954143a2498a07d307c",
+      "lfs_size_bytes": 30167,
+      "observed_download_sha256": "35f937507fc18705308f5fce781f5ea5cb3d0caca5447954143a2498a07d307c",
+      "observed_download_size_bytes": 30167
+    },
+    {
+      "ligand_id": "lig_59",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/lig_59.top",
+      "git_pointer_blob_sha1": "e913578df7d20604c8990dc2aed888590f2b021c",
+      "lfs_oid_sha256": "4c7b5ef28dbb6079d5a12b673ecc3c35795287272126b84fef0441cce2782535",
+      "lfs_size_bytes": 30515,
+      "observed_download_sha256": "4c7b5ef28dbb6079d5a12b673ecc3c35795287272126b84fef0441cce2782535",
+      "observed_download_size_bytes": 30515
+    },
+    {
+      "ligand_id": "lig_60",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/lig_60.top",
+      "git_pointer_blob_sha1": "d61e8afd3103b8f628738d76e79e0b650db17769",
+      "lfs_oid_sha256": "7bec1594c99a8fc2227743429adfe44c00d71da2a2da5d5acde5a7f5581ccea6",
+      "lfs_size_bytes": 33354,
+      "observed_download_sha256": "7bec1594c99a8fc2227743429adfe44c00d71da2a2da5d5acde5a7f5581ccea6",
+      "observed_download_size_bytes": 33354
+    },
+    {
+      "ligand_id": "lig_62",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/lig_62.top",
+      "git_pointer_blob_sha1": "12be950daf8d543fc793420fa1404087063eb57c",
+      "lfs_oid_sha256": "e5ff3204e2940921e3b455a31846b0f1b5db0465f76a248593c885f64806be6c",
+      "lfs_size_bytes": 27389,
+      "observed_download_sha256": "e5ff3204e2940921e3b455a31846b0f1b5db0465f76a248593c885f64806be6c",
+      "observed_download_size_bytes": 27389
+    },
+    {
+      "ligand_id": "lig_63",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/lig_63.top",
+      "git_pointer_blob_sha1": "fce6b052d53f0fae41b645b720f8f833a1039988",
+      "lfs_oid_sha256": "672df3b0b5bd1d776cf60a005600df91fe7b142eaeb9ecb6b2c77b19b03a8ae6",
+      "lfs_size_bytes": 27320,
+      "observed_download_sha256": "672df3b0b5bd1d776cf60a005600df91fe7b142eaeb9ecb6b2c77b19b03a8ae6",
+      "observed_download_size_bytes": 27320
+    },
+    {
+      "ligand_id": "lig_64",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/lig_64.top",
+      "git_pointer_blob_sha1": "8d66556163466498ef54314d348633569f5270b6",
+      "lfs_oid_sha256": "9be6f691e0ea41bd4fdfc18fdacd9d40d63256c38af4a9da01ecf76e7c5775cf",
+      "lfs_size_bytes": 28025,
+      "observed_download_sha256": "9be6f691e0ea41bd4fdfc18fdacd9d40d63256c38af4a9da01ecf76e7c5775cf",
+      "observed_download_size_bytes": 28025
+    },
+    {
+      "ligand_id": "lig_65",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/lig_65.top",
+      "git_pointer_blob_sha1": "209a0c2bfc1015e4a8491221cadace8f4aa97bbb",
+      "lfs_oid_sha256": "55cd15da3df5645c80b1cf48deb234ce3ecc0df44da5deffffd2edd0c991b36e",
+      "lfs_size_bytes": 28022,
+      "observed_download_sha256": "55cd15da3df5645c80b1cf48deb234ce3ecc0df44da5deffffd2edd0c991b36e",
+      "observed_download_size_bytes": 28022
+    },
+    {
+      "ligand_id": "lig_67",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/lig_67.top",
+      "git_pointer_blob_sha1": "aab5f933d8d706163798e4f302ad2352145ae96d",
+      "lfs_oid_sha256": "89696d9ba05f9af475d6b55617ad211bf55148042ba94d18881c4e71ab9ecca6",
+      "lfs_size_bytes": 29113,
+      "observed_download_sha256": "89696d9ba05f9af475d6b55617ad211bf55148042ba94d18881c4e71ab9ecca6",
+      "observed_download_size_bytes": 29113
+    },
+    {
+      "ligand_id": "lig_68",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/lig_68.top",
+      "git_pointer_blob_sha1": "3c5719fc6c341e19fc73d701f0588937a381e349",
+      "lfs_oid_sha256": "40f19ccae04efdd429f827bad0a4b6821ab46e118634dc502243c0d28fb3acb9",
+      "lfs_size_bytes": 29843,
+      "observed_download_sha256": "40f19ccae04efdd429f827bad0a4b6821ab46e118634dc502243c0d28fb3acb9",
+      "observed_download_size_bytes": 29843
+    },
+    {
+      "ligand_id": "lig_69",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/lig_69.top",
+      "git_pointer_blob_sha1": "5d7b1b29ce39514c17e7b10c193344a9a7dfad31",
+      "lfs_oid_sha256": "f6436267a3ae67855e4c3fa9ade6f8ce4c807f30a76ca4de8f4f4e629c7d37aa",
+      "lfs_size_bytes": 30599,
+      "observed_download_sha256": "f6436267a3ae67855e4c3fa9ade6f8ce4c807f30a76ca4de8f4f4e629c7d37aa",
+      "observed_download_size_bytes": 30599
+    },
+    {
+      "ligand_id": "lig_70",
+      "kind": "ligand_top",
+      "path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/lig_70.top",
+      "git_pointer_blob_sha1": "e496f003d53e01bad8706e8b5f2810f97dfd0bd6",
+      "lfs_oid_sha256": "d40094e88e20c1efe31dcfd738e5724addd655c63cf08ec921ec5b641ec77575",
+      "lfs_size_bytes": 30678,
+      "observed_download_sha256": "d40094e88e20c1efe31dcfd738e5724addd655c63cf08ec921ec5b641ec77575",
+      "observed_download_size_bytes": 30678
+    },
+    {
+      "ligand_id": null,
+      "kind": "protein_pdb",
+      "path": "data/2020-07-06_pfkfb3/01_protein/crd/protein.pdb",
+      "git_pointer_blob_sha1": "e458ad1216fe11cfdcf14611fd5d98af436fe85f",
+      "lfs_oid_sha256": "a92c23ece51dd98900faaf90a379bff0edaa8c5fb78bf0eb6100edd5995ff7a3",
+      "lfs_size_bytes": 533236,
+      "observed_download_sha256": "a92c23ece51dd98900faaf90a379bff0edaa8c5fb78bf0eb6100edd5995ff7a3",
+      "observed_download_size_bytes": 533236
+    },
+    {
+      "ligand_id": null,
+      "kind": "protein_topol_itp",
+      "path": "data/2020-07-06_pfkfb3/01_protein/top/amber99sb-star-ildn-mut.ff/topol.itp",
+      "git_pointer_blob_sha1": "cea840ecea7bcdb7327575046cb5438804c5be54",
+      "lfs_oid_sha256": "c1d4902f016c479d23ae91b697803cbadb8e0331fb35ee7bdc0d9ddbda7d9cee",
+      "lfs_size_bytes": 1920050,
+      "observed_download_sha256": "c1d4902f016c479d23ae91b697803cbadb8e0331fb35ee7bdc0d9ddbda7d9cee",
+      "observed_download_size_bytes": 1920050
+    }
+  ]
+}

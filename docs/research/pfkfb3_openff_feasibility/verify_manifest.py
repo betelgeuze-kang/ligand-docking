@@ -16,6 +16,16 @@ import stat
 
 ROOT = Path(__file__).resolve().parent
 MANIFEST = ROOT / "feasibility.v1.json"
+OFFICIAL_LFS_INVENTORY = (
+    "openff_lfs_inventory.v1.json",
+    102836,
+    "23345cfcb902ee7d0009ee630760797a6212ed7047f273eb4edef9487bc56e13",
+)
+READER_COMPATIBILITY_RECEIPT = (
+    "reader_compatibility.v1.json",
+    69617,
+    "70bfb752447f182f215312ef2cfd8da3e6762525ae9ccfeb812edb76e0725200",
+)
 MAX_BYTES = 32_768
 IDS = (
     "lig_19",
@@ -141,6 +151,26 @@ def expected_manifest() -> dict:
             "primary_paper_and_supplement_rights_reviewed_for_product": False,
             "separate_protein_parameters_rights_and_coevality_reviewed": False,
         },
+        "official_openff_lfs_inventory": {
+            "relative_path": OFFICIAL_LFS_INVENTORY[0],
+            "size_bytes": OFFICIAL_LFS_INVENTORY[1],
+            "sha256": OFFICIAL_LFS_INVENTORY[2],
+            "ligand_id_count": 40,
+            "official_source_file_count": 202,
+            "source_bytes_bundled_in_checkout": False,
+            "external_source_rechecked_by_offline_feasibility_verifier": False,
+            "prepared_state_assay_equivalence_verified": False,
+        },
+        "reader_compatibility_receipt": {
+            "relative_path": READER_COMPATIBILITY_RECEIPT[0],
+            "size_bytes": READER_COMPATIBILITY_RECEIPT[1],
+            "sha256": READER_COMPATIBILITY_RECEIPT[2],
+            "reader_candidate_count": 40,
+            "reader_pass_count": 40,
+            "loader_reexecuted_by_offline_feasibility_verifier": False,
+            "source_coevality_verified": False,
+            "scientific_comparison_eligible": False,
+        },
         "archived_context_observation": {
             "candidate_count": 40,
             "single_study_component_count": 1,
@@ -261,6 +291,24 @@ def verify(path: Path = MANIFEST) -> dict:
 
     if canonical(observed) != canonical(expected_manifest()):
         raise ValueError("pfkfb3_feasibility_receipt_mismatch")
+    inventory_path = ROOT / OFFICIAL_LFS_INVENTORY[0]
+    if (
+        not inventory_path.is_file()
+        or inventory_path.is_symlink()
+        or inventory_path.stat().st_size != OFFICIAL_LFS_INVENTORY[1]
+        or hashlib.sha256(inventory_path.read_bytes()).hexdigest()
+        != OFFICIAL_LFS_INVENTORY[2]
+    ):
+        raise ValueError("official_lfs_inventory_bytes_changed")
+    reader_path = ROOT / READER_COMPATIBILITY_RECEIPT[0]
+    if (
+        not reader_path.is_file()
+        or reader_path.is_symlink()
+        or reader_path.stat().st_size != READER_COMPATIBILITY_RECEIPT[1]
+        or hashlib.sha256(reader_path.read_bytes()).hexdigest()
+        != READER_COMPATIBILITY_RECEIPT[2]
+    ):
+        raise ValueError("reader_compatibility_receipt_bytes_changed")
     return {
         "status": "PASS_STATIC_FEASIBILITY_BLOCKED",
         "manifest_sha256": digest,
@@ -268,6 +316,9 @@ def verify(path: Path = MANIFEST) -> dict:
         "archived_prepared_candidate_ref_count": 1,
         "individually_replayable_historical_pfk40_report_count": 0,
         "eligible_source_state_join_count": 0,
+        "official_lfs_inventory_file_count": 202,
+        "development_reader_pass_count": 40,
+        "loader_reexecuted_by_offline_verifier": False,
         "external_archive_or_source_bytes_checked": False,
         "experimental_values_or_protected_outcomes_read": False,
     }

@@ -1,0 +1,1575 @@
+{
+  "schema_version": "pfkfb3_openff_v3_reader_compatibility_v1",
+  "status": "PASS_DEVELOPMENT_READER_COMPATIBILITY_SOURCE_ROLE_BLOCKED",
+  "provenance": {
+    "openff_commit": "fe6f96916b2e28f9c14398d77c838d6515e931b0",
+    "inventory_sha256": "23345cfcb902ee7d0009ee630760797a6212ed7047f273eb4edef9487bc56e13",
+    "raw_temp_receipt_sha256": "24b2bb11b42ac06baad50da2bb4a5f77cda7ce5bb2b816450beaf9c1e04fce14",
+    "raw_temp_receipt_bytes": 182925,
+    "historical_lig38_request_sha256": "ec956d769c868c985e854b9bae1689d265991324e541bed01fd0f08fe46da9fb",
+    "protein_parameter_source": {
+      "zenodo_record": "https://zenodo.org/records/10495732",
+      "historical_archive_sha256": "50ae6280e8628005542cb560f77edbce0624737bf1feb813ec65e62df25b9b41",
+      "rights_reviewed": false,
+      "coevality_verified": false,
+      "files": {
+        "protein_atomtypes": {
+          "archive_member": "ffnonbonded.itp",
+          "sha256": "70bb6bdf7c651267749a91c7b296536a284acf1ad67a7d7a5cd60bb8b5ff8370"
+        },
+        "protein_defaults": {
+          "archive_member": "forcefield.itp",
+          "sha256": "a73df8ee82c58f106364276622f7bfab8130cdc2cb698342030ef84545569d0b"
+        }
+      }
+    },
+    "reader_module_sha256": "e73b6516de6535a6bca6a6d8fe407635778f52e77b1da674a7d9e71dab058bb0",
+    "code_head": "50d8fa01af596e29099bc2336f430869d3d7a7b9",
+    "python_version": "3.10.12",
+    "reader_sweep_seconds": 161.769
+  },
+  "boundary": {
+    "official_source_rechecked_now": false,
+    "loader_reexecuted_by_offline_verifier": false,
+    "source_coevality_verified": false,
+    "source_declarations_verified": false,
+    "prepared_state_assay_equivalence_verified": false,
+    "numeric_comparison_performed": false,
+    "scientific_comparison_eligible": false,
+    "training_admitted": false,
+    "protected_evaluation_outcomes_accessed": false,
+    "experimental_assay_values_extracted_or_exported": false
+  },
+  "common_official_files": {
+    "protein_pdb": {
+      "repository_path": "data/2020-07-06_pfkfb3/01_protein/crd/protein.pdb",
+      "sha256": "a92c23ece51dd98900faaf90a379bff0edaa8c5fb78bf0eb6100edd5995ff7a3"
+    },
+    "protein_topol_itp": {
+      "repository_path": "data/2020-07-06_pfkfb3/01_protein/top/amber99sb-star-ildn-mut.ff/topol.itp",
+      "sha256": "c1d4902f016c479d23ae91b697803cbadb8e0331fb35ee7bdc0d9ddbda7d9cee"
+    }
+  },
+  "rows": [
+    {
+      "ligand_id": "lig_19",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 45,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/crd/lig_19.sdf",
+          "sha256": "bd8e7d3138d4b34f0cb947cc0ee7be125b2bb56e6d6eb161ed99dac55c1c9b90"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/lig_19.gro",
+          "sha256": "45af551ab0a89934ddd422c0e3b2711706202a1318968bf51d259c613b69f865"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/lig_19.itp",
+          "sha256": "812d6890705c2ecfcb03f479a4b8d390563bf517b4f1d5ea03eca3ed484502b4"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/fflig_19.itp",
+          "sha256": "6379dd41c231148598b78aeca4a49fbbb81cf88cbc596e82bc8913bbf04ac93a"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_19/top/openff-1.0.0.offxml/lig_19.top",
+          "sha256": "48a752445303b65f23748c7b9584d4eb25cad998b7401c18a0f22bce75d70855"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.799
+    },
+    {
+      "ligand_id": "lig_20",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 47,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/crd/lig_20.sdf",
+          "sha256": "cd1736e71550175a1b2bf8cef4085c2621f3c4660886aa9f7b4ee87391636f1a"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/lig_20.gro",
+          "sha256": "cd5ebfbb87110bafc8229216246cfd464f026b4a1d91aa3c4e3ca0f721fcd66c"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/lig_20.itp",
+          "sha256": "7cb4f96128db74279b96100c1956be10ccd8c1054374a6d557298bb0aa030aea"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/fflig_20.itp",
+          "sha256": "4f87d1c405868a62bf3652489928dd0ce00ad610d27b95cf6d42335e969c3cdc"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_20/top/openff-1.0.0.offxml/lig_20.top",
+          "sha256": "5ed7e67e21c1614dcffd971f8d79e0913a11d4395bd3934a315777c5edbf1be0"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.9
+    },
+    {
+      "ligand_id": "lig_23",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 44,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/crd/lig_23.sdf",
+          "sha256": "f745347aad1b60069f8d31718144ac7fa640a2edc4def90025ba9bdddc3fc557"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/lig_23.gro",
+          "sha256": "8a783d4ddf161ca77f1db81ec080166783db2a355411a9f289094ab24b9cce5a"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/lig_23.itp",
+          "sha256": "70a3de42ffb386416dbcb45156e8b5cb4fd13072e6d1caef8aa0f35d263c60ee"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/fflig_23.itp",
+          "sha256": "6e739277c864ed487e0e87b43c1885d620543bcdbc1549fccdd9cce258b813c1"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_23/top/openff-1.0.0.offxml/lig_23.top",
+          "sha256": "119f5a2c11113822ffe0d4625d3971b7f887333ccd028112de1674633539d180"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.803
+    },
+    {
+      "ligand_id": "lig_24",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 46,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/crd/lig_24.sdf",
+          "sha256": "fa373359423367ed782c5e684d62f0e1954e17e801d2154ffefb0c25ae576422"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/lig_24.gro",
+          "sha256": "7cdd018e0a29adf5f9b75b5736d05dbe5eed4c6668fa855eeac3f25d94059ce0"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/lig_24.itp",
+          "sha256": "53efe128b1de8ecf36c090fe9e20ba40b31901a1f280330aa9b2554f04cb1365"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/fflig_24.itp",
+          "sha256": "b81dcd1183dab0541fb9882420c9b03817589a94bbb8da219681930ab2f9a6da"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_24/top/openff-1.0.0.offxml/lig_24.top",
+          "sha256": "925bd693096549ed94331806436a36cd8b69506359760d127b52d252664620aa"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.917
+    },
+    {
+      "ligand_id": "lig_26",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 49,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/crd/lig_26.sdf",
+          "sha256": "c6fb2b4d5dd30c1ceb7519e0ea593e471a4a8a60ef4887cab58a3931b21538d6"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/lig_26.gro",
+          "sha256": "40f2c718e83a6f5e41c523d67628d918e63671813e217bed606f6b60c9a82c64"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/lig_26.itp",
+          "sha256": "6564cc9e53551dda9f2783dc972b1aafa67f9a263a77efdd62f88f8d6edc35e8"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/fflig_26.itp",
+          "sha256": "deaa3ce4b97ab74d8218d4b21bfdac15de0bfadd4009128d235680d3b0fb24c7"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_26/top/openff-1.0.0.offxml/lig_26.top",
+          "sha256": "cdbff7b37af0025e09938229a0d46a783784af7f1331a64e08dbfad4728b7894"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.876
+    },
+    {
+      "ligand_id": "lig_29",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 51,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/crd/lig_29.sdf",
+          "sha256": "766cf585d85239be27f4efecb51ffa236253b55f3906fc525e1befaaa491592f"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/lig_29.gro",
+          "sha256": "a6d0c4947d15a71eb3d2465c25938b5da3df0dc1a2ec867fa5181250ef87e4b0"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/lig_29.itp",
+          "sha256": "2fa352d6466176f21124aa806db8bc2d24a1a70b282fd46ff36a071a8fdc76ae"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/fflig_29.itp",
+          "sha256": "462add6715b32e18407eeba56f742d7d24c84860332705263a7ada02e3538983"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_29/top/openff-1.0.0.offxml/lig_29.top",
+          "sha256": "e739b1b443de5cdf5b0cd8c9c26b7b394a7629748826001dfbdf208590e89178"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.917
+    },
+    {
+      "ligand_id": "lig_30",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 48,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/crd/lig_30.sdf",
+          "sha256": "52040e470b4d205a2ea2bc6267a14f4323227facb9ec6e811aade7a8afc7b6f7"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/lig_30.gro",
+          "sha256": "9c0be6154db64361da0ae0ad5c6f16b0f9cd6a922e284fd854683049c6fc68a8"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/lig_30.itp",
+          "sha256": "a760956ddbfd6bd865de708e189d82fa06f15374845c931fea90bdee2d04453a"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/fflig_30.itp",
+          "sha256": "28f6702d61461c5986f20a9cc862053475aa43b25d531df9e67095455105b300"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_30/top/openff-1.0.0.offxml/lig_30.top",
+          "sha256": "beb90aa46310760ca3d1027fa2c3b63a12be3f216b6f54d5231ba04ad3ece78e"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.022
+    },
+    {
+      "ligand_id": "lig_31",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 48,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/crd/lig_31.sdf",
+          "sha256": "6112891923f7bc59678890a97ae5abbdf6a3e6a83dc27195e1058d81c3f00d7e"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/lig_31.gro",
+          "sha256": "e812694ad874d570618e6cade821b762b6d07408eacf206460dede5043f5554e"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/lig_31.itp",
+          "sha256": "17e0317be4e67b8cc81727634fa1dd6dd0514760191fb70d6d8726d026afb975"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/fflig_31.itp",
+          "sha256": "85cea78649a698ba77b9765df5b1e82c925f0d7a0bd45fbeb6f96fc98464b3be"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_31/top/openff-1.0.0.offxml/lig_31.top",
+          "sha256": "0eef4ab5e312f05f88781e4a2594a06d7e983ffc73a56f89f4895a939b5adaa1"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.995
+    },
+    {
+      "ligand_id": "lig_33",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 45,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/crd/lig_33.sdf",
+          "sha256": "5f5a1521f457eba6ae5e3f5e73b3000fe0b7374b7564a06dfc3ecce05b023c47"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/lig_33.gro",
+          "sha256": "7feaafd6a9fe4fdaea20f436546d4b81a09d1aaeed1f3faf622e29a572bcc154"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/lig_33.itp",
+          "sha256": "07e32cc2117dc4bbad2742ce3fd53523f95a2c64aa1b548e96b23687110896c2"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/fflig_33.itp",
+          "sha256": "f34836e06453b3eb1c143451201d94ba03c2c4f094a62e8d20473e5d3f50ee46"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_33/top/openff-1.0.0.offxml/lig_33.top",
+          "sha256": "d25c68207ba88eb9bd8e7780d3dca2124a8e5951a05cd1a6a0650f608255e65f"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.073
+    },
+    {
+      "ligand_id": "lig_34",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 48,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/crd/lig_34.sdf",
+          "sha256": "2c78ff0a42e0b6b82f7aa197b61e149c9bcfe39670e93ce202d7ceb6756728b9"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/lig_34.gro",
+          "sha256": "52354d4e3eb3f4db1113ad72e1461d4a5aa85d37b9e3e72f78addf8c1ff725d1"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/lig_34.itp",
+          "sha256": "3879287dd7ffb3237101e814d2168970d1b9c6c46b38d884ddebd711537bc81e"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/fflig_34.itp",
+          "sha256": "10e7f17f82959a56c3e8156f44d20b88b02ece87ce3941f2e828596db746abb6"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_34/top/openff-1.0.0.offxml/lig_34.top",
+          "sha256": "884b41bb329c17f2b25c48a0e980fb3ac7c8549b4c9cba9bfa301caed6d2faad"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.088
+    },
+    {
+      "ligand_id": "lig_35",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 50,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/crd/lig_35.sdf",
+          "sha256": "4bbd001fd846901e3b3727973ff97c026f165cc236bf5649dc4217a7f89ab23f"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/lig_35.gro",
+          "sha256": "dcf273bf65fcea7b7b87a323f49f5994c0402c4574872030a59319c87473c797"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/lig_35.itp",
+          "sha256": "5a670f8b9a3f5fa9508dfd33d3fa036de007916d80b25c189db7d65e8991aaab"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/fflig_35.itp",
+          "sha256": "5b1ce9caddc50ce073cb25161f18268c2b5bdc8e725216fcccc13f9afa9bf6bc"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_35/top/openff-1.0.0.offxml/lig_35.top",
+          "sha256": "e1a0363cfd045a3a9432309924fc3084de15f2d8b9f517d0ea0a74ea52af18ae"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.166
+    },
+    {
+      "ligand_id": "lig_36",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 53,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/crd/lig_36.sdf",
+          "sha256": "327fc5e8ea1ea7f88ab1351c5206522bf0fb51f4b8a1f3969b6ab65426c3574c"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/lig_36.gro",
+          "sha256": "fe8af519012625ec9b5743a461c0878fe25369a20455c3ce6ec75b2d6f360548"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/lig_36.itp",
+          "sha256": "ad11ba4082f9453e1fb07e0cd325bcfe5eb011b7371e121dc22b49f7b1cce68c"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/fflig_36.itp",
+          "sha256": "508f26e17cda92758e82ebcfe28e66c2f2aacd8b0cc385eeff23e59d2d2e5b2d"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_36/top/openff-1.0.0.offxml/lig_36.top",
+          "sha256": "d97e9ddd0f78496bb213234b00da303a6a82f715dba9c9e651a2252faecf0d17"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.089
+    },
+    {
+      "ligand_id": "lig_37",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 62,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/crd/lig_37.sdf",
+          "sha256": "f0d1cafe29ced1ea154609a6a89e9ba33dd51add43d1a37459c91b6508386a59"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/lig_37.gro",
+          "sha256": "823e9a5d11be95c102bfc831018b207763a15a75d21da2d4da9faac9bc1ce27f"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/lig_37.itp",
+          "sha256": "e6188690cd61a3ecfbc8b96126a2578168560bd6349da35bb3b6a9a313d91ebd"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/fflig_37.itp",
+          "sha256": "2192364a5dc1871ab063b74f49a685cf2f70af53a14af108ff15cc0e20f94853"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_37/top/openff-1.0.0.offxml/lig_37.top",
+          "sha256": "8d5cceabda82f2ced14af91dd0a50a11cc1547ad4723435c17ae797457db6126"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.065
+    },
+    {
+      "ligand_id": "lig_38",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 51,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/crd/lig_38.sdf",
+          "sha256": "407014add44d32a3a3b483aaa01e6799e7fe8350faf82ef720f1eb3d9ea32899"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.gro",
+          "sha256": "33f82c3310153536aba0eb65d0c93e8548fd914cd3da4da8bf6f801544b25d0e"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.itp",
+          "sha256": "a2684ba2c58cccf8bb2eaafa25da5450ec633932eafd08e20a6888f83d457d59"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/fflig_38.itp",
+          "sha256": "48fef9061ce0d08ae363c190816ac60d32407fbd3664078d32b65b170da4dc90"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.top",
+          "sha256": "63e850a807c4485015c988fbbf900244adfd9dc6f1660176435c75337d703c0e"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.086
+    },
+    {
+      "ligand_id": "lig_39",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 45,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/crd/lig_39.sdf",
+          "sha256": "522533c5abfa2058aa37b741a4f1204b145a152df7cc75948063e21144e865d1"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/lig_39.gro",
+          "sha256": "2a9e2d07f740d4c20ff5b93a40c33d947ac895553229b017e6333f35ee891c2f"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/lig_39.itp",
+          "sha256": "0adf9b2a45a4f22787fb65911d881b1a6e3624ce9a749f120089c03a52de6899"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/fflig_39.itp",
+          "sha256": "fe5e3b8e7b485d3f964037ca1a5099e52dd033c9a58fc44e6c280907b6d97c0f"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_39/top/openff-1.0.0.offxml/lig_39.top",
+          "sha256": "f4dbeb15981b6560892ab7a4957807981417eb05666ebf32a153ee71e2f2d2f2"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.918
+    },
+    {
+      "ligand_id": "lig_41",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 47,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/crd/lig_41.sdf",
+          "sha256": "ac3c5685fd60b68c42b64deb5fda2d25129e09a9c740df5722e9e774ef82ce38"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/lig_41.gro",
+          "sha256": "5b2c09c453ac781f2d7a7e2ee82518d17907f288c69bad7c1d5d71f95f7a4e1f"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/lig_41.itp",
+          "sha256": "722bfc16cc0023d06907e2f6f0139506be989b90edc4aed301c7e8739acf3b96"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/fflig_41.itp",
+          "sha256": "62720576b4b613556cf4c7e8ff0630abb6c225c23d5ebc620376fe12c76a99f8"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_41/top/openff-1.0.0.offxml/lig_41.top",
+          "sha256": "b654476c54b8c0b045727360fb4b8d11c6ed02ee98c885972bbb556a28124914"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.02
+    },
+    {
+      "ligand_id": "lig_42",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 47,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/crd/lig_42.sdf",
+          "sha256": "ef1f8c5fb265821cd98fc85a7fe893901cc929c1671c94d3e717f8b4d5357199"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/lig_42.gro",
+          "sha256": "53db8472d2cb5773e6e93d15374796c51e0810297fb63887f178347b42a516e3"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/lig_42.itp",
+          "sha256": "666ac58942b02d2f7ced6248580b72dce700c8e9f0c85bf2694df1a5a83dd840"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/fflig_42.itp",
+          "sha256": "ab28664e0e7473e705fa4db186cf6cf5a94eb38a76f99a44f90695f2e8958676"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_42/top/openff-1.0.0.offxml/lig_42.top",
+          "sha256": "428725d4a927a45940248777fc56e96a34776f9d9d236d2b844cf1fb501777c3"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.055
+    },
+    {
+      "ligand_id": "lig_43",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 43,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/crd/lig_43.sdf",
+          "sha256": "ce2887f25de27260e5505355273545c43055178fe62a6bee890ad941a7e5bcb7"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/lig_43.gro",
+          "sha256": "67b537e7b066593735b800977d52555aa736ed3f4d1d8eeb047b422eebfd81b6"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/lig_43.itp",
+          "sha256": "cd8d3a5412965a1d9cbec4ec8daf52f62b7e5ba386e02a2ffea263302db835c0"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/fflig_43.itp",
+          "sha256": "fa47468bb40635908fab64535e6c1f70af5c4b72d59cadb49b8c691b518013ec"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_43/top/openff-1.0.0.offxml/lig_43.top",
+          "sha256": "e9a93f5d74f8b9abfb202e83ea858b6c5d3412aee0fc44385991e8f2ae8b0186"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.0
+    },
+    {
+      "ligand_id": "lig_44",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 43,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/crd/lig_44.sdf",
+          "sha256": "880ec9ae9c2bf4dbbc5498a0aba3c24e31511ea80313b9205fa880323bbc9f82"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/lig_44.gro",
+          "sha256": "23c7f0b59f44359eae08b809ede1937c83e705d39da8027051d1e84407f6d928"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/lig_44.itp",
+          "sha256": "1dbeb01a5fd912de18d4dc99e21772472f570f01419e077ad71e7c57d0687962"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/fflig_44.itp",
+          "sha256": "dc6b35cab7a89d6226517999c70549742ec858b8ebd8e6a71d9b5e701d85aa16"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_44/top/openff-1.0.0.offxml/lig_44.top",
+          "sha256": "89c62d25464f674164659acee115a7b6aec79eccdf0e4170edcd9f4bf7202a02"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.224
+    },
+    {
+      "ligand_id": "lig_46",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 46,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/crd/lig_46.sdf",
+          "sha256": "e76d96b6167d0389453f1825051d4a20678027d38478b4283c3830eac4e60b96"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/lig_46.gro",
+          "sha256": "32f39460c08f5712e04f7651dd5a949ea40ed489a0c984f46cdc5b7ecd88eee4"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/lig_46.itp",
+          "sha256": "3bb88f765b901a7282b771cc4ac63daf4451ff792dab5207c81d7bd9d7d3e5ed"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/fflig_46.itp",
+          "sha256": "48ba78a8bb83a6e036f07a6e61cf96294f88274beef109085b84c87f04ae2434"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_46/top/openff-1.0.0.offxml/lig_46.top",
+          "sha256": "a4da2efa923f31cc71b3056c3d2082e7cee0bbc5b838c88297fad8510a044c69"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.978
+    },
+    {
+      "ligand_id": "lig_47",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 49,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/crd/lig_47.sdf",
+          "sha256": "b00f77d873caeea4c337e553662dc4e2e003fd87d4f1fb38af3490a94594ecb2"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/lig_47.gro",
+          "sha256": "edb12bbebb9555b6b6b17e55ccd8af82e87c924105d0288e96efaa78e8046ce4"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/lig_47.itp",
+          "sha256": "a03c4cf1f5e52536a27850bd8df0a465e2d4bafcf06a07834b7048ed3e4a83fd"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/fflig_47.itp",
+          "sha256": "f7ee884420a92ad510e0542eb9606d047d02cb32166ea16c40c71e4f50185f68"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_47/top/openff-1.0.0.offxml/lig_47.top",
+          "sha256": "1af92d4bc9c400291dd50b4af400f40bf38998d4497fbfea20077a310ad7cfdd"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.067
+    },
+    {
+      "ligand_id": "lig_48",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 47,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/crd/lig_48.sdf",
+          "sha256": "0d0dd1228ed1232fc5f96974c64a76f52b840718212f8c99caa2431a64bc465d"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/lig_48.gro",
+          "sha256": "9b3b53b397de06fe63660e9644a40cd98ced97df557eff89eabb55be3c3c1833"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/lig_48.itp",
+          "sha256": "31c96ab068a81696441a5ec861fe82654466658af543b46d6c2537affeabad27"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/fflig_48.itp",
+          "sha256": "df525292abdcc7bbea08334e294ecc5c79c3b916f1b6b128444d07048cc8b945"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_48/top/openff-1.0.0.offxml/lig_48.top",
+          "sha256": "ec07b07f7fe61ee49048e3c257a1bae8fe12be52393a9d09b94adeeedb7fc4c2"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.046
+    },
+    {
+      "ligand_id": "lig_49",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 45,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/crd/lig_49.sdf",
+          "sha256": "1ac99dc7c0811f00c8d23e48816e364f4a3c53341990d8eb89db28b00ac35736"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/lig_49.gro",
+          "sha256": "1c036dfb428e5c870c9825f19d1c11e8524cf2da6dfb4616a21b041621699cbe"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/lig_49.itp",
+          "sha256": "4571056e11c1c90858f9c275a4d5a0df9aeb8c007938ad2c680fd33d8ccb2e37"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/fflig_49.itp",
+          "sha256": "62cb3969e69f7235319879e724d045c61e6408999c3e7d3c8b4883441d8b34ee"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_49/top/openff-1.0.0.offxml/lig_49.top",
+          "sha256": "0fe48c81f7cfec830e3fc994e154659a336e6dbb16a282806e3bf9d0d7d012be"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.078
+    },
+    {
+      "ligand_id": "lig_52",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 53,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/crd/lig_52.sdf",
+          "sha256": "71b14778d398aefee97a115a3ee356b777b919c470205875a657c72c5970e98d"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/lig_52.gro",
+          "sha256": "67e4c02cf135d1f1ea89b5c1436d79712430297234a993456c2cfd89dd5ee32d"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/lig_52.itp",
+          "sha256": "fe37408e659923ca5bfcff8b0448e440df740d5d8579baf0fc0f009191321df7"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/fflig_52.itp",
+          "sha256": "271d998d5138eb2ff8ae6516c2f7440b862c56f171565e7754ea758d3f045a90"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_52/top/openff-1.0.0.offxml/lig_52.top",
+          "sha256": "02bbaf49a64756a3b789456f1b10537519e9d643343ff2c44280fd9ed20f5b59"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.048
+    },
+    {
+      "ligand_id": "lig_53",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 56,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/crd/lig_53.sdf",
+          "sha256": "01cb200e7f14b4ea9ed8858706f68b8fef3af8de045da2943975b58d28148a20"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/lig_53.gro",
+          "sha256": "b45417a130aff175f22d21599b6622266d1d6473a86d0979084f43d74baa16c1"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/lig_53.itp",
+          "sha256": "3857a696bd3322f9ca04df12e8409aae338ca4018f463054bfff321eaa558d9e"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/fflig_53.itp",
+          "sha256": "3720364abe83e7ac7e94f3a3e1903586428d5751cd50b3cc288a93c06b82c692"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_53/top/openff-1.0.0.offxml/lig_53.top",
+          "sha256": "78b49362f73eeff7c9d035e8bf112a4ff85ead1609ca6538956536437a6e747c"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.089
+    },
+    {
+      "ligand_id": "lig_54",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 56,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/crd/lig_54.sdf",
+          "sha256": "8fe8a5351fdbc8ae6c47b51d440979871165c9a4dc520c3f32908d396decb5d1"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/lig_54.gro",
+          "sha256": "0bcd03210240d9b3d2e635f6ee97c74227e10b15f7698647fc45cc97278181f5"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/lig_54.itp",
+          "sha256": "7e2dc0bed2f2aeb0fc03e1c762263954d4921e1a18d04fc2f316b62a9c6215dc"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/fflig_54.itp",
+          "sha256": "2b47835d4dbc9292ab36849e546a35666f6c931141d21af203d4a688c04110d5"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_54/top/openff-1.0.0.offxml/lig_54.top",
+          "sha256": "238b54e53934983a0d5e0f0dc8dd7ffec5cb9aa97da294c779f2a74b52916613"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.08
+    },
+    {
+      "ligand_id": "lig_55",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 50,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/crd/lig_55.sdf",
+          "sha256": "286c45d5919ca5840537eb27815984dfe5f2560f2fb30261d51fbe1a194dd972"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/lig_55.gro",
+          "sha256": "e39dc96b387c17a860a1d71c335ab653244897a3991064f7c3df86a5d98c6139"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/lig_55.itp",
+          "sha256": "d27b3788da8bc1c065269054eff1d6139f7d4f9fcbe4e1d9e8b1749faa8c9074"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/fflig_55.itp",
+          "sha256": "09c4d4cd2ce85b1da2cc820d8438323239abe0192c5288a701ec93019c04adab"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_55/top/openff-1.0.0.offxml/lig_55.top",
+          "sha256": "b16d129a7c2681b87bdd2868e662e4eacff79e89c3255c9298b98021df37a173"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.106
+    },
+    {
+      "ligand_id": "lig_56",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 53,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/crd/lig_56.sdf",
+          "sha256": "3705edc846e98d9c821487688ee037b7afb7cc73e2770699d05a2f7e8b521b85"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/lig_56.gro",
+          "sha256": "e0162782b74dd31d5c435d2f76ca36ee8fbd272d2597537c2c1daf97f10eaf32"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/lig_56.itp",
+          "sha256": "414fc69f2c500a961fe543afc21839089e9a8fdd3726a9063b310341ae8cb3d0"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/fflig_56.itp",
+          "sha256": "3beb64f3471932236e22f00b71d2d87e2aecb6c5604599f861370ae99eaec3cf"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_56/top/openff-1.0.0.offxml/lig_56.top",
+          "sha256": "c57579755be7925057b06ad3ebf3b762f799aa7180f9a710c83541cef12d7639"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.0
+    },
+    {
+      "ligand_id": "lig_57",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 50,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/crd/lig_57.sdf",
+          "sha256": "5ea519c93034b0df6c0fd30c297b25764ac8b95626ba0573d8f520cb0d065ae1"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/lig_57.gro",
+          "sha256": "faf236c5a66daa7e6ffa7ab54226a6222b6c31067f8032b28320da74108432c8"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/lig_57.itp",
+          "sha256": "5d576701309cf319bbfbe75917990ed555dcf9f750901fb8fa5c7b771b1c99da"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/fflig_57.itp",
+          "sha256": "9fc0df21a54ff49905cb2d4817595915c9c4bd9816b374643129acb7dbf8dfd4"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_57/top/openff-1.0.0.offxml/lig_57.top",
+          "sha256": "9bef20a2a55679e0f2f202d265e8cb93108ac7451ea387870c98951dd221d974"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.149
+    },
+    {
+      "ligand_id": "lig_58",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 48,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/crd/lig_58.sdf",
+          "sha256": "ec0ad8bf5b16cd2733d0b9f4adcc35a057555a95ee28de6c50eb7b652b77883d"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/lig_58.gro",
+          "sha256": "92a707b99a8fc30e5dfd41be34037a1661e1c66fe774c8007d7072f593fd4369"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/lig_58.itp",
+          "sha256": "71f286e217f12d1d2f4cf64d64ed2c92ed3665036e3303adcb9ef9721b0bf6d0"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/fflig_58.itp",
+          "sha256": "7f11dfc60c581f608ab99cd935587ca5b7a8d7237d52de614ccd5fae3f99f26a"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_58/top/openff-1.0.0.offxml/lig_58.top",
+          "sha256": "35f937507fc18705308f5fce781f5ea5cb3d0caca5447954143a2498a07d307c"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.131
+    },
+    {
+      "ligand_id": "lig_59",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 49,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/crd/lig_59.sdf",
+          "sha256": "db8ccec3030a74d118e441c5806082c71fe8ae3096f2eb3e8e3478fb02d1e643"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/lig_59.gro",
+          "sha256": "700af9b9d1100f782e2de71d744f035733ebf8e4d46ab0afec9c404bf76c3ebe"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/lig_59.itp",
+          "sha256": "b14442f84553750208a120ad965086998c906f2d96a655c233d15ba039068310"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/fflig_59.itp",
+          "sha256": "bfd71d18daee8e0115b44e509d170ac2d9923d50161d764a9eca3fb44dec5451"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_59/top/openff-1.0.0.offxml/lig_59.top",
+          "sha256": "4c7b5ef28dbb6079d5a12b673ecc3c35795287272126b84fef0441cce2782535"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.319
+    },
+    {
+      "ligand_id": "lig_60",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 54,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/crd/lig_60.sdf",
+          "sha256": "7b6223d63c2b5b1e70bd3aaec90d96642bf1547531d0d48fdb2c018c05306774"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/lig_60.gro",
+          "sha256": "c267e313c5dbeb32e76720372457b85a4b1562d7a4271e3cc3a4652f31b464a1"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/lig_60.itp",
+          "sha256": "3d17ac269f03dc144a556f5a6018131fcdc0d536287aa6a71b9ee4644b876d11"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/fflig_60.itp",
+          "sha256": "aad23f78cb86d8f59fc98d3d66c959826852ff6ce57b32e5f352f47f304b3c88"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_60/top/openff-1.0.0.offxml/lig_60.top",
+          "sha256": "7bec1594c99a8fc2227743429adfe44c00d71da2a2da5d5acde5a7f5581ccea6"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 3.949
+    },
+    {
+      "ligand_id": "lig_62",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 44,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/crd/lig_62.sdf",
+          "sha256": "ed50b22b2db03e2c65f2ab60f05e699a67ba43abaa81546161377e4b2fafb59c"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/lig_62.gro",
+          "sha256": "6e3d50c194843e994293569d7b4d8918b0ddedf3aa47567c15a0dd4e9d5b929b"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/lig_62.itp",
+          "sha256": "be70bebf30c774bdb8335ab37f26258ab6fdbc2705336c5826141aff08303367"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/fflig_62.itp",
+          "sha256": "d4db72fac546e722cf139b909c94625904c6b877248a2b02eb0aa8f330d0641d"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_62/top/openff-1.0.0.offxml/lig_62.top",
+          "sha256": "e5ff3204e2940921e3b455a31846b0f1b5db0465f76a248593c885f64806be6c"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.063
+    },
+    {
+      "ligand_id": "lig_63",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 44,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/crd/lig_63.sdf",
+          "sha256": "946d617514cbe5d890a105cada84cde2162e3bb3609402e5fa8d45ca86c7f413"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/lig_63.gro",
+          "sha256": "6ba9b9db028fd184dcf43a12822773b6d9d714e8c8c619693694b9d83a1e1eb4"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/lig_63.itp",
+          "sha256": "6ae4466fe29a5d1748eebbeae16358bd741b2ad73281193afd7bb74eb9c0baad"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/fflig_63.itp",
+          "sha256": "08e3089c509de4ab23f9aaa8733e3b5f9ac4f563eb7f1d1111079849cecaac87"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_63/top/openff-1.0.0.offxml/lig_63.top",
+          "sha256": "672df3b0b5bd1d776cf60a005600df91fe7b142eaeb9ecb6b2c77b19b03a8ae6"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.055
+    },
+    {
+      "ligand_id": "lig_64",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 45,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/crd/lig_64.sdf",
+          "sha256": "94b6a2e395dce9c31c27e50b1da52084c15e2282f8760e2dddda1af3763833ec"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/lig_64.gro",
+          "sha256": "0a87ed8839c5d4b19abdf9814c6e32dd9c5dd40c2771c6c2a97706067d929830"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/lig_64.itp",
+          "sha256": "cdbbd0ddd281274697479ea2b3da3e9c561dd1160f4240359cee7bd62e007e51"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/fflig_64.itp",
+          "sha256": "f56148a864faa8175488760da5fba0ef5051ffb654456df50ba2ce77eb26ca5c"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_64/top/openff-1.0.0.offxml/lig_64.top",
+          "sha256": "9be6f691e0ea41bd4fdfc18fdacd9d40d63256c38af4a9da01ecf76e7c5775cf"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.025
+    },
+    {
+      "ligand_id": "lig_65",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 45,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/crd/lig_65.sdf",
+          "sha256": "007c54788778ac77bf3600a16e8e1902fdc9216f386b991a37fcd2de59cae969"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/lig_65.gro",
+          "sha256": "546598c4de97b58e89fadafa1bca3de47284b905545f3135083aff00541d1cd5"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/lig_65.itp",
+          "sha256": "55dc46f96607cc19f87f4d886e2d37a308e5ee9ce340d0e2ba1d7c14837c7358"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/fflig_65.itp",
+          "sha256": "c8ce92aa241777cfed34819136c4b31b483210a61cdd561bee64b141d66bf8ab"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_65/top/openff-1.0.0.offxml/lig_65.top",
+          "sha256": "55cd15da3df5645c80b1cf48deb234ce3ecc0df44da5deffffd2edd0c991b36e"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.071
+    },
+    {
+      "ligand_id": "lig_67",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 47,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/crd/lig_67.sdf",
+          "sha256": "8ede22bcf9877e860af1f7aa738ff2b2ad473818ef86e20908b3de3a2f6057a8"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/lig_67.gro",
+          "sha256": "dbcbd8a864d6afc5dbb943e3791813d0dce13b8b9c7c7aa1ca7ed193d7d704eb"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/lig_67.itp",
+          "sha256": "0e1b76616e9e3a7e71d7bb04e0421990d88954412794df60738d4b148a95602c"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/fflig_67.itp",
+          "sha256": "d0499da1fc9625c26b3813b7ae4f457ea3b8fca637db419d3a5f531a5df45791"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_67/top/openff-1.0.0.offxml/lig_67.top",
+          "sha256": "89696d9ba05f9af475d6b55617ad211bf55148042ba94d18881c4e71ab9ecca6"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.047
+    },
+    {
+      "ligand_id": "lig_68",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 48,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/crd/lig_68.sdf",
+          "sha256": "d41b5454b6da7bf64846075e92634c53085f342fa56e94b4329be35f84c08794"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/lig_68.gro",
+          "sha256": "0418f4caebeb01470a02bbbc0f9dfce2e2ca8694df8a49fb06e73c5810ec7bae"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/lig_68.itp",
+          "sha256": "99f859faae72458498e3f305c596b14cb8e62466d3a280abebc5921f1891d85d"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/fflig_68.itp",
+          "sha256": "e6fdc100683eed350bfc998b2e2a0ebb59a84913512799bed76d64c3968a18d2"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_68/top/openff-1.0.0.offxml/lig_68.top",
+          "sha256": "40f19ccae04efdd429f827bad0a4b6821ab46e118634dc502243c0d28fb3acb9"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.146
+    },
+    {
+      "ligand_id": "lig_69",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 49,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/crd/lig_69.sdf",
+          "sha256": "81533bbd14efd56b204c0fece77e079c719e8baebf29fd42a0faacb68ce7ed03"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/lig_69.gro",
+          "sha256": "c9db6a2961e5c678d20b1cae0c9408a7c96ba948160e22dc15c8f39385af3a08"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/lig_69.itp",
+          "sha256": "f35c0d4b57dbd29a8dda28a62860255522e17809fc29c71ee5890bb413826db5"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/fflig_69.itp",
+          "sha256": "4980eb3aea1e233746b8cde602f9791825de348b4d4f2529edbe5e75b3a1360f"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_69/top/openff-1.0.0.offxml/lig_69.top",
+          "sha256": "f6436267a3ae67855e4c3fa9ade6f8ce4c807f30a76ca4de8f4f4e629c7d37aa"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.151
+    },
+    {
+      "ligand_id": "lig_70",
+      "reader_status": "PASS",
+      "reader_failure_reason": null,
+      "receptor_atom_count": 6749,
+      "ligand_atom_count": 49,
+      "source_hashes_postflight_verified": true,
+      "official_files": {
+        "sdf": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/crd/lig_70.sdf",
+          "sha256": "a84d408578c092dfaf216b4054c95277ce9577d951ecd33467fdc827afd9236a"
+        },
+        "gro": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/lig_70.gro",
+          "sha256": "3efe98a9dd2c2b682fee130d152168fc5aa34756430cfc0bbbf6254bdfa46f87"
+        },
+        "ligand_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/lig_70.itp",
+          "sha256": "cc6360cde9c15eac1e882cec59295775942b8d4e0dfbff4cdab69d0eeb82dbb7"
+        },
+        "atomtypes_itp": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/fflig_70.itp",
+          "sha256": "419754caa7e8e690f6c3f4f3fe8fcb06cf23efa6614f2e1de861dcf30c84e036"
+        },
+        "ligand_top": {
+          "repository_path": "data/2020-07-06_pfkfb3/02_ligands/lig_70/top/openff-1.0.0.offxml/lig_70.top",
+          "sha256": "d40094e88e20c1efe31dcfd738e5724addd655c63cf08ec921ec5b641ec77575"
+        }
+      },
+      "source_coevality_verified": false,
+      "source_declarations_verified": false,
+      "prepared_state_assay_equivalence_verified": false,
+      "numeric_comparison_pass": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "reader_seconds": 4.147
+    }
+  ]
+}
