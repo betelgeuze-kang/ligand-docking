@@ -52,6 +52,7 @@ def test_receipt_verifies_without_source_inputs_or_tools(exported, tmp_path):
     ("score", "pose_report_score_mismatch"),
     ("denominator", "receipt_denominator_mismatch"),
     ("completion", "invalid_completion_receipt"),
+    ("budget", "invalid_completion_receipt"),
     ("worker", "invalid_worker_completion_receipt"),
     ("missing_pose_reference", "evaluated_engine_row_missing_pose_report"),
     ("similarity_score", "similarity_prediction_score_mismatch"),
@@ -95,6 +96,10 @@ def test_tampered_copy_rejected(exported, tmp_path, mutation, reason):
                 engine["denominator"]["requested"] += 1
             elif mutation == "completion":
                 engine["completion"]["status"] = "budget_exhausted"
+            elif mutation == "budget":
+                engine["completion"]["measured_process_wall_seconds"] = (
+                    result["budget_seconds_per_arm"] + 1.0)
+                engine["completion"]["termination_overhead_seconds"] = 1.0
             elif mutation == "worker":
                 engine["worker_complete"]["engine_calls"] = result["max_engine_calls_per_arm"] + 1
             elif mutation == "missing_pose_reference":
