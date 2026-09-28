@@ -51,9 +51,12 @@ When assembling or rechecking a completed result, the similarity arm's scored
 value must match its committed priority prediction. Each scored rigid-engine row
 must have a hash-matched pose report whose independent scalar check passes,
 whose denominators match the row, and whose minimum cross energy equals the
-recorded score. Failed and unsupported rows cannot carry a score. This
-verification runs before any post-freeze outcome load. It binds the software
-receipt to its numerical evidence; it does not establish physical validity.
+recorded score. The scored report's poses, prepared source documents, evaluation
+model and pocket must also match the frozen candidate request and source bytes;
+a report for a different candidate input cannot be reassigned by resealing the row.
+Failed and unsupported rows cannot carry a score. This verification runs before
+any post-freeze outcome load. It binds the software receipt to its numerical
+evidence and declared inputs; it does not establish physical validity.
 The receipt also replays similarity predictions from fit-only rows and refits the
 AI Ridge selector from those rows. For native intake it uses the source-bound
 summary's prescribed assay or connected-component replicate weighting, and

@@ -64,6 +64,14 @@ call counts, missing-input denominators, and false scientific/product authority
 flags. A completed journal with zero engine calls establishes workflow integrity
 and selector computation only.
 
+An evaluated v2 pose report must also match its frozen candidate request when
+`run`, `resume`, or `verify-run` summarizes it. The installed verifier reparses
+the bound prepared files and reconstructs the requested rigid pose, then checks
+the saved pose identity, coordinates, receptor and ligand source systems,
+parameters, model, pocket, and declarations. This is a parent-side integrity
+check outside the equal worker budgets, included in the original run's summary
+wall time. It does not authenticate the assay state or assess physical validity.
+
 The versioned `native-v4-fit-replay-v1` wheel extra supports Python 3.10,
 `rdkit-pypi==2022.9.5` (RDKit runtime `2022.09.5`), `scipy==1.12.0`,
 `scikit-learn==1.7.2`, and `torch==2.6.0`. The wheel's base requirements pin

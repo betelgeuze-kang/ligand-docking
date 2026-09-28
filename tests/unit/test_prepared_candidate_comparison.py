@@ -402,6 +402,47 @@ def test_resealed_row_cannot_detach_score_from_prediction_or_pose(
             report_path.write_bytes(original_report)
 
 
+def test_resealed_candidate_cannot_borrow_another_valid_pose_report(integrity_run):
+    root, frozen, result = integrity_run
+    directory = root / "engine"
+    source = comparison.read(directory / (comparison.sha("a") + ".row.json"))["payload"]
+    target_path = directory / (comparison.sha("b") + ".row.json")
+    original_target = target_path.read_bytes()
+    target = comparison.read(target_path)["payload"]
+    assert source["score"] != target["score"]
+    try:
+        target.update(
+            score=source["score"],
+            pose_report=source["pose_report"],
+            pose_denominator=source["pose_denominator"],
+            numeric_denominator=source["numeric_denominator"],
+        )
+        target_path.write_text(
+            comparison.canonical({"payload": target, "sha256": comparison.sha(target)})
+        )
+        with pytest.raises(ValueError, match="pose_report_request_mismatch"):
+            comparison._arm_summary(
+                directory, frozen, result["binding"], result["arms"]["engine"]["cost"]
+            )
+    finally:
+        target_path.write_bytes(original_target)
+
+
+def test_valid_pose_report_cannot_borrow_another_prepared_source(integrity_run):
+    from betelgeuze_engine.product.prepared_pose_journal import _input_binding
+
+    root, _, _ = integrity_run
+    row = comparison.read(root / "engine" / (comparison.sha("a") + ".row.json"))[
+        "payload"
+    ]
+    report = comparison.read(row["pose_report"]["path"])
+    other_request = _request(root / "other-input")
+    with pytest.raises(ValueError, match="pose_report_request_mismatch"):
+        comparison._check_pose_report_request(
+            report, other_request, _input_binding(other_request)
+        )
+
+
 def test_hard_time_budget_keeps_all_candidates_and_has_no_free_retry(tmp_path):
     protocol = _protocol(tmp_path, seconds=0.03)
     output = tmp_path / "run"

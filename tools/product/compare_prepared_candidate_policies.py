@@ -134,6 +134,157 @@ def _checked_pose_report(path, raw_report, check_report):
     return report, checked
 
 
+def _check_pose_report_request(report, request, source_inputs):
+    """Bind reported pose arithmetic to the frozen request and prepared sources."""
+    from dataclasses import replace
+
+    import torch
+
+    from betelgeuze_engine.product import prepared_rigid_poses as pose_adapter
+    from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
+    from betelgeuze_engine.product.prepared_pose_journal import _input_binding
+    from betelgeuze_engine.product.prepared_validation import prepared_validation_scope
+    from betelgeuze_engine.product.v2_cross_interaction import MINIMUM_PAIR_DISTANCE_ANGSTROM
+    from betelgeuze_engine_v2.molecular import (
+        canonical_coordinates_sha256, canonical_system_sha256,
+    )
+    from betelgeuze_engine_v2.molecular.serialization import (
+        canonical_json_value, canonical_system_document,
+    )
+
+    def require(condition):
+        if not condition:
+            raise ValueError("pose_report_request_mismatch")
+
+    require(type(request) is dict and type(request.get("poses")) is list)
+    poses = request["poses"]
+    require(
+        type(report) is dict
+        and report.get("schema_version") == "prepared_rigid_pose_cross_report_v1"
+        and type(report.get("rows")) is list
+        and len(report["rows"]) == len(poses)
+        and report.get("pose_adapter_source_sha256")
+        == hashlib.sha256(Path(pose_adapter.__file__).read_bytes()).hexdigest()
+        and report.get("customer_execution") is False
+        and report.get("scientifically_validated") is False
+        and report.get("external_solver_called") is False
+    )
+    for index, (pose, row) in enumerate(zip(poses, report["rows"])):
+        pose_id = pose.get("pose_id") if type(pose) is dict else None
+        require(
+            type(row) is dict
+            and type(row.get("request_index")) is int
+            and row["request_index"] == index
+            and row.get("case_id") == (pose_id if type(pose_id) is str else None)
+        )
+    evaluated = [row for row in report["rows"] if row["status"] == "evaluated"]
+    if not evaluated:
+        return
+
+    def source(system, parameters):
+        return {
+            "system_sha256": canonical_system_sha256(system),
+            "coordinates_sha256": canonical_coordinates_sha256(system),
+            "system": canonical_json_value(canonical_system_document(system)),
+            "nonbonded_parameters": parameters,
+        }
+
+    def current_source_inputs():
+        # Canonical frozen JSON sorts request keys, but the original source
+        # binding list retains the request's insertion order.
+        return sorted(_input_binding(request), key=canonical)
+
+    with prepared_validation_scope():
+        require(current_source_inputs() == sorted(source_inputs, key=canonical))
+        receptor, ligand, rp, lp, provenance = load_prepared_gromacs_components(
+            request["prepared_input"]
+        )
+        require(provenance["source_hashes_postflight_verified"] is True)
+        parent = canonical_system_sha256(ligand)
+        shared = report.get("preparation")
+        require(
+            type(shared) is dict
+            and shared.get("preparation_provenance") == provenance
+            and shared.get("receptor_system_sha256") == canonical_system_sha256(receptor)
+            and shared.get("ligand_system_sha256") == parent
+            and shared.get("source_receptor_coordinates_angstrom")
+            == receptor.coordinates[0].tolist()
+            and shared.get("source_ligand_coordinates_angstrom")
+            == ligand.coordinates[0].tolist()
+            and report.get("execution") == request["execution"]
+        )
+        receptor_source = source(receptor, rp)
+        center = ligand.coordinates.mean(dim=1, keepdim=True)
+        evaluation = request["evaluation"]
+        model = {
+            "id": "existing_v2_switched_cross_lj_screened_coulomb_v1",
+            **{
+                key: float(evaluation[key])
+                for key in (
+                    "cutoff_angstrom", "switch_start_angstrom", "dielectric",
+                    "screening_kappa_per_angstrom",
+                )
+            },
+            "mixing": "Lorentz-Berthelot",
+            "cross_pair_scaling": 1.0,
+            "periodic": False,
+            "source_full_simulation_hamiltonian_reproduced": False,
+            "minimum_pair_distance_angstrom": MINIMUM_PAIR_DISTANCE_ANGSTROM,
+            "minimum_distance_scope": "all source atoms; admission independent of tile order",
+        }
+        pocket = {
+            "center_angstrom": evaluation["pocket_center_angstrom"],
+            "radius_angstrom": float(evaluation["pocket_radius_angstrom"]),
+        }
+        for row in evaluated:
+            pose = poses[row["request_index"]]
+            rotation, translation = pose_adapter._transform(pose)
+            if torch.equal(rotation, torch.eye(3, dtype=torch.float64)):
+                coordinates = ligand.coordinates + translation
+            else:
+                coordinates = (ligand.coordinates - center) @ rotation.T + center + translation
+            derivation = {
+                "pose_id": pose["pose_id"],
+                "rotation_matrix": rotation.tolist(),
+                "translation_angstrom": translation.tolist(),
+                "pivot_angstrom": center[0, 0].tolist(),
+                "pivot_policy": "supplied_ligand_all_atom_centroid",
+                "coordinate_origin": "computed_rigid_transform_of_supplied_preparation",
+                "source_ligand_system_sha256": parent,
+                "atom_order_and_chemical_state_unchanged": True,
+                "hydrogen_positions_added": False,
+            }
+            candidate = replace(
+                ligand,
+                coordinates=coordinates,
+                provenance=replace(
+                    ligand.provenance,
+                    operations=ligand.provenance.operations + ("explicit_product_rigid_pose",),
+                    parent_sha256=ligand.provenance.parent_sha256 + (parent,),
+                    metadata={**ligand.provenance.metadata, "pose_derivation": derivation},
+                ),
+            )
+            declarations = dict(request["prepared_input"]["source_declarations"])
+            declarations["prepared_state_id"] = (
+                "derived-rigid-pose:" + pose["pose_id"] + ":" + parent
+            )
+            result = row.get("result")
+            require(
+                row.get("pose_derivation") == derivation
+                and row.get("evaluated_ligand_coordinates_angstrom")
+                == coordinates[0].tolist()
+                and type(result) is dict
+                and result.get("source_declarations") == declarations
+                and result.get("model") == model
+                and result.get("pocket") == pocket
+                and result.get("sources") == {
+                    "receptor": receptor_source,
+                    "ligand": source(candidate, lp),
+                }
+            )
+        require(current_source_inputs() == sorted(source_inputs, key=canonical))
+
+
 def _number(value, *, positive=False):
     if (
         type(value) not in (int, float)
@@ -924,6 +1075,9 @@ def _arm_summary(directory, frozen, binding, completion):
                 raise ValueError("pose_report_hash_mismatch")
             report = loads(raw.decode())
             checked = check_report(report)
+            _check_pose_report_request(
+                report, frozen["requests"][rid], frozen["source_inputs"][rid]
+            )
             if (value.get("pose_denominator") != report["denominator"]
                     or value.get("numeric_denominator") != checked["denominator"]):
                 raise ValueError("pose_report_denominator_mismatch")

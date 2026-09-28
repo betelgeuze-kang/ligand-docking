@@ -36,6 +36,12 @@ selection. Fit-only Morgan/Tanimoto and Ridge predictions are recalculated
 on verification, and saved order must match the prescribed seeded order.
 Saved rows must form a prefix of that order. Engine scores are checked
 against saved pose reports and independent scalar energy/force arithmetic.
+For each evaluated pose, verification also reparses the frozen prepared files
+and reconstructs the requested rigid transform without scoring it again. The
+saved receptor, ligand coordinates and parameters, pose identity, evaluation
+settings, and source declarations must match that reconstruction. This check
+runs during parent-side summary and verification, outside each worker budget;
+the original run's summary wall time includes it.
 Private, canonical, exclusive JSON files make interruption and byte changes
 visible; a party able to rewrite and reseal all files can still forge local
 receipts. There is no external trust anchor.

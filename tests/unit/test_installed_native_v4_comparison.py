@@ -9,6 +9,7 @@ import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
+from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
 from betelgeuze_product import installed_synthetic_comparison as comparison
 from betelgeuze_product import installed_native_v4_comparison as native_cli
 from betelgeuze_product import installed_native_v4_source as source_verifier
@@ -217,6 +218,40 @@ def test_native_v2_synthetic_structural_binding_run_verify_resume(bounded_source
     assert result["arms"]["engine"]["worker_complete"]["engine_calls"] == 1
     assert comparison.verify_run(protocol, root)["status"] == "verified"
     assert comparison.run(protocol, root, resume=True) == result
+
+
+def test_native_v2_resealed_alternate_pose_report_is_rejected(bounded_source, tmp_path):
+    protocol, request, candidate = _linked_protocol(bounded_source, tmp_path)
+    root = tmp_path / "linked-run"
+    result = comparison.run(protocol, root)
+    assert result["arms"]["engine"]["rows"][0]["status"] == "evaluated"
+    alternate = copy.deepcopy(request)
+    alternate["poses"][0]["translation_angstrom"][0] += 0.5
+    report = comparison._json(comparison._canonical(evaluate_rigid_pose_request(alternate)))
+    assert comparison.check_report(report)["status"] == "passed"
+    report_path = root / "engine" / f"{comparison._sha(candidate)}.poses.json"
+    report_path.write_bytes(comparison._canonical(report) + b"\n")
+    row_path = root / "engine" / f"{comparison._sha(candidate)}.row.json"
+    wrapped = json.loads(row_path.read_text())
+    wrapped["payload"].update(
+        score=min(row["result"]["quantities"]["cross_total_kcal_per_mol"]
+                  for row in report["rows"]),
+        pose_report=comparison._entry(
+            f"engine/{comparison._sha(candidate)}.poses.json", report_path.read_bytes()),
+        pose_denominator=report["denominator"],
+        numeric_denominator=comparison.check_report(report)["denominator"],
+    )
+    wrapped["sha256"] = comparison._sha(wrapped["payload"])
+    row_path.write_bytes(comparison._canonical(wrapped) + b"\n")
+    result_path = root / "comparison.json"
+    resealed = json.loads(result_path.read_text())
+    resealed["arms"]["engine"]["rows"][0] = wrapped["payload"]
+    result_path.write_bytes(comparison._canonical(resealed) + b"\n")
+    assert comparison.verify_run(protocol, root)["reason"] == (
+        "installed_pose_report_request_mismatch"
+    )
+    with pytest.raises(ValueError, match="installed_pose_report_request_mismatch"):
+        comparison.run(protocol, root, resume=True)
 
 
 @pytest.mark.parametrize("change,reason", [

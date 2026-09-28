@@ -2,11 +2,13 @@
 
 import copy
 import json
+from pathlib import Path
 import shutil
 import time
 
 import pytest
 
+from betelgeuze_engine.product.prepared_pose_journal import _input_binding
 from betelgeuze_product import installed_synthetic_comparison as installed
 from tools.product import compare_prepared_candidate_policies as research
 from tests.unit.test_prepared_candidate_comparison import _protocol
@@ -110,6 +112,69 @@ def test_resealed_row_and_result_cannot_detach_score_from_pose(completed, tmp_pa
     row["score"] = wrapped["payload"]["score"]
     result_path.write_bytes(installed._canonical(result) + b"\n")
     assert installed.verify_run(protocol, copied)["reason"] == "installed_pose_report_score_mismatch"
+
+
+def test_resealed_pose_report_cannot_be_assigned_to_another_candidate(completed, tmp_path):
+    root, protocol, result = completed
+    copied = tmp_path / "cross-candidate-pose"
+    shutil.copytree(root / "run", copied)
+    first, second = "a", "b"
+    first_row = next(row for row in result["arms"]["engine"]["rows"]
+                     if row["record_id"] == first)
+    second_report = copied / "engine" / f"{installed._sha(second)}.poses.json"
+    second_report.write_bytes(
+        (copied / "engine" / f"{installed._sha(first)}.poses.json").read_bytes()
+    )
+    second_row_path = copied / "engine" / f"{installed._sha(second)}.row.json"
+    wrapped = json.loads(second_row_path.read_text())
+    wrapped["payload"].update(
+        score=first_row["score"],
+        pose_report=installed._entry(
+            f"engine/{installed._sha(second)}.poses.json", second_report.read_bytes()),
+        pose_denominator=first_row["pose_denominator"],
+        numeric_denominator=first_row["numeric_denominator"],
+    )
+    wrapped["sha256"] = installed._sha(wrapped["payload"])
+    second_row_path.write_bytes(installed._canonical(wrapped) + b"\n")
+    result_path = copied / "comparison.json"
+    resealed = json.loads(result_path.read_text())
+    arm = resealed["arms"]["engine"]
+    arm["rows"] = [wrapped["payload"] if row["record_id"] == second else row
+                   for row in arm["rows"]]
+    arm["ranked_record_ids"] = [row["record_id"] for row in sorted(
+        (row for row in arm["rows"] if row["status"] == "evaluated"),
+        key=lambda row: (row["score"], row["record_id"]),
+    )]
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    assert installed.verify_run(protocol, copied)["reason"] == (
+        "installed_pose_report_request_mismatch"
+    )
+    with pytest.raises(ValueError, match="installed_pose_report_request_mismatch"):
+        installed.run(protocol, copied, resume=True)
+
+
+def test_pose_report_binding_survives_canonical_request_key_order(tmp_path):
+    protocol = _installed_protocol(tmp_path / "inputs")
+    ref = protocol["requests"]["a"]
+    request_path = Path(ref["path"])
+    request = json.loads(request_path.read_text())
+    request["prepared_input"] = dict(reversed(list(request["prepared_input"].items())))
+    request_path.write_text(json.dumps(request))
+    ref["sha256"] = installed._digest(request_path.read_bytes())
+    root = tmp_path / "run"
+    result = installed.run(protocol, root)
+    saved, binding = installed._envelope(root)
+    assert _input_binding(saved["requests"]["a"]) != saved["source_inputs"]["a"]
+    assert installed._summary(root, "engine", saved, binding) == result["arms"]["engine"]
+    assert installed.verify_run(protocol, root)["status"] == "verified"
+    assert installed.run(protocol, root, resume=True) == result
+    report_path, _ = installed._report_ref(root, "engine", "a")
+    report = installed._json(report_path.read_bytes())
+    with pytest.raises(ValueError, match="installed_pose_report_request_mismatch"):
+        installed._check_pose_report_request(
+            report, saved["requests"]["a"],
+            saved["source_inputs"]["a"] + [saved["source_inputs"]["a"][0]],
+        )
 
 
 def test_bound_input_change_blocks_read_only_verification_and_resume(completed, tmp_path):
