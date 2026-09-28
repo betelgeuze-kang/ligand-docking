@@ -16,6 +16,32 @@ candidate keys in `requests` must exactly equal the preassigned
 `null`: a ChEMBL record ID or canonical SMILES alone does not bind a prepared
 pose to the assayed ligand state, target structure, or assay conditions.
 
+The opt-in `installed_native_v4_fit_prepared_comparison_protocol_v2` has the
+same top-level fields and accepts a non-null bound request only when that
+candidate's rederived v4 metadata record contains `prepared_state_origin`.
+The origin is a `{path, sha256}` reference to an exact
+`native_v4_candidate_prepared_structural_binding_v1` descriptor. The installed
+source verifier checks its bounded fields, then comparison freeze reparses the
+prepared GROMACS sources and requires exact equality with a fresh observation.
+The observation binds the source record and assay metadata origins, isomeric
+chemical identity, SDF atom graph and formal charge, prepared ligand and
+receptor system hashes, receptor construct, pocket and evaluation parameters,
+prepared state and coordinate-frame declarations, and force-field/charge
+source identifiers and file hashes. Unresolved stereochemistry and a ligand
+identity mismatch reject the request before scoring. A changed source, origin,
+request, or runtime also rejects resume and read-only verification.
+
+`candidate_prepared_identity_bound` in v2 records this structural integrity
+check. The source origin is a declaration bound into the rederived intake, not
+independent evidence that its receptor construct or microstate was used in the
+assay. `same_prepared_assay_state_verified`, `source_authenticated`,
+`scientifically_validated`, and `product_ranking_enabled` remain false. The
+current public v4 intake's three development candidates have no such source
+origin, so their v2 requests remain null and their engine-call count remains
+zero. A descriptor supplied only in the comparison protocol cannot create the
+missing source link. The v1 protocol and null-only behavior are unchanged;
+existing checkpoint verification remains bound to its original code/runtime.
+
 The source is reverified before run, resume, and read-only verification. Only
 eligible `fit` exact-point Ki observations enter selector fitting. The native
 Ridge arm uses the v4 trainer's fixed Morgan features, alpha 10, and inverse
@@ -95,6 +121,7 @@ completed-run `resume` returned `committed`. The fresh CPU torch wheel transfer
 was 178.6 MB; the installed venv occupied 1.5 GB on this host. These are
 installation observations, not run or scientific performance measurements.
 
-Actual receptor/ligand preparation, a provenance-checked candidate-to-pose
-link, independent calibration and evaluation roles, and evaluation outcomes
-remain prerequisites for testing a scientific ranking claim.
+Independent evidence connecting the prepared receptor construct and ligand
+microstate to the assay, independent calibration and evaluation roles, and
+evaluation outcomes remain prerequisites for testing a scientific ranking
+claim.

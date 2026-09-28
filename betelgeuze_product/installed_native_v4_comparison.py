@@ -1,8 +1,8 @@
-"""Installed native receptor v4 fit comparison with no prepared-state link.
+"""Installed native receptor v4 fit comparison with an opt-in structural bridge.
 
-This entry point accepts the distinct native v4 protocol only. The shared
-four-arm journal performs fit-only selector work and records missing prepared
-requests without claiming engine calculations or scientific validation.
+The v1 protocol remains null-only. V2 accepts prepared requests only when a
+source-record origin matches the rederived structural observation. Neither
+version claims that the prepared state matches the assayed physical state.
 """
 
 from __future__ import annotations
@@ -21,14 +21,18 @@ def main(argv=None) -> int:
     parser.add_argument("--run-dir", type=Path, required=True)
     args = parser.parse_args(argv)
     protocol = comparison._read_protocol(args.protocol)
-    if protocol.get("schema_version") != comparison.NATIVE_PROTOCOL:
+    if protocol.get("schema_version") not in {
+        comparison.NATIVE_PROTOCOL, comparison.NATIVE_PROTOCOL_V2,
+    }:
         raise ValueError("native_v4_comparison_requires_native_protocol")
     if args.action == "verify-run":
         outcome = comparison.verify_run(protocol, args.run_dir)
     else:
         result = comparison.run(protocol, args.run_dir, resume=args.action == "resume")
         outcome = {
-            "schema_version": "installed_native_v4_fit_comparison_cli_v1",
+            "schema_version": ("installed_native_v4_fit_prepared_comparison_cli_v2"
+                               if protocol["schema_version"] == comparison.NATIVE_PROTOCOL_V2
+                               else "installed_native_v4_fit_comparison_cli_v1"),
             "status": "committed", "exit_code": 0,
             "binding": result["binding"], "pool_count": len(result["pool"]),
             "arms": {arm: result["arms"][arm]["denominator"]

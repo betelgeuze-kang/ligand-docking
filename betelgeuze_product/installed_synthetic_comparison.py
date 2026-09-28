@@ -1,7 +1,7 @@
 """Installed-wheel, budgeted four-arm comparison on bounded development inputs.
 
 Synthetic and native v4 fit sources use distinct versioned checkpoints. Native
-v4 has no prepared-structure identity link yet, so every request must be null.
+v4 v1 remains null-only; v2 requires a source-origin-bound structural bridge.
 Neither route opens checkout ``tools`` modules or evaluation outcomes.
 """
 
@@ -35,6 +35,9 @@ RESULT = "installed_synthetic_prepared_comparison_result_v1"
 NATIVE_PROTOCOL = "installed_native_v4_fit_comparison_protocol_v1"
 NATIVE_FROZEN = "installed_native_v4_fit_comparison_frozen_v1"
 NATIVE_RESULT = "installed_native_v4_fit_comparison_result_v1"
+NATIVE_PROTOCOL_V2 = "installed_native_v4_fit_prepared_comparison_protocol_v2"
+NATIVE_FROZEN_V2 = "installed_native_v4_fit_prepared_comparison_frozen_v2"
+NATIVE_RESULT_V2 = "installed_native_v4_fit_prepared_comparison_result_v2"
 NATIVE_SOURCE_KIND = "native_chembl_receptor_research_v4_fit"
 MAX_BUDGET_SECONDS = 3600.0
 BOUND_ENVIRONMENT = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
@@ -132,7 +135,7 @@ def _validate_rows(result: list[dict]) -> list[dict]:
     return result
 
 
-def _native_rows(reference: dict) -> tuple[list[dict], dict]:
+def _native_rows(reference: dict, *, include_source: bool = False):
     """Project only source-derived fit labels and preassigned candidate IDs."""
     from .installed_native_v4_source import _verified_intake
 
@@ -158,7 +161,7 @@ def _native_rows(reference: dict) -> tuple[list[dict], dict]:
     selected = [r for r in checked if r["role"] == "fit" and r["fit_value"] is not None]
     _require(len(selected) >= 5 and len({r["component_id"] for r in selected}) >= 2,
              "insufficient_supported_native_fit_rows_or_components")
-    return checked, receipt
+    return (checked, receipt, original) if include_source else (checked, receipt)
 
 
 def _features(smiles: list[str]):
@@ -245,9 +248,10 @@ def freeze(protocol: dict) -> dict:
     _require(type(protocol) is dict and set(protocol) == {
         "schema_version", "source", "requests", "budget_seconds_per_arm",
         "max_engine_calls_per_arm", "arm_order", "selection_seed", "tie_policy",
-    } and protocol["schema_version"] in {PROTOCOL, NATIVE_PROTOCOL},
+    } and protocol["schema_version"] in {PROTOCOL, NATIVE_PROTOCOL, NATIVE_PROTOCOL_V2},
              "unsupported_installed_comparison_protocol")
-    native = protocol["schema_version"] == NATIVE_PROTOCOL
+    native = protocol["schema_version"] in {NATIVE_PROTOCOL, NATIVE_PROTOCOL_V2}
+    native_prepared = protocol["schema_version"] == NATIVE_PROTOCOL_V2
     budget, cap = protocol["budget_seconds_per_arm"], protocol["max_engine_calls_per_arm"]
     _require(_finite(budget) and 0 < budget <= MAX_BUDGET_SECONDS
              and type(cap) is int and 1 <= cap <= MAX_POOL,
@@ -258,27 +262,41 @@ def freeze(protocol: dict) -> dict:
              and type(protocol["selection_seed"]) is int
              and 0 <= protocol["selection_seed"] < 2**32,
              "invalid_prespecified_comparison_order")
-    rows, source_verification = (_native_rows(protocol["source"])
-                                 if native else (_rows(protocol["source"]), None))
+    source_rows = None
+    if native_prepared:
+        rows, source_verification, source_rows = _native_rows(
+            protocol["source"], include_source=True)
+    else:
+        rows, source_verification = (_native_rows(protocol["source"])
+                                     if native else (_rows(protocol["source"]), None))
     pool = [row["record_id"] for row in rows if row["role"] == "development_test"]
     _require(type(protocol["requests"]) is dict and set(protocol["requests"]) == set(pool),
              "candidate_request_denominator_mismatch")
     from betelgeuze_engine.product.prepared_pose_journal import _input_binding
 
-    requests, source_inputs = {}, {}
+    requests, source_inputs, prepared_bindings = {}, {}, {}
+    original_by_id = ({row["record_id"]: row for row in source_rows}
+                      if source_rows is not None else {})
     for rid in pool:
         ref = protocol["requests"][rid]
-        _require(not native or ref is None,
+        _require(not (native and not native_prepared) or ref is None,
                  "native_prepared_candidate_identity_link_not_supported")
         request = None if ref is None else _bound_json(ref)
         _require(request is None or (type(request) is dict and request.get("schema_version")
                  == "prepared_rigid_pose_cross_request_v1"),
                  "requires_existing_rigid_pose_request")
+        if native_prepared and request is not None:
+            from .installed_native_v4_prepared_binding import check_source_binding
+
+            prepared_bindings[rid] = check_source_binding(original_by_id[rid], request)
+        elif native_prepared:
+            prepared_bindings[rid] = None
         requests[rid] = request
         source_inputs[rid] = None if request is None else _input_binding(request)
     runtime = _comparison_runtime()
     frozen = {
-        "schema_version": NATIVE_FROZEN if native else FROZEN,
+        "schema_version": (NATIVE_FROZEN_V2 if native_prepared else
+                           NATIVE_FROZEN if native else FROZEN),
         "protocol": copy.deepcopy(protocol),
         "rows": rows, "pool": pool, "requests": requests,
         "source_inputs": source_inputs, "runtime": runtime,
@@ -290,6 +308,8 @@ def freeze(protocol: dict) -> dict:
     }
     if native:
         frozen["source_verification"] = source_verification
+    if native_prepared:
+        frozen["prepared_bindings"] = prepared_bindings
     _require(len(_canonical(frozen)) <= MAX_JSON_BYTES,
              "frozen_comparison_capacity_exceeded")
     return frozen
@@ -301,7 +321,8 @@ def _envelope(run_dir: Path) -> tuple[dict, str]:
              and type(value["sha256"]) is str
              and HEX.fullmatch(value["sha256"]) is not None
              and type(value["payload"]) is dict
-             and value["payload"].get("schema_version") in {FROZEN, NATIVE_FROZEN}
+             and value["payload"].get("schema_version") in {
+                 FROZEN, NATIVE_FROZEN, NATIVE_FROZEN_V2}
              and _sha(value["payload"]) == value["sha256"],
              "installed_frozen_binding_mismatch")
     return value["payload"], value["sha256"]
@@ -339,6 +360,9 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
     frozen, binding = _envelope(run_dir)
     _require(_comparison_runtime() == frozen["runtime"],
              "installed_worker_runtime_changed")
+    if frozen["schema_version"] == NATIVE_FROZEN_V2:
+        _require(freeze(frozen["protocol"]) == frozen,
+                 "native_prepared_binding_changed_before_scoring")
     tick = time.perf_counter()
     predictions = _predictions(frozen, arm)
     order = _order(frozen, arm, predictions)
@@ -682,9 +706,11 @@ def _read_protocol(path: Path) -> dict:
 def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
     protocol = frozen["protocol"]
     native = frozen["source_kind"] == NATIVE_SOURCE_KIND
-    expected_schema = NATIVE_RESULT if native else RESULT
+    native_prepared = frozen["schema_version"] == NATIVE_FROZEN_V2
+    expected_schema = (NATIVE_RESULT_V2 if native_prepared else
+                       NATIVE_RESULT if native else RESULT)
     expected_source_kind = NATIVE_SOURCE_KIND if native else "synthetic_constants"
-    _require(type(result) is dict and set(result) == {
+    expected_fields = {
         "schema_version", "binding", "pool", "arm_order", "arms",
         "budget_seconds_per_arm", "max_engine_calls_per_arm", "source_kind",
         "evaluation_labels_read", "selector_recomputed_locally",
@@ -693,7 +719,14 @@ def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
         "common_validation_seconds", "arm_execution_and_summary_wall_seconds",
         "orchestrator_wall_seconds", "cost_scope",
         "upstream_acquisition_preparation_and_pose_generation_measured",
-    } and result["schema_version"] == expected_schema
+    }
+    if native_prepared:
+        expected_fields.add("candidate_prepared_identity_bound")
+    _require(type(result) is dict and set(result) == expected_fields
+             and (not native_prepared or result["candidate_prepared_identity_bound"]
+                  == {rid: frozen["prepared_bindings"][rid] is not None
+                      for rid in frozen["pool"]})
+             and result["schema_version"] == expected_schema
              and result["binding"] == binding
              and result["pool"] == frozen["pool"]
              and result["arm_order"] == protocol["arm_order"]
@@ -750,7 +783,8 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
         summary_seconds = time.perf_counter() - summary_started
         _require(freeze(protocol) == frozen, "installed_inputs_changed_during_comparison")
         result = {
-            "schema_version": (NATIVE_RESULT if frozen["source_kind"] == NATIVE_SOURCE_KIND
+            "schema_version": (NATIVE_RESULT_V2 if frozen["schema_version"] == NATIVE_FROZEN_V2
+                               else NATIVE_RESULT if frozen["source_kind"] == NATIVE_SOURCE_KIND
                                else RESULT),
             "binding": binding, "pool": frozen["pool"],
             "arm_order": protocol["arm_order"], "arms": arms,
@@ -767,6 +801,9 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
             "cost_scope": "installed_input_validation_fit_inference_supplied_pose_scoring_worker_io_and_summary",
             "upstream_acquisition_preparation_and_pose_generation_measured": False,
         }
+        if frozen["schema_version"] == NATIVE_FROZEN_V2:
+            result["candidate_prepared_identity_bound"] = {
+                rid: frozen["prepared_bindings"][rid] is not None for rid in frozen["pool"]}
         _publish(final, result)
         return result
     finally:
@@ -776,7 +813,10 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
 def verify_run(protocol: dict, run_dir: Path) -> dict:
     """Read-only checkpoint/result verification with current input/runtime binding."""
     outcome = {
-        "schema_version": ("installed_native_v4_fit_comparison_verification_v1"
+        "schema_version": ("installed_native_v4_fit_prepared_comparison_verification_v2"
+                           if type(protocol) is dict
+                           and protocol.get("schema_version") == NATIVE_PROTOCOL_V2 else
+                           "installed_native_v4_fit_comparison_verification_v1"
                            if type(protocol) is dict
                            and protocol.get("schema_version") == NATIVE_PROTOCOL else
                            "installed_synthetic_comparison_verification_v1"),
@@ -829,7 +869,9 @@ def main(argv=None) -> int:
         outcome = verify_run(protocol, args.run_dir)
     else:
         result = run(protocol, args.run_dir, resume=args.command == "resume")
-        outcome = {"schema_version": ("installed_native_v4_fit_comparison_cli_v1"
+        outcome = {"schema_version": ("installed_native_v4_fit_prepared_comparison_cli_v2"
+                                      if protocol.get("schema_version") == NATIVE_PROTOCOL_V2 else
+                                      "installed_native_v4_fit_comparison_cli_v1"
                                       if protocol.get("schema_version") == NATIVE_PROTOCOL else
                                       "installed_synthetic_comparison_cli_v1"),
                    "status": "committed", "exit_code": 0,

@@ -31,6 +31,19 @@ _ENTRY_REQUIRED = {
 _ENTRY_ORIGINS = {
     "metadata_origin", "role_origin", "activity_origin", "method_origin",
     "document_origin", "primary_origin", "bibliography_origin",
+    "prepared_state_origin",
+}
+_PREPARED_STATE_FIELDS = {
+    "schema_version", "record_id", "assay_id", "metadata_origin_sha256",
+    "method_origin_sha256", "target_annotation_sha256", "target_chembl_id",
+    "prepared_input_sha256", "ligand", "receptor_system_sha256",
+    "receptor_construct_sha256", "pocket_sha256", "evaluation_sha256",
+    "prepared_state_id", "coordinate_frame_id", "parameter_source_id",
+    "charge_source_id", "parameter_sources_sha256",
+}
+_PREPARED_LIGAND_FIELDS = {
+    "sdf_sha256", "atom_graph_sha256", "canonical_isomeric_smiles_sha256",
+    "formal_charge", "system_sha256",
 }
 _SCOPE_REQUIRED = {
     "intake_source_kind", "endpoint", "endpoint_subtype",
@@ -126,6 +139,32 @@ def validate_entry(entry):
                 raise ValueError("missing_receptor_source_origin")
             continue
         _source_origin(origin)
+        if field == "prepared_state_origin":
+            if set(origin) != {"path", "sha256"}:
+                raise ValueError("invalid_prepared_state_origin")
+            if Path(origin["path"]).stat().st_size > 1024 * 1024:
+                raise ValueError("prepared_state_origin_exceeds_capacity")
+            descriptor = bound.bound_json(origin)
+            if (type(descriptor) is not dict
+                    or set(descriptor) != _PREPARED_STATE_FIELDS
+                    or descriptor.get("schema_version")
+                    != "native_v4_candidate_prepared_structural_binding_v1"
+                    or type(descriptor.get("ligand")) is not dict
+                    or set(descriptor["ligand"]) != _PREPARED_LIGAND_FIELDS
+                    or type(descriptor["ligand"]["formal_charge"]) is not int
+                    or any(type(value) is not str or not value.strip()
+                           for key, value in descriptor.items()
+                           if key not in {"ligand"})
+                    or any(type(value) is not str or not value.strip()
+                           for key, value in descriptor["ligand"].items()
+                           if key != "formal_charge")
+                    or any(common.SHA.fullmatch(value) is None
+                           for key, value in descriptor.items()
+                           if key.endswith("_sha256"))
+                    or any(common.SHA.fullmatch(value) is None
+                           for key, value in descriptor["ligand"].items()
+                           if key.endswith("_sha256"))):
+                raise ValueError("outcome_or_nonmetadata_field_in_prepared_state_origin")
 
 
 def method_projection(source):
