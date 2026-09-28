@@ -1,5 +1,9 @@
 # Installed synthetic comparison receipt v1
 
+For new comparisons run directly from an installed wheel, see
+[`engine_v2_installed_synthetic_run.md`](engine_v2_installed_synthetic_run.md).
+This page covers only the read-only export of a completed legacy checkout run.
+
 `betelgeuze-comparison-receipt export-synthetic --source-run OLD_RUN --output-dir NEW_RECEIPT`
 copies a **completed, cold, synthetic** v1/v2 four-arm research comparison into a
 new private directory. It reads the committed checkout result and receipts; it

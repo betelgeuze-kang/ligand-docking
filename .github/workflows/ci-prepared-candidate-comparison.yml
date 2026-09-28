@@ -10,9 +10,12 @@ on:
       - 'tools/product/public_assay*.py'
       - 'tools/product/verify_prepared_cross_numerics.py'
       - 'betelgeuze_product/comparison_receipts.py'
+      - 'betelgeuze_product/installed_synthetic_comparison.py'
       - 'betelgeuze_product/prepared_cross_numeric_reference.py'
       - 'tests/unit/test_installed_comparison_receipts.py'
+      - 'tests/unit/test_installed_synthetic_comparison.py'
       - 'docs/engine_v2_installed_synthetic_receipt.md'
+      - 'docs/engine_v2_installed_synthetic_run.md'
       - 'pyproject.toml'
       - 'betelgeuze_engine/product/prepared*.py'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
@@ -38,9 +41,12 @@ on:
       - 'tools/product/public_assay*.py'
       - 'tools/product/verify_prepared_cross_numerics.py'
       - 'betelgeuze_product/comparison_receipts.py'
+      - 'betelgeuze_product/installed_synthetic_comparison.py'
       - 'betelgeuze_product/prepared_cross_numeric_reference.py'
       - 'tests/unit/test_installed_comparison_receipts.py'
+      - 'tests/unit/test_installed_synthetic_comparison.py'
       - 'docs/engine_v2_installed_synthetic_receipt.md'
+      - 'docs/engine_v2_installed_synthetic_run.md'
       - 'pyproject.toml'
       - 'betelgeuze_engine/product/prepared*.py'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
@@ -64,7 +70,7 @@ permissions:
 jobs:
   synthetic-cpu-contracts:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
       PYTHONDONTWRITEBYTECODE: '1'
@@ -99,14 +105,14 @@ jobs:
           PY
       - name: Lint and test
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py betelgeuze_product/comparison_receipts.py betelgeuze_product/prepared_cross_numeric_reference.py tests/unit/test_installed_comparison_receipts.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py --junitxml=candidate-comparison-junit.xml
+          python -m ruff check --isolated --no-cache betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py betelgeuze_product/comparison_receipts.py betelgeuze_product/installed_synthetic_comparison.py betelgeuze_product/prepared_cross_numeric_reference.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_synthetic_comparison.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_synthetic_comparison.py --junitxml=candidate-comparison-junit.xml
       - name: Build wheel and verify synthetic receipt outside checkout
         run: |
           python -m pip install setuptools==75.8.2 wheel==0.46.3
           python -m pip wheel --no-deps --no-build-isolation . -w "$RUNNER_TEMP/comparison-wheels"
           python - <<'PY'
-          import os
+          import json, os
           from pathlib import Path
           from tests.unit.test_prepared_candidate_comparison import _protocol, comparison
           root = Path(os.environ['RUNNER_TEMP']) / 'installed-comparison-fixture'
@@ -120,6 +126,98 @@ jobs:
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.comparison_receipts export-synthetic --source-run "$RUNNER_TEMP/installed-comparison-fixture/legacy" --output-dir "$RUNNER_TEMP/installed-comparison-fixture/portable"
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.comparison_receipts verify-run --run-dir "$RUNNER_TEMP/installed-comparison-fixture/portable"
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -c 'import sys, betelgeuze_product.comparison_receipts as c; assert "site-packages" in c.__file__; assert not any(x == "tools" or x.startswith("tools.") for x in sys.modules)'
+      - name: Execute, resume, verify and tamper-test installed wheel without checkout
+        run: |
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip install scipy==1.15.3 scikit-learn==1.7.2 rdkit==2026.3.6
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I - <<'PY'
+          import copy, hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'installed-comparison-fixture'
+          source = root / 'installed-inputs'
+          source.mkdir()
+          def write(name, content):
+              path = source / name
+              path.write_text(content)
+              return {'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                      'source_id': 'installed-synthetic-constants:' + name}
+          pdb = f"ATOM  {1:5d} {'C1':>4s} {'SYN':>3s} A{1:4d}    {0.0:8.3f}{0.0:8.3f}{0.0:8.3f}{1.0:6.2f}{0.0:6.2f}          {'C':>2s}  \nEND\n"
+          sdf = ("Synthetic explicit carbon\n  local synthetic test\n\n"
+                 "  1  0  0  0  0  0            999 V2000\n"
+                 f"{4.0:10.4f}{0.0:10.4f}{0.0:10.4f} C   0  0  0  0  0  0  0  0  0  0  0  0\nM  END\n$$$$\n")
+          gro = ("Synthetic explicit carbon\n1\n"
+                 f"{1:5d}{'LIG':<5s}{'C1':>5s}{1:5d}{0.4:8.3f}{0.0:8.3f}{0.0:8.3f}\n0.0 0.0 0.0\n")
+          atomtypes = "[ atomtypes ]\nC 6 12.011 0.0 A 0.300000 0.836800\n"
+          defaults = "[ defaults ]\n1 2 yes 0.5 0.833333\n"
+          protein_itp = "[ moleculetype ]\nSYN 3\n[ atoms ]\n1 C 1 SYN C1 1 0.2 12.011\n"
+          ligand_itp = "[ moleculetype ]\nLIG 3\n[ atoms ]\n1 C 1 LIG C1 1 -0.3 12.011\n"
+          files = {'protein_pdb': ('receptor.pdb', pdb),
+                   'protein_atomtypes': ('receptor-types.itp', atomtypes),
+                   'protein_defaults': ('receptor-defaults.itp', defaults),
+                   'ligand_sdf': ('ligand.sdf', sdf),
+                   'ligand_gro': ('ligand.gro', gro),
+                   'ligand_itp': ('ligand.itp', ligand_itp),
+                   'ligand_atomtypes': ('ligand-types.itp', atomtypes),
+                   'ligand_defaults': ('ligand-defaults.itp', defaults)}
+          prepared = {key: write(*value) for key, value in files.items()}
+          prepared.update(schema_version='prepared_gromacs_components_v1',
+                          protein_chains=[{'chain_id':'A','molecule_itp':write('receptor.itp', protein_itp)}],
+                          ligand_atomtype_name_mapping={},
+                          ligand_residue_name_mapping={'gro':'LIG','itp':'LIG'},
+                          naming_convention='exact', pdb_element_policy='reject_missing',
+                          source_relationship='independent synthetic text constants in a declared frame',
+                          source_declarations={'coordinate_frame_id':'synthetic-frame',
+                                               'prepared_state_id':'synthetic-state',
+                                               'parameter_source_id':'synthetic-explicit-tables',
+                                               'charge_source_id':'synthetic-explicit-charge'})
+          base = {'schema_version':'prepared_rigid_pose_cross_request_v1',
+                  'prepared_input':prepared,
+                  'evaluation':{'pocket_center_angstrom':[0.0,0.0,0.0],
+                                'pocket_radius_angstrom':10.0,'cutoff_angstrom':10.0,
+                                'switch_start_angstrom':8.0,'dielectric':4.0,
+                                'screening_kappa_per_angstrom':0.1},
+                  'execution':{'projection_partition':'source_order_v1',
+                               'preparation_reuse':'request'},
+                  'poses':[{'pose_id':'reference',
+                            'rotation_matrix':[[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]],
+                            'translation_angstrom':[0.0,0.0,0.0]}]}
+          rows = [{'record_id':rid,'role':role,'component_id':rid+'-component',
+                   'smiles':smiles,'fit_value':value,'assay_id':'synthetic-one-assay'}
+                  for rid,role,smiles,value in [
+                      ('fit-a','fit','CCCC',5.0),('fit-b','fit','CCNCC',7.0),
+                      ('fit-c','fit','CCCCCO',6.0),('cal-a','calibration','c1ccccc1',None),
+                      ('a','development_test','CCCCN',None),
+                      ('b','development_test','CCCCCC',None),
+                      ('c','development_test','CCCCS',None),
+                      ('d','development_test',None,None)]]
+          requests = {}
+          for rid, shift in [('a',0.0),('b',0.8),('c',1000.0)]:
+              request = copy.deepcopy(base)
+              request['poses'][0]['translation_angstrom'][0] = shift
+              path = source / (rid + '.request.json')
+              path.write_text(json.dumps(request,sort_keys=True)+'\n')
+              requests[rid] = {'path':str(path),
+                               'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+          requests['d'] = None
+          protocol = {'schema_version':'installed_synthetic_prepared_comparison_protocol_v1',
+                      'source':{'kind':'synthetic_constants','rows':rows},
+                      'requests':requests,'budget_seconds_per_arm':20.0,
+                      'max_engine_calls_per_arm':10,
+                      'arm_order':['similarity','engine','ai_engine','similarity_engine'],
+                      'selection_seed':17,'tie_policy':'seeded_pool_order'}
+          (root / 'installed-protocol.json').write_text(json.dumps(protocol,sort_keys=True)+'\n')
+          PY
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.installed_synthetic_comparison run --protocol "$RUNNER_TEMP/installed-comparison-fixture/installed-protocol.json" --run-dir "$RUNNER_TEMP/installed-comparison-fixture/installed-run"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.installed_synthetic_comparison verify-run --protocol "$RUNNER_TEMP/installed-comparison-fixture/installed-protocol.json" --run-dir "$RUNNER_TEMP/installed-comparison-fixture/installed-run"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.installed_synthetic_comparison resume --protocol "$RUNNER_TEMP/installed-comparison-fixture/installed-protocol.json" --run-dir "$RUNNER_TEMP/installed-comparison-fixture/installed-run"
+          cp -a "$RUNNER_TEMP/installed-comparison-fixture/installed-run" "$RUNNER_TEMP/installed-comparison-fixture/tampered-run"
+          printf ' ' >> "$RUNNER_TEMP/installed-comparison-fixture/tampered-run/comparison.json"
+          if "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.installed_synthetic_comparison verify-run --protocol "$RUNNER_TEMP/installed-comparison-fixture/installed-protocol.json" --run-dir "$RUNNER_TEMP/installed-comparison-fixture/tampered-run"; then
+            exit 1
+          fi
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -c 'import importlib.util, sys, betelgeuze_product.installed_synthetic_comparison as c; assert "site-packages" in c.__file__; assert importlib.util.find_spec("tools") is None; assert not any(x == "tools" or x.startswith("tools.") for x in sys.modules)'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -134,9 +232,12 @@ jobs:
             tools/product/diagnose_prepared_cross_numerics.py
             tests/unit/test_prepared_candidate_comparison.py
             tests/unit/test_installed_comparison_receipts.py
+            tests/unit/test_installed_synthetic_comparison.py
             betelgeuze_product/comparison_receipts.py
+            betelgeuze_product/installed_synthetic_comparison.py
             betelgeuze_product/prepared_cross_numeric_reference.py
             docs/engine_v2_installed_synthetic_receipt.md
+            docs/engine_v2_installed_synthetic_run.md
             tests/unit/test_prepared_cross_force_diagnostic.py
             docs/prepared_candidate_comparison.md
             docs/prepared_cross_force_diagnostic.md
