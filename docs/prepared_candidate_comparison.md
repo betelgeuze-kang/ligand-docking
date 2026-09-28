@@ -54,6 +54,12 @@ whose denominators match the row, and whose minimum cross energy equals the
 recorded score. Failed and unsupported rows cannot carry a score. This
 verification runs before any post-freeze outcome load. It binds the software
 receipt to its numerical evidence; it does not establish physical validity.
+The receipt also replays similarity predictions from fit-only rows and refits the
+AI Ridge selector from those rows. For native intake it uses the source-bound
+summary's prescribed assay or connected-component replicate weighting, and
+checks the saved protocol, checkpoint coefficients and intercept against that
+fit. Resealing a model, its priority and the final summary therefore cannot
+substitute a different selector while retaining the original frozen fit input.
 
 ## Cost and interruption
 
@@ -65,6 +71,13 @@ receive no rank. Measured termination overhead is reported instead of hidden.
 Common preflight and final source verification are measured separately. Peak
 process memory and CPU time are recorded for workers that complete their receipt;
 a killed worker has no fabricated resource measurement.
+`receipt_verification_cost` records parent wall time for each arm's read-only
+receipt check, including selector fit replay, and the final source recheck. This
+work occurs after each worker and outside its equal deadline; it cannot improve
+that arm's candidate order or grant a retry. The saved measurement describes the
+original completed run, not a later `--resume` verification invocation. Parent
+`orchestrator_wall_seconds` includes this cost, but upstream preparation remains
+unmeasured, so `end_to_end_cost_measured` stays false.
 
 Acquisition, original molecular preparation, and pose generation already happened
 before these supplied requests. Their costs are **unmeasured** here. Consequently
