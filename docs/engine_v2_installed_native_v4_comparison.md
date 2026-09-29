@@ -274,3 +274,27 @@ with SHA-256
 `36f6be13fc07d3044338b3873dbfe80d57826130dcde74fb6874a3d26650720a`.
 This local fixture isolates workflow cost; it does not support a real-target
 speedup, learned-ranking gain, HIP parity, or product claim.
+
+## PR #566 exact-commit installed replay (2026-09-29)
+
+A wheel built from the selected package files of commit
+`85a1b60800bf37f91825cd651249c82e74206976` had SHA-256
+`a31bc21c0f0ba8a95f452a0349ec161da9a27b8a129b27edfc932d7ebce6a46d`.
+All 506 packaged Python files matched the archived commit source byte-for-byte.
+The wheel was force-installed into a cloned isolated Python 3.10 environment
+with pinned CPU Torch/RDKit dependencies; `pip check` passed. This reused an
+existing dependency environment and is not a new dependency-resolution test.
+
+The installed commands verified the seven-row **synthetic** source, committed,
+verified and resumed a linked one-candidate run, rejected an unlinked request
+before creating a run directory, and completed the two-candidate preflight and
+four-arm run/verify/resume. Each arm evaluated both synthetic candidates, zero
+evaluation labels were read, completed resume left `comparison.json` byte-for-byte
+unchanged, and the installed module accepted valid 3D stereochemistry while
+rejecting a flat wedged SDF. The local wheel/source receipt and CLI results are
+under
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-exact-head-20260929`.
+The installed replay receipt SHA-256 is
+`8cfb0780d421b01c26331be3c3e9fcff494d84d6cc44336007465a03ec7c6af6`.
+This validates that exact commit's package path on the synthetic fixture. It
+does not prepare or evaluate a real 5-HT6 candidate.

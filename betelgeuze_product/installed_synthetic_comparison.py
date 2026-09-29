@@ -183,19 +183,39 @@ def _features(smiles: list[str]):
     return np.asarray(matrix, dtype=np.float64).reshape(len(smiles), 1024)
 
 
-def _predictions(frozen: dict, arm: str) -> dict[str, float]:
+class _SelectorCache:
+    """Share only in-memory predictor work for one freshly frozen comparison."""
+
+    def __init__(self, frozen: dict):
+        self.frozen = frozen
+        self.inputs = None
+        self.predictions: dict[str, dict[str, float]] = {}
+
+
+def _predictions(frozen: dict, arm: str, *, cache: _SelectorCache | None = None
+                 ) -> dict[str, float]:
     if arm == "engine":
         return {}
     import numpy as np
 
-    selected = [row for row in frozen["rows"] if row["role"] == "fit"
-                and row["smiles"] and row["fit_value"] is not None]
-    candidates = {row["record_id"]: row for row in frozen["rows"]
-                  if row["record_id"] in frozen["pool"]}
-    valid = [rid for rid in frozen["pool"] if candidates[rid]["smiles"]]
-    x = _features([row["smiles"] for row in selected])
-    z = _features([candidates[rid]["smiles"] for rid in valid])
-    y = np.asarray([row["fit_value"] for row in selected], dtype=np.float64)
+    family = "ridge" if arm == "ai_engine" else "similarity"
+    if cache is not None:
+        _require(cache.frozen is frozen, "comparison_selector_cache_input_mismatch")
+        if family in cache.predictions:
+            return cache.predictions[family]
+    if cache is not None and cache.inputs is not None:
+        selected, valid, x, z, y = cache.inputs
+    else:
+        selected = [row for row in frozen["rows"] if row["role"] == "fit"
+                    and row["smiles"] and row["fit_value"] is not None]
+        candidates = {row["record_id"]: row for row in frozen["rows"]
+                      if row["record_id"] in frozen["pool"]}
+        valid = [rid for rid in frozen["pool"] if candidates[rid]["smiles"]]
+        x = _features([row["smiles"] for row in selected])
+        z = _features([candidates[rid]["smiles"] for rid in valid])
+        y = np.asarray([row["fit_value"] for row in selected], dtype=np.float64)
+        if cache is not None:
+            cache.inputs = (selected, valid, x, z, y)
     if arm == "ai_engine":
         from sklearn.linear_model import Ridge
 
@@ -221,7 +241,10 @@ def _predictions(frozen: dict, arm: str) -> dict[str, float]:
             similarity = np.divide(intersection, union, out=np.ones_like(union),
                                    where=union != 0)
             values.append(float(fy[similarity == similarity.max()].mean()))
-    return {rid: float(value) for rid, value in zip(valid, values)}
+    predictions = {rid: float(value) for rid, value in zip(valid, values)}
+    if cache is not None:
+        cache.predictions[family] = predictions
+    return predictions
 
 
 def _order(frozen: dict, arm: str, predictions: dict) -> list[str]:
@@ -620,7 +643,8 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
         _require(same_source_inputs(), reason)
 
 
-def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
+def _summary(run_dir: Path, arm: str, frozen: dict, binding: str, *,
+             selector_cache: _SelectorCache | None = None) -> dict:
     directory = run_dir / arm
     _private_dir(directory)
     completion = _committed(directory / "completion.json")
@@ -663,7 +687,7 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
                  and _finite(priority.get("setup_wall_seconds"))
                  and priority["setup_wall_seconds"] >= 0,
                  "invalid_installed_priority")
-        predicted = _predictions(frozen, arm)
+        predicted = _predictions(frozen, arm, cache=selector_cache)
         expected_selector = ("source_order" if arm == "engine" else
                              "fit_only_ridge" if arm == "ai_engine" else
                              "fit_only_morgan_tanimoto")
@@ -868,7 +892,8 @@ def _stop_child(child: subprocess.Popen) -> None:
     child.wait()
 
 
-def _one_arm(run_dir: Path, arm: str, frozen: dict, binding: str, *, resume: bool) -> dict:
+def _one_arm(run_dir: Path, arm: str, frozen: dict, binding: str, *, resume: bool,
+             selector_cache: _SelectorCache | None = None) -> dict:
     directory = run_dir / arm
     directory.mkdir(mode=0o700, exist_ok=resume)
     _private_dir(directory)
@@ -928,7 +953,7 @@ def _one_arm(run_dir: Path, arm: str, frozen: dict, binding: str, *, resume: boo
             "budget_seconds": frozen["protocol"]["budget_seconds_per_arm"],
             "termination_overhead_seconds": None,
         })
-    return _summary(run_dir, arm, frozen, binding)
+    return _summary(run_dir, arm, frozen, binding, selector_cache=selector_cache)
 
 
 def _read_protocol(path: Path) -> dict:
@@ -988,6 +1013,7 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
     started = time.perf_counter()
     frozen = freeze(protocol)
     setup_seconds = time.perf_counter() - started
+    selector_cache = _SelectorCache(frozen)
     binding = _sha(frozen)
     root = Path(output_dir).absolute()
     if resume:
@@ -1007,13 +1033,15 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
             result = _committed(final)
             _validate_result_header(result, frozen, binding)
             for arm in ARMS:
-                _require(_summary(root, arm, frozen, binding) == result["arms"][arm],
+                _require(_summary(root, arm, frozen, binding,
+                                  selector_cache=selector_cache) == result["arms"][arm],
                          "installed_resume_summary_mismatch")
             return result
         arms = {}
         summary_started = time.perf_counter()
         for arm in protocol["arm_order"]:
-            arms[arm] = _one_arm(root, arm, frozen, binding, resume=resume)
+            arms[arm] = _one_arm(root, arm, frozen, binding, resume=resume,
+                                 selector_cache=selector_cache)
         summary_seconds = time.perf_counter() - summary_started
         _require(freeze(protocol) == frozen, "installed_inputs_changed_during_comparison")
         result = {
@@ -1067,10 +1095,12 @@ def verify_run(protocol: dict, run_dir: Path) -> dict:
         saved, binding = _envelope(root)
         _require(saved == frozen and binding == _sha(frozen),
                  "installed_verify_input_or_runtime_changed")
+        selector_cache = _SelectorCache(frozen)
         result = _committed(root / "comparison.json")
         _validate_result_header(result, frozen, binding)
         for arm in ARMS:
-            _require(_summary(root, arm, frozen, binding) == result["arms"][arm],
+            _require(_summary(root, arm, frozen, binding,
+                              selector_cache=selector_cache) == result["arms"][arm],
                      "installed_result_summary_mismatch")
         outcome.update(status="verified", exit_code=0, reason=None,
                        binding=binding, pool_count=len(frozen["pool"]),

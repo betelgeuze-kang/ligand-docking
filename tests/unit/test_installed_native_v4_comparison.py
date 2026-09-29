@@ -269,6 +269,34 @@ def test_native_fit_selector_matches_checkout_trainer(bounded_source, tmp_path):
             assert actual[row["record_id"]] == pytest.approx(row["predicted"], rel=1e-12)
 
 
+def test_native_fit_selector_cache_matches_independent_predictions(bounded_source,
+                                                                    monkeypatch):
+    _, _, reference, _ = bounded_source
+    frozen = comparison.freeze(_protocol(reference))
+    independent = {}
+    for arm in comparison.ARMS:
+        predictions = comparison._predictions(frozen, arm)
+        independent[arm] = predictions, comparison._order(frozen, arm, predictions)
+    feature_calls = []
+    original_features = comparison._features
+
+    def counted_features(smiles):
+        feature_calls.append(tuple(smiles))
+        return original_features(smiles)
+
+    monkeypatch.setattr(comparison, "_features", counted_features)
+    cache = comparison._SelectorCache(frozen)
+    cached = {}
+    for arm in comparison.ARMS:
+        predictions = comparison._predictions(frozen, arm, cache=cache)
+        cached[arm] = predictions, comparison._order(frozen, arm, predictions)
+    assert cached == independent
+    assert len(feature_calls) == 2
+    assert cached["similarity"][0] is cached["similarity_engine"][0]
+    with pytest.raises(ValueError, match="comparison_selector_cache_input_mismatch"):
+        comparison._predictions(copy.deepcopy(frozen), "similarity", cache=cache)
+
+
 def test_native_run_rechecks_source_and_reports_zero_engine_calls(bounded_source, tmp_path):
     _, _, reference, _ = bounded_source
     protocol = _protocol(reference)

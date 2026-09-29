@@ -66,6 +66,41 @@ def test_real_four_arm_run_read_only_verify_and_idempotent_resume(completed):
     assert before == after
 
 
+def test_selector_cache_keeps_independent_summaries_and_receipts(completed, monkeypatch):
+    root, protocol, result = completed
+    run_dir = root / "run"
+    frozen, binding = installed._envelope(run_dir)
+    independent = {arm: installed._summary(run_dir, arm, frozen, binding)
+                   for arm in installed.ARMS}
+    assert independent == result["arms"]
+    before = {path: path.read_bytes() for path in run_dir.rglob("*") if path.is_file()}
+
+    feature_calls = []
+    original_features = installed._features
+
+    def counted_features(smiles):
+        feature_calls.append(tuple(smiles))
+        return original_features(smiles)
+
+    monkeypatch.setattr(installed, "_features", counted_features)
+    cache = installed._SelectorCache(frozen)
+    cached = {arm: installed._summary(run_dir, arm, frozen, binding,
+                                      selector_cache=cache)
+              for arm in installed.ARMS}
+    assert cached == independent
+    assert len(feature_calls) == 2
+    assert set(cache.predictions) == {"ridge", "similarity"}
+
+    feature_calls.clear()
+    assert installed.verify_run(protocol, run_dir)["status"] == "verified"
+    assert len(feature_calls) == 2
+    feature_calls.clear()
+    assert installed.run(protocol, run_dir, resume=True) == result
+    assert len(feature_calls) == 2
+    assert {path: path.read_bytes() for path in run_dir.rglob("*")
+            if path.is_file()} == before
+
+
 def test_same_synthetic_v2_policy_matches_checkout_comparator(completed):
     root, protocol, result = completed
     legacy = copy.deepcopy(protocol)
@@ -200,6 +235,25 @@ def test_resealed_priority_and_result_still_rejected(completed, tmp_path):
     result_path.write_bytes(installed._canonical(result) + b"\n")
     verdict = installed.verify_run(protocol, copied)
     assert verdict["reason"] == "installed_priority_recalculation_mismatch"
+    with pytest.raises(ValueError, match="installed_priority_recalculation_mismatch"):
+        installed.run(protocol, copied, resume=True)
+
+
+def test_cached_similarity_rejects_resealed_second_arm_prediction(completed, tmp_path):
+    root, protocol, _ = completed
+    copied = tmp_path / "resealed-similarity-engine"
+    shutil.copytree(root / "run", copied)
+    priority_path = copied / "similarity_engine" / "priority.json"
+    priority = installed._json(priority_path.read_bytes())
+    candidate = next(iter(priority["predictions"]))
+    priority["predictions"][candidate] += 1.0
+    priority_path.write_bytes(installed._canonical(priority) + b"\n")
+    result_path = copied / "comparison.json"
+    result = installed._json(result_path.read_bytes())
+    result["arms"]["similarity_engine"]["priority"] = priority
+    result_path.write_bytes(installed._canonical(result) + b"\n")
+    assert installed.verify_run(protocol, copied)["reason"] == (
+        "installed_priority_recalculation_mismatch")
     with pytest.raises(ValueError, match="installed_priority_recalculation_mismatch"):
         installed.run(protocol, copied, resume=True)
 
