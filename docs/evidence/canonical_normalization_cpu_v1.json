@@ -189,6 +189,56 @@
       "bytes": 393,
       "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/storage-accounting.json",
       "sha256": "b2c0d0a2a5a0d9c3c182bd0d936a5541c7162aeea9baa9f32c32b4d10040be67"
+    },
+    {
+      "bytes": 159153,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/protocol.json",
+      "sha256": "542ac13404704ca832510260f2cd20f24302e1c79aaee421b2780bbf2489a632"
+    },
+    {
+      "bytes": 10271,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/execution-result.json",
+      "sha256": "08cd34fca5a9c5a9aae24c36490eaa85e162641108f8920068accaa560955ad0"
+    },
+    {
+      "bytes": 7600,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/comparison.json",
+      "sha256": "6f52ac1fe785d00325016789fe6b610d14fb016f9529401cea06fe39128fcf78"
+    },
+    {
+      "bytes": 19539,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/cost-and-failure-accounting.json",
+      "sha256": "cfc0ec02e458645da141f200cf9be0e5b9909c898860f45de590fd9e2c337d85"
+    },
+    {
+      "bytes": 10737,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/independent-output-audit.py",
+      "sha256": "84d4bed53566f755cde15a4b367553c6b261778dd16b1841c29a71d9fbb4788d"
+    },
+    {
+      "bytes": 374755,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/independent-output-audit.json",
+      "sha256": "0726f9e5d99f85464512d12c07c0ea4fb38a5c5463c635a23211462fdd8c4855"
+    },
+    {
+      "bytes": 4369,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/prior-interrupted-attempt-audit.json",
+      "sha256": "9f7e9c55ce0b898e25eea656fc14711d713f06d7ae13e9efbd5075ca87d61bac"
+    },
+    {
+      "bytes": 5102,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/README.md",
+      "sha256": "0fd85f7288ede02984cb43ee2964de5ae6c1e345bd301f86007248021d69d784"
+    },
+    {
+      "bytes": 175651,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/packet-manifest.json",
+      "sha256": "00fa075445d04a7d900c36b6ff3e68490365ae6089567f6290bf061f45566258"
+    },
+    {
+      "bytes": 3381,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-trajectory-delivery-20260929-kmmpckzm/installed-current-root-audit-20260930.json",
+      "sha256": "08b52ead13879bee29196a52b0d9618c568ef2db2e035a513a00354b5cc736eb"
     }
   ],
   "candidate_serializer_sha256": "5a697e413368137308076632437452a7fcb39a1e949f56ace14c749d271195b6",
@@ -273,6 +323,88 @@
   "schema_id": "canonical_normalization_cpu_evidence/1.0.0",
   "source_parent_commit": "031894211edb613a7659bd08aaab48d44f643f20",
   "validation": {
+    "current_installed_registered_pose_replay": {
+      "baseline_coordinates_preserved": true,
+      "baseline_resume_costs": {
+        "historical_force_calls": 0,
+        "historical_score_calls": 1,
+        "intent_counts": [
+          1
+        ],
+        "interrupted_attempts_unknown_cost": 0,
+        "new_candidates": 0,
+        "new_force_calls": 0,
+        "new_score_calls": 0,
+        "reused_candidates": 1
+      },
+      "comparison_scope": "Exact current-source arm rows, attempts/checkpoint digests, selections and scientific settings. Timings, journaling costs and outer report files differ by execution mode. No previous-source output hash equality claim.",
+      "exact_canonical_scope_comparisons_in_root_audit": 13,
+      "fresh_dependency_install_verified": false,
+      "full_checkpoint_state_published": false,
+      "nested_timings_do_not_sum": true,
+      "no_mid_minimizer_resume_proved": true,
+      "package_rebuild_or_copy": false,
+      "paired_decisions": [
+        {
+          "candidate_id": "pose-00000-3b53f1682d27",
+          "reason": "refined_pose_invalid_or_incomplete",
+          "variant": "baseline"
+        }
+      ],
+      "prior_interrupted_attempt": {
+        "consumed_cpu_seconds": null,
+        "consumed_wall_seconds": null,
+        "exact_termination_time": null,
+        "missing_work_unknown": true,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-20260929-ea_ovsx2",
+        "preserved": true,
+        "protocol": {
+          "bytes": 154481,
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-20260929-ea_ovsx2/protocol.json",
+          "sha256": "bd396962786e9946dd6e527fbb97ada950973d2fc9e49380cf90102da8cb07ea"
+        },
+        "status": "interrupted_without_completion"
+      },
+      "raw_force_converged": false,
+      "refined_resume_costs": {
+        "historical_force_calls": 0,
+        "historical_score_calls": 0,
+        "intent_counts": [
+          1
+        ],
+        "interrupted_attempts_unknown_cost": 0,
+        "new_candidates": 1,
+        "new_force_calls": 38,
+        "new_score_calls": 1,
+        "reused_candidates": 0
+      },
+      "refined_valid": false,
+      "refinement_attempt": {
+        "accepted_iterations": 32,
+        "converged": false,
+        "evaluation_count": 38,
+        "final_energy": -96.76290541772049,
+        "initial_energy": 399.91318138974935,
+        "max_constraint_residual": 0.0,
+        "max_tangent_force": 37.95144208186961,
+        "minimization_status": "max_iterations_reached",
+        "status": "success"
+      },
+      "resume_boundary": "After one baseline candidate is journaled, before refined candidate starts; no mid-minimizer resume claim.",
+      "runtime_backend": "Python CPU reference; imported native dependency separately verified",
+      "shared_dependencies": true,
+      "source_and_input_postcheck_completed": true,
+      "stage_denominator": {
+        "attempted": 6,
+        "completed": 6,
+        "failed": 0,
+        "planned": 6,
+        "unfinished": 0
+      },
+      "status": "passed",
+      "whole_elapsed_seconds": 215.790733262,
+      "whole_scope": "Existing installed packages only: preflight, continuous and verify, pause/resume and verify, equality audit, source/input postflight; excludes earlier build/install and this completion publication."
+    },
     "current_product_wheel": {
       "dependencies_shared": true,
       "fresh_dependency_installation": false,

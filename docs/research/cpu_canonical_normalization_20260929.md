@@ -108,9 +108,28 @@ The current product wheel matches all 513 owned package files and the 224-file
 implementation manifest. Outside the checkout, its synthetic ownership and
 serialization smoke checks pass 376 assertions with all 176 imported owned
 modules coming from the isolated install target. Existing dependencies are
-shared; this does not establish fresh dependency installation. Actual installed
-workflow/restart validation for this source is pending and will require a
-separate execution receipt.
+shared; this does not establish fresh dependency installation.
+
+The subsequent installed PR49 execution uses this exact source with the original
+one-pose request. All six stages complete: continuous run and verification,
+pause after the baseline candidate, resume, verification and equality audit.
+Thirteen independently reserialized scope comparisons match exactly, including
+complete arm rows, attempts with checkpoint digests, settings and selections.
+The baseline journal is reused with zero new baseline score or force calls.
+Refinement performs 32 accepted iterations and 38 force evaluations per run;
+raw force 37.951442 still fails convergence and bond preservation fails, so the
+valid original baseline remains selected. These failures are retained.
+
+This proves candidate-journal reuse across processes, not interruption/resumption
+inside minimization. Full solver checkpoint state is not separately published.
+All five installed CLI boundaries check 224 implementation files, 513 product
+members, distribution metadata and loaded native-module membership. The request
+uses the Python CPU reference backend; importing the verified native dependency
+does not demonstrate that it computed this trajectory. The enclosing six-stage
+wrapper takes 215.791 seconds, excluding earlier build/install, the interrupted
+prior attempt and post-run review. This is a cost observation, not an A/B speedup.
+The previous attempt's exact termination time and consumed cost are unknown and
+remain unknown. The new packet is about 2.82 MiB and reuses installed packages.
 Earlier PR49 receipts retain their original source identities and do not qualify
 this changed source automatically. Admitted experimental roles, matched
 candidate-ordering benefit, affinity and HIP parity remain incomplete.
