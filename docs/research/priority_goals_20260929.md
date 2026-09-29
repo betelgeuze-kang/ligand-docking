@@ -8,10 +8,10 @@ is used. The five requirements remain:
 | Goal | Evidence still required for completion | Current boundary |
 |---|---|---|
 | 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 computational preparation and a typed 205-occurrence source audit exist; 78 printed IDs and six repeated reports do not establish independent measurements. Source-family/identity/intake clearance remains incomplete; no newly admitted fit/calibration/evaluation rows |
-| 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | PR49 and a separately prepared observed-coordinate SRO development case have explicit chemistry and numerical observations; SRO passes four fixed same-math states and a later installed 32-step run with 8/8 scoped geometry and 2/2 initial/final numerical checks; raw force 8.428 > 0.001 still rejects refinement and pose recovery is unproved |
+| 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | The new fixed-budget SRO comparison completes: external L-BFGS converges at 253 objective calls with force 0.00095027, all 8 scoped geometry and 2 initial/final same-math checks passing; SD remains unconverged after 417 calls. This is one declared-state development result, not pose recovery, affinity validation or product optimizer integration |
 | 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Source-bound registered-pose v3 now passes a two-candidate synthetic four-arm installed run and guarded reuse; independently cleared real candidates and scientific matched comparison are incomplete |
 | 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Deferred diagnostic formatting retains both fresh integrity passes; four-state SRO full outputs match with evaluation mean 6.18% lower, and the receptor integrity guard mean is 2.62% lower; full preparation-through-storage cost and broader throughput remain unproved |
-| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | The prior CPU-normalization baseline passed 529 tests and installed PR49 candidate-journal replay. The newer native-v3 integration passes 255 relevant boundary tests and an exact-wheel synthetic replay with zero new score/force calls on completed reuse. Fresh v3 dependency installation, mid-minimizer resume and all five end-to-end requirements are not complete |
+| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | The latest sulfonyl-compatible source passes 120 affected tests and a fresh 44-runtime dependency installation with exact source/wheel/installed ownership. Its synthetic public CLI comparison/verified reuse passes with zero new score/force calls on completed reuse. Product L-BFGS integration, mid-minimizer resume and all five real end-to-end requirements remain incomplete; earlier 529/255-test receipts belong to their historical source versions |
 
 The work-package priorities below do not replace these five goals.
 
@@ -19,7 +19,7 @@ The work-package priorities below do not replace these five goals.
 |---|---|---|---|
 | 1 | Transfer a complete, source-bound receptor chemical graph | Bond orders, aromaticity, formal charge, HIE/CYX/termini and atom mapping verified; coordinates, partial charges, masses and adjacency unchanged; unsupported states rejected | Implemented and verified on all 4,376 receptor atoms |
 | 2 | Preserve the prepared input and complete the CPU comparison | Explicit registered-pose request/plan, exact initial coordinates, normal and installed pause/resume agreement, failure denominator and verification | Implemented; actual one-pose/two-row execution and exact installed replay passed; valid baseline retained |
-| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | PR49 retained 8 steps / 78 points and stopped at the strain boundary; the separate SRO case completes 32 accepted steps / 51 force calls with geometry and strain passing but force 8.428 > 0.001. Both remain NOT_ADMITTED |
+| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Historical PR49 and 32-step SRO remain NOT_ADMITTED. The new SRO comparison finds a development-eligible external L-BFGS state at 253 calls with force 0.00095027 and all original criteria passing; matched-cap SD fails after 417 calls. Versioned product integration with durable intra-candidate restart is the next implementation task |
 | 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Canonical normalization now defers diagnostic-path construction while retaining fresh traversal and both digests; controlled fixed-state SRO evaluation has 18/18 completed attempts and exact full outputs. Current-source regression and installed replay evidence is tracked in the CPU normalization report; hosted completion is separate |
 
 Preparation, arithmetic agreement, pose recovery, candidate prioritization and
@@ -100,8 +100,10 @@ product geometry gates pass within their limited scope. A later
 now completes 32 accepted steps and 51 force calls, retaining 8/8 final scoped
 geometry and 2/2 independent initial/final arithmetic checks. Final raw force
 8.428 exceeds 0.001; the baseline is selected. Comprehensive stereochemistry,
-perturbation geometry, pose recovery and useful converged refinement remain
-unproved. Existing source reservations and zero admission remain. This numerical case cannot substitute for independently
+perturbation geometry, pose recovery and useful converged refinement were not
+proved by that 32-step run. The later fixed-budget comparison below separately
+establishes an externally converged development state. Existing source
+reservations and zero admission remain. This numerical case cannot substitute for independently
 allowed active/inactive experimental endpoints.
 
 The earlier [guard profile](pr49_integrity_profile_20260929.md) retained all
@@ -158,7 +160,37 @@ comparison/reuse. This adds no real force/score calls or assay admission and
 does not change the earlier unconverged SRO result.
 
 The [same-budget SRO SD/L-BFGS comparison](sro_same_budget_comparison_20260930.md)
-has now been launched under its separately reviewed protocol: at most 417
-objective attempts and a common 7200-second operational watchdog per arm,
-original criteria, exact historical SD prefix and independently checked
-endpoints. The launch observation is not a final convergence or benefit result.
+now completes both arms under the separately reviewed 417-objective-attempt cap
+and 7200-second operational watchdog. SD's 51-observation historical prefix
+matches exactly. SD uses all 417 calls and retains the baseline because force
+5.864118662 exceeds 0.001. L-BFGS converges after 253 calls at 0.000950270044,
+with all original strain, geometry, score and independent numerical requirements
+passing. Its refined selection is the external research protocol decision;
+the installed product solver has not been replaced. All 670 attempted states
+and returned forces are retained, with no extrapolation after early termination.
+This justifies a versioned product L-BFGS integration, not new assay admission,
+general algorithm ranking, affinity claims or a HIP transition.
+
+The [sulfonyl compatibility and fresh installation](registered_sulfonyl_fresh_install_20260930.md)
+resolves the pinned RDKit false-positive potential stereo rejection while
+retaining true unsupported stereo boundaries and the original raw identity.
+Its 120 affected regressions pass. A new independent runtime environment now
+passes exact wheel installation, dependency resolution, the synthetic four-arm
+public CLI and completed reuse. This closes the previously missing fresh
+dependency installation observation; meaningful real candidate comparisons and
+mid-minimizer restart remain separate requirements.
+
+The [source-mapped PR49 aromatic annotation](pr49_aromatic_annotation_20260930.md)
+now produces a separately referenced canonical preparation with correct aromatic
+flags, exact original coordinates/charges/integer bonds and consistent parameter
+hashes. All four component gates and five reproduction/mutation checks pass;
+the old artifact remains rejected and unchanged. This clears a preparation
+representation blocker without creating a source row, role, fit or admission.
+
+The next implementation is the
+[versioned Cartesian refinement and durable-restart path](cartesian_refinement_integration_20260930.md).
+The source review identifies why changing an optimizer flag alone is insufficient:
+the old projected schema, 256-step pose budget, projection work counters and
+candidate-only retry semantics do not represent the demonstrated 417-attempt
+Cartesian comparison. New solver/history/journal identities and explicit
+restart-verification accounting are required. This design is not yet implemented.

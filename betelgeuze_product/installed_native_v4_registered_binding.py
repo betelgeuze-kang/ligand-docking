@@ -165,14 +165,66 @@ def _check_aromatic_representations(ligand):
         _require(len(encodings) == 1, "registered_ligand_mixed_aromatic_representation")
 
 
+def _ordinary_sulfonyl_potential_stereo(molecule, info):
+    """Recognize only RDKit's untagged potential square-planar sulfonyl S.
+
+    Identical ligands do not generally remove square-planar stereochemistry.
+    This exception is confined to neutral S(VI) with two equivalent terminal
+    oxo atoms and two single bonds; it never changes the recorded identity.
+    """
+    if (str(info.type) != "Atom_SquarePlanar" or str(info.specified) != "Unspecified"
+            or str(info.descriptor) != "NoValue"):
+        return False
+    atom = molecule.GetAtomWithIdx(info.centeredOn)
+    if (atom.GetAtomicNum() != 16 or atom.GetFormalCharge() != 0
+            or atom.GetNumRadicalElectrons() != 0 or atom.GetIsAromatic()
+            or atom.GetDegree() != 4 or atom.GetTotalValence() != 6
+            or atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED
+            or atom.HasProp("_chiralPermutation") or atom.HasProp("_UnknownStereo")):
+        return False
+    bonds = list(atom.GetBonds())
+    if (any(bond.GetIsAromatic() for bond in bonds)
+            or sorted(bond.GetBondTypeAsDouble() for bond in bonds) != [1., 1., 2., 2.]):
+        return False
+    oxygens = [bond.GetOtherAtom(atom) for bond in bonds
+               if bond.GetBondType() == Chem.BondType.DOUBLE]
+    return (len(oxygens) == 2 and oxygens[0].GetIsotope() == oxygens[1].GetIsotope()
+            and all(oxygen.GetAtomicNum() == 8 and oxygen.GetFormalCharge() == 0
+                    and oxygen.GetNumRadicalElectrons() == 0 and not oxygen.GetIsAromatic()
+                    and oxygen.GetDegree() == 1 and oxygen.GetTotalNumHs(includeNeighbors=True) == 0
+                    and oxygen.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED
+                    and not oxygen.HasProp("_UnknownStereo")
+                    for oxygen in oxygens))
+
+
+def _supported_stereo(molecule, potential):
+    """Use the same supported stereo policy for source and coordinate graphs."""
+    if any(atom.GetChiralTag() not in {
+            Chem.ChiralType.CHI_UNSPECIFIED, Chem.ChiralType.CHI_TETRAHEDRAL_CW,
+            Chem.ChiralType.CHI_TETRAHEDRAL_CCW} for atom in molecule.GetAtoms()):
+        return False
+    return all(_ordinary_sulfonyl_potential_stereo(molecule, info)
+               or (str(info.type) in {"Atom_Tetrahedral", "Bond_Double"}
+                   and str(info.specified) == "Specified")
+               for info in potential)
+
+
 def _ligand_identity(ligand, identity):
     """Rebuild the explicit graph and derive R/S and E/Z from actual coordinates."""
     from betelgeuze_engine_v2.molecular.serialization import (
         canonical_coordinates_sha256, canonical_system_sha256,
     )
 
-    _require(type(identity) is dict and identity.get("stereo_unspecified_count") == 0
-             and not identity.get("unresolved_stereochemistry"),
+    _require(type(identity) is dict and not identity.get("unresolved_stereochemistry"),
+             "registered_ligand_chemical_identity_unresolved")
+    source_smiles = identity.get("canonical_isomeric_smiles")
+    source = Chem.MolFromSmiles(source_smiles) if type(source_smiles) is str else None
+    _require(source is not None, "registered_ligand_chemical_identity_unresolved")
+    potential = list(Chem.FindPotentialStereo(source))
+    _require(type(identity.get("stereo_unspecified_count")) is int
+             and identity["stereo_unspecified_count"] == sum(
+                 str(info.specified) == "Unspecified" for info in potential)
+             and _supported_stereo(source, potential),
              "registered_ligand_chemical_identity_unresolved")
     _check_aromatic_representations(ligand)
     molecule = Chem.RWMol()
@@ -234,7 +286,7 @@ def _ligand_identity(ligand, identity):
         _require((observed is None and bond.stereo in {"none", "NONE", "unspecified"})
                  or observed == bond.stereo, "registered_ligand_geometry_stereochemistry_mismatch")
     normalized = Chem.RemoveHs(molecule, sanitize=True)
-    _require(not any(str(info.specified) == "Unspecified" for info in Chem.FindPotentialStereo(normalized)),
+    _require(_supported_stereo(normalized, list(Chem.FindPotentialStereo(normalized))),
              "registered_ligand_geometry_stereochemistry_unresolved")
     smiles = Chem.MolToSmiles(normalized, canonical=True, isomericSmiles=True)
     _require(chemical.chemical_identity(smiles) == identity,

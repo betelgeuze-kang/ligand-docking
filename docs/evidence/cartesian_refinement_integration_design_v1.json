@@ -1,0 +1,29 @@
+{
+  "implemented": false,
+  "new_molecular_evaluations": 0,
+  "new_tests_run": 0,
+  "references": {
+    "REPORT.md": {
+      "bytes": 16869,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-lbfgs-product-integration-review-20260930-pnwatph2/REPORT.md",
+      "sha256": "fc8701e73bc24c4958fcf977c06670343ddc41a1abf542b1de6740f2fd72d6dd"
+    },
+    "SCOPE-ADDENDUM.md": {
+      "bytes": 1923,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-lbfgs-product-integration-review-20260930-pnwatph2/SCOPE-ADDENDUM.md",
+      "sha256": "c1d50ddab90cf374e22e30cc7ff7f4750635f92ff9b858310baaf22f14b98fcf"
+    },
+    "manifest-v2.json": {
+      "bytes": 1383,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-lbfgs-product-integration-review-20260930-pnwatph2/manifest-v2.json",
+      "sha256": "c412743422d36f90d38a0070f7a0623a3f27e28ae0b37198e63b5e60d3e90ca2"
+    },
+    "review.json": {
+      "bytes": 20643,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-lbfgs-product-integration-review-20260930-pnwatph2/review.json",
+      "sha256": "06559a1c77f81fcb22caa661f61674e7122dba2e11d550c1682e307b2743840e"
+    }
+  },
+  "schema_id": "cartesian_refinement_integration_design/1",
+  "status": "source_reviewed_design_only"
+}

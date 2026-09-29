@@ -303,6 +303,86 @@ def test_sanitization_must_not_repair_neutral_nitro_formal_charges():
         binding._ligand_identity(replace(ligand, atoms=atoms, bonds=bonds), identity)
 
 
+def _sulfonyl_system(smiles="CS(=O)(=O)N"):
+    molecule = Chem.AddHs(Chem.MolFromSmiles(smiles))
+    rdDepictor.Compute2DCoords(molecule)
+    xyz = molecule.GetConformer().GetPositions().tolist()
+    sulfur = next(atom for atom in molecule.GetAtoms() if atom.GetAtomicNum() == 16)
+    xyz[sulfur.GetIdx()] = [0., 0., 0.]
+    for atom, point in zip(sulfur.GetNeighbors(), [
+            [1., 1., 1.], [1., -1., -1.], [-1., 1., -1.], [-1., -1., 1.]]):
+        xyz[atom.GetIdx()] = point
+    ligand, _ = _stereo_system(smiles, xyz)
+    return ligand, chemical_identity(smiles)
+
+
+@pytest.mark.parametrize("smiles", ["CS(=O)(=O)N", "CS(=O)(=O)C",
+                                   "CS(=[18O])(=[18O])N", "CS(=[16O])(=[16O])N"])
+def test_ordinary_sulfonyl_potential_stereo_preserves_raw_identity_and_graph(smiles):
+    ligand, identity = _sulfonyl_system(smiles)
+    source, encoded = deepcopy(identity), canonical_system_json_bytes(ligand)
+    flags = (Chem.GetAllowNontetrahedralChirality(), Chem.GetUseLegacyStereoPerception())
+    assert identity["stereo_unspecified_count"] == 1
+    observed = binding._ligand_identity(ligand, identity)
+    assert observed["canonical_isomeric_smiles_sha256"] == identity["canonical_isomeric_smiles_sha256"]
+    assert identity == source and canonical_system_json_bytes(ligand) == encoded
+    assert flags == (Chem.GetAllowNontetrahedralChirality(), Chem.GetUseLegacyStereoPerception())
+
+
+@pytest.mark.parametrize("smiles", [
+    "CS(=[18O])(=O)N", "CS(=[16O])(=O)N",  # distinct exact oxo isotopes
+    "CS(=O)N", "CS(=O)(=N)N", "CS(=[O+]C)(=O)N",  # sulfoxide/imino/nonterminal oxo
+    "C[S+](=O)(=O)N", "C[S](=O)(O)N",  # different charge/valence state
+    "CS(=O)(=O)NC(F)(Cl)Br", "CS(=O)(=O)NC=C(F)Cl",  # other unresolved stereo
+    "F[Pt](F)(Cl)Br", "FP(F)(F)(Cl)Br", "F[Co](F)(F)(F)(Cl)Br",
+    "C[S@SP1](=O)(=O)N", "C[S@SP0](=O)(=O)N", "C[S@SP](=O)(=O)N",
+    "C[S@TB1](=O)(=O)N", "C[S@OH1](=O)(=O)N", "N[Pt@SP1](Cl)(F)Br",
+])
+def test_sulfonyl_exception_cannot_clear_unsupported_source_stereo(smiles):
+    # The source gate must reject before opening or reconstructing any ligand.
+    identity = chemical_identity(smiles)
+    original = deepcopy(identity)
+    with pytest.raises(ValueError, match="chemical_identity_unresolved"):
+        binding._ligand_identity(None, identity)
+    assert identity == original
+
+
+@pytest.mark.parametrize("count", [0, 2, True, 1.0, "1"])
+def test_sulfonyl_exception_does_not_rewrite_or_trust_unspecified_count(count):
+    ligand, identity = _sulfonyl_system()
+    identity["stereo_unspecified_count"] = count
+    with pytest.raises(ValueError, match="chemical_identity_unresolved"):
+        binding._ligand_identity(ligand, identity)
+
+
+@pytest.mark.parametrize("property_name", ["_UnknownStereo", "_chiralPermutation"])
+def test_explicit_unknown_sulfur_marker_is_not_an_ordinary_untagged_center(property_name):
+    molecule = Chem.MolFromSmiles("CS(=O)(=O)N")
+    potential = list(Chem.FindPotentialStereo(molecule))
+    assert binding._supported_stereo(molecule, potential)
+    molecule.GetAtomWithIdx(potential[0].centeredOn).SetIntProp(property_name, 0)
+    assert not binding._supported_stereo(molecule, potential)
+
+
+def test_coordinates_assigning_actual_square_planar_sulfur_remain_unsupported():
+    ligand, source = _sulfonyl_system()
+    binding._ligand_identity(ligand, source)
+    # Identical oxo ligands do not erase a coordinate-perceived SP assignment.
+    planar, declared = _aromatic_system("CS(=O)(=O)N")
+    assert "@SP" in declared["canonical_isomeric_smiles"]
+    with pytest.raises(ValueError, match="geometry_stereochemistry_unresolved"):
+        binding._ligand_identity(planar, source)
+
+
+def test_sulfonyl_exception_cannot_hide_changed_isotope_in_registered_graph():
+    ligand, identity = _sulfonyl_system()
+    oxygen = next(atom.index for atom in ligand.atoms if atom.element == "O")
+    atoms = tuple(replace(atom, isotope_mass_number=18) if i == oxygen else atom
+                  for i, atom in enumerate(ligand.atoms))
+    with pytest.raises(ValueError, match="registered_ligand_"):
+        binding._ligand_identity(replace(ligand, atoms=atoms), identity)
+
+
 def test_actual_registered_coordinates_determine_tetrahedral_stereo():
     ligand, identity = _stereo_system("FC(Cl)(Br)I", [(1.,1.,1.), (0.,0.,0.), (1.,-1.,-1.),
                                                     (-1.,1.,-1.), (-1.,-1.,1.)])

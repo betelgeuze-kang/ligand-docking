@@ -41,6 +41,16 @@ candidate's canonical isomeric identity. Missing hydrogens, unresolved stereo,
 unsupported graphs and mismatches fail closed; admission does not automatically
 neutralize, add hydrogens or choose a tautomer.
 
+The version-pinned RDKit profile can report ordinary sulfonyl S(VI) as an
+unspecified potential square-planar center. The binding accepts only the narrow
+neutral, nonradical, untagged sulfur graph with two equivalent terminal double
+bonded oxygen atoms and two single bonds. Original identity and raw unspecified
+count remain intact and are rederived; neither the source nor the actual
+coordinate graph may contain specified/unknown unsupported non-tetrahedral
+stereo. Isotope-distinct oxo atoms, sulfoxides, real square-planar geometry and
+unassigned tetrahedral/E/Z centers remain rejected. This does not change global
+RDKit stereo settings or the frozen chemical-identity producer.
+
 The charge-origin record
 `native_v4_registered_openmm_charge_origin_v1` binds an OpenMM System XML and
 a complete, index-preserving particle-to-ligand atom map. The original
