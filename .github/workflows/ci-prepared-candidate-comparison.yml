@@ -12,6 +12,7 @@ on:
       - 'tools/product/verify_prepared_cross_report_binding.py'
       - 'betelgeuze_product/comparison_receipts.py'
       - 'betelgeuze_product/installed_synthetic_comparison.py'
+      - 'betelgeuze_product/prepared_net_charge_screen.py'
       - 'betelgeuze_product/installed_native_v4_*.py'
       - 'betelgeuze_product/native_v4_*.py'
       - 'betelgeuze_product/prepared_cross_numeric_reference.py'
@@ -36,6 +37,7 @@ on:
       - 'tests/unit/test_prepared_rigid_poses.py'
       - 'tests/unit/test_score_prepared_cross_interactions.py'
       - 'tests/unit/test_prepared_candidate_comparison.py'
+      - 'tests/unit/test_prepared_net_charge_screen.py'
       - 'tests/unit/test_prepared_cross_force_diagnostic.py'
       - 'tests/unit/test_prepared_cross_report_binding.py'
       - 'docs/prepared_cross_report_binding.md'
@@ -54,6 +56,7 @@ on:
       - 'tools/product/verify_prepared_cross_report_binding.py'
       - 'betelgeuze_product/comparison_receipts.py'
       - 'betelgeuze_product/installed_synthetic_comparison.py'
+      - 'betelgeuze_product/prepared_net_charge_screen.py'
       - 'betelgeuze_product/installed_native_v4_*.py'
       - 'betelgeuze_product/native_v4_*.py'
       - 'betelgeuze_product/prepared_cross_numeric_reference.py'
@@ -78,6 +81,7 @@ on:
       - 'tests/unit/test_prepared_rigid_poses.py'
       - 'tests/unit/test_score_prepared_cross_interactions.py'
       - 'tests/unit/test_prepared_candidate_comparison.py'
+      - 'tests/unit/test_prepared_net_charge_screen.py'
       - 'tests/unit/test_prepared_cross_force_diagnostic.py'
       - 'tests/unit/test_prepared_cross_report_binding.py'
       - 'docs/prepared_cross_report_binding.md'
@@ -126,6 +130,7 @@ jobs:
                   'betelgeuze_engine/product/censored_rank_metrics.py',
                   'betelgeuze_product/comparison_receipts.py',
                   'betelgeuze_product/installed_synthetic_comparison.py',
+                  'betelgeuze_product/prepared_net_charge_screen.py',
                   'betelgeuze_product/prepared_cross_numeric_reference.py',
                   'tests/unit/test_censored_rank_metrics.py',
                   'tests/unit/test_installed_comparison_receipts.py',
@@ -140,8 +145,8 @@ jobs:
           PY
       - name: Lint and test
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tools/product/verify_prepared_cross_report_binding.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_report_binding.py betelgeuze_product/comparison_receipts.py betelgeuze_product/installed_synthetic_comparison.py betelgeuze_product/prepared_cross_numeric_reference.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_synthetic_comparison.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_report_binding.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_synthetic_comparison.py --junitxml=candidate-comparison-junit.xml
+          python -m ruff check --isolated --no-cache betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tools/product/verify_prepared_cross_report_binding.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_net_charge_screen.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_report_binding.py betelgeuze_product/comparison_receipts.py betelgeuze_product/installed_synthetic_comparison.py betelgeuze_product/prepared_cross_numeric_reference.py betelgeuze_product/prepared_net_charge_screen.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_synthetic_comparison.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_prepared_net_charge_screen.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_report_binding.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_synthetic_comparison.py --junitxml=candidate-comparison-junit.xml
       - name: Build wheel and verify synthetic receipt outside checkout
         run: |
           python -m pip install setuptools==75.8.2 wheel==0.46.3
@@ -267,12 +272,14 @@ jobs:
             tools/product/diagnose_prepared_cross_numerics.py
             tools/product/verify_prepared_cross_report_binding.py
             tests/unit/test_prepared_candidate_comparison.py
+            tests/unit/test_prepared_net_charge_screen.py
             tests/unit/test_prepared_cross_report_binding.py
             docs/prepared_cross_report_binding.md
             tests/unit/test_installed_comparison_receipts.py
             tests/unit/test_installed_synthetic_comparison.py
             betelgeuze_product/comparison_receipts.py
             betelgeuze_product/installed_synthetic_comparison.py
+            betelgeuze_product/prepared_net_charge_screen.py
             betelgeuze_product/prepared_cross_numeric_reference.py
             docs/engine_v2_installed_synthetic_receipt.md
             docs/engine_v2_installed_synthetic_run.md
@@ -317,6 +324,7 @@ jobs:
           root = pathlib.Path.cwd()
           files = sorted(root.glob('betelgeuze_product/*native_v4*.py'))
           files += [root / 'betelgeuze_product/installed_synthetic_comparison.py']
+          files += [root / 'betelgeuze_product/prepared_net_charge_screen.py']
           files += [root / 'betelgeuze_engine/product/prepared_gromacs_input.py']
           files += sorted(root.glob('tests/unit/test_installed_native_v4_*.py'))
           files += [root / 'tests/ci/native_v4_wheel_probe.py']
@@ -332,7 +340,7 @@ jobs:
           PY
       - name: Lint and test source and prepared binding boundaries
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_product/installed_native_v4_*.py betelgeuze_product/native_v4_*.py betelgeuze_product/installed_synthetic_comparison.py tests/unit/test_installed_native_v4_*.py tests/ci/native_v4_wheel_probe.py tools/analysis/native_v4_comparison_readiness.py tests/unit/test_native_v4_comparison_readiness.py
+          python -m ruff check --isolated --no-cache betelgeuze_product/installed_native_v4_*.py betelgeuze_product/native_v4_*.py betelgeuze_product/installed_synthetic_comparison.py betelgeuze_product/prepared_net_charge_screen.py tests/unit/test_installed_native_v4_*.py tests/ci/native_v4_wheel_probe.py tools/analysis/native_v4_comparison_readiness.py tests/unit/test_native_v4_comparison_readiness.py
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_installed_native_v4_source.py tests/unit/test_installed_native_v4_comparison.py tests/unit/test_installed_native_v4_replay_cli.py tests/unit/test_installed_synthetic_comparison.py tests/unit/test_native_v4_comparison_readiness.py --junitxml=native-v4-boundary-junit.xml
       - name: Build exact checkout wheel and prepare synthetic v2 probe
         run: |

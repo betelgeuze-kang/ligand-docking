@@ -56,14 +56,31 @@ The completed-receipt verifier repeats this screen and checks the selected pose.
 This is a fixed hard-overlap ranking rule, not a calibrated clash or physical
 validity assessment.
 
+For SDF/ITP prepared ligand inputs, a separate versioned rank screen compares
+the SDF's encoded integral formal-charge total with the exact Decimal sum of
+the printed ligand ITP partial-charge tokens. An exact encoded match can enter
+the ranking. For a nonzero difference, the screen allows at most the sum of one
+last printed decimal place per token, and only when both that bound and the
+absolute difference are below 0.5 elementary charge. This conservative print
+bound does not assume a rounding mode; a coarsely printed total with a bound of
+0.5 charge or more cannot establish consistency. A larger difference or an
+indeterminate decimal sum makes the candidate rank-ineligible. The calculation,
+numeric check, supplied charges and full pose denominator remain recorded.
+Compiled particle inputs lack an SDF formal-charge source and are explicitly
+marked unassessed by this screen; their previous ranking policy remains.
+Arithmetic consistency does not verify a chemical microstate, source coevality,
+force-field parameters, physical contacts, or assay-state identity.
+
 The installed synthetic and native-v4 prepared comparison paths apply the same
 rule when a prepared request is scored, and their run verifier recomputes the
 selection before accepting a completed row. New portable synthetic exports use
-receipt v2, which binds the displayed coordinates to the numeric source tensors
-and repeats the screen. Historical portable receipt v1 keeps its original
-minimum-energy meaning and reports `hard_overlap_screen_verified=false`; it
-must not be read as evidence that this new rule was applied. Existing installed
-checkpoints from before the rule change need their original runtime to resume.
+receipt v3, which binds the displayed coordinates to the numeric source tensors
+and repeats both screens using the embedded prepared state. Its verification is
+internal receipt consistency, not independent source authentication. Historical
+portable receipt v1 keeps its original minimum-energy meaning; receipt v2 checks
+only the hard-overlap rule. Neither may be read as evidence that the charge
+screen was applied. Existing installed checkpoints from before either rule
+change need their original runtime to resume.
 
 When assembling or rechecking a completed result, the similarity arm's scored
 value must match its committed priority prediction. Each scored rigid-engine row
@@ -92,6 +109,9 @@ receive no rank. Measured termination overhead is reported instead of hidden.
 Common preflight and final source verification are measured separately. Peak
 process memory and CPU time are recorded for workers that complete their receipt;
 a killed worker has no fabricated resource measurement.
+Receipt checks require the sequential committed candidate costs to fit within
+observed arm wall time and, when available, worker CPU time. Missing totals from
+an interrupted attempt remain unknown; nested calculation times are not added.
 `receipt_verification_cost` records parent wall time for each arm's read-only
 receipt check, including selector fit replay, and the final source recheck. This
 work occurs after each worker and outside its equal deadline; it cannot improve

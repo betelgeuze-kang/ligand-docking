@@ -29,6 +29,9 @@ from betelgeuze_product.prepared_hard_overlap_screen import (
     hard_overlap_screen as _hard_overlap_screen,
     screened_pose_selection as _screened_pose_selection,
 )
+from betelgeuze_product.prepared_net_charge_screen import (
+    ligand_net_charge_screen as _ligand_net_charge_screen,
+)
 
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "prepared_candidate_comparison_protocol_v1"
@@ -786,9 +789,15 @@ def worker(run_dir, arm, deadline):
                 )
                 if checked["status"] == "passed":
                     screen = _hard_overlap_screen(report)
-                    selected = _screened_pose_selection(report, screen)
-                    result.update(hard_overlap_screen=screen, selected_pose=selected)
-                    if selected is None:
+                    charge_screen = _ligand_net_charge_screen(report)
+                    selected = (_screened_pose_selection(report, screen)
+                                if charge_screen["rank_eligible"] else None)
+                    result.update(hard_overlap_screen=screen,
+                                  ligand_net_charge_screen=charge_screen,
+                                  selected_pose=selected)
+                    if not charge_screen["rank_eligible"]:
+                        result["reason"] = "ligand_net_charge_rank_ineligible"
+                    elif selected is None:
                         result["reason"] = "no_hard_overlap_screen_eligible_pose"
                     else:
                         result.update(status="evaluated", reason=None, score=selected["score"])
@@ -1066,6 +1075,12 @@ def _arm_summary(directory, frozen, binding, completion):
             _number(value["score"])
         elif value["score"] is not None:
             raise ValueError("unscored_comparison_row_has_score")
+        if "completed_monotonic" in value:
+            cost = value.get("cost")
+            if type(cost) is not dict or set(cost) != {"wall_seconds", "cpu_seconds"}:
+                raise ValueError("invalid_comparison_row_cost")
+            if any(_number(cost[key]) < 0 for key in ("wall_seconds", "cpu_seconds")):
+                raise ValueError("invalid_comparison_row_cost")
         if directory.name == "similarity" and value["status"] == "evaluated":
             if (priority is None or rid not in priority["predictions"]
                     or value["score"] != _number(priority["predictions"][rid])):
@@ -1091,11 +1106,22 @@ def _arm_summary(directory, frozen, binding, completion):
                 raise ValueError("pose_report_denominator_mismatch")
             if checked["status"] == "passed":
                 screen = _hard_overlap_screen(report)
-                selected = _screened_pose_selection(report, screen)
-                if (value.get("hard_overlap_screen") != screen
-                        or value.get("selected_pose", "missing") != selected):
+                charge_screen = _ligand_net_charge_screen(report)
+                selected = (_screened_pose_selection(report, screen)
+                            if charge_screen["rank_eligible"] else None)
+                if value.get("hard_overlap_screen") != screen:
                     raise ValueError("pose_report_hard_overlap_screen_mismatch")
-                if selected is None:
+                if value.get("ligand_net_charge_screen") != charge_screen:
+                    raise ValueError("pose_report_charge_screen_mismatch")
+                if value.get("selected_pose", "missing") != selected:
+                    raise ValueError("pose_report_hard_overlap_screen_mismatch"
+                                     if charge_screen["rank_eligible"]
+                                     else "pose_report_charge_screen_mismatch")
+                if not charge_screen["rank_eligible"]:
+                    if (value["status"] != "failed" or value["score"] is not None
+                            or value["reason"] != "ligand_net_charge_rank_ineligible"):
+                        raise ValueError("pose_report_charge_status_mismatch")
+                elif selected is None:
                     if (value["status"] != "failed" or value["score"] is not None
                             or value["reason"] != "no_hard_overlap_screen_eligible_pose"):
                         raise ValueError("pose_report_hard_overlap_status_mismatch")
@@ -1103,7 +1129,7 @@ def _arm_summary(directory, frozen, binding, completion):
                       or value["reason"] is not None):
                     raise ValueError("pose_report_score_mismatch")
             elif (value["status"] != "failed" or "hard_overlap_screen" in value
-                  or "selected_pose" in value):
+                  or "ligand_net_charge_screen" in value or "selected_pose" in value):
                 raise ValueError("pose_report_numeric_status_mismatch")
         elif (frozen["protocol"]["schema_version"] != D3_SCHEMA
               and directory.name != "similarity" and value["status"] == "evaluated"):
@@ -1122,6 +1148,22 @@ def _arm_summary(directory, frozen, binding, completion):
         observed_order = [rid for _, rid in sorted(committed_order)]
         if observed_order != priority["order"][:len(observed_order)]:
             raise ValueError("committed_row_priority_sequence_mismatch")
+    # Retained candidate spans are sequential subsets of process cost. A lost
+    # attempt has no inferred wall/CPU total unless that observation exists.
+    retained = [row for row in rows if "completed_monotonic" in row]
+    elapsed = completion.get("measured_process_wall_seconds")
+    if elapsed is not None:
+        elapsed = _number(elapsed)
+        if elapsed < 0 or math.fsum(row["cost"]["wall_seconds"] for row in retained) > (
+            elapsed + max(1e-6, 1e-9 * elapsed)
+        ):
+            raise ValueError("comparison_row_wall_exceeds_arm_wall")
+    if worker_complete is not None:
+        worker_cpu = _number(worker_complete["process_cpu_seconds"])
+        if worker_cpu < 0 or math.fsum(row["cost"]["cpu_seconds"] for row in retained) > (
+            worker_cpu + max(1e-6, 1e-9 * worker_cpu)
+        ):
+            raise ValueError("comparison_row_cpu_exceeds_worker_cpu")
     direction = -1 if directory.name == "similarity" else 1
     ranked = sorted(
         (r for r in rows if r["status"] == "evaluated"),

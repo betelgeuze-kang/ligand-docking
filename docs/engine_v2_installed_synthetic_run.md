@@ -57,7 +57,10 @@ arm summary instead of rerunning a completed arm.
 Worker setup, fit, inference, supplied-pose scoring, and worker I/O are
 inside each arm's wall budget. The result records full orchestrator wall
 time and separate setup and arm/summary scopes; it does not measure
-upstream acquisition, chemical preparation, or pose generation. A clean
+upstream acquisition, chemical preparation, or pose generation. Receipt
+verification also bounds the sequential committed candidate wall and
+CPU costs by their observed arm and worker totals; absent observations after
+interruption remain unknown. A clean
 installed-wheel CI runs, verifies, resumes, and rejects tampering outside
 the checkout. These synthetic software checks establish neither model
 advantage nor source, physical, training, scientific, GPU, or customer

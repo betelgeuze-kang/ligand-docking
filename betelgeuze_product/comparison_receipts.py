@@ -5,7 +5,7 @@ without migrating its checkpoint, and verifies the exported copy without the
 checkout, original prepared inputs, engine, selector, or evaluation labels.
 Selector predictions are checked against committed rows but are not refitted.
 V1 retains the historical numeric-minimum rule; V2 verifies the fixed overlap
-screen against source-bound report geometry. Neither version establishes source
+screen. V3 additionally verifies a source net-charge ranking screen. None establish source
 authenticity or fitness.
 """
 from __future__ import annotations
@@ -26,10 +26,12 @@ from .prepared_hard_overlap_screen import (
     hard_overlap_screen, require_report_geometry_source_binding,
     screened_pose_selection,
 )
+from .prepared_net_charge_screen import ligand_net_charge_screen
 
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "installed_synthetic_prepared_comparison_receipt_v1"
 SCREENED_SCHEMA = "installed_synthetic_prepared_comparison_receipt_v2"
+CHARGE_SCREENED_SCHEMA = "installed_synthetic_prepared_comparison_receipt_v3"
 MANIFEST_SCHEMA = "installed_synthetic_prepared_comparison_manifest_v1"
 MAX_JSON_BYTES = 32 * 1024 * 1024
 MAX_POOL = 10000
@@ -119,9 +121,11 @@ def _private_dir(path: Path) -> None:
 
 
 def _validate_result(result: dict, report_reader) -> list[dict]:
-    _require(type(result) is dict and result.get("schema_version") in {SCHEMA, SCREENED_SCHEMA},
+    _require(type(result) is dict and result.get("schema_version") in {
+        SCHEMA, SCREENED_SCHEMA, CHARGE_SCREENED_SCHEMA},
              "unsupported_receipt_schema")
-    screened_receipt = result["schema_version"] == SCREENED_SCHEMA
+    screened_receipt = result["schema_version"] in {SCREENED_SCHEMA, CHARGE_SCREENED_SCHEMA}
+    charge_screened_receipt = result["schema_version"] == CHARGE_SCREENED_SCHEMA
     _require(result.get("source_kind") == "synthetic_constants"
              and result.get("legacy_protocol_version") in {
                  "prepared_candidate_comparison_protocol_v1",
@@ -236,11 +240,28 @@ def _validate_result(result: dict, report_reader) -> list[dict]:
                     if screened_receipt:
                         require_report_geometry_source_binding(report)
                         screen = hard_overlap_screen(report)
-                        selected = screened_pose_selection(report, screen)
-                        _require(row.get("hard_overlap_screen") == screen
-                                 and row.get("selected_pose", "missing") == selected,
+                        charge_screen = (ligand_net_charge_screen(report)
+                                         if charge_screened_receipt else None)
+                        selected = (screened_pose_selection(report, screen)
+                                    if charge_screen is None or charge_screen["rank_eligible"]
+                                    else None)
+                        _require(row.get("hard_overlap_screen") == screen,
                                  "pose_report_hard_overlap_screen_mismatch")
-                        if selected is None:
+                        _require(row.get("selected_pose", "missing") == selected,
+                                 "pose_report_charge_screen_mismatch"
+                                 if charge_screen is not None and not charge_screen["rank_eligible"]
+                                 else "pose_report_hard_overlap_screen_mismatch")
+                        if charge_screened_receipt:
+                            _require(row.get("ligand_net_charge_screen") == charge_screen,
+                                     "pose_report_charge_screen_mismatch")
+                        else:
+                            _require("ligand_net_charge_screen" not in row,
+                                     "pose_report_charge_screen_mismatch")
+                        if charge_screen is not None and not charge_screen["rank_eligible"]:
+                            _require(status == "failed" and score is None
+                                     and row.get("reason") == "ligand_net_charge_rank_ineligible",
+                                     "pose_report_charge_status_mismatch")
+                        elif selected is None:
                             _require(status == "failed" and score is None
                                      and row.get("reason")
                                      == "no_hard_overlap_screen_eligible_pose",
@@ -259,6 +280,7 @@ def _validate_result(result: dict, report_reader) -> list[dict]:
                     _require(status == "failed", "pose_report_numeric_status_mismatch")
                     if screened_receipt:
                         _require("hard_overlap_screen" not in row
+                                 and "ligand_net_charge_screen" not in row
                                  and "selected_pose" not in row,
                                  "pose_report_hard_overlap_screen_mismatch")
                 references.append(ref)
@@ -271,6 +293,25 @@ def _validate_result(result: dict, report_reader) -> list[dict]:
                 _require(rid in priority["predictions"] and
                          score == priority["predictions"][rid],
                          "similarity_prediction_score_mismatch")
+        if charge_screened_receipt:
+            # V3 records sequential outer candidate costs. Older portable
+            # receipts retain their historical, narrower verification meaning.
+            committed = [row for row in rows if "completed_monotonic" in row]
+            for row in committed:
+                cost = row.get("cost")
+                _require(type(cost) is dict and set(cost) == {
+                    "wall_seconds", "cpu_seconds"}
+                    and all(_finite(cost[key]) and cost[key] >= 0
+                            for key in ("wall_seconds", "cpu_seconds")),
+                    "invalid_portable_row_cost")
+            arm_wall = completion["measured_process_wall_seconds"]
+            worker_cpu = worker["process_cpu_seconds"]
+            _require(math.fsum(row["cost"]["wall_seconds"] for row in committed)
+                     <= arm_wall + max(1e-6, 1e-9 * arm_wall),
+                     "portable_row_wall_exceeds_arm_wall")
+            _require(math.fsum(row["cost"]["cpu_seconds"] for row in committed)
+                     <= worker_cpu + max(1e-6, 1e-9 * worker_cpu),
+                     "portable_row_cpu_exceeds_worker_cpu")
         _require(worker["engine_calls"] >= pose_report_count,
                  "engine_calls_less_than_saved_reports")
         direction = -1 if arm == "similarity" else 1
@@ -295,7 +336,9 @@ def verify_run(run_dir: Path) -> dict:
               "execution_performed": False, "selector_recomputed": False,
               "source_authenticated": False, "scientifically_validated": False,
               "resume_authorized": False, "pose_reports_checked": 0,
-              "hard_overlap_screen_verified": False}
+              "hard_overlap_screen_verified": False,
+              "ligand_net_charge_screen_verified": False,
+              "candidate_cost_bounds_verified": False}
     try:
         root = Path(run_dir).absolute()
         _private_dir(root)
@@ -340,7 +383,12 @@ def verify_run(run_dir: Path) -> dict:
         result.update(status="verified", exit_code=0, reason=None,
                       result_sha256=manifest["result"]["sha256"],
                       pose_reports_checked=len(references),
-                      hard_overlap_screen_verified=(data["schema_version"] == SCREENED_SCHEMA),
+                      hard_overlap_screen_verified=(data["schema_version"] in {
+                          SCREENED_SCHEMA, CHARGE_SCREENED_SCHEMA}),
+                      ligand_net_charge_screen_verified=(
+                          data["schema_version"] == CHARGE_SCREENED_SCHEMA),
+                      candidate_cost_bounds_verified=(
+                          data["schema_version"] == CHARGE_SCREENED_SCHEMA),
                       pool_count=len(data["pool"]), arms_verified=list(ARMS))
     except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
         result["reason"] = str(exc) if type(exc) is ValueError else type(exc).__name__
@@ -431,7 +479,13 @@ def export_legacy_synthetic(source_run: Path, output_dir: Path) -> dict:
                      for row in screened_rows]
     _require(not any(screen_fields) or all(screen_fields),
              "mixed_legacy_screen_receipts")
-    schema = SCREENED_SCHEMA if screen_fields and all(screen_fields) else SCHEMA
+    charge_fields = ["ligand_net_charge_screen" in row for row in screened_rows]
+    _require(not any(charge_fields) or all(charge_fields),
+             "mixed_legacy_charge_screen_receipts")
+    _require(not any(charge_fields) or all(screen_fields),
+             "charge_screen_without_overlap_screen")
+    schema = (CHARGE_SCREENED_SCHEMA if charge_fields and all(charge_fields)
+              else SCREENED_SCHEMA if screen_fields and all(screen_fields) else SCHEMA)
     result = {
         "schema_version": schema, "source_kind": "synthetic_constants",
         "legacy_protocol_version": protocol["schema_version"],

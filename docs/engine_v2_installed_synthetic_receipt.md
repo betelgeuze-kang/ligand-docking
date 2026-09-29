@@ -1,4 +1,4 @@
-# Installed synthetic comparison receipt v1
+# Installed synthetic comparison portable receipts
 
 For new comparisons run directly from an installed wheel, see
 [`engine_v2_installed_synthetic_run.md`](engine_v2_installed_synthetic_run.md).
@@ -19,6 +19,15 @@ versus pose reports, independent scalar energy/force arithmetic and numeric
 denominators, budget-bound rows, and worker/completion bindings. A missing,
 modified, symlinked, or extra report is rejected. It returns JSON with status
 `verified`/`invalid` and exit code 0/2.
+
+Current exports use portable receipt v3. It repeats the hard-overlap and
+source net-charge ranking screens against the embedded pose report and bounds
+the sum of sequential committed candidate wall/CPU costs by the observed arm
+wall/worker CPU totals. The verifier reports these as separate boolean checks.
+Historical v1 retains its original numeric-minimum rule, and v2 checks the
+overlap screen only; neither claims charge or candidate-cost verification.
+All three versions check internal receipt consistency without authenticating
+the original prepared files or the history of the run.
 
 This receipt is **local integrity only**. A party able to rewrite and reseal
 all files can forge a receipt. The fit-only similarity and Ridge selector

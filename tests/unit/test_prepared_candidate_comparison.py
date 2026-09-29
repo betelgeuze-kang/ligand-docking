@@ -51,6 +51,7 @@ def _protocol(tmp_path, *, seconds=20.0, calls=10):
             }
         )
     request = _request(tmp_path / "prepared")
+    _comparison_charge_source(request)
     refs = {}
     for rid in "abc":
         value = copy.deepcopy(request)
@@ -70,7 +71,18 @@ def _protocol(tmp_path, *, seconds=20.0, calls=10):
     }
 
 
+def _comparison_charge_source(request, token="-0.1"):
+    """Use a comparison-only ITP within its one-decimal print resolution."""
+    source = request["prepared_input"]["ligand_itp"]
+    path = Path(source["path"])
+    original = path.read_text()
+    assert "C1 1 -0.3 12.011" in original
+    path.write_text(original.replace("C1 1 -0.3 12.011", f"C1 1 {token} 12.011"))
+    source["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _zero_lj_source(request):
+    _comparison_charge_source(request)
     for name in ("protein_atomtypes", "ligand_atomtypes"):
         source = request["prepared_input"][name]
         path = Path(source["path"])
@@ -149,6 +161,94 @@ def test_hard_overlap_screen_fails_closed_on_unavailable_coordinates():
     report["preparation"]["source_receptor_coordinates_angstrom"] = None
     screen = comparison._hard_overlap_screen(report)
     assert [row["status"] for row in screen["poses"]] == ["unavailable", "unavailable"]
+
+
+def test_charge_rank_screen_excludes_inconsistent_state_but_retains_numeric_evidence(tmp_path):
+    from tools.product.verify_prepared_cross_numerics import check_report
+
+    protocol = _protocol(tmp_path / "input")
+    conflict = _request(tmp_path / "conflict")
+    sdf = conflict["prepared_input"]["ligand_sdf"]
+    sdf_path = Path(sdf["path"])
+    sdf_path.write_text(sdf_path.read_text().replace(
+        "M  END\n", "M  CHG  1   1   1\nM  END\n"))
+    sdf["sha256"] = hashlib.sha256(sdf_path.read_bytes()).hexdigest()
+    protocol["requests"]["a"] = _ref(tmp_path / "conflict.request.json", conflict)
+
+    exact = _request(tmp_path / "exact")
+    _comparison_charge_source(exact, token="0.0")
+    protocol["requests"]["b"] = _ref(tmp_path / "exact.request.json", exact)
+
+    output = tmp_path / "run"
+    result = comparison.run(protocol, output)
+    rows = {row["record_id"]: row for row in result["arms"]["engine"]["rows"]}
+    rejected = rows["a"]
+    report = comparison.read(rejected["pose_report"]["path"])
+    assert report["denominator"]["evaluated"] == 2
+    assert check_report(report)["status"] == "passed"
+    assert rejected["numeric_denominator"]["passed"] == 2
+    assert [pose["status"] for pose in rejected["hard_overlap_screen"]["poses"]] == [
+        "eligible", "eligible"]
+    charge = rejected["ligand_net_charge_screen"]
+    assert charge["sdf_formal_charge_sum_e"] == 1
+    assert charge["itp_printed_partial_charge_sum_e"] == "-0.3"
+    assert charge["difference_e"] == "-1.3"
+    assert charge["status"] == "different_integral_state_range"
+    assert charge["rank_eligible"] is False
+    assert rejected["status"] == "failed" and rejected["score"] is None
+    assert rejected["reason"] == "ligand_net_charge_rank_ineligible"
+    assert rejected["selected_pose"] is None
+    matched = rows["b"]
+    assert matched["ligand_net_charge_screen"]["status"] == "equal_as_encoded"
+    assert matched["status"] == "evaluated" and matched["selected_pose"] is not None
+
+    row_path = output / "engine" / (comparison.sha("a") + ".row.json")
+    saved = row_path.read_bytes()
+    try:
+        wrapped = comparison.read(row_path)
+        tampered = wrapped["payload"]
+        tampered["ligand_net_charge_screen"]["rank_eligible"] = True
+        row_path.write_text(comparison.canonical({"payload": tampered,
+                                                 "sha256": comparison.sha(tampered)}))
+        with pytest.raises(ValueError, match="pose_report_charge_screen_mismatch"):
+            comparison._arm_summary(
+                output / "engine", comparison.read(output / "frozen.json")["payload"],
+                result["binding"], result["arms"]["engine"]["cost"],
+            )
+    finally:
+        row_path.write_bytes(saved)
+
+
+def test_charge_rank_screen_uses_print_resolution_and_abstains_when_unreadable(tmp_path):
+    from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
+    from betelgeuze_product.prepared_net_charge_screen import ligand_net_charge_screen
+
+    within = _request(tmp_path / "within")
+    _comparison_charge_source(within, token="-0.1")
+    screen = ligand_net_charge_screen(evaluate_rigid_pose_request(within))
+    assert screen["difference_e"] == "-0.1"
+    assert screen["print_resolution_bound_e"] == "0.1"
+    assert screen["status"] == "within_print_resolution"
+    assert screen["rank_eligible"] is True
+
+    coarse = _request(tmp_path / "coarse")
+    sdf = coarse["prepared_input"]["ligand_sdf"]
+    sdf_path = Path(sdf["path"])
+    sdf_path.write_text(sdf_path.read_text().replace(
+        "M  END\n", "M  CHG  1   1   1\nM  END\n"))
+    sdf["sha256"] = hashlib.sha256(sdf_path.read_bytes()).hexdigest()
+    _comparison_charge_source(coarse, token="0")
+    screen = ligand_net_charge_screen(evaluate_rigid_pose_request(coarse))
+    assert screen["difference_e"] == "-1"
+    assert screen["print_resolution_bound_e"] == "1"
+    assert screen["status"] == "different_integral_state_range"
+    assert screen["rank_eligible"] is False
+
+    unreadable = _request(tmp_path / "unreadable")
+    _comparison_charge_source(unreadable, token="1e-4096")
+    screen = ligand_net_charge_screen(evaluate_rigid_pose_request(unreadable))
+    assert screen["status"] == "indeterminate"
+    assert screen["rank_eligible"] is False
 
 
 def test_prepared_source_receipt_reuses_canonical_document_without_changing_identity(tmp_path):
@@ -389,6 +489,36 @@ def integrity_run(tmp_path_factory):
     result = comparison.run(_protocol(root / "input"), root / "run")
     frozen = comparison.read(root / "run/frozen.json")["payload"]
     return root / "run", frozen, result
+
+
+@pytest.mark.parametrize("measure,error", [
+    ("wall_seconds", "comparison_row_wall_exceeds_arm_wall"),
+    ("cpu_seconds", "comparison_row_cpu_exceeds_worker_cpu"),
+])
+def test_resealed_candidate_cost_cannot_exceed_worker_total(integrity_run, measure, error):
+    root, frozen, result = integrity_run
+    arm, rid = "similarity", "a"
+    row_path = root / arm / (comparison.sha(rid) + ".row.json")
+    result_path = root / "comparison.json"
+    original_row, original_result = row_path.read_bytes(), result_path.read_bytes()
+    try:
+        wrapped = comparison.read(row_path)
+        observed = (result["arms"][arm]["cost"]["measured_process_wall_seconds"]
+                    if measure == "wall_seconds" else
+                    result["arms"][arm]["worker_observations"]["worker-complete.json"]["process_cpu_seconds"])
+        wrapped["payload"]["cost"][measure] = observed + 10.0
+        wrapped["sha256"] = comparison.sha(wrapped["payload"])
+        row_path.write_text(comparison.canonical(wrapped) + "\n")
+        resealed = copy.deepcopy(result)
+        resealed["arms"][arm]["rows"] = [
+            wrapped["payload"] if row["record_id"] == rid else row
+            for row in resealed["arms"][arm]["rows"]]
+        result_path.write_text(comparison.canonical(resealed) + "\n")
+        with pytest.raises(ValueError, match=error):
+            comparison.run(frozen["protocol"], root, resume=True)
+    finally:
+        row_path.write_bytes(original_row)
+        result_path.write_bytes(original_result)
 
 
 @pytest.mark.parametrize(
@@ -650,6 +780,7 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
         "score": predictions[rid],
         "prediction": predictions[rid],
         "status": "evaluated",
+        "cost": {"wall_seconds": 0.0, "cpu_seconds": 0.0},
         "completed_monotonic": time.monotonic() - 10,
     }
     comparison.publish(

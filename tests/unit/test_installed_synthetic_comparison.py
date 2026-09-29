@@ -12,7 +12,9 @@ import pytest
 from betelgeuze_engine.product.prepared_pose_journal import _input_binding
 from betelgeuze_product import installed_synthetic_comparison as installed
 from tools.product import compare_prepared_candidate_policies as research
-from tests.unit.test_prepared_candidate_comparison import _protocol, _zero_lj_source
+from tests.unit.test_prepared_candidate_comparison import (
+    _comparison_charge_source, _protocol, _zero_lj_source,
+)
 from tests.unit.test_prepared_rigid_poses import _pose, _request
 
 
@@ -136,6 +138,54 @@ def test_installed_screen_excludes_numeric_zero_lj_overlap_and_rejects_reselecti
         "installed_pose_report_hard_overlap_screen_mismatch")
 
 
+def test_installed_charge_screen_preserves_numeric_report_and_rejects_resealed_rank(tmp_path):
+    protocol = _installed_protocol(tmp_path / "inputs")
+    conflict = _request(tmp_path / "conflict")
+    sdf = conflict["prepared_input"]["ligand_sdf"]
+    sdf_path = Path(sdf["path"])
+    sdf_path.write_text(sdf_path.read_text().replace(
+        "M  END\n", "M  CHG  1   1   1\nM  END\n"))
+    sdf["sha256"] = installed._digest(sdf_path.read_bytes())
+    exact = _request(tmp_path / "exact")
+    _comparison_charge_source(exact, token="0.0")
+    for rid, request in (("a", conflict), ("b", exact)):
+        path = tmp_path / f"{rid}.charge-request.json"
+        path.write_bytes(installed._canonical(request) + b"\n")
+        protocol["requests"][rid] = {
+            "path": str(path), "sha256": installed._digest(path.read_bytes())}
+
+    root = tmp_path / "run"
+    result = installed.run(protocol, root)
+    rows = {row["record_id"]: row for row in result["arms"]["engine"]["rows"]}
+    rejected = rows["a"]
+    report = installed._read_report(root, "engine", "a", rejected["pose_report"])
+    assert report["denominator"]["evaluated"] == 2
+    assert installed.check_report(report)["status"] == "passed"
+    assert rejected["numeric_denominator"]["passed"] == 2
+    assert rejected["ligand_net_charge_screen"]["status"] == "different_integral_state_range"
+    assert rejected["status"] == "failed" and rejected["score"] is None
+    assert rejected["reason"] == "ligand_net_charge_rank_ineligible"
+    assert rows["b"]["ligand_net_charge_screen"]["status"] == "equal_as_encoded"
+    assert rows["b"]["status"] == "evaluated"
+    assert installed.verify_run(protocol, root)["status"] == "verified"
+
+    copied = tmp_path / "resealed-charge"
+    shutil.copytree(root, copied)
+    row_path = copied / "engine" / f"{installed._sha('a')}.row.json"
+    wrapped = installed._json(row_path.read_bytes())
+    wrapped["payload"]["ligand_net_charge_screen"]["rank_eligible"] = True
+    wrapped["sha256"] = installed._sha(wrapped["payload"])
+    row_path.write_bytes(installed._canonical(wrapped) + b"\n")
+    result_path = copied / "comparison.json"
+    resealed = installed._json(result_path.read_bytes())
+    resealed["arms"]["engine"]["rows"] = [
+        wrapped["payload"] if row["record_id"] == "a" else row
+        for row in resealed["arms"]["engine"]["rows"]]
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    assert installed.verify_run(protocol, copied)["reason"] == (
+        "installed_pose_report_charge_screen_mismatch")
+
+
 def test_resealed_priority_and_result_still_rejected(completed, tmp_path):
     root, protocol, _ = completed
     copied = tmp_path / "resealed"
@@ -151,6 +201,34 @@ def test_resealed_priority_and_result_still_rejected(completed, tmp_path):
     verdict = installed.verify_run(protocol, copied)
     assert verdict["reason"] == "installed_priority_recalculation_mismatch"
     with pytest.raises(ValueError, match="installed_priority_recalculation_mismatch"):
+        installed.run(protocol, copied, resume=True)
+
+
+@pytest.mark.parametrize("measure,error", [
+    ("wall_seconds", "installed_row_wall_exceeds_arm_wall"),
+    ("cpu_seconds", "installed_row_cpu_exceeds_worker_cpu"),
+])
+def test_resealed_candidate_cost_cannot_exceed_worker_total(completed, tmp_path, measure, error):
+    root, protocol, result = completed
+    copied = tmp_path / f"resealed-{measure}"
+    shutil.copytree(root / "run", copied)
+    arm, rid = "similarity", "a"
+    row_path = copied / arm / f"{installed._sha(rid)}.row.json"
+    wrapped = installed._json(row_path.read_bytes())
+    observed = (result["arms"][arm]["completion"]["measured_process_wall_seconds"]
+                if measure == "wall_seconds" else
+                result["arms"][arm]["worker_complete"]["process_cpu_seconds"])
+    wrapped["payload"]["cost"][measure] = observed + 10.0
+    wrapped["sha256"] = installed._sha(wrapped["payload"])
+    row_path.write_bytes(installed._canonical(wrapped) + b"\n")
+    result_path = copied / "comparison.json"
+    resealed = installed._json(result_path.read_bytes())
+    resealed["arms"][arm]["rows"] = [
+        wrapped["payload"] if row["record_id"] == rid else row
+        for row in resealed["arms"][arm]["rows"]]
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    assert installed.verify_run(protocol, copied)["reason"] == error
+    with pytest.raises(ValueError, match=error):
         installed.run(protocol, copied, resume=True)
 
 

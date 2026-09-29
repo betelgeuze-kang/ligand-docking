@@ -13,6 +13,7 @@ import copy
 import fcntl
 import importlib.metadata
 import json
+import math
 import os
 from pathlib import Path
 import resource
@@ -30,6 +31,7 @@ from .comparison_receipts import (
 from .prepared_cross_numeric_reference import MAX_BYTES as MAX_POSE_BYTES, check_report
 from . import prepared_hard_overlap_screen as overlap_screen
 from .prepared_hard_overlap_screen import hard_overlap_screen, screened_pose_selection
+from .prepared_net_charge_screen import ligand_net_charge_screen
 
 PROTOCOL = "installed_synthetic_prepared_comparison_protocol_v1"
 FROZEN = "installed_synthetic_prepared_comparison_frozen_v1"
@@ -415,9 +417,15 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
                            numeric_denominator=checked["denominator"])
                 if checked["status"] == "passed":
                     screen = hard_overlap_screen(report)
-                    selected = screened_pose_selection(report, screen)
-                    row.update(hard_overlap_screen=screen, selected_pose=selected)
-                    if selected is None:
+                    charge_screen = ligand_net_charge_screen(report)
+                    selected = (screened_pose_selection(report, screen)
+                                if charge_screen["rank_eligible"] else None)
+                    row.update(hard_overlap_screen=screen,
+                               ligand_net_charge_screen=charge_screen,
+                               selected_pose=selected)
+                    if not charge_screen["rank_eligible"]:
+                        row["reason"] = "ligand_net_charge_rank_ineligible"
+                    elif selected is None:
                         row["reason"] = "no_hard_overlap_screen_eligible_pose"
                     else:
                         row.update(status="evaluated", reason=None, score=selected["score"])
@@ -741,11 +749,22 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
                      "installed_pose_report_denominator_mismatch")
             if checked["status"] == "passed":
                 screen = hard_overlap_screen(report)
-                selected = screened_pose_selection(report, screen)
-                _require(value.get("hard_overlap_screen") == screen
-                         and value.get("selected_pose", "missing") == selected,
+                charge_screen = ligand_net_charge_screen(report)
+                selected = (screened_pose_selection(report, screen)
+                            if charge_screen["rank_eligible"] else None)
+                _require(value.get("hard_overlap_screen") == screen,
                          "installed_pose_report_hard_overlap_screen_mismatch")
-                if selected is None:
+                _require(value.get("ligand_net_charge_screen") == charge_screen,
+                         "installed_pose_report_charge_screen_mismatch")
+                _require(value.get("selected_pose", "missing") == selected,
+                         "installed_pose_report_hard_overlap_screen_mismatch"
+                         if charge_screen["rank_eligible"]
+                         else "installed_pose_report_charge_screen_mismatch")
+                if not charge_screen["rank_eligible"]:
+                    _require(value["status"] == "failed" and value["score"] is None
+                             and value["reason"] == "ligand_net_charge_rank_ineligible",
+                             "installed_pose_report_charge_status_mismatch")
+                elif selected is None:
                     _require(value["status"] == "failed" and value["score"] is None
                              and value["reason"] == "no_hard_overlap_screen_eligible_pose",
                              "installed_pose_report_hard_overlap_status_mismatch")
@@ -757,6 +776,7 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
             else:
                 _require(value["status"] == "failed"
                          and "hard_overlap_screen" not in value
+                         and "ligand_net_charge_screen" not in value
                          and "selected_pose" not in value,
                          "installed_pose_report_status_mismatch")
         elif arm != "similarity" and value["status"] == "evaluated":
@@ -785,6 +805,17 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
         uncommitted_call = worker_complete["engine_calls"] - expected_calls
         _require(0 <= uncommitted_call <= (1 if worker_complete["stop_reason"] == "deadline" else 0),
                  "installed_engine_call_count_mismatch")
+    # Candidate measurements are sequential subsets of the worker's outer cost.
+    # Missing parent/worker observations on interrupted attempts remain unknown.
+    if elapsed is not None:
+        row_wall = math.fsum(row["cost"]["wall_seconds"] for row in processed)
+        _require(row_wall <= elapsed + max(1e-6, 1e-9 * elapsed),
+                 "installed_row_wall_exceeds_arm_wall")
+    if worker_complete is not None:
+        worker_cpu = worker_complete["process_cpu_seconds"]
+        row_cpu = math.fsum(row["cost"]["cpu_seconds"] for row in processed)
+        _require(row_cpu <= worker_cpu + max(1e-6, 1e-9 * worker_cpu),
+                 "installed_row_cpu_exceeds_worker_cpu")
     direction = -1 if arm == "similarity" else 1
     ranked = sorted((row for row in rows if row["status"] == "evaluated"),
                     key=lambda row: (direction * row["score"], row["record_id"]))

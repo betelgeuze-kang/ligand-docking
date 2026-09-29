@@ -1,6 +1,7 @@
 """Installed receipt checks against a completed synthetic four-arm run."""
 from collections import Counter
 import json
+from pathlib import Path
 import shutil
 
 import pytest
@@ -92,11 +93,13 @@ def test_receipt_verifies_without_source_inputs_or_tools(exported, tmp_path):
     assert verified["selector_recomputed"] is False
     assert verified["scientifically_validated"] is False
     assert verified["hard_overlap_screen_verified"] is True
+    assert verified["ligand_net_charge_screen_verified"] is True
+    assert verified["candidate_cost_bounds_verified"] is True
 
 
-def test_screened_v2_export_preserves_overlap_exclusion(screened_portable):
+def test_screened_v3_export_preserves_overlap_exclusion(screened_portable):
     result = json.loads((screened_portable / "result.json").read_text())
-    assert result["schema_version"] == receipts.SCREENED_SCHEMA
+    assert result["schema_version"] == receipts.CHARGE_SCREENED_SCHEMA
     rows = {row["record_id"]: row for row in result["arms"]["engine"]["rows"]}
     assert rows["a"]["selected_pose"]["pose_id"] == "far"
     assert [pose["status"] for pose in rows["a"]["hard_overlap_screen"]["poses"]] == [
@@ -106,6 +109,7 @@ def test_screened_v2_export_preserves_overlap_exclusion(screened_portable):
     verified = receipts.verify_run(screened_portable)
     assert verified["status"] == "verified"
     assert verified["hard_overlap_screen_verified"] is True
+    assert verified["ligand_net_charge_screen_verified"] is True
 
 
 def test_screened_v2_resealed_selection_of_overlap_rejected(screened_portable, tmp_path):
@@ -126,6 +130,113 @@ def test_screened_v2_resealed_selection_of_overlap_rejected(screened_portable, t
     _rewrite_result(copied, change)
     assert receipts.verify_run(copied)["reason"] == (
         "pose_report_hard_overlap_screen_mismatch")
+
+
+def test_screened_v3_resealed_charge_decision_rejected(screened_portable, tmp_path):
+    copied = tmp_path / "resealed-charge-screen"
+    shutil.copytree(screened_portable, copied)
+
+    def change(result):
+        row = next(item for item in result["arms"]["engine"]["rows"]
+                   if item["record_id"] == "a")
+        row["ligand_net_charge_screen"]["rank_eligible"] = False
+
+    _rewrite_result(copied, change)
+    assert receipts.verify_run(copied)["reason"] == "pose_report_charge_screen_mismatch"
+
+
+@pytest.mark.parametrize("measure,reason", [
+    ("wall_seconds", "portable_row_wall_exceeds_arm_wall"),
+    ("cpu_seconds", "portable_row_cpu_exceeds_worker_cpu"),
+])
+def test_v3_resealed_candidate_cost_cannot_exceed_observed_total(
+    exported, tmp_path, measure, reason,
+):
+    copied = tmp_path / f"resealed-cost-{measure}"
+    shutil.copytree(exported, copied)
+
+    def change(result):
+        data = result["arms"]["similarity"]
+        observed = (data["completion"]["measured_process_wall_seconds"]
+                    if measure == "wall_seconds" else
+                    data["worker_complete"]["process_cpu_seconds"])
+        row = next(item for item in data["rows"] if "completed_monotonic" in item)
+        row["cost"][measure] = observed + 10.0
+
+    _rewrite_result(copied, change)
+    verified = receipts.verify_run(copied)
+    assert verified["status"] == "invalid"
+    assert verified["reason"] == reason
+
+
+def test_screened_v3_resealed_charge_observation_rejected(screened_portable, tmp_path):
+    copied = tmp_path / "resealed-charge-observation"
+    shutil.copytree(screened_portable, copied)
+
+    def change(report):
+        report["preparation"]["preparation_provenance"][
+            "ligand_source_net_charge_observation"]["itp_minus_sdf_charge_sum_e"] = "0.0"
+
+    _rewrite_report(copied, "engine", "a", change)
+    assert receipts.verify_run(copied)["reason"] == "pose_report_ligand_charge_source_mismatch"
+
+
+def test_screened_v3_resealed_compiled_profile_cannot_skip_charge_screen(
+    screened_portable, tmp_path,
+):
+    copied = tmp_path / "resealed-compiled-profile"
+    shutil.copytree(screened_portable, copied)
+
+    def change_report(report):
+        provenance = report["preparation"]["preparation_provenance"]
+        provenance["schema_version"] = "compiled_gromacs_cross_particles_v1"
+        provenance.pop("ligand_source_net_charge_observation")
+
+    _rewrite_report(copied, "engine", "a", change_report)
+
+    def change_result(result):
+        row = next(item for item in result["arms"]["engine"]["rows"]
+                   if item["record_id"] == "a")
+        screen = row["ligand_net_charge_screen"]
+        screen.update(
+            profile="compiled_gromacs_cross_particles_v1",
+            status="not_assessed_compiled_profile", rank_eligible=True,
+            sdf_formal_charge_sum_e=None,
+            itp_printed_partial_charge_sum_e=None,
+            difference_e=None, print_resolution_bound_e=None,
+            scope="no SDF formal-charge source in compiled particle profile; not chemical validation",
+        )
+
+    _rewrite_result(copied, change_result)
+    assert receipts.verify_run(copied)["reason"] == "pose_report_ligand_charge_source_mismatch"
+
+
+def test_v3_portable_receipt_retains_charge_rejected_numeric_pose(tmp_path):
+    protocol = _protocol(tmp_path / "inputs")
+    conflict = _request(tmp_path / "conflict")
+    sdf = conflict["prepared_input"]["ligand_sdf"]
+    sdf_path = Path(sdf["path"])
+    sdf_path.write_text(sdf_path.read_text().replace(
+        "M  END\n", "M  CHG  1   1   1\nM  END\n"))
+    sdf["sha256"] = receipts._digest(sdf_path.read_bytes())
+    request_path = tmp_path / "conflict.request.json"
+    request_path.write_bytes(receipts._canonical(conflict) + b"\n")
+    protocol["requests"]["a"] = {
+        "path": str(request_path), "sha256": receipts._digest(request_path.read_bytes())}
+    comparison.run(protocol, tmp_path / "source")
+    portable = tmp_path / "portable"
+    assert receipts.export_legacy_synthetic(tmp_path / "source", portable)["status"] == "verified"
+    result = json.loads((portable / "result.json").read_text())
+    assert result["schema_version"] == receipts.CHARGE_SCREENED_SCHEMA
+    row = next(item for item in result["arms"]["engine"]["rows"]
+               if item["record_id"] == "a")
+    report = json.loads((portable / row["pose_report"]["path"]).read_text())
+    assert receipts.check_report(report)["status"] == "passed"
+    assert row["numeric_denominator"]["passed"] == 2
+    assert row["status"] == "failed" and row["score"] is None
+    assert row["reason"] == "ligand_net_charge_rank_ineligible"
+    assert row["ligand_net_charge_screen"]["status"] == "different_integral_state_range"
+    assert receipts.verify_run(portable)["ligand_net_charge_screen_verified"] is True
 
 
 @pytest.mark.parametrize("field,coordinate", [
@@ -168,6 +279,7 @@ def test_v1_receipt_preserves_historical_numeric_minimum(screened_portable, tmp_
                         item["result"]["quantities"]["cross_total_kcal_per_mol"]
                         for item in report["rows"]))
                 row.pop("hard_overlap_screen", None)
+                row.pop("ligand_net_charge_screen", None)
                 row.pop("selected_pose", None)
             data["denominator"] = {
                 "requested": len(data["rows"]),
@@ -181,6 +293,26 @@ def test_v1_receipt_preserves_historical_numeric_minimum(screened_portable, tmp_
     verified = receipts.verify_run(copied)
     assert verified["status"] == "verified"
     assert verified["hard_overlap_screen_verified"] is False
+    assert verified["ligand_net_charge_screen_verified"] is False
+    assert verified["candidate_cost_bounds_verified"] is False
+
+
+def test_v2_receipt_preserves_historical_overlap_only_screen(screened_portable, tmp_path):
+    copied = tmp_path / "historical-v2"
+    shutil.copytree(screened_portable, copied)
+
+    def change(result):
+        result["schema_version"] = receipts.SCREENED_SCHEMA
+        for arm in receipts.ARMS:
+            for row in result["arms"][arm]["rows"]:
+                row.pop("ligand_net_charge_screen", None)
+
+    _rewrite_result(copied, change)
+    verified = receipts.verify_run(copied)
+    assert verified["status"] == "verified"
+    assert verified["hard_overlap_screen_verified"] is True
+    assert verified["ligand_net_charge_screen_verified"] is False
+    assert verified["candidate_cost_bounds_verified"] is False
 
 
 @pytest.mark.parametrize("mutation,reason", [
