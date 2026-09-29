@@ -74,6 +74,32 @@ heading specifies **3-(methylsulfonyl)**, whereas Tables 3-4 specify the
 [SGC probe identity](https://www.thesgc.org/chemical-probes/gsk2801).
 This audit records the conflict without silently correcting the paper.
 
+## Coordinate-to-component check (source observation only)
+
+The official [4RVR coordinate CIF](https://files.rcsb.org/download/4RVR.cif)
+and [3WQ component CIF](https://files.rcsb.org/ligands/download/3WQ.cif)
+were retrieved on 2026-09-29. The saved files were respectively 262,430
+bytes, SHA-256 `6a05676dd6f19f5b402c0dd278d23cec7691881c1ebd41641faad81733e163d1`,
+and 9,201 bytes, SHA-256
+`668e9f9eeab4bca46eb16b447eb48c9460beed1b5bebe2ea6db380b9f649d739`.
+They remain outside the repository. Parsing the CIF atom tables with
+Biopython `MMCIF2Dict` found one 3WQ instance (label asym B, author asym A).
+Its 26 observed heavy-atom names and elements exactly match the 26 heavy
+atoms in the CCD. The CCD lists 21 hydrogens; none is observed in 4RVR.
+The coordinate atom-table scan found 117 modeled polymer residues, 176 water
+oxygen atoms, and no deposited hydrogens. The [RCSB entry metadata](https://data.rcsb.org/rest/v1/core/entry/4RVR)
+and [polymer entity mapping](https://data.rcsb.org/rest/v1/core/polymer_entity/4RVR/1)
+links the construct to Q9UIF8 but covers only about 5.3% of the full
+UniProt sequence. This is not evidence that the full target is present.
+
+An all-heavy-atom coordinate scan found a 3.126 Å minimum ligand–protein
+distance and a 2.704 Å minimum ligand–water distance; 12 distinct waters
+have an atom within 4 Å of the ligand. Six ethylene-glycol instances are
+deposited; their nearest atom is 7.878 Å from the ligand. These are raw
+geometric observations, not a contact-quality or physical-validity pass.
+Hydrogen placement, water retention, receptor construct choice, formal
+microstate, and force-field parameters remain preparation decisions.
+
 ## Admission remains blocked
 
 - **Method and construct linkage:** supplement page 1 delegates construct and
