@@ -298,3 +298,34 @@ The installed replay receipt SHA-256 is
 `8cfb0780d421b01c26331be3c3e9fcff494d84d6cc44336007465a03ec7c6af6`.
 This validates that exact commit's package path on the synthetic fixture. It
 does not prepare or evaluate a real 5-HT6 candidate.
+
+## Per-invocation selector reuse and measured limit (2026-09-29)
+
+Commit `083c1a6520f041d0bbdad400c3cb08b0e74cf126` reuses the frozen
+fit/candidate fingerprints and identical similarity predictions across the
+four parent-side summaries of one `run`, `verify-run` or completed `resume`.
+Each arm still compares its committed predictions, order and selector kind to
+the locally derived values; workers, source revalidation, runtime binding and
+receipt formats are unchanged. The full local CI-scope unit suite passed 153
+tests. The wheel built from this exact commit had SHA-256
+`78d682d64bd360c24a49228535f3d07b246fc91f77190b2ce1891bf54203e8ee`;
+all 506 packaged Python files matched the commit. Its cloned isolated-venv
+installed replay passed source verification, one- and two-candidate synthetic
+run/verify/resume, unlinked-request rejection and 3D/flat-wedge checks. The
+installed replay receipt SHA-256 is
+`503c2c1064ec70149f9fe7050d5ecdbc12fee262c1ba6bcdf18456c657d791bf`.
+
+On separately generated deterministic two-chemical fixtures, 196 prespecified
+result field groups and six pose reports matched after excluding runtime
+bindings, source paths and measured costs. In the instrumented `verify-run`,
+fingerprint generation fell from six calls to two, but its old 0.0022 s
+cumulative scope was small. Three fresh-process measurements gave medians of
+1.862 s before versus 1.873 s after for `verify-run`, and 1.910 s before
+versus 1.870 s after for completed `resume`. These differences do **not**
+establish an end-to-end speedup. Cold freeze/import work remained about 1.4 s
+in each profile, including its nested costs. The comparison receipt at
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-cache-exact-head-20260929/cpu-cache-comparison-receipt.json`
+has SHA-256
+`afb3345f973c5756fe799d8bf7ff3d4505cafee627e26fed1086e842b3892d9d`.
+As for other bound code changes, old frozen runs remain tied to their original
+implementation; they require that runtime rather than automatic migration.
