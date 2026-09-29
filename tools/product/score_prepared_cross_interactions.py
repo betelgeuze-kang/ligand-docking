@@ -8,7 +8,9 @@ version can additionally execute the registered public assay predictor.
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
+import io
 import json
 from pathlib import Path
 import platform
@@ -134,8 +136,8 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--request", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--output-format", choices=("pretty", "compact"), default="pretty",
-                        help="JSON representation only; compact preserves every field and encodes one case at a time")
+    parser.add_argument("--output-format", choices=("pretty", "compact", "compact-gzip"), default="pretty",
+                        help="compact preserves every field; compact-gzip stores the same JSON bytes in a deterministic gzip stream")
     parser.add_argument("--checkpoint-dir", type=Path,
                         help="New private directory for durable per-pose completion (Linux only)")
     parser.add_argument("--resume", action="store_true",
@@ -148,6 +150,8 @@ def main(argv=None) -> int:
             parser.error("output must not be inside the checkpoint directory")
     if args.output.exists() or args.output.is_symlink():
         parser.error("output must be a new path; existing evidence and source files are preserved")
+    if args.output_format == "compact-gzip" and not args.output.name.endswith(".json.gz"):
+        parser.error("compact-gzip output must end in .json.gz")
     started, cpu = time.perf_counter(), time.process_time()
     request_sha = None
     try:
@@ -179,12 +183,19 @@ def main(argv=None) -> int:
         "scope": "command main including imports, parsing and evaluation; process startup/output excluded"}
     result["exit_code"] = exit_code
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("x", encoding="utf-8") as output:
-        if args.output_format == "compact":
-            _write_report_json(result, output)
-        else:
-            json.dump(result, output, sort_keys=True, indent=2, allow_nan=False)
-            output.write("\n")
+    if args.output_format == "compact-gzip":
+        with args.output.open("xb") as raw_output:
+            with gzip.GzipFile(filename="", mode="wb", fileobj=raw_output,
+                               compresslevel=1, mtime=0) as compressed:
+                with io.TextIOWrapper(compressed, encoding="utf-8", newline="\n") as output:
+                    _write_report_json(result, output)
+    else:
+        with args.output.open("x", encoding="utf-8") as output:
+            if args.output_format == "compact":
+                _write_report_json(result, output)
+            else:
+                json.dump(result, output, sort_keys=True, indent=2, allow_nan=False)
+                output.write("\n")
     print(json.dumps({"output": str(args.output), "exit_code": exit_code,
                       "denominator": result["denominator"]}, allow_nan=False))
     return exit_code
