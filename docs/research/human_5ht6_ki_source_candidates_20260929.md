@@ -1,8 +1,8 @@
 # Human 5-HT6 Ki primary-source candidates, 2026-09-29
 
 Decision: **source discovery GO; cohort admission and prepared comparison
-NO-GO / NOT_QUALIFIED**. These are published biochemical rows, not current
-ChEMBL-v4 intake records or prepared requests. No fit, calibration, or
+NO-GO / NOT_QUALIFIED**. These are published receptor-binding assay rows, not
+current ChEMBL-v4 intake records or prepared requests. No fit, calibration, or
 evaluation role is assigned; protected Fresh-128 outcomes were not opened.
 
 | Source and primary row | Human 5-HT6 Ki | Exact source chemical name | Reported purity |
@@ -64,8 +64,9 @@ conditions to its reference 12 (section 3.2, p. 17). Exact cross-paper method
 equivalence and the assayed receptor construct therefore remain unverified.
 
 A third paper candidate, [2023 DOI 10.3390/molecules28031096](https://doi.org/10.3390/molecules28031096),
-reports same-method human-5-HT6 Ki values of 11 nM for compound 8 and 556 nM
-for compound 12, with reported purity above 95%. It is not yet an independent
+reports human-5-HT6 Ki values in the same radioligand-method family: 11 nM
+for compound 8 and 556 nM for compound 12, with reported purity above 95%.
+It is not yet an independent
 source component: citation, scaffold and protected-identity links still need
 checking. Paper count alone cannot assign fit/calibration/evaluation roles.
 The 2023 triazine and 2024 DOI records were not returned by an exact-DOI
