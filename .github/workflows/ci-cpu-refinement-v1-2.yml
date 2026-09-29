@@ -5,6 +5,8 @@ on:
       - 'betelgeuze_engine_v2/**'
       - 'betelgeuze_product/**'
       - 'tests/unit/test_cpu_*.py'
+      - 'tests/unit/test_cartesian_*.py'
+      - 'tests/ci/cartesian_refinement_wheel_probe.py'
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
       - 'tests/unit/frozen_engine_v2_historical_sources.py'
@@ -65,6 +67,8 @@ jobs:
       - name: Lint new implementation and tests without exclusions
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
+            betelgeuze_product/cpu_refinement_v1_3 tests/unit/test_cartesian_*.py \
+            tests/ci/cartesian_refinement_wheel_probe.py \
             tests/unit/test_cpu_*.py \
             tools/verify_cpu_refinement_v1_2_install.py \
             tools/verify_cpu_candidate_resume_install.py \
@@ -79,6 +83,7 @@ jobs:
           set -euo pipefail
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
             tests/unit/test_cpu_*.py \
+            tests/unit/test_cartesian_*.py \
             tests/unit/test_engine_v2_reference_angle_boundary.py \
             tests/unit/test_engine_v2_refinement_comparison.py \
             tests/unit/test_engine_v2_numerics_v1_1_contracts.py \
@@ -116,6 +121,17 @@ jobs:
           python tools/verify_cpu_candidate_resume_install.py \
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output "$RUNNER_TEMP/candidate-resume-installed"
+      - name: Verify installed Cartesian iteration and trial-level resume
+        run: |
+          shared_dependency_root="$(python -c 'import sys; print(sys.prefix)')"
+          python -m tests.ci.cartesian_refinement_wheel_probe prepare "$RUNNER_TEMP/cartesian-probe"
+          cp tests/ci/cartesian_refinement_wheel_probe.py "$RUNNER_TEMP/cartesian-wheel-probe.py"
+          trap 'cp -a "$RUNNER_TEMP/cartesian-probe" "$GITHUB_WORKSPACE/verification-artifacts/cartesian-probe"' EXIT
+          cd "$RUNNER_TEMP"
+          env -u PYTHONPATH "$RUNNER_TEMP/corrected-installed/bin/python" -I -B \
+            "$RUNNER_TEMP/cartesian-wheel-probe.py" execute "$RUNNER_TEMP/cartesian-probe" \
+            --installed-root "$RUNNER_TEMP/corrected-installed" \
+            --shared-dependency-root "$shared_dependency_root"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:

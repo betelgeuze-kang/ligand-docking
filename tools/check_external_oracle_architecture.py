@@ -28,6 +28,22 @@ from typing import Iterator, Sequence
 ORACLE_PREFIX = "benchmarks/oracles/"
 ORACLE_MODULE_PREFIX = "benchmarks.oracles"
 
+# Exact retained research scripts with external OpenMM reference calls. These
+# must remain outside the product import and Docker image closure.
+RETAINED_RESEARCH_ORACLE_SCRIPTS = frozenset(
+    {
+        "docs/research/human_5ht6_7xtb_openmm_projection/build_projection.py",
+        "docs/research/human_5ht6_7xtb_openmm_projection/verify_projection.py",
+        "docs/research/human_5ht6_d3_complex/chemical_typing_audit.py",
+        "docs/research/human_5ht6_d3_complex/derive_receptor_chemistry.py",
+        "docs/research/human_5ht6_d3_complex/prepare_complex.py",
+        "docs/research/human_5ht6_pr49_pr59_openff_projection/build_projection.py",
+        "docs/research/human_5ht6_pr49_pr59_openff_projection/verify_projection.py",
+        "docs/research/human_5ht6_sro_numerical_preparation/prepare_sro.py",
+        "tools/analysis/openmm_d3_numerical_audit.py",
+    }
+)
+
 EXTERNAL_PYTHON_ROOTS = frozenset(
     {"openmm", "simtk", "gmxapi", "gromacs", "vina", "gnina"}
 )
@@ -593,7 +609,7 @@ def _external_python_root(module: str) -> str:
 
 
 def _is_oracle_path(relative: str) -> bool:
-    return relative.startswith(ORACLE_PREFIX)
+    return relative.startswith(ORACLE_PREFIX) or relative in RETAINED_RESEARCH_ORACLE_SCRIPTS
 
 
 def _command_tokens(
@@ -1449,6 +1465,7 @@ def inspect_product_import_boundary(root: Path) -> list[Violation]:
         first = Path(relative).parts[0]
         docker_product_tool = (
             first == "tools" and relative not in LEGACY_BENCHMARK_DOCKER_EXCLUSIONS
+            and relative not in RETAINED_RESEARCH_ORACLE_SCRIPTS
         )
         if (
             relative in PRODUCT_ENTRYPOINTS
@@ -1517,8 +1534,20 @@ def inspect_product_import_boundary(root: Path) -> list[Violation]:
             candidate = target
             while candidate and candidate not in module_paths:
                 candidate = candidate.rpartition(".")[0]
-            if candidate and candidate not in visited:
-                queue.append((candidate, (*chain, candidate)))
+            if candidate:
+                candidate_path = _relative(module_paths[candidate][0], root)
+                if candidate_path in RETAINED_RESEARCH_ORACLE_SCRIPTS:
+                    violations.append(
+                        Violation(
+                            relative,
+                            line,
+                            "product_imports_external_oracle",
+                            " -> ".join((*chain, candidate)),
+                        )
+                    )
+                    continue
+                if candidate not in visited:
+                    queue.append((candidate, (*chain, candidate)))
     return sorted(set(violations))
 
 
@@ -1743,6 +1772,12 @@ def inspect_packaging_boundary(
 ) -> list[Violation]:
     root = root.resolve()
     violations: list[Violation] = []
+    if product_image:
+        for relative in sorted(RETAINED_RESEARCH_ORACLE_SCRIPTS):
+            if (root / relative).exists():
+                violations.append(
+                    Violation(relative, 0, "oracle_script_in_product_image", relative)
+                )
     dockerfile = root / "Dockerfile.product"
     if dockerfile.is_file():
         text = dockerfile.read_text(encoding="utf-8")
@@ -1787,6 +1822,7 @@ def inspect_packaging_boundary(
                 "benchmarks",
                 "benchmarks/**",
                 *LEGACY_BENCHMARK_DOCKER_EXCLUSIONS,
+                *RETAINED_RESEARCH_ORACLE_SCRIPTS,
             }
             for missing in sorted(required - positive_rules):
                 violations.append(
@@ -1798,6 +1834,7 @@ def inspect_packaging_boundary(
                 "benchmarks",
                 "benchmarks/oracles/architecture-probe.py",
                 *LEGACY_BENCHMARK_DOCKER_EXCLUSIONS,
+                *RETAINED_RESEARCH_ORACLE_SCRIPTS,
             }
             for leaked in sorted(
                 target

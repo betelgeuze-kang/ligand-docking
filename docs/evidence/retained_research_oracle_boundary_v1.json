@@ -1,0 +1,85 @@
+{
+  "architecture_regression_counts": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "tests": 101
+  },
+  "architecture_regression_junit": {
+    "bytes": 21450,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/external-oracle-recovery-final.xml",
+    "sha256": "98773152077f9f759a530199c52211dc3f249d3c2fb8fda2dc83c1de030f8824"
+  },
+  "baseline_head": "2403a9e277ff9d873ef099ace6b0fae9cac2202b",
+  "boundary_implementation": {
+    ".dockerignore": {
+      "bytes": 3967,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/.dockerignore",
+      "sha256": "7365b035f84cc98319a3b3634e225989343791fa07fce6ff75541449b8cecbf7"
+    },
+    "tests/unit/test_external_oracle_architecture.py": {
+      "bytes": 24889,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tests/unit/test_external_oracle_architecture.py",
+      "sha256": "9967aaa87fd4e92183788cf869d59f377101be3bad8b705c5ef8adf4b26e66d6"
+    },
+    "tools/check_external_oracle_architecture.py": {
+      "bytes": 68356,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tools/check_external_oracle_architecture.py",
+      "sha256": "c9491e6432d69f4dde30f7291d8a2ec9c865c1ccec29e456862f98299a678f49"
+    }
+  },
+  "exact_research_scripts_unchanged": {
+    "docs/research/human_5ht6_7xtb_openmm_projection/build_projection.py": {
+      "bytes": 17531,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_7xtb_openmm_projection/build_projection.py",
+      "sha256": "66bcee79d852b7eeb19733480e87a220eead36f50f69dc710fd60484304c9a63"
+    },
+    "docs/research/human_5ht6_7xtb_openmm_projection/verify_projection.py": {
+      "bytes": 18582,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_7xtb_openmm_projection/verify_projection.py",
+      "sha256": "18b6414f3558b8e186e155e180a01d4ce0d4ddc1e118d90c77dcde4b25b1ab7c"
+    },
+    "docs/research/human_5ht6_d3_complex/chemical_typing_audit.py": {
+      "bytes": 9503,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_d3_complex/chemical_typing_audit.py",
+      "sha256": "3a867bbdba41d2851305303a91626873fe60e8256930eb0028e2a66e41294b6a"
+    },
+    "docs/research/human_5ht6_d3_complex/derive_receptor_chemistry.py": {
+      "bytes": 10454,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_d3_complex/derive_receptor_chemistry.py",
+      "sha256": "e6f0c25d6683628afe1c8d20cf07ad2947998d143330b8f888bf81010f25f8c8"
+    },
+    "docs/research/human_5ht6_d3_complex/prepare_complex.py": {
+      "bytes": 25460,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_d3_complex/prepare_complex.py",
+      "sha256": "42820d79d5187bb0346bc31415fc7f4e0d7561ac0321b6e10a60a1beb50287e5"
+    },
+    "docs/research/human_5ht6_pr49_pr59_openff_projection/build_projection.py": {
+      "bytes": 15005,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_pr49_pr59_openff_projection/build_projection.py",
+      "sha256": "5fc7f2caba83fe996fec874f20d9e69689b06ae61b5c896c61603e7a5632afbf"
+    },
+    "docs/research/human_5ht6_pr49_pr59_openff_projection/verify_projection.py": {
+      "bytes": 16929,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_pr49_pr59_openff_projection/verify_projection.py",
+      "sha256": "643edcc9521b6a5d78f5b4d6931609498a1cd0ed6ad816736b9f5592d2297059"
+    },
+    "docs/research/human_5ht6_sro_numerical_preparation/prepare_sro.py": {
+      "bytes": 34076,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_sro_numerical_preparation/prepare_sro.py",
+      "sha256": "cfa955ec3d92384fd9c920569db290fcc959d041af52a4e5ee96097ef8ae0e82"
+    },
+    "tools/analysis/openmm_d3_numerical_audit.py": {
+      "bytes": 24082,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tools/analysis/openmm_d3_numerical_audit.py",
+      "sha256": "483b73f2a5ff2593092d9f003f7062a0bd7b388c2e0bd6460e1c9f25a08a0e71"
+    }
+  },
+  "hosted_exact_head_ci_complete": false,
+  "original_development_protocol_command": "python3 tools/check_external_oracle_architecture.py",
+  "original_development_protocol_command_local_exit_code": 0,
+  "product_docker_reinclusion_and_image_presence_rejected": true,
+  "product_import_and_transitive_import_rejected": true,
+  "schema_id": "retained_research_oracle_boundary_evidence/1",
+  "scientific_validation": false
+}

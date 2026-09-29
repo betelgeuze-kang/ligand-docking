@@ -1,0 +1,116 @@
+{
+  "installed_product": {
+    "actual_real_molecular_evaluations": 0,
+    "build_install_probe": {
+      "bytes": 6726,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/installation-v3/build-install-probe.json",
+      "sha256": "d06baa58e97f34c08f9cc1894698aeb3fe1a09e8138fd8d935b9677f4bff5deb"
+    },
+    "completed_reuse_new_force_calls": 0,
+    "completed_reuse_new_score_calls": 0,
+    "continuous_optimizer_attempts": 7,
+    "existing_dependency_distributions_reused": 44,
+    "fresh_dependency_install": false,
+    "numerical_state_exact": true,
+    "owned_package_files": 523,
+    "resumed_optimizer_attempts": 7,
+    "resumed_restart_force_calls": 1,
+    "selections_exact": true,
+    "synthetic_cli_probe": {
+      "bytes": 165030,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/installation-v3/probe/installed-probe.json",
+      "sha256": "ee40da6fa0b7fdd5b832652789745149f8bc2542be5e0043de549ec16427861f"
+    },
+    "wheel": {
+      "bytes": 2482990,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/installation-v3/wheels/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+      "sha256": "00814229724d90cca5b81d00c2a78a4ae6dfe983e95930552ca693d2c13484b8"
+    }
+  },
+  "legacy_regression": {
+    "counts": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 149
+    },
+    "junit": {
+      "bytes": 22517,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/legacy-regressions.xml",
+      "sha256": "3be8577b715ad992691195e4d4994e1658591464a644e03cd998ca771b3e5248"
+    },
+    "scope": "separate unchanged v1.2-related paths"
+  },
+  "native_four_arm_comparator_connected": false,
+  "new_installed_real_sro_execution_complete": false,
+  "newly_admitted_experimental_training_rows": 0,
+  "protected_evaluation_used": false,
+  "regression": {
+    "counts": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 192
+    },
+    "junit": {
+      "bytes": 28139,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/cartesian-recovery-regressions.xml",
+      "sha256": "53a510bb43bdb0b95de829d5d8c19f8e579d554c98e5695f09ca947756cf730e"
+    },
+    "scope": "new Cartesian journal/kernel/minimizer/workflow including unknown-work rejection"
+  },
+  "retained_sro_transition_compatibility": {
+    "new_graph_force_score_oracle_calls": 0,
+    "objective_observations": 670,
+    "report": {
+      "bytes": 1101,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-sro-transcript-replay-20260930-3726ofhn/report.md",
+      "sha256": "d81d69b3c3206a06836960eb2fcbcba7ca4a18b6ff6a7f389bbb48218b8e3496"
+    },
+    "review": {
+      "bytes": 465504,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-sro-transcript-replay-20260930-3726ofhn/review.json",
+      "sha256": "491916a3ab7fdd5f27df48494c86cb6b638eff4ec49474d4f74fb8771d2be0d5"
+    }
+  },
+  "schema_id": "cartesian_refinement_product_evidence/1",
+  "scientific_qualification": false,
+  "source_files": {
+    "betelgeuze_product/cpu_refinement_v1_3/__init__.py": {
+      "bytes": 84,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/__init__.py",
+      "sha256": "23a7044125f0e3eb5ef46daa84b2efa5ad810fb6b794ae9c36cae2918edbae53"
+    },
+    "betelgeuze_product/cpu_refinement_v1_3/__main__.py": {
+      "bytes": 1214,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/__main__.py",
+      "sha256": "507f03c2973e17d834fc3055acc29c9ae4e65d4ba5cc567b1aeabd37a6ac58de"
+    },
+    "betelgeuze_product/cpu_refinement_v1_3/contracts.py": {
+      "bytes": 3182,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/contracts.py",
+      "sha256": "1ee0042bc55166974412b3fca0501a91f92f44fad7125bd13f0fd058283e1c7b"
+    },
+    "betelgeuze_product/cpu_refinement_v1_3/journal.py": {
+      "bytes": 19765,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/journal.py",
+      "sha256": "51a1c510880b60ff2d31e8333287bdc29910c97f64306f52543e8f96b6d8490f"
+    },
+    "betelgeuze_product/cpu_refinement_v1_3/kernel.py": {
+      "bytes": 11558,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/kernel.py",
+      "sha256": "c1b1a5f3ad2ca597d44870c1b2e37391f1a867f1a5540351a4081b119ce5a392"
+    },
+    "betelgeuze_product/cpu_refinement_v1_3/minimization.py": {
+      "bytes": 16881,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/minimization.py",
+      "sha256": "a76453934630302d7c66b1a6681514dbbb0194ccfa642041f259fcf8ec8ead5e"
+    },
+    "betelgeuze_product/cpu_refinement_v1_3/workflow.py": {
+      "bytes": 41484,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/cpu_refinement_v1_3/workflow.py",
+      "sha256": "14405cb2aa46c36cfe72f6c20440526850bbf7a675787235daf264cd9ef152e1"
+    }
+  },
+  "source_head_before_commit": "2403a9e277ff9d873ef099ace6b0fae9cac2202b"
+}
