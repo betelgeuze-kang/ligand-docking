@@ -9,8 +9,8 @@ the requested priorities and observable completion criteria.
 |---|---|---|---|
 | 1 | Transfer a complete, source-bound receptor chemical graph | Bond orders, aromaticity, formal charge, HIE/CYX/termini and atom mapping verified; coordinates, partial charges, masses and adjacency unchanged; unsupported states rejected | Implemented and verified on all 4,376 receptor atoms |
 | 2 | Preserve the prepared input and complete the CPU comparison | Explicit registered-pose request/plan, exact initial coordinates, normal and installed pause/resume agreement, failure denominator and verification | Implemented; actual one-pose/two-row execution and exact installed replay passed; valid baseline retained |
-| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Rigid and bounded L-BFGS experiments completed; both NOT_ADMITTED; useful refinement remains unresolved |
-| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | CPU CI selection 806 passed; separate research selection 66 passed; installed actual-case restart passed with shared dependencies; hosted CI separately pending |
+| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Rigid, L-BFGS and strain/bond-constrained experiments completed; latest 148 points / 128 iterations retained no improved incumbent; useful refinement remains unresolved |
+| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Previous CPU selection 806 and research selection 66 passed; new constrained/geometry/runner selection 86 passed; installed actual-case restart passed with shared dependencies; hosted CI separately pending |
 
 Preparation, arithmetic agreement, pose recovery, candidate prioritization and
 affinity are separate questions. PR49 has no observed reference pose here. The
@@ -43,10 +43,19 @@ the implemented fix and narrow the remaining priorities:
    and do not weaken the 5 kcal/mol or 0.001 force criteria to obtain admission.
    L-BFGS on the original pose completed 128 accepted steps and 131 force calls,
    ending with +19.022436 kcal/mol strain and 0.679586 kcal/mol/Å force: still
-   **NOT_ADMITTED**. Next freeze an admissibility-aware experiment including
-   product bond/chirality/self-clash checks and an explicit stationarity definition.
-   Algorithm and budget changed together here; a matched-budget benefit remains
-   unproven. Do not substitute this research optimizer into the product yet.
+   **NOT_ADMITTED**. A retrospective audit now confirms all eight product geometry
+   checks pass for that L-BFGS state; the strain and force failures remain.
+   The subsequent [strain/bond-constrained experiment](pr49_constrained_refinement_20260929.md)
+   includes all eight product and six research geometry gates plus an explicit
+   independent KKT diagnostic. Its 128-iteration/148-point run produces no eligible
+   update: terminal strain is 5.000032510069104 and force is 47.337095201. The
+   original pose remains retained, with neither raw-force nor KKT convergence.
+   Next freeze a bounded feasibility-preserving step experiment; require an
+   actually retained lower-energy feasible pose while preserving the separate
+   product force threshold. Algorithm and budget changed together here; a
+   matched-budget benefit remains unproven. Do not substitute research optimizers
+   into the product. Repeated integrity checks are a measured research-harness
+   cost; optimize them only with mutation detection preserved.
 3. **Add an independent allowed observed-pose case and enclosing cost evidence.**
    The current PR49 pose is computational. New enclosing execution/restart/audit
    measurements exist, but exclude upstream structure preparation and human work;

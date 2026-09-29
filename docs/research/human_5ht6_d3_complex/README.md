@@ -195,3 +195,20 @@ remains NOT_ADMITTED; it does not replace the product solver. See the
 [executed report](../pr49_registered_pose_execution_20260929.md) for complete
 denominators, numerical checks, runtime identity, retained harness failures and
 the remaining acceptance conditions.
+
+## Strain and bond constrained research
+
+`constrained_development_experiment.py` adds a separately frozen SLSQP experiment
+on the same registered input. `constrained_refinement_core.py` records exact
+strain/bond feasibility, all evaluated points and independent KKT diagnostics;
+`product_geometry_audit.py` applies the eight existing product geometry checks
+to actual trial coordinates without scoring. The product solver is unchanged.
+
+The actual 128-iteration/148-point run retained no improved incumbent. Its
+terminal trial still exceeds the strict strain limit and raw-force threshold,
+so the original pose remains selected. Main and supplemental OpenMM audits
+agree numerically but do not change that negative outcome. See the
+[executed constrained-refinement report](../pr49_constrained_refinement_20260929.md)
+and [hash-bound evidence](../../evidence/pr49_constrained_refinement_development_v1.json)
+for denominators, complete geometry scope, source-integrity overhead and the next
+feasibility-preserving research criteria.
