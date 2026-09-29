@@ -1,0 +1,462 @@
+{
+  "HIP_parity_verified": false,
+  "affinity_validated": false,
+  "artifacts": {
+    "chemical_graph_manifest": {
+      "bytes": 5523,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-chemical-graph-20260929-final1/manifest.v1.json",
+      "sha256": "566b38cc63013184a063cd336cdcd170b2e57e134162d7844b4f6909b9b1d5d1"
+    },
+    "comparison": {
+      "bytes": 581234,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-explicit-chemistry-execution-20260929-final/comparison/report.json",
+      "sha256": "87cf62ff5e5fb68ea13a2007578a09739698a293a08372ba82c1ff3259bbcaa2"
+    },
+    "comparison_verification": {
+      "bytes": 183,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-explicit-chemistry-execution-20260929-final/comparison-verification.json",
+      "sha256": "80c778e5000814f7006456385b5dd47c8ed4bfdd856ac8a26ab8bd98b6f7e81c"
+    },
+    "feature_independent_comparator": {
+      "bytes": 15865,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/chemical-feature-contract-20260929/independent-rdkit-comparison.json",
+      "sha256": "0d5ddf6717e19171b7789f0a980042a70dc8c802408d94710ce448b0aa6795f5"
+    },
+    "installed_wheel_smoke": {
+      "bytes": 44037,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/explicit-chemistry-wheel-20260929-vflbrz2m/installed-smoke.json",
+      "sha256": "c0f41b178606730b0b7731e6846b901d093af49a2b46b3b085255e59d45e99bc"
+    },
+    "integrity_profile": {
+      "bytes": 7379,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-diagnostic-20260929-eny_thn9/diagnostic-summary.json",
+      "sha256": "9086efc65642a006f623e24ef657ff647e22c2e68ecb150a788ab00434ee51bb"
+    },
+    "registered_pose_diagnostic": {
+      "bytes": 52084,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-registered-pose-diagnostic-20260929/diagnostic.json",
+      "sha256": "64410c2c53e179b26efe19a29e3ee6d31a0c904f740e0ec78227937e83f4a413"
+    },
+    "regression": {
+      "bytes": 671,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-explicit-chemistry-execution-20260929-final/regression.log",
+      "sha256": "a93fde7a8b1a8511def8d7eba6f7b1c89c6aa02db9934190835eb3aff15e7ffa"
+    },
+    "request": {
+      "bytes": 3359,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-explicit-chemistry-execution-20260929-final/request.json",
+      "sha256": "4d0ee51608590cda7decdf7fb8665f526d25e45c7e16faf5bbea8d2a25b6d2cc"
+    },
+    "request_binding": {
+      "bytes": 3161,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-explicit-chemistry-execution-20260929-final/binding.json",
+      "sha256": "214f751cf6b97c152e350a9708ddd56bf38a8042ceb5cca77d0ef9b564766fb4"
+    },
+    "rigid_experiment": {
+      "bytes": 5897,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-rigid-d3-development-20260929-iyovgbc5/run/report.json",
+      "sha256": "a712fe837bb75cefe18ebbf0723e8749a9de3e234949f78dad1b25ab675c9e5d"
+    },
+    "rigid_file_manifest": {
+      "bytes": 4774,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-rigid-d3-development-20260929-iyovgbc5/completed-file-manifest.json",
+      "sha256": "03e2f69038ea60ac5f9f82f0c58b059f9f01ec11e70b167391a26678fed5b75f"
+    },
+    "wheel_members": {
+      "bytes": 1318,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/explicit-chemistry-wheel-20260929-vflbrz2m/wheel-members.json",
+      "sha256": "7ce46ebff2423ee3705788b369bd48ef6c9fae40b25efd29d56813f44687224b"
+    }
+  },
+  "fixed_state_integrity_microbenchmark": {
+    "calls_per_method": 3,
+    "global_cache_added": false,
+    "ligand_atoms": 39,
+    "median_seconds": {
+      "baseline": 2.5317024100222625,
+      "identity_reuse": 1.9084313880011905
+    },
+    "observations": [
+      {
+        "components_exact": true,
+        "constraint_observations_exact": true,
+        "energy_descriptor_exact": true,
+        "energy_exact": true,
+        "evaluator_fingerprint_exact": true,
+        "force_descriptor_exact": true,
+        "forces_exact": true,
+        "method": "baseline",
+        "provenance_exact": true,
+        "scientific_blockers_exact": true,
+        "wall_seconds": 2.750835124985315
+      },
+      {
+        "components_exact": true,
+        "constraint_observations_exact": true,
+        "energy_descriptor_exact": true,
+        "energy_exact": true,
+        "evaluator_fingerprint_exact": true,
+        "force_descriptor_exact": true,
+        "forces_exact": true,
+        "method": "identity_reuse",
+        "provenance_exact": true,
+        "scientific_blockers_exact": true,
+        "wall_seconds": 1.9084313880011905
+      },
+      {
+        "components_exact": true,
+        "constraint_observations_exact": true,
+        "energy_descriptor_exact": true,
+        "energy_exact": true,
+        "evaluator_fingerprint_exact": true,
+        "force_descriptor_exact": true,
+        "forces_exact": true,
+        "method": "identity_reuse",
+        "provenance_exact": true,
+        "scientific_blockers_exact": true,
+        "wall_seconds": 1.9145354889915325
+      },
+      {
+        "components_exact": true,
+        "constraint_observations_exact": true,
+        "energy_descriptor_exact": true,
+        "energy_exact": true,
+        "evaluator_fingerprint_exact": true,
+        "force_descriptor_exact": true,
+        "forces_exact": true,
+        "method": "baseline",
+        "provenance_exact": true,
+        "scientific_blockers_exact": true,
+        "wall_seconds": 2.4444959009997547
+      },
+      {
+        "components_exact": true,
+        "constraint_observations_exact": true,
+        "energy_descriptor_exact": true,
+        "energy_exact": true,
+        "evaluator_fingerprint_exact": true,
+        "force_descriptor_exact": true,
+        "forces_exact": true,
+        "method": "baseline",
+        "provenance_exact": true,
+        "scientific_blockers_exact": true,
+        "wall_seconds": 2.5317024100222625
+      },
+      {
+        "components_exact": true,
+        "constraint_observations_exact": true,
+        "energy_descriptor_exact": true,
+        "energy_exact": true,
+        "evaluator_fingerprint_exact": true,
+        "force_descriptor_exact": true,
+        "forces_exact": true,
+        "method": "identity_reuse",
+        "provenance_exact": true,
+        "scientific_blockers_exact": true,
+        "wall_seconds": 1.9066698069800623
+      }
+    ],
+    "public_validation_boundaries_removed": false,
+    "receptor_atoms": 4376,
+    "redundant_post_evaluation_identity_call_removed": 1,
+    "same_energy_force_components_provenance": true,
+    "source_manifest_unchanged": true
+  },
+  "implementation_source_sha256": "1ace8ae29a95bad25ee58c83926f10d8f027ab622bbe9b5f168f273702f63019",
+  "installed_wheel": {
+    "checkout_shadow_absent": true,
+    "dependencies_shared_from_existing_user_site": true,
+    "fresh_dependency_install_verified": false,
+    "implementation_source_sha256": "1ace8ae29a95bad25ee58c83926f10d8f027ab622bbe9b5f168f273702f63019",
+    "interrupted_explicit_resume_verified": true
+  },
+  "new_training_rows": 0,
+  "observed_PR49_pose": false,
+  "oracle": {
+    "absolute_energy_tolerance": 1e-08,
+    "absolute_force_tolerance": 1e-08,
+    "evaluated": 4,
+    "max_total_energy_error": 2.0804691303055733e-11,
+    "max_total_force_component_error": 5.206857167650014e-11,
+    "passed": 4,
+    "scope": "original registered, rigid adjusted and native final states of separate rigid experiment; not every generated product candidate",
+    "unique_coordinate_states": 3
+  },
+  "product_qualified": false,
+  "protected_outcomes_read": false,
+  "receptor_chemistry": {
+    "aromatic_atoms": 211,
+    "aromatic_bonds": 218,
+    "atoms": 4376,
+    "bonds": 4431,
+    "coordinates_atom_order_parameters_preserved": true,
+    "double_bonds": 413,
+    "features": {
+      "acceptors": 368,
+      "donor_pairs": 431,
+      "hydrophobic": 938,
+      "unexpected_acceptors_in_declared_backbone_ARG_TRP_HIE": {}
+    },
+    "formal_charge_sum": 11,
+    "partial_charge_sum": 11.00000000000004
+  },
+  "registered_input_diagnostic": {
+    "authentic_registered_pose_scored_separately": true,
+    "existing_comparison_changed": false,
+    "finding": "Existing product generates new pocket-centered Haar-rotated placements. max_torsions=0 preserves conformation only; translation_radius is relative to pocket center, not the registered input pose.",
+    "refinement_executed": false
+  },
+  "regression": {
+    "elapsed_seconds": 60.82,
+    "full_repository_suite_claimed": false,
+    "passed": 554
+  },
+  "remaining_priorities": [
+    "explicit registered-pose-preserving proposal policy with replay binding",
+    "native refinement that meets unchanged convergence and internal-strain criteria",
+    "independent permitted observed-pose validation and whole-cost accounting"
+  ],
+  "rigid_then_native": {
+    "criteria": {
+      "final_geometry_eligible": true,
+      "internal_increase_within_5_kcal_mol": false,
+      "native_converged": false,
+      "native_total_not_increased": true,
+      "numerical_audits_passed": true
+    },
+    "internal_increase_from_original_kcal_mol": 43.56158601416561,
+    "native_final_components": {
+      "cross_lennard_jones": 141.13539025721232,
+      "cross_screened_coulomb": 0.6460089887417002,
+      "ligand_internal": -239.57806419198548,
+      "total": -97.79666494603146
+    },
+    "native_final_max_force_kcal_mol_angstrom": 67.12567702518943,
+    "native_initial_components": {
+      "cross_lennard_jones": 625.9995022629256,
+      "cross_screened_coulomb": 6.478301082370964,
+      "ligand_internal": -283.13965020615024,
+      "total": 349.33815313914636
+    },
+    "phase_wall_seconds": {
+      "initial_internal": 0.411441892007133,
+      "initial_rigid_numerical_audit": 9.257188939023763,
+      "native_d3": 69.43882861398743,
+      "rigid_final_numerical_audit": 9.253130939003313,
+      "rigid_internal_verification": 0.11227125002187677,
+      "rigid_preparation": 9.926229249977041
+    },
+    "rigid": {
+      "accepted_steps": 7,
+      "all_atom_centroid_shift_angstrom": [
+        -0.01348896563040138,
+        0.008511892937061713,
+        -0.005958777777591986
+      ],
+      "cross_force_calls": 8,
+      "failed_cross_force_calls": 0,
+      "final_cross_energy_kcal_mol": 632.4778033452966,
+      "final_geometry": {
+        "checks": {
+          "all_distance": true,
+          "all_ratio": true,
+          "centroid_offset": true,
+          "heavy_distance": true,
+          "heavy_ratio": true,
+          "pocket": true
+        },
+        "heavy_centroid_offset_angstrom": 2.4617327628711076,
+        "maximum_ligand_heavy_radius_angstrom": 6.88290232289207,
+        "minimum_all_atom_distance_angstrom": 1.583638798072126,
+        "minimum_all_atom_radius_sum_ratio": 0.6000004136474124,
+        "minimum_heavy_atom_distance_angstrom": 2.5239111442717674,
+        "minimum_heavy_atom_radius_sum_ratio": 0.7423268071387551,
+        "passed": true
+      },
+      "final_projected_force_kcal_mol_angstrom": 64.10735730335585,
+      "full_coordinate_convergence_claimed": false,
+      "initial_cross_energy_kcal_mol": 683.0528315959004,
+      "maximum_internal_distance_drift_angstrom": 2.1316282072803006e-14,
+      "nested_cross_force_wall_seconds": 9.712175921013113,
+      "rotation_from_original": [
+        [
+          0.9999845484261385,
+          0.005317880891604305,
+          0.0016195838337372808
+        ],
+        [
+          -0.0053079053010399715,
+          0.9999672916917144,
+          -0.006102596828647363
+        ],
+        [
+          -0.0016519837429542431,
+          0.006093905936305129,
+          0.9999800674314224
+        ]
+      ],
+      "status": "rigid_line_search_failed_last_accepted_retained",
+      "timings_are_inclusive": true,
+      "trial_count": 62,
+      "wall_seconds": 9.926229249977041
+    },
+    "status": "NOT_ADMITTED",
+    "whole_wall_seconds_before_report_publication": 105.88908703700872
+  },
+  "schema_id": "pr49_explicit_chemistry_development_evidence/1.0.0",
+  "scientifically_validated": false,
+  "source_baseline_commit": "67b67b29d6adb8b6b45e0bdbb4773ab06457402e",
+  "whole_comparison": {
+    "attempts": [
+      {
+        "accepted_iterations": 32,
+        "candidate_id": "pose-00000-ee9db638232d",
+        "converged": false,
+        "evaluation_count": 33,
+        "final_components": {
+          "cross_lennard_jones": 7736.607825002588,
+          "cross_screened_coulomb": 9.446761999614033,
+          "ligand_internal": 1493.861966791102,
+          "total": 9239.916553793304
+        },
+        "final_energy": 9239.916553793304,
+        "initial_components": {
+          "cross_lennard_jones": 157131808.90842786,
+          "cross_screened_coulomb": 4.120420624715004,
+          "ligand_internal": -283.1396502061511,
+          "total": 157131529.8891983
+        },
+        "initial_energy": 157131529.8891983,
+        "internal_increase_kcal_mol": 1777.0016169972532
+      },
+      {
+        "accepted_iterations": 32,
+        "candidate_id": "pose-00001-37a66fc8aaa4",
+        "converged": false,
+        "evaluation_count": 33,
+        "final_components": {
+          "cross_lennard_jones": 4583.866066070311,
+          "cross_screened_coulomb": -8.328791396187476,
+          "ligand_internal": 1018.3692573458532,
+          "total": 5593.906532019976
+        },
+        "final_energy": 5593.906532019976,
+        "initial_components": {
+          "cross_lennard_jones": 51078742.522106074,
+          "cross_screened_coulomb": -5.52075481689178,
+          "ligand_internal": -283.1396502061501,
+          "total": 51078453.86170106
+        },
+        "initial_energy": 51078453.86170106,
+        "internal_increase_kcal_mol": 1301.5089075520032
+      }
+    ],
+    "candidate_rows": 4,
+    "costs": {
+      "baseline": {
+        "historical_force_calls": 0,
+        "historical_score_calls": 1,
+        "intent_counts": [
+          1,
+          1
+        ],
+        "interrupted_attempts_unknown_cost": 0,
+        "new_candidates": 1,
+        "new_force_calls": 0,
+        "new_score_calls": 1,
+        "reused_candidates": 1
+      },
+      "refined": {
+        "historical_force_calls": 0,
+        "historical_score_calls": 0,
+        "intent_counts": [
+          1,
+          1
+        ],
+        "interrupted_attempts_unknown_cost": 0,
+        "new_candidates": 2,
+        "new_force_calls": 66,
+        "new_score_calls": 2,
+        "reused_candidates": 0
+      }
+    },
+    "distinct_requested_candidates": 2,
+    "execution_complete": true,
+    "paired_decisions": [
+      {
+        "candidate_id": "pose-00000-ee9db638232d",
+        "reason": "refined_pose_invalid_or_incomplete",
+        "variant": "none"
+      },
+      {
+        "candidate_id": "pose-00001-37a66fc8aaa4",
+        "reason": "refined_pose_invalid_or_incomplete",
+        "variant": "none"
+      }
+    ],
+    "rows": {
+      "baseline": [
+        {
+          "blockers": [
+            "receptor_ligand_clash_detected",
+            "element_vdw_receptor_severe_overlap_detected"
+          ],
+          "candidate_id": "pose-00000-ee9db638232d",
+          "max_bond_length_delta_angstrom": 0.0,
+          "min_receptor_distance_angstrom": 0.5607722359081713,
+          "score": 5730.249782011694,
+          "score_success": true,
+          "selection_eligible": false
+        },
+        {
+          "blockers": [
+            "receptor_ligand_clash_detected",
+            "element_vdw_receptor_severe_overlap_detected"
+          ],
+          "candidate_id": "pose-00001-37a66fc8aaa4",
+          "max_bond_length_delta_angstrom": 1.176836406102666e-14,
+          "min_receptor_distance_angstrom": 0.6126214058837927,
+          "score": 5792.594481841958,
+          "score_success": true,
+          "selection_eligible": false
+        }
+      ],
+      "refined": [
+        {
+          "blockers": [
+            "bond_length_preservation_failed",
+            "element_vdw_receptor_severe_overlap_detected"
+          ],
+          "candidate_id": "pose-00000-ee9db638232d",
+          "max_bond_length_delta_angstrom": 1.4916409391144134,
+          "min_receptor_distance_angstrom": 1.3138525811153947,
+          "score": 1475.2902356953266,
+          "score_success": true,
+          "selection_eligible": false
+        },
+        {
+          "blockers": [
+            "bond_length_preservation_failed",
+            "element_vdw_receptor_severe_overlap_detected"
+          ],
+          "candidate_id": "pose-00001-37a66fc8aaa4",
+          "max_bond_length_delta_angstrom": 0.8620581284353666,
+          "min_receptor_distance_angstrom": 1.091673657460379,
+          "score": 1114.3271092905152,
+          "score_success": true,
+          "selection_eligible": false
+        }
+      ]
+    },
+    "score_success_rows": 4,
+    "selected_candidates": 0,
+    "total_wall_time_including_all_preparation_verification_storage": null,
+    "total_wall_time_status": "not_measured_as_one_enclosing_scope",
+    "verification": {
+      "execution_complete": true,
+      "scientifically_validated": false,
+      "structural_verification_passed": true,
+      "summary_sha256": "2d07f66488e08898f1ab1b277d58cb99737fa4301a2fd3b32fda9ca65acd437b"
+    }
+  }
+}

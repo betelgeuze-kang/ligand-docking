@@ -12,6 +12,7 @@ from betelgeuze_engine_v2.docking.scorer_v1 import (
 )
 from betelgeuze_engine_v2.docking.scoring import DockingScoreDescriptor, ScoreDirection
 from .score_replay import _IDENTITIES, _VALUES, _COUNTS
+from .scoring_profile import plan_model, descriptor as expected_score_descriptor, terms_class
 from .provenance import (
     ResearchError,
     digest,
@@ -116,15 +117,14 @@ def _verify(doc):
             "arms",
         },
     )
-    same(plan["schema_id"], "cpu_candidate_comparison_plan/1.0.0", "plan schema")
+    scoring_model = plan_model(plan)
     same(digest(plan), doc["plan_sha256"], "plan digest")
     if plan["external_request_sha256"] is not None:
         require_digest(plan["external_request_sha256"])
     for name in ("source", "authority", "problem", "search_space", "validity_context"):
         require_digest(plan[name])
-    exact_fields(plan["scorer"], {"context", "config", "backend"})
-    for value in plan["scorer"].values():
-        require_digest(value)
+    for name in ("context", "config", "backend"):
+        require_digest(plan["scorer"][name])
     n = integer(plan["atom_count"], 1, 256)
     budget, solver, comparison, before, after, bound, effective = execution_plan(
         plan["budget"], plan["solver"], plan["comparison"]
@@ -161,14 +161,7 @@ def _verify(doc):
             cross.receptor_system_sha256,
             "fixed receptor binding",
         )
-    descriptor = DockingScoreDescriptor(
-        SCORER_V1_SCORE_ID,
-        ScoreDirection.MINIMIZE,
-        None,
-        "uncalibrated_dimensionless_chemistry_pose_ordering_score",
-        False,
-        applicability_domain_id=SCORER_V1_APPLICABILITY_DOMAIN_ID,
-    )
+    descriptor = expected_score_descriptor(scoring_model)
     same(doc["score_descriptor"], descriptor.to_dict(), "score descriptor")
     for field in ("arms",):
         exact_fields(plan[field], {"baseline", "refined"})
@@ -331,7 +324,7 @@ def _verify(doc):
                     raise ResearchError("failed refinement produced success")
                 same(stages["score.evaluate"]["completed"], 1, "score completed")
                 terms = row["terms"]
-                restored = ScorerV1Terms(
+                restored = terms_class(scoring_model)(
                     **{k: terms[k] for k in _IDENTITIES + _COUNTS},
                     **{k: float.fromhex(terms[k + "_binary64_hex"]) for k in _VALUES},
                 )

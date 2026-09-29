@@ -12,6 +12,7 @@ from betelgeuze_product.reference_minimization_workflow import _bound
 from betelgeuze_product.cpu_refinement_v1_2.workflow import load_request, REQUEST_SCHEMA
 from betelgeuze_product.cpu_refinement_v1_2.fixed_receptor import CrossParameters, FixedReceptorEnvironment, FIXED_REQUEST_SCHEMA
 from betelgeuze_product.cpu_refinement_v1_2.minimization import minimize_extended
+from betelgeuze_product.cpu_refinement_v1_2.scoring_profile import FIXED_REQUEST_SCHEMAS
 from betelgeuze_product.cpu_refinement_v1_2.provenance import source_manifest, digest
 
 
@@ -24,7 +25,7 @@ def write(path, document):
 def run(request_path, output):
     started = time.perf_counter()
     request = json.loads(request_path.read_bytes())
-    if request['schema_id'] != FIXED_REQUEST_SCHEMA:
+    if request['schema_id'] not in FIXED_REQUEST_SCHEMAS:
         raise ValueError('fixed receptor request required')
     source = source_manifest()
     internal_request = {k: v for k, v in request.items() if k != 'cross_parameters'}

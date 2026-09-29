@@ -16,6 +16,7 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import (
 )
 from betelgeuze_product.reference_minimization_workflow import _directory, _publish
 from .candidate_journal import open_journal, _load, _envelope
+from .scoring_profile import LEGACY_MODEL, EXPLICIT_MODEL, EXPLICIT_PLAN_SCHEMA, scorer_class, require_model
 from .candidate_execution import CandidateExecution
 from .comparison import choose_variant
 from .evaluation import ExtendedEvaluator
@@ -54,7 +55,11 @@ def run_candidate_comparison(
     selection=None,
     fixed_environment=None,
     request_sha256=None,
+    scoring_model=LEGACY_MODEL,
 ):
+    require_model(scoring_model)
+    if scoring_model == EXPLICIT_MODEL and fixed_environment is None:
+        raise ResearchError("explicit chemical features require fixed-receptor comparison")
     if request_sha256 is not None:
         require_digest(request_sha256)
     comparison = RefinementComparisonConfig() if comparison is None else comparison
@@ -105,11 +110,11 @@ def run_candidate_comparison(
             ligand_system=ligand_system,
         )
         plans.append((name, arm_budget, proposals, receipt))
-    bound_scorer = ChemistryPoseScorerV1(
+    bound_scorer = scorer_class(scoring_model)(
         authority, receptor_system, ligand_system, implementation_source_sha256=source
     )
     plan = {
-        "schema_id": "cpu_candidate_comparison_plan/1.0.0",
+        "schema_id": EXPLICIT_PLAN_SCHEMA if scoring_model == EXPLICIT_MODEL else "cpu_candidate_comparison_plan/1.0.0",
         "source": source,
         "environment": runtime,
         "external_request_sha256": request_sha256,
@@ -127,6 +132,7 @@ def run_candidate_comparison(
             "context": bound_scorer.context.fingerprint_sha256,
             "config": bound_scorer.config.fingerprint_sha256,
             "backend": bound_scorer.backend_receipt_sha256,
+            **({"feature_model_id": EXPLICIT_MODEL} if scoring_model == EXPLICIT_MODEL else {}),
         },
         "solver": solver.to_dict(),
         "budget": budget.to_dict(),
@@ -159,7 +165,7 @@ def run_candidate_comparison(
         }:
             raise ResearchError("unexpected comparison journal files")
         for name, arm_budget, proposals, _ in plans:
-            scorer = ChemistryPoseScorerV1(
+            scorer = scorer_class(scoring_model)(
                 authority,
                 receptor_system,
                 ligand_system,

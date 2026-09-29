@@ -22,6 +22,7 @@ from .provenance import ResearchError, canonical, digest, environment, exact_fie
 from .selection import SelectionConfig
 from .verification import verify_report
 from .work import WorkMeter, verify_admitted_bytes
+from .scoring_profile import FIXED_REQUEST_SCHEMAS, FIXED_REPORT_SCHEMAS, request_model, outer_report_schema
 
 REQUEST_SCHEMA = "cpu_extended_comparison_request/1.2.0"
 
@@ -90,7 +91,7 @@ def run_request(request: dict, output: str | Path) -> dict:
         sources = source_manifest()
         implementation = digest(sources)
     with meter.measure("inputs.parse"):
-        fixed_mode = request["schema_id"] == FIXED_REQUEST_SCHEMA
+        fixed_mode = request["schema_id"] in FIXED_REQUEST_SCHEMAS
         prepared = request if not fixed_mode else {**{k: v for k, v in request.items() if k != "cross_parameters"}, "schema_id": REQUEST_SCHEMA}
         authority, receptor, ligand, parameters, budget, solver, solvent, comparison, selection = load_request(prepared, implementation)
         fixed = None if not fixed_mode else FixedReceptorEnvironment(receptor, CrossParameters.from_dict(_bound(request["cross_parameters"])))
@@ -102,6 +103,7 @@ def run_request(request: dict, output: str | Path) -> dict:
         with meter.measure("comparison.execute"):
             result = run_comparison(authority, budget, receptor_system=receptor, ligand_system=ligand,
                 parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection,
+                scoring_model=request_model(request),
                 **({} if fixed is None else {"fixed_environment": fixed}))
         result["request_binding"] = binding
         result["report_sha256"] = digest({key: value for key, value in result.items() if key != "report_sha256"})
@@ -114,7 +116,7 @@ def run_request(request: dict, output: str | Path) -> dict:
         with meter.measure("implementation.verify"):
             if source_manifest() != sources or result["implementation_source_sha256"] != implementation:
                 raise ResearchError("implementation source changed")
-        report = {"schema_id": "local_cpu_fixed_receptor_comparison/1.0.0" if fixed_mode else "local_cpu_extended_comparison/1.2.1", "request_sha256": digest(request),
+        report = {"schema_id": outer_report_schema(result["schema_id"]), "request_sha256": digest(request),
                   "implementation_sources": sources, "implementation_source_sha256": implementation,
                   "environment": environment(), "result": result, "verification": verification,
                   "execution_work_before_report_publication": meter.snapshot()}
@@ -158,9 +160,9 @@ def _verify_output(directory: str | Path) -> dict:
         raise ResearchError("completion marker does not match failure-inclusive result")
     verify_request_settings(request, report["result"])
     verification = verify_report(report["result"])
-    current = report["result"]["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}
-    expected_schema = ("local_cpu_fixed_receptor_comparison/1.0.0" if report["result"]["schema_id"] == FIXED_REPORT_SCHEMA
-                       else "local_cpu_extended_comparison/1.2.1" if current else "local_cpu_extended_comparison/1.2.0")
+    current = report["result"]["schema_id"] in ({REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS)
+    expected_schema = (outer_report_schema(report["result"]["schema_id"]) if current
+                       else "local_cpu_extended_comparison/1.2.0")
     same(report["schema_id"], expected_schema, "outer report schema")
     stored = report["verification"]
     expected = verification if current or "verification_schema_id" in stored else {

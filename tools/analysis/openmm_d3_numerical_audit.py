@@ -27,6 +27,7 @@ from betelgeuze_product.cpu_refinement_v1_2.fixed_receptor import (
     CrossParameters, FixedReceptorEnvironment, FIXED_REQUEST_SCHEMA,
 )
 from betelgeuze_product.cpu_refinement_v1_2.openmm_periodic_extension import OpenMMPeriodicParameters
+from betelgeuze_product.cpu_refinement_v1_2.scoring_profile import FIXED_REQUEST_SCHEMAS
 from betelgeuze_product.cpu_refinement_v1_2.provenance import canonical, digest, source_manifest
 from betelgeuze_product.cpu_refinement_v1_2.workflow import REQUEST_SCHEMA, load_request
 from betelgeuze_product.local_research_workflow import _decode
@@ -268,7 +269,7 @@ def audit(request_path, ligand_xml_path, receptor_xml_path, *, final_coordinates
     paths = [Path(path).absolute() for path in (request_path, ligand_xml_path, receptor_xml_path)]
     raw_request, ligand_xml, receptor_xml = map(_read, paths)
     request = _decode(raw_request)
-    if request.get("schema_id") != FIXED_REQUEST_SCHEMA or request.get("solvation") is not None:
+    if request.get("schema_id") not in FIXED_REQUEST_SCHEMAS or request.get("solvation") is not None:
         raise NumericalAuditError("explicit_fixed_receptor_request_required")
     sources = source_manifest()
     prepared = {key: value for key, value in request.items() if key != "cross_parameters"}

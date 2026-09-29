@@ -145,3 +145,36 @@ assign fit, calibration or independent evaluation roles. Protected outcome files
 and Fresh-128 results are not inputs. Mathematical agreement, reference-pose
 recovery, candidate activity ordering and affinity prediction remain distinct
 validation questions.
+
+## Explicit receptor chemistry and the next execution
+
+`derive_receptor_chemistry.py` separately derives a complete chemical graph from
+the source CIF component tables and the declared AMBER preparation states.
+It preserves coordinates, atom order, masses, partial charges and bond adjacency.
+Only the supported, explicitly mapped standard residues, HIE, CYX and terminal
+states are accepted. A coordinate or force-field change is not a chemistry repair.
+
+`bind_chemical_request.py` binds that new receptor identity into a new request.
+The schema `cpu_explicit_chemistry_fixed_receptor_request/1.0.0` selects the
+versioned `explicit_graph_hbond_features/1.0.0` feature model and a distinct,
+uncalibrated scorer. Existing request schemas retain their existing scorer.
+The new model checks complete explicit valence before pocket filtering and
+classifies donors/acceptors using chemical groups, rather than atom names alone.
+Unsupported or incomplete chemistry is rejected. Existing score weights and the
+native D3 force model do not change. Old and new score receipts are not interchangeable.
+
+Use a new output directory for each source version. The common product commands
+are `run`, `run-resumable`, `verify` and `verify-resumable`; resumable execution
+retains its original request and source identity. A source change requires a new
+execution rather than relabelling or overwriting an old journal.
+
+`d3_development_experiment.py` is a separate, bounded research experiment:
+rigid-body cross-energy descent followed by the unchanged 32-step native D3
+minimizer. It writes the protocol before evaluating energy, preserves internal
+geometry during rigid preparation, records every trial and retains the existing
+convergence and strain limits. Its changed starting candidate is explicitly
+distinct from the product's same-candidate comparison. It cannot establish pose
+recovery without an observed PR49 reference pose.
+
+See [current goals](../priority_goals_20260929.md) for completion evidence and
+remaining scientific and operational work.

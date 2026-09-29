@@ -17,6 +17,7 @@ from .provenance import ResearchError, digest, source_manifest
 from .refinement import ExtendedRefiner
 from .selection import SelectionConfig, candidate_from_row, select_final_candidates, refinement_admissible
 from .work import WorkMeter
+from .scoring_profile import LEGACY_MODEL, EXPLICIT_MODEL, EXPLICIT_REPORT_SCHEMA, scorer_class, require_model
 
 
 class MeasuredScorer(ChemistryPoseScorerV1):
@@ -29,6 +30,16 @@ class MeasuredScorer(ChemistryPoseScorerV1):
     def _score_terms_python(self, proposal):
         with self._work_meter.measure("score.evaluate"):
             return super()._score_terms_python(proposal)
+
+
+def measured_scorer(scoring_model, *args, work_meter, **kwargs):
+    if scoring_model == LEGACY_MODEL:
+        return MeasuredScorer(*args, work_meter=work_meter, **kwargs)
+    class MeasuredExplicit(scorer_class(scoring_model)):
+        def _score_terms_python(self, proposal):
+            with work_meter.measure("score.evaluate"):
+                return super()._score_terms_python(proposal)
+    return MeasuredExplicit(*args, **kwargs)
 
 
 def choose_variant(before: dict, after: dict, attempt: dict, require_convergence: bool) -> tuple[str, str]:
@@ -51,7 +62,10 @@ def choose_variant(before: dict, after: dict, attempt: dict, require_convergence
 
 
 def run_comparison(authority, budget, *, receptor_system, ligand_system, parameters,
-                   solver: SolverConfig, solvation=None, comparison=None, selection=None, fixed_environment=None) -> dict:
+                   solver: SolverConfig, solvation=None, comparison=None, selection=None, fixed_environment=None, scoring_model=LEGACY_MODEL) -> dict:
+    require_model(scoring_model)
+    if scoring_model == EXPLICIT_MODEL and fixed_environment is None:
+        raise ResearchError("explicit chemical features require fixed-receptor comparison")
     comparison = RefinementComparisonConfig() if comparison is None else comparison
     selection = SelectionConfig(budget.top_k) if selection is None else selection
     if type(solver) is not SolverConfig:
@@ -77,12 +91,21 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
         **({} if fixed_environment is None else {"fixed_environment": fixed_environment}))
     refiner.assert_ready()
     arms, searches, descriptors = {}, {}, {}
+    scorer_binding = None
     for name, arm_budget, arm_refiner in (("baseline", before_budget, None), ("refined", after_budget, refiner)):
         start = time.perf_counter()
         meter = WorkMeter()
         with meter.measure("scorer.construct"):
-            scorer = MeasuredScorer(authority, receptor_system, ligand_system,
+            scorer = measured_scorer(scoring_model, authority, receptor_system, ligand_system,
                                    work_meter=meter, implementation_source_sha256=implementation)
+        if scoring_model == EXPLICIT_MODEL:
+            observed_binding = {"feature_model_id": EXPLICIT_MODEL,
+                "context": scorer.context.fingerprint_sha256,
+                "config": scorer.config.fingerprint_sha256,
+                "backend": scorer.backend_receipt_sha256}
+            if scorer_binding is not None and scorer_binding != observed_binding:
+                raise ResearchError("comparison arms have different scorer identity")
+            scorer_binding = observed_binding
         with meter.measure("context.construct"):
             context = build_guided_placement_context(authority, receptor_system, ligand_system)
         with meter.measure("search.execute"):
@@ -167,8 +190,10 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
               "customer_execution_allowed": False, "claim_safe": False}
     if fixed_environment is not None:
         fixed_environment.assert_intact()
-        report.update(schema_id=FIXED_REPORT_SCHEMA, selection_policy_id=FIXED_POLICY_ID,
+        report.update(schema_id=EXPLICIT_REPORT_SCHEMA if scoring_model == EXPLICIT_MODEL else FIXED_REPORT_SCHEMA, selection_policy_id=FIXED_POLICY_ID,
                       cross_parameters=fixed_environment.cross.to_dict(),
                       receptor_ligand_interaction_energy_minimized=True)
+    if scoring_model == EXPLICIT_MODEL:
+        report["scorer"] = scorer_binding
     report["report_sha256"] = digest(report)
     return report
