@@ -94,6 +94,9 @@ jobs:
           tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
           prefixes = ('betelgeuze_engine/', 'betelgeuze_engine_v2/', 'betelgeuze_product/', 'core/', 'tests/unit/', 'tools/', 'docs/research/human_5ht6_d3_complex/', 'docs/research/human_5ht6_sro_numerical_preparation/')
           files = [p for p in tracked if p.endswith('.py') and p.startswith(prefixes)]
+          occurrence_inputs = ['docs/evidence/human_5ht6_2024_occurrence_contract_v1.json', 'docs/evidence/human_5ht6_2024_occurrences_v1.json']
+          assert all(path in tracked for path in occurrence_inputs)
+          files = sorted(set(files + occurrence_inputs))
           manifest = {p: hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for p in files}
           pathlib.Path('source-sha256.json').write_text(json.dumps(manifest, sort_keys=True, indent=2)+'\n')
           with tarfile.open('test-source.tar.gz', 'w:gz') as bundle:
