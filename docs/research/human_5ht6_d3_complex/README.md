@@ -212,3 +212,20 @@ agree numerically but do not change that negative outcome. See the
 and [hash-bound evidence](../../evidence/pr49_constrained_refinement_development_v1.json)
 for denominators, complete geometry scope, source-integrity overhead and the next
 feasibility-preserving research criteria.
+
+## Single feasible descent step
+
+`feasible_step_development_experiment.py` and `feasible_step_core.py` implement
+the separately frozen next milestone: one fixed negative-gradient ray, at most
+16 halved step lengths, exact strain/bond and all 8+6 geometry checks, and the
+first strictly energy-lowering Armijo step retained. Every attempt is recorded;
+no later optimizer iteration runs after acceptance.
+
+The actual first trial at nominal 0.05 Å passed. Energy decreased by
+83.859850757 kcal/mol with strain +0.325376508 and maximum bond change
+0.032742467 Å. Original and retained native states both passed independent
+arithmetic audit. Force remains 484.650668593, so this is one feasible research
+endpoint, not converged or product-admitted refinement. Molecular backtracking
+was not required; its failure/shortening paths have synthetic coverage. See the
+[executed report](../pr49_feasible_step_20260929.md) and
+[evidence manifest](../../evidence/pr49_feasible_step_development_v1.json).

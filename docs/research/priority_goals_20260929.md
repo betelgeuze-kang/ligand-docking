@@ -9,8 +9,8 @@ the requested priorities and observable completion criteria.
 |---|---|---|---|
 | 1 | Transfer a complete, source-bound receptor chemical graph | Bond orders, aromaticity, formal charge, HIE/CYX/termini and atom mapping verified; coordinates, partial charges, masses and adjacency unchanged; unsupported states rejected | Implemented and verified on all 4,376 receptor atoms |
 | 2 | Preserve the prepared input and complete the CPU comparison | Explicit registered-pose request/plan, exact initial coordinates, normal and installed pause/resume agreement, failure denominator and verification | Implemented; actual one-pose/two-row execution and exact installed replay passed; valid baseline retained |
-| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Rigid, L-BFGS and strain/bond-constrained experiments completed; latest 148 points / 128 iterations retained no improved incumbent; useful refinement remains unresolved |
-| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Previous CPU selection 806 and research selection 66 passed; new constrained/geometry/runner selection 86 passed; installed actual-case restart passed with shared dependencies; hosted CI separately pending |
+| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | One exact-feasible energy-lowering step now retained: two native points, strain +0.325377, bond change 0.0327425 Å; force 484.651 remains unconverged; repeated-step refinement unresolved |
+| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Latest focused selection 89 passed (61 new, 28 reused); earlier CPU 806 / research 66 / constrained 86 scopes remain historical and overlapping; installed restart passed with shared dependencies; hosted CI separately pending |
 
 Preparation, arithmetic agreement, pose recovery, candidate prioritization and
 affinity are separate questions. PR49 has no observed reference pose here. The
@@ -50,9 +50,14 @@ the implemented fix and narrow the remaining priorities:
    independent KKT diagnostic. Its 128-iteration/148-point run produces no eligible
    update: terminal strain is 5.000032510069104 and force is 47.337095201. The
    original pose remains retained, with neither raw-force nor KKT convergence.
-   Next freeze a bounded feasibility-preserving step experiment; require an
-   actually retained lower-energy feasible pose while preserving the separate
-   product force threshold. Algorithm and budget changed together here; a
+   The subsequent [single feasible-step experiment](pr49_feasible_step_20260929.md)
+   completed that narrow transition: its first 0.05 Å trial reduced total energy
+   from 399.913181390 to 316.053330633 while meeting exact strain/bond and all
+   8+6 geometry gates. Both native states passed independent arithmetic checks.
+   Its force remains 484.650668593, so no product refinement is admitted.
+   Next freeze a bounded repeated-step protocol that preserves the original
+   strain/bond reference throughout; report blocked steps, budget exhaustion
+   and raw-force convergence separately. Algorithm and budget changed together; a
    matched-budget benefit remains unproven. Do not substitute research optimizers
    into the product. Repeated integrity checks are a measured research-harness
    cost; optimize them only with mutation detection preserved.
