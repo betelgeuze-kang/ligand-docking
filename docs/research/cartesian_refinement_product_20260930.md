@@ -111,10 +111,19 @@ suite does not turn unknown cost into zero.
 The synthetic checks test software and numerical consistency, not experimental
 affinity, pose recovery or candidate-ranking quality.
 
+The [subsequent installed SRO execution](installed_cartesian_sro_execution_20260930.md)
+now runs the same prepared state through this wheel's pause, resume and verify
+commands. It performs 253 new optimizer objectives and one restart force check,
+converges at the unchanged raw-force threshold and reproduces 40,986 retained
+binary64 observation values exactly. That is one real prepared molecular case,
+with no new independent OpenMM call, assay endpoint or pose-recovery evaluation.
+The original evidence index above remains a dated record of the earlier
+synthetic-only validation; the [new execution index](../evidence/installed_cartesian_sro_execution_v1.json)
+separately pins this later run.
+
 The five development goals remain open. This package has not yet replaced the
-native registered four-arm comparator's refinement worker. A separately fixed
-installed-product protocol must reproduce the real SRO outcome, and independently
+native registered four-arm comparator's refinement worker. Independently
 eligible real candidate/endpoint correspondence is still required for the
 similarity/native/native-plus-AI comparison. No new real fit rows, source-role
 promotion, protected-evaluation use, model training, HIP claim or service
-qualification follows from the new implementation.
+qualification follows from the new installed execution.

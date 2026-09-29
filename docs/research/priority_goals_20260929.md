@@ -8,10 +8,10 @@ is used. The five requirements remain:
 | Goal | Evidence still required for completion | Current boundary |
 |---|---|---|
 | 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 computational preparation and a typed 205-occurrence source audit exist; 78 printed IDs and six repeated reports do not establish independent measurements. Source-family/identity/intake clearance remains incomplete; no newly admitted fit/calibration/evaluation rows |
-| 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | The new fixed-budget SRO comparison completes: external L-BFGS converges at 253 objective calls with force 0.00095027, all 8 scoped geometry and 2 initial/final same-math checks passing; SD remains unconverged after 417 calls. This is one declared-state development result, not pose recovery, affinity validation or product optimizer integration |
+| 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | Fixed-budget external L-BFGS converges at 253 objective calls with force 0.00095027, all 8 scoped geometry and 2 retained initial/final same-math checks passing; SD remains unconverged after 417 calls. The installed Cartesian product separately completes 253 new objective calls plus one restart check on the same state, reproducing 40,986 retained binary64 values. This is one declared-state development result, not pose recovery or affinity validation |
 | 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Source-bound registered-pose v3 now passes a two-candidate synthetic four-arm installed run and guarded reuse; independently cleared real candidates and scientific matched comparison are incomplete |
 | 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Deferred diagnostic formatting retains both fresh integrity passes; four-state SRO full outputs match with evaluation mean 6.18% lower, and the receptor integrity guard mean is 2.62% lower; full preparation-through-storage cost and broader throughput remain unproved |
-| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | The sulfonyl-compatible baseline passes 120 affected tests and a fresh 44-runtime dependency installation. A separate Cartesian SD/L-BFGS product path now implements durable trial-level restart, full-force continuation checks and completed zero-work reuse. Installed synthetic iteration/resume has passed at earlier implementation snapshots; final recovery-boundary validation, real installed SRO execution and native comparator integration are tracked in the Cartesian product report. All five real end-to-end requirements remain open; historical test counts are not added across changed versions |
+| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | The sulfonyl-compatible baseline passes 120 affected tests and a fresh 44-runtime dependency installation. A separate Cartesian SD/L-BFGS product path implements durable trial-level restart, full-force continuation checks and completed zero-work reuse. Current-source recovery tests pass; installed synthetic iteration/resume and the later real SRO pause/resume/verify pass with exact retained-trajectory agreement. Native comparator integration and wider installation/workflow validation remain open. All five real end-to-end requirements remain open; historical test counts are not added across changed versions |
 
 The work-package priorities below do not replace these five goals.
 
@@ -19,7 +19,7 @@ The work-package priorities below do not replace these five goals.
 |---|---|---|---|
 | 1 | Transfer a complete, source-bound receptor chemical graph | Bond orders, aromaticity, formal charge, HIE/CYX/termini and atom mapping verified; coordinates, partial charges, masses and adjacency unchanged; unsupported states rejected | Implemented and verified on all 4,376 receptor atoms |
 | 2 | Preserve the prepared input and complete the CPU comparison | Explicit registered-pose request/plan, exact initial coordinates, normal and installed pause/resume agreement, failure denominator and verification | Implemented; actual one-pose/two-row execution and exact installed replay passed; valid baseline retained |
-| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Historical PR49 and 32-step SRO remain NOT_ADMITTED. The SRO comparison finds a development-eligible external L-BFGS state at 253 calls with force 0.00095027; matched-cap SD fails after 417 calls. A separate Cartesian product path is implemented and reproduces all 670 retained observations without new physics. Actual execution of that installed product and connection to the native comparison worker remain required |
+| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Historical PR49 and 32-step SRO remain NOT_ADMITTED. The SRO comparison finds a development-eligible external L-BFGS state at 253 calls with force 0.00095027; matched-cap SD fails after 417 calls. The separate Cartesian product first replayed all 670 retained observations without new physics, then executed the same SRO state in the installed wheel with 253 actual new optimizer evaluations and one restart force check. Native comparison-worker connection remains required |
 | 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Canonical normalization now defers diagnostic-path construction while retaining fresh traversal and both digests; controlled fixed-state SRO evaluation has 18/18 completed attempts and exact full outputs. Current-source regression and installed replay evidence is tracked in the CPU normalization report; hosted completion is separate |
 
 Preparation, arithmetic agreement, pose recovery, candidate prioritization and
@@ -166,7 +166,7 @@ matches exactly. SD uses all 417 calls and retains the baseline because force
 5.864118662 exceeds 0.001. L-BFGS converges after 253 calls at 0.000950270044,
 with all original strain, geometry, score and independent numerical requirements
 passing. Its refined selection is the external research protocol decision;
-the installed product solver has not been replaced. All 670 attempted states
+the native v1.2 comparator's refinement worker has not been replaced. All 670 attempted states
 and returned forces are retained, with no extrapolation after early termination.
 This justifies a versioned product L-BFGS integration, not new assay admission,
 general algorithm ranking, affinity claims or a HIP transition.
@@ -199,9 +199,11 @@ adds the separate request/solver/CLI, durable objective and score reservations,
 full-force restart verification, and replayed curvature history. Its numerical
 kernel reproduces all 670 retained SRO observations exactly without another
 force calculation. Installed synthetic iteration and resume evidence is tracked
-in that report. Actual SRO execution of this new installed version and connection
-to the native four-arm comparator remain separate work; neither the original
-five goals nor real source/role admission are declared complete.
+in that report. The [later installed SRO execution](installed_cartesian_sro_execution_20260930.md)
+performs 253 new optimizer evaluations, one restart force check and completed
+structural verification on the same prepared state, with exact retained-trajectory
+agreement. Connection to the native four-arm comparator and real source/role
+admission remain separate work; the original five goals are not declared complete.
 
 The [retained research-oracle boundary correction](retained_research_oracle_boundary_20260930.md)
 addresses the observed `development-protocol` CI failure: nine unchanged

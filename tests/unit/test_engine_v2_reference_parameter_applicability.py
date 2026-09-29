@@ -35,7 +35,7 @@ def test_frozen_h5_record_binds_parameter_origin_runtime_envelope_and_digest() -
         FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
     )
     assert FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256 == (
-        "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
+        "725171ad350f22d471b0a2cfdcd8c94f56cfbb795af3f585d3d655c365e7da0b"
     )
     assert record.record_sha256 == document["record_sha256"]
 

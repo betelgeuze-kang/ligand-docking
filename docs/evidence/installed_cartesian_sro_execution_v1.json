@@ -1,0 +1,183 @@
+{
+  "HIP_or_service_qualified": false,
+  "actual_force_calls": 254,
+  "affinity_or_pose_recovery_validated": false,
+  "all_pinned_inputs_still_match": true,
+  "baseline_dimensionless_score": -16.64914897958716,
+  "candidate_count": 1,
+  "completed_verification_new_force_or_score_calls": 0,
+  "executed_wheel": {
+    "bytes": 2482990,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/installation-v3/wheels/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+    "sha256": "00814229724d90cca5b81d00c2a78a4ae6dfe983e95930552ca693d2c13484b8"
+  },
+  "experimental_labels_read": 0,
+  "final_maximum_raw_atom_force_kcal_per_mol_angstrom": 0.0009502700440099484,
+  "final_model_energy_kcal_per_mol": -37.41137030653765,
+  "final_numerical_checkpoint": {
+    "bytes": 50781,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/run/numerical/checkpoints/checkpoint-00508.json",
+    "sha256": "eff854040b8e5e46f8d936bb1c979af1fa58ffa7facb729d4bc46d5c14560b3f"
+  },
+  "independent_new_openmm_calls": 0,
+  "installed_build_receipt": {
+    "bytes": 6726,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cartesian-product-validation-20260930-2iag28p5/installation-v3/build-install-probe.json",
+    "sha256": "d06baa58e97f34c08f9cc1894698aeb3fe1a09e8138fd8d935b9677f4bff5deb"
+  },
+  "native_four_arm_comparator_connected": false,
+  "newly_admitted_fit_rows": 0,
+  "numerical_checkpoint_count": 254,
+  "numerical_events": {
+    "bytes": 2219785,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/run/numerical/events.jsonl",
+    "sha256": "d2672d598fdc3136b2cfcd71132af03851c61b54d5c718cc990e8cdd28fefcc2"
+  },
+  "numerical_result": {
+    "bytes": 52015,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/run/numerical/result.json",
+    "sha256": "2d389f5e7eaa9e98b9c82c91d53fa2af85461facaf5253ae4fdee78f40bde4d6"
+  },
+  "optimizer_force_calls": 253,
+  "optimizer_objective_attempts": 253,
+  "outer_result": {
+    "bytes": 591181,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/run/result.json",
+    "sha256": "6b0a633dbd5cd2f9afafb5510ce0e54e1ecc0f2f25cc4bb8540909471d4d1ac3"
+  },
+  "prepared_inputs": {
+    "cross_parameters": {
+      "bytes": 634803,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/cross-parameters.json",
+      "sha256": "226cb9f4be87b40d312e4b3bdb0dbc785bd6d6e87daa68e2f6abec76dde22d52"
+    },
+    "extensions": {
+      "bytes": 10457,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/extensions.json",
+      "sha256": "871c1a252c87c0b4f134c8b572f009f99658fea88f1076c9ee3fe1461a0871f6"
+    },
+    "ligand": {
+      "bytes": 66662,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand-canonical.json",
+      "sha256": "aee0cdee35491fc44998a14c69c5e888b2de5e6c0c85b35bfedfb0562832445c"
+    },
+    "parameters": {
+      "bytes": 43995,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/parameters.json",
+      "sha256": "16d3b25e6492ae8500771d60d6fe5b5db12089b8c7fa64d3f25a6f1230fad217"
+    },
+    "receptor": {
+      "bytes": 7511796,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-chemical-graph-20260929-final1/receptor-canonical.json",
+      "sha256": "2c0970bcaf9e994f382e0f0c0fdacbfd1359bef60a10b879f757b31628658c4c"
+    }
+  },
+  "protected_evaluation_used": false,
+  "protocol": {
+    "bytes": 6241,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/protocol.json",
+    "sha256": "6779e8854f958026db0675be790b1a75a79da9e9dfb06c8c02ca9f4f42b305f0"
+  },
+  "refined_dimensionless_score": -18.857554317900235,
+  "request": {
+    "bytes": 2933,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/request.json",
+    "sha256": "5493d963f94ecee0375acd45545a918ac4f68081fde3191a97a3b1f792c85925"
+  },
+  "restart_force_calls": 1,
+  "retained_reference_audit": {
+    "bytes": 931,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/retained-reference-audit.json",
+    "sha256": "be751e2fb981f371cf844e840d363ef3af97c9bb19292a4fdb1affe31c0f6170"
+  },
+  "retained_reference_audit_source": {
+    "bytes": 4720,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/scripts/installed_cartesian_sro_retained_reference_audit_20260930.py",
+    "sha256": "da5a28630b0a989f0442b0543c1761c9df7af500ddf309f5e368ded4fdda00ec"
+  },
+  "retained_reference_exact_binary64_values": 40986,
+  "retained_research_endpoint_audit": {
+    "bytes": 75702,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/run/lbfgs/numerical-audit.json",
+    "sha256": "899ee12873459dbfa17e0350d3ffc62b445fe34863e6a2af142ffc3a0ba64b88"
+  },
+  "retained_research_trials": {
+    "bytes": 1834540,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/run/lbfgs/trials.jsonl",
+    "sha256": "aa789291901eafc9010a4fb59ba44b193fcffc7d78717d3e50f20345f3540622"
+  },
+  "run_complete": {
+    "bytes": 421,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/run-complete.json",
+    "sha256": "4b1c0279fb7e7ab0d50450e72102eddec09313fbb484d7e9c0a7bcc50868c4e9"
+  },
+  "schema_id": "installed_cartesian_sro_execution_evidence/1",
+  "scientific_qualification": false,
+  "scoped_pose_checks_pass_for_both_rows": true,
+  "score_calls": 2,
+  "score_quantity": "uncalibrated_explicit_graph_scorer_dimensionless_minimize",
+  "selected_variant": "refined",
+  "source_dependency_installation_fresh_for_this_wheel": false,
+  "source_head_context": "25b0ef44e6cf3f34f292ebe8d34a5c0c799a6255",
+  "stages": {
+    "pause": {
+      "execution_receipt": {
+        "bytes": 622,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/pause.execution.json",
+        "sha256": "c817039628bcf01f83aa9bc29fe9edacc0a9e32a1e9716db586e460f717d8eee"
+      },
+      "exit_code": 0,
+      "process_wall_seconds": 17.236501112998667,
+      "stderr": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/pause.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 510762,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/pause.stdout.json",
+        "sha256": "5183449e6d469ad038444a7d943f1a46e7e9b21bb187b525fd55c8e5b1eb6770"
+      }
+    },
+    "resume": {
+      "execution_receipt": {
+        "bytes": 625,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/resume.execution.json",
+        "sha256": "555739780f707482946bb8dc13db1001a5ef01b9bca8680abb5b10ed8d32c5f6"
+      },
+      "exit_code": 0,
+      "process_wall_seconds": 451.50544487799925,
+      "stderr": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/resume.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 593623,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/resume.stdout.json",
+        "sha256": "fe7dc73c6d5d76c07dd69c4c63b6910d8a7036c4af2f0a631df853feaf24d4f1"
+      }
+    },
+    "verify": {
+      "execution_receipt": {
+        "bytes": 622,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/verify.execution.json",
+        "sha256": "3270925d88db1470e89f5e228aa3eec49ae90808c7faf4bf07a742dcf64927eb"
+      },
+      "exit_code": 0,
+      "process_wall_seconds": 16.083375203998003,
+      "stderr": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/verify.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 969,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/verify.stdout.json",
+        "sha256": "9b22f2099f1e9d1a84eda161531299b7f4bca87367a09a3b1d14ad97c0f1070b"
+      }
+    }
+  },
+  "status": "force_converged",
+  "unknown_pending_attempts": 0
+}
