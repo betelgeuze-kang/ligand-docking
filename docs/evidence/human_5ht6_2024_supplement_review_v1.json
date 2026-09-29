@@ -1,0 +1,515 @@
+{
+  "schema_version": "human_5ht6_2024_supplement_review_v1",
+  "source_doi": "10.3390/ijms251910287",
+  "review_date_local": "2026-09-30",
+  "timezone": "Asia/Seoul",
+  "source_checkout_head": "47806adeebf7d30185199f518c90fbefe3980805",
+  "review_status": "blocked_review / NOT_PROMOTED / NOT_QUALIFIED",
+  "scope": "Additive retained-supplement content review; preserves earlier occurrence contract, inventory, literal manifest, source ledgers and role decisions. Not full source-family clearance.",
+  "document": "docs/research/human_5ht6_2024_supplement_review_20260930.md",
+  "inputs": {
+    "supplement_access": {
+      "path": "docs/evidence/human_5ht6_2024_supplement_access_v1.json",
+      "byte_count": 1858,
+      "sha256": "c0727e764f69a6ae436bcaf78d732343f2d75135e34e9180e93c097ef419987e"
+    },
+    "retained_archive": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-supplement-s001.zip",
+      "byte_count": 16820378,
+      "sha256": "f27fbee99054e7b3d866e1e46164961758d4c5fd3c031e871aff9c454f3a8363"
+    },
+    "human_5ht6_2024_occurrence_contract_v1.json": {
+      "path": "docs/evidence/human_5ht6_2024_occurrence_contract_v1.json",
+      "byte_count": 31266,
+      "sha256": "55fab87416d876a0ffd24313446590a5d2e1b0d775b3f7389d4b321c4b2292cc"
+    },
+    "human_5ht6_2024_occurrences_v1.json": {
+      "path": "docs/evidence/human_5ht6_2024_occurrences_v1.json",
+      "byte_count": 154330,
+      "sha256": "6261d248b41d68a4754ea800b1a577c2de1442846b54c17b16e0a2fc1740dd64"
+    },
+    "human_5ht6_2024_full_source_lineage_v1.json": {
+      "path": "docs/evidence/human_5ht6_2024_full_source_lineage_v1.json",
+      "byte_count": 31106,
+      "sha256": "cd989ee652ff22e212dcbe702e706ac8856ae3fd533f5ee6aba265070c2f0c18"
+    },
+    "human_5ht6_2024_identity_manifest_v1.json": {
+      "path": "docs/evidence/human_5ht6_2024_identity_manifest_v1.json",
+      "byte_count": 9067,
+      "sha256": "d7a82bacb00c18f27cbf82cae393422bc4e8be0f0c2ac2f33b0abf18a9a4067e"
+    },
+    "human_5ht6_ki_2024_source_ledger_v1.json": {
+      "path": "docs/evidence/human_5ht6_ki_2024_source_ledger_v1.json",
+      "byte_count": 3005,
+      "sha256": "277f62f7cad26e85f4401aa4e53cfe5992da19dddec692500b7b552d21d33189"
+    },
+    "retained_main_article_pdf": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+      "byte_count": 7957708,
+      "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+    },
+    "retained_main_article_layout": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-layout.txt",
+      "byte_count": 455125,
+      "sha256": "0d0a82e71aec1b94febbe739cacb2434ea783c3dd636d53a910747e362bba5b2"
+    },
+    "retained_literal_identity_manifest": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/identity-manifest.json",
+      "byte_count": 84617,
+      "sha256": "14ea7c3d094b233e9e81b7404de31cc09099b04f3f8b65f4e27da8aa3101374f"
+    }
+  },
+  "archive_binding": {
+    "access_receipt": "supplement_access",
+    "retrieved": true,
+    "source_link_basis": "Parent-recorded official publisher URL and HTTP 200 in pinned access receipt; archive and all member bytes independently rechecked.",
+    "new_download_performed_by_this_review": false,
+    "member_count": 3,
+    "zip_crc_valid": true,
+    "raw_instrument_or_coordinate_files_present_in_archive": false
+  },
+  "members": [
+    {
+      "name": "SI_biological_research.pdf",
+      "byte_count": 3548804,
+      "sha256": "425159e0da28fca8f3074e452c50a99c662230918be54c30660a3428606fb093",
+      "physical_pdf_pages": 17,
+      "searchable_text_pages_reviewed": [
+        1,
+        17
+      ],
+      "visually_reviewed_pages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "embedded_file_names": []
+    },
+    {
+      "name": "SI_synthesis.pdf",
+      "byte_count": 14617785,
+      "sha256": "0f0714a7cade0f6f9715ecab40f268caaefeb730b8f9d59b83bd82bce5094894",
+      "physical_pdf_pages": 112,
+      "searchable_text_pages_reviewed": [
+        1,
+        112
+      ],
+      "visually_reviewed_pages": [
+        57,
+        58,
+        76,
+        77
+      ],
+      "embedded_file_names": []
+    },
+    {
+      "name": "SI_Table1.pdf",
+      "byte_count": 545203,
+      "sha256": "d4998be58c84f82a42291db53370620caa313c7431f5fabf7f0a4194e3e65f8d",
+      "physical_pdf_pages": 1,
+      "searchable_text_pages_reviewed": [
+        1,
+        1
+      ],
+      "visually_reviewed_pages": [
+        1
+      ],
+      "embedded_file_names": []
+    }
+  ],
+  "review_method": {
+    "pdf_bytes_read_in_memory": true,
+    "rendered_pages_inspected_in_memory": true,
+    "tools": [
+      "pypdf text and PDF metadata extraction",
+      "Poppler pdftotext layout extraction",
+      "Poppler pdftoppm rendering"
+    ],
+    "new_transcription_or_mutation_test_suite_created": false,
+    "molecular_calculation_performed": false,
+    "spectral_structure_validation_performed": false
+  },
+  "biological_scope": [
+    {
+      "pages": [
+        1,
+        5
+      ],
+      "source_section": "1.1",
+      "target": "printed 5-HT6R binding",
+      "endpoint_context": "binding displacement curves",
+      "content": "Representative plotted curves with labels PR1 through PR78; PR49 on page 3, PR59 on page 4.",
+      "binding_figure_label_count": 78,
+      "numeric_Ki_SD_table_supplied": false,
+      "raw_replicate_binding_table_supplied": false,
+      "independent_remeasurement_established": false
+    },
+    {
+      "pages": [
+        5,
+        6
+      ],
+      "source_sections": [
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5"
+      ],
+      "targets": [
+        "5-HT1A",
+        "5-HT5A",
+        "5-HT7",
+        "D2"
+      ],
+      "endpoint_context": "other-target representative binding curves",
+      "content": "PR49 occurs in 5-HT1A/5-HT7/D2 curves; 5-HT5A figures label PR66, PR68 and SB-269970. Preserve printed target context without pharmacological reassignment.",
+      "human_5HT6_Ki_row_inferred": false
+    },
+    {
+      "pages": [
+        7,
+        7
+      ],
+      "source_sections": [
+        "1.6",
+        "1.7"
+      ],
+      "targets": [
+        "printed 5-HT6R functional response",
+        "HEK293 cell viability"
+      ],
+      "endpoint_context": "functional response and cytotoxicity",
+      "content": "Functional figures label PR49, PR68, PR71, PR73, PR76 and 5-CT; HEK293 viability figures label PR49 and PR68.",
+      "binding_Ki_equivalence_inferred": false
+    },
+    {
+      "pages": [
+        8,
+        8
+      ],
+      "source_sections": [
+        "2",
+        "3"
+      ],
+      "targets": [
+        "1321N1",
+        "U87MG",
+        "U251MG",
+        "MCF7",
+        "DMSO/PBS solubility"
+      ],
+      "endpoint_context": "cell viability and cytotoxicity dose response; qualitative solubility",
+      "content": "Panel A/C axes identify 1321N1, B/D U87MG, E U251MG and F MCF7; dose response figures concern PR74 and PR64. PR68 solubility is reported in 100% DMSO at 10 mM and 10% DMSO/PBS at 1 mM.",
+      "binding_Ki_equivalence_inferred": false
+    },
+    {
+      "pages": [
+        9,
+        9
+      ],
+      "source_section": "4",
+      "target": "PAMPA permeability",
+      "endpoint_context": "permeability coefficient and UPLC figures",
+      "content": "PR68 and caffeine control; PBS pH 7.4 and five-hour incubation refer to PAMPA.",
+      "receptor_assay_pH_established": false
+    },
+    {
+      "pages": [
+        10,
+        16
+      ],
+      "source_section": "5",
+      "target": "mouse liver microsomes and buffer controls",
+      "endpoint_context": "metabolic stability, UPLC/MS observations and MetaSite predictions",
+      "content": "PR68/PR73/PR76 remaining fraction, masses and reported pathways; buffer/MLM UPLC and MS figures. MetaSite 6.0.1 predicted sites are computational annotations, distinct from reported experimental observations.",
+      "raw_instrument_file_supplied": false,
+      "binding_Ki_equivalence_inferred": false
+    },
+    {
+      "pages": [
+        17,
+        17
+      ],
+      "source_section": "6",
+      "target": "plasma protein binding",
+      "endpoint_context": "kD, fraction bound with SD and UPLC figures",
+      "content": "PR68 and warfarin reference. kD belongs to plasma protein binding and is not a human 5-HT6 receptor Ki/Kd.",
+      "receptor_affinity_value_inferred": false
+    }
+  ],
+  "table_s1": {
+    "member": "SI_Table1.pdf",
+    "physical_pdf_page": 1,
+    "reviewed_scope": "Full numbered name-column rows 1-45, header endpoint/condition ownership, all three calibration name blocks, PR59 row availability and PR49 name absence. No independent experimental-denominator or chemical-equivalence inference.",
+    "numbered_rows": 45,
+    "PR_coded_rows": 40,
+    "PR_coded_rows_with_labels_in_PR1_PR78": 39,
+    "other_unresolved_PR_label_rows": [
+      {
+        "numbered_row": 22,
+        "printed_name": "PR109"
+      }
+    ],
+    "comparison_drug_rows": [
+      {
+        "numbered_row": 41,
+        "printed_name": "Venlafaxine"
+      },
+      {
+        "numbered_row": 42,
+        "printed_name": "Mirtazapine"
+      },
+      {
+        "numbered_row": 43,
+        "printed_name": "Amitriptyline"
+      },
+      {
+        "numbered_row": 44,
+        "printed_name": "Desipramine"
+      },
+      {
+        "numbered_row": 45,
+        "printed_name": "Mianserin"
+      }
+    ],
+    "calibration_row_occurrences_by_block": {
+      "C18": 8,
+      "IAM": 9,
+      "HSA": 9
+    },
+    "additional_calibration_names_not_in_prior_literal_manifest": [
+      "Trimetoprim",
+      "Propranolol"
+    ],
+    "printed_spelling_variants": [
+      {
+        "printed_name": "Colichicine",
+        "existing_literal_lead": "colchicine",
+        "aliases_merged": false
+      },
+      {
+        "printed_name": "Acetanilidine",
+        "existing_literal_lead": "acetanilide",
+        "aliases_merged": false
+      },
+      {
+        "printed_name": "Propiohenone",
+        "existing_literal_lead": "propiophenone",
+        "aliases_merged": false
+      },
+      {
+        "printed_name": "Octanophenone",
+        "existing_literal_lead": "octanonophenone",
+        "aliases_merged": false
+      }
+    ],
+    "endpoint_columns": [
+      "C18 at pH 2.6",
+      "C18 at pH 7.4",
+      "C18 at pH 10.5",
+      "IAM",
+      "HSA"
+    ],
+    "retention_data_form": "Published numeric t1/t2/t3, tm, SD and derived chromatography indices; not receptor-binding raw replicates.",
+    "numbered_rows_with_HSA_numeric_cells": 25,
+    "PR49": {
+      "printed_name_found": false,
+      "numeric_value_inferred_from_absence": false
+    },
+    "PR59": {
+      "numbered_row": 31,
+      "C18_pH_conditions": [
+        "2.6",
+        "7.4",
+        "10.5"
+      ],
+      "IAM_cells_present": true,
+      "HSA_cells": "blank",
+      "blank_to_zero_conversion": false
+    },
+    "target_species_or_receptor_condition_inferred_from_chromatography": false,
+    "new_Ki_rows_supplied_by_this_table": 0
+  },
+  "PR49_PR59_links": {
+    "PR49": {
+      "biological_binding_page": 3,
+      "other_target_binding_pages": [
+        5,
+        6
+      ],
+      "functional_and_HEK293_viability_page": 7,
+      "synthesis_pages": [
+        57,
+        58
+      ],
+      "synthesis_content": [
+        "named structure drawing",
+        "13C NMR",
+        "FT-IR",
+        "UPLC-MS",
+        "1H NMR"
+      ],
+      "table_s1_name_present": false,
+      "retained_main_article_reported_purity_percent": 92,
+      "assayed_microstate_verified": false,
+      "assay_batch_to_spectra_link_verified": false,
+      "single_assayed_chemical_state_established": false
+    },
+    "PR59": {
+      "biological_binding_page": 4,
+      "synthesis_pages": [
+        76,
+        77
+      ],
+      "synthesis_content": [
+        "named structure drawing",
+        "13C NMR",
+        "FT-IR",
+        "UPLC-MS",
+        "1H NMR"
+      ],
+      "table_s1_numbered_row": 31,
+      "retained_main_article_reported_purity_percent": 96,
+      "assayed_microstate_verified": false,
+      "assay_batch_to_spectra_link_verified": false,
+      "single_assayed_chemical_state_established": false
+    },
+    "interpretation": "Published structure drawings and analytical figures add source characterization evidence. They do not settle assay salts/protonation/tautomers, purity effects, construct/pH matching or an observed receptor-bound PR49/PR59 reference pose. Mass-ion signals do not establish wet-assay microstates."
+  },
+  "identity_and_correspondence_exceptions": [
+    {
+      "id": "TableS1_PR109",
+      "status": "unresolved",
+      "source": "SI_Table1.pdf p1 numbered row22",
+      "detail": "Literal PR109 is visually present; no mapping to PR10/PR9 or new verified compound inferred."
+    },
+    {
+      "id": "seven_additional_comparator_calibration_names",
+      "status": "new_literal_occurrences_not_verified_identities",
+      "names": [
+        "Venlafaxine",
+        "Mirtazapine",
+        "Amitriptyline",
+        "Desipramine",
+        "Mianserin",
+        "Trimetoprim",
+        "Propranolol"
+      ],
+      "prior_other_literal_entity_count": 45,
+      "all_seven_absent_from_prior_literal_manifest": true,
+      "graph_inclusion": "unknown"
+    },
+    {
+      "id": "calibration_spelling_variants",
+      "status": "unresolved_aliases",
+      "detail": "Keep printed spellings and proposed existing-name leads separate; no chemical-equivalence merge."
+    },
+    {
+      "id": "other_target_PR78_vs_main_Table6_PR77",
+      "status": "unresolved_correspondence",
+      "source": "SI_biological_research.pdf pp5-6; retained main article Table6",
+      "detail": "Other-target 5-HT1A/5-HT7/D2 curves literally label PR78 whereas the main Table6 lists PR77. No relabeling, editorial correction or value transfer inferred."
+    },
+    {
+      "id": "PR65_PR66_conflict",
+      "status": "remains_unresolved",
+      "detail": "Synthesis text heading PR65 names morpholin; no PR66 synthesis heading found. This does not settle the earlier table-versus-synthesis conflict."
+    },
+    {
+      "id": "PR39_conflict",
+      "status": "remains_unresolved",
+      "detail": "No PR39 synthesis heading found in this supplement; selected-page review does not resolve the retained ring-element/name conflict."
+    }
+  ],
+  "computational_scope": {
+    "MetaSite_prediction_pages": [
+      10,
+      11,
+      13,
+      14,
+      15,
+      16
+    ],
+    "other_computational_terms_not_found_in_searchable_text": [
+      "MM-GBSA",
+      "MMGBSA",
+      "QPLD",
+      "FMO",
+      "Glide",
+      "Schrodinger"
+    ],
+    "docking_coordinate_or_energy_files_in_zip": false,
+    "complete_main_article_computational_data_claim_verified": false,
+    "caution": "Text search and the three-file archive inventory do not establish complete coverage of computations referred to by the main article."
+  },
+  "denominator_semantics": {
+    "printed_5HT6_binding_curve_labels": 78,
+    "table_s1_numbered_row_occurrences": 45,
+    "table_s1_calibration_row_occurrences": 26,
+    "new_independent_human_5HT6_Ki_observations_credited": 0,
+    "new_numeric_human_5HT6_Ki_rows_transcribed": 0,
+    "independent_measurement_denominator": null,
+    "new_independent_source_component_established": false,
+    "interpretation": "Curve/row/label counts describe representations in the same DOI-bound source. Independent Ki remeasurement and source-component independence remain unestablished. Existing seen outcomes do not become a blind holdout."
+  },
+  "rights_evidence": {
+    "article_license_notice": "CC BY 4.0 in retained main article page1",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "publisher_policy_url": "https://www.mdpi.com/openaccess",
+    "legal_code_url": "https://creativecommons.org/licenses/by/4.0/legalcode.en",
+    "official_web_sources_reviewed_live": true,
+    "official_web_body_bytes_retained_by_this_sidecar": false,
+    "summary": "The publisher policy includes article data and supplementary material in cited reuse and text-mining scope. CC BY permits sharing and adaptation including commercial use subject to its terms. Sharing requires appropriate author/copyright/source/license attribution and modification notices; no endorsement or restrictive downstream terms may be inferred.",
+    "asset_level_exceptions_review_complete": false,
+    "supplement_searchable_text_separate_license_notice_found": false,
+    "remaining_conditions": [
+      "Bind attribution and modification notices to the intended extraction/distribution/use.",
+      "Review material-level third-party exceptions; the licensor can grant only rights it holds.",
+      "Patent/trademark and other unlicensed rights are not granted by CC BY.",
+      "Keep repository admission and scientific eligibility separate from copyright-use evidence."
+    ],
+    "blanket_training_or_product_rights_clearance_issued": false
+  },
+  "unreviewed_scope": [
+    "108 synthesis PDF pages were not visually inspected; 54 extracted headings are not 54 independently validated structures.",
+    "No new full chemical graph/salt/stereo/microstate verification for study compounds, controls, comparator drugs or calibration names.",
+    "No source-method authenticity or raw experimental/instrument provenance audit; PDF plots and reported summaries do not supply raw binding replicates.",
+    "No complete whole-article/supplement occurrence contract extension, bibliography traversal or source-component graph decision.",
+    "No fresh protected-context preflight, source-role assignment or independent-cohort admission.",
+    "No full per-asset third-party rights exception audit or intended-use attribution implementation."
+  ],
+  "boundary": {
+    "earlier_205_occurrence_contract_preserved": true,
+    "earlier_123_literal_manifest_preserved": true,
+    "supplement_retrieved": true,
+    "supplement_content_review_complete": false,
+    "full_source_clearance": false,
+    "graph_inclusion": "unknown_pending_separate_policy_review",
+    "graph_nodes_emitted": 0,
+    "assigned_role": null,
+    "new_training_admission": 0,
+    "new_calibration_admission": 0,
+    "new_independent_evaluation_admission": 0,
+    "new_assay_rows_admitted": 0,
+    "independent_measurement_denominator": null,
+    "protected_context_opened": false,
+    "protected_fresh128_touched": false,
+    "new_preflight_executed": false,
+    "model_or_weight_change": false,
+    "scientifically_qualified": false
+  }
+}

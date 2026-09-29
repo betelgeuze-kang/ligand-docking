@@ -57,6 +57,29 @@ one declared state, not independent physical validation or a general optimizer
 ranking. The retained exact-value audit source and its output hash are recorded
 in the evidence index.
 
+A [separate subsequent OpenMM Reference audit](../evidence/installed_sro_openmm_direct_v1.json)
+then read the installed result's final 26-atom coordinates and recomputed
+source-driven same-math internal and receptor-cross terms on those fixed
+coordinates. The original execution did not make these oracle calls. The
+protocol was pinned before this audit at
+`5840cca25ec629cc6c5f4d053e6badd4e6d04de26e68a8614a3309d5e7b4c799`;
+its initial and supplied-final snapshots both pass the unchanged
+`1e-8` kcal/mol energy and kcal/mol/Å force-component tolerances. At the
+installed final coordinates, the direct product-to-OpenMM total-energy error
+is `2.8421709430404007e-13` kcal/mol and the maximum of 78 force-component
+errors is `2.094764639526403e-11` kcal/mol/Å. The four corresponding
+component-energy errors also pass. The independent audit uses the current
+source checkout at `47806adeebf7d30185199f518c90fbefe3980805` and the
+original XML, while the product result remains identified by the installed
+wheel hash. Its original `/tmp` protocol and output paths are preserved in a
+byte-identical external retention packet; the retention receipt explicitly
+records this relocation without claiming another execution. The exact executed
+comparison script is also retained as
+[source text](../evidence/scripts/verify_installed_sro_direct_openmm_20260930.py.txt).
+This is a new
+fixed-coordinate arithmetic check, not source XML energy equivalence,
+intrareceptor evaluation or physical validation.
+
 This case has one candidate and one pose. It does not establish experimental
 affinity, pose recovery, active/inactive prioritization, training eligibility,
 HIP parity or service qualification. No experimental label, protected Fresh-128
