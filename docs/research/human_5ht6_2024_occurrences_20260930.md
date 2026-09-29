@@ -20,8 +20,11 @@ The actual retained-source invocation reproduces **205 occurrences**, comprising
 153 study-compound, 9 binding-control, 4 functional-reference, 37 reagent and
 2 cited-only occurrences. There are **78 printed primary test IDs**, not 205
 independent compounds or measurements. Six Table 6 Ki entries repeat earlier
-reports. Five repeat links lack transcribed primary numeric values and are
-explicitly marked unverified; no independent remeasurement is inferred.
+reports. At the time of this receipt, five repeat links lacked transcribed primary
+numeric values and were explicitly marked unverified. The later
+[Table 5 correspondence](human_5ht6_2024_repeat_correspondence_20260930.md)
+now binds those five means and SDs separately; the original inventory stays
+unchanged and no independent remeasurement is inferred.
 
 PR49/PR59 means and SDs have bound source positions. NA, ND and NT remain
 distinct source tokens and never become numeric values or inactive labels.

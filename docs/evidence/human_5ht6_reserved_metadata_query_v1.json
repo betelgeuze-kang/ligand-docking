@@ -1,0 +1,194 @@
+{
+  "schema_id": "human_5ht6_bounded_metadata_evidence/1.0.0",
+  "artifacts": [
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/README.md",
+      "bytes": 2404,
+      "sha256": "80215bfaf5f4f03870b3a1637cc3d5503369d3969957c9cf2fac2ada99869d99"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/probe.receipt.json",
+      "bytes": 368,
+      "sha256": "83bed6515d8ab4673cd24c802b4b1383d2c0ecf648e8331700294982c77f4098"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/probe.request.json",
+      "bytes": 465,
+      "sha256": "657cc5c755fa2710521b46e9a39018dee72726c129e74634193e3cdea15a6528"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/query_metadata.py",
+      "bytes": 6017,
+      "sha256": "43fd1da0e0e005cc9d07b594e579d7efc62041303c87643da962983212fe8cce"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/query_metadata_v2.py",
+      "bytes": 6677,
+      "sha256": "f81dd8052bd0ca4f3eae3323fd70731b085d382df4c169505af24dad9d71e321"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/query_metadata_v3.py",
+      "bytes": 6902,
+      "sha256": "ea8cc35504ab3a4a909a095d3271440628f2babebae0a80b9541eca65efbc0a6"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/query_metadata_v4.py",
+      "bytes": 6908,
+      "sha256": "54f76b5edee6ebfbe1ae0446fa4b4778ed98e6cde6c9f166bf2ed64e405694c5"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/summary.json",
+      "bytes": 3314,
+      "sha256": "7c1f9b9992b58e7f092be862c1f8f2ba0d94144bfdcd99660b152e3d9556e82d"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v2-probe.receipt.json",
+      "bytes": 325,
+      "sha256": "3401ab7f94e83d508c5594f8ff2a738e2cd03d4c31653d30e0e2e77c1a161033"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v2-probe.request.json",
+      "bytes": 465,
+      "sha256": "657cc5c755fa2710521b46e9a39018dee72726c129e74634193e3cdea15a6528"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v3-probe.receipt.json",
+      "bytes": 385,
+      "sha256": "549a6d7a5698ff27860476f875a5cb171fa8c9451a806abb463852ae883e72d1"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v3-probe.request.json",
+      "bytes": 465,
+      "sha256": "657cc5c755fa2710521b46e9a39018dee72726c129e74634193e3cdea15a6528"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-assay.receipt.json",
+      "bytes": 2062,
+      "sha256": "13b1313d04cea2cae92a362f79c4fba0119ecafd00d638cf1ce1c1d82f4d715c"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-assay.request.json",
+      "bytes": 467,
+      "sha256": "57723bf1d4a1a6a3825eea4dc20d13a17fe1f0cd545f167151acaf0839b54ed5"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-assay.response.json",
+      "bytes": 476,
+      "sha256": "ca92c6560302d4773414784c875536dab49c1c0a103b9a8a38862f56add14a98"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-document.receipt.json",
+      "bytes": 2065,
+      "sha256": "d0ac1bef95f9260551c3a65b73b3273a2e9bc7f99701a8bb89e4dfba2f6cecef"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-document.request.json",
+      "bytes": 508,
+      "sha256": "682ca08027937eefa342bc582ff516d1c9dc4c2959772280ca759ea731effa23"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-document.response.json",
+      "bytes": 476,
+      "sha256": "ca92c6560302d4773414784c875536dab49c1c0a103b9a8a38862f56add14a98"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-probe.receipt.json",
+      "bytes": 2460,
+      "sha256": "702cf4c4b028302d01cf2d70058ef2438f61bf63f987d876d7893fde4ecefe7c"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-probe.request.json",
+      "bytes": 465,
+      "sha256": "657cc5c755fa2710521b46e9a39018dee72726c129e74634193e3cdea15a6528"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/v4-probe.response.json",
+      "bytes": 3665,
+      "sha256": "7e7d94804129a551555a4c4533a30fdb9b08783f6e4a472d567efcab579addd7"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/manifest.json",
+      "bytes": 3162,
+      "sha256": "c203b903c871ec34b69ce8941ae4e22f0476b9e60489d4f62c42a84fc70064bc"
+    }
+  ],
+  "summary": {
+    "completed_at_utc": "2026-09-29T15:47:03.737184+00:00",
+    "implementation_consequence": "The exact currently indexed assay and same-document target Ki collection contain no second development molecule. A new prepared binding or source adapter cannot manufacture the missing candidate. Preserve the reservation and numeric-value boundary. Any future additional source needs independently frozen source-family roles and actual primary identity/method evidence; no new role or admission is made by this packet.",
+    "preserved_reservation": {
+      "evaluation_only": true,
+      "metadata_only_until_model_frozen": "US10441590B2",
+      "role": "development_test",
+      "role_origin_path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-patent-primary-fit-kl3tjq90/roles-before-primary-access.json",
+      "role_origin_pointer": "/assignments/216",
+      "role_origin_sha256": "dc3dd0e2a14bc771922a609ab84eb6ea3a64215712711daf4affa8e1a01c9561",
+      "source37_scientific_admission": false
+    },
+    "projection_check": {
+      "alias_validation": "each is null or a short nonnumeric endpoint-metadata token; excluded from saved response",
+      "first_attempts_failed_closed": 3,
+      "nonreserved_probe_unfetched": 142,
+      "numeric_or_outcome_field_returned_by_successful_queries": false,
+      "raw_http_response_saved": false,
+      "reserved_queries_before_successful_probe": 0,
+      "saved_responses_are_sanitized": true,
+      "server_added_aliases": [
+        "type",
+        "relation",
+        "units"
+      ],
+      "successful_nonreserved_probe_records": 10,
+      "successful_nonreserved_probe_total": 152
+    },
+    "query_boundaries": {
+      "activity_outcome_fields_saved": false,
+      "activity_value_fields_requested": false,
+      "free_text_description_reason": "Assay descriptions may embed outcome prose; no construct claim is inferred from IDs.",
+      "free_text_descriptions_requested": false,
+      "model_fit_run": false,
+      "model_weights_opened": false,
+      "new_preflight_run": false,
+      "patent_primary_content_opened": false,
+      "physics_run": false,
+      "protected_outcomes_opened": false,
+      "roles_changed": false,
+      "source_scope_expanded_beyond_two_authorized_queries": false
+    },
+    "results": {
+      "activity_ids": [
+        27765488
+      ],
+      "assay_filtered_total": 1,
+      "assay_ids": [
+        "CHEMBL5734474"
+      ],
+      "compound_record_ids": [
+        4373762
+      ],
+      "document_target_filtered_total": 1,
+      "graph_identity_rederived": false,
+      "identity_count_scope": "one ChEMBL molecule accession; no new graph or assayed-state validation",
+      "molecule_chembl_ids": [
+        "CHEMBL5095172"
+      ],
+      "new_activity_ids": [],
+      "new_molecule_ids": [],
+      "unfetched_filtered_records": 0
+    },
+    "schema_version": "human_5ht6_existing_development_metadata_expansion_v1",
+    "scope": {
+      "assay": "CHEMBL5734474",
+      "document": "CHEMBL5727345",
+      "patent": "US-10441590-B2",
+      "standard_type": "Ki"
+    },
+    "status": "completed_no_additional_identity",
+    "target": {
+      "name_from_existing_repository_evidence": "human 5-HT6 serotonin receptor",
+      "target_chembl_id": "CHEMBL3371"
+    },
+    "validation": "all saved responses have exactly the nine requested activity fields plus pagination; request and response hashes match; both reserved denominators are complete and equal"
+  },
+  "new_chemistry_or_role_admission": false,
+  "scope_note": "Only the exact existing assay Ki and document+human target Ki filters; no claim about all other sources."
+}
