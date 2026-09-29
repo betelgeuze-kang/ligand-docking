@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 from rdkit import Chem
+from rdkit.Chem import rdDepictor
 import torch
 
 from betelgeuze_engine_v2.molecular import (
@@ -207,6 +208,99 @@ def _stereo_system(smiles, xyz):
                          torch.tensor([xyz], dtype=torch.float64),
                          StructureProvenance(source_format="synthetic", source_id="stereo", source_sha256="d" * 64,
                                              parser_name="synthetic", parser_version="1")), chemical_identity(observed)
+
+
+def _aromatic_system(smiles, *, kekule=False):
+    molecule = Chem.AddHs(Chem.MolFromSmiles(smiles))
+    rdDepictor.Compute2DCoords(molecule)
+    xyz = molecule.GetConformer().GetPositions().tolist()
+    ligand, identity = _stereo_system(smiles, xyz)
+    if kekule:
+        Chem.Kekulize(molecule, clearAromaticFlags=False)
+        ligand = replace(ligand, bonds=tuple(
+            replace(bond, order=molecule.GetBondBetweenAtoms(bond.atom_i, bond.atom_j).GetBondTypeAsDouble())
+            for bond in ligand.bonds))
+    return ligand, identity
+
+
+@pytest.mark.parametrize("smiles", ["c1ccccc1", "c1ccncc1", "c1cc[nH]c1", "c1ccoc1",
+                                   "c1ncc[nH]1", "c1ccc2[nH]ccc2c1", "c1cc[nH+]cc1"])
+def test_aromatic_and_kekule_graphs_bind_same_identity_but_keep_original_hashes(smiles):
+    fractional, identity = _aromatic_system(smiles)
+    integer, integer_identity = _aromatic_system(smiles, kekule=True)
+    assert identity == integer_identity
+    original = canonical_system_json_bytes(integer)
+    left = binding._ligand_identity(fractional, identity)
+    right = binding._ligand_identity(integer, identity)
+    assert left["canonical_isomeric_smiles_sha256"] == right["canonical_isomeric_smiles_sha256"]
+    assert left["coordinates_sha256"] == right["coordinates_sha256"]
+    assert left["atom_graph_sha256"] != right["atom_graph_sha256"]
+    assert left["system_sha256"] != right["system_sha256"]
+    assert canonical_system_json_bytes(integer) == original
+
+
+def test_alternate_benzene_kekule_assignment_keeps_distinct_raw_graph():
+    ligand, identity = _aromatic_system("c1ccccc1", kekule=True)
+    alternative = replace(ligand, bonds=tuple(
+        replace(bond, order=3. - bond.order) if bond.aromatic else bond for bond in ligand.bonds))
+    first = binding._ligand_identity(ligand, identity)
+    second = binding._ligand_identity(alternative, identity)
+    assert first["atom_graph_sha256"] != second["atom_graph_sha256"]
+    assert first["canonical_isomeric_smiles_sha256"] == second["canonical_isomeric_smiles_sha256"]
+
+
+@pytest.mark.parametrize("change", ["all_single", "extra_double", "missing_double", "mixed_encoding",
+                                    "triple", "edge_flag", "atom_flag", "hydrogen_flag",
+                                    "missing_hydrogen", "isotope", "formal_charge"])
+def test_aromatic_normalization_cannot_repair_invalid_or_changed_raw_graph(change):
+    ligand, identity = _aromatic_system("c1ccccc1", kekule=True)
+    binding._ligand_identity(ligand, identity)
+    atoms, bonds = list(ligand.atoms), list(ligand.bonds)
+    single = next(i for i, bond in enumerate(bonds) if bond.aromatic and bond.order == 1.)
+    double = next(i for i, bond in enumerate(bonds) if bond.aromatic and bond.order == 2.)
+    if change == "all_single":
+        bonds = [replace(bond, order=1.) if bond.aromatic else bond for bond in bonds]
+    elif change == "extra_double":
+        bonds[single] = replace(bonds[single], order=2.)
+    elif change == "missing_double":
+        bonds[double] = replace(bonds[double], order=1.)
+    elif change == "mixed_encoding":
+        bonds[single] = replace(bonds[single], order=1.5)
+    elif change == "triple":
+        bonds[single] = replace(bonds[single], order=3.)
+    elif change == "edge_flag":
+        bonds[single] = replace(bonds[single], aromatic=False)
+    elif change == "atom_flag":
+        atoms[0] = replace(atoms[0], aromatic=False)
+    elif change == "hydrogen_flag":
+        atoms[-1] = replace(atoms[-1], aromatic=True)
+    elif change == "missing_hydrogen":
+        bonds = [bond for bond in bonds if bond.atom_i != len(atoms) - 1 and bond.atom_j != len(atoms) - 1]
+    elif change == "isotope":
+        atoms[0] = replace(atoms[0], isotope_mass_number=13)
+    else:
+        atoms[0] = replace(atoms[0], formal_charge=1)
+    with pytest.raises(ValueError, match="registered_ligand_"):
+        binding._ligand_identity(replace(ligand, atoms=tuple(atoms), bonds=tuple(bonds)), identity)
+
+
+def test_disconnected_aromatic_edge_sets_can_use_different_complete_encodings():
+    ligand, identity = _aromatic_system("c1ccccc1-c2ccccc2", kekule=True)
+    ligand = replace(ligand, bonds=tuple(
+        replace(bond, order=1.5) if bond.aromatic and bond.atom_i < 6 and bond.atom_j < 6 else bond
+        for bond in ligand.bonds))
+    binding._ligand_identity(ligand, identity)
+
+
+def test_sanitization_must_not_repair_neutral_nitro_formal_charges():
+    ligand, identity = _aromatic_system("[O-][N+](=O)c1ccccc1", kekule=True)
+    binding._ligand_identity(ligand, identity)
+    atoms = tuple(replace(atom, formal_charge=0) if i in {0, 1} else atom
+                  for i, atom in enumerate(ligand.atoms))
+    bonds = tuple(replace(bond, order=2.) if {bond.atom_i, bond.atom_j} == {0, 1} else bond
+                  for bond in ligand.bonds)
+    with pytest.raises(ValueError, match="registered_ligand_"):
+        binding._ligand_identity(replace(ligand, atoms=atoms, bonds=bonds), identity)
 
 
 def test_actual_registered_coordinates_determine_tetrahedral_stereo():

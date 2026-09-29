@@ -29,7 +29,13 @@ The registered descriptor is
 `native_v4_candidate_registered_structural_binding_v1`. A fresh observation
 reopens the bound canonical ligand/receptor, internal/extension/cross parameters
 and charge-origin record. A complete explicit ligand graph preserves atom
-identity, isotopes, aromaticity, bond orders and formal charge. R/S and E/Z
+identity, isotopes, aromaticity, bond orders and formal charge. Each connected
+aromatic edge set accepts either all aromatic 1.5 orders or a complete valid
+integer Kekule assignment. Aromaticity is perceived from the encoded graph;
+declared flags cannot repair an invalid assignment. Mixed encodings within one
+aromatic edge set are explicitly unsupported. Original graph and system hashes
+retain the exact representation, and sanitization cannot change formal charges,
+isotopes or hydrogen completeness. R/S and E/Z
 assignments are rederived from the supplied coordinates and compared with the
 candidate's canonical isomeric identity. Missing hydrogens, unresolved stereo,
 unsupported graphs and mismatches fail closed; admission does not automatically

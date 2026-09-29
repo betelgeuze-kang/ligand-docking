@@ -9,7 +9,7 @@ inputs and limits. Existing v1/v2 protocols retain their behavior.
 
 ## Verified software behavior
 
-The current change passes **255 distinct focused tests** with zero failures,
+The integration at `cd5ecb034` passed **255 distinct focused tests** with zero failures,
 errors or skips in the final runs:
 
 | Scope | Passed |

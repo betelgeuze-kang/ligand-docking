@@ -129,6 +129,17 @@ resolves the missing Table 5 means/SDs and their Table 6 repeats while preservin
 the original occurrence inventory. This credits zero new independent measurements
 and does not clear source-family roles or prepared-state correspondence.
 
+The [non-outcome identity manifest](human_5ht6_2024_identity_manifest_20260930.md)
+now links all 205 occurrences to 78 PR labels and 45 other literal names, with
+78 source-bound synthesis headings and 22 entry-level prior-description citations.
+PR29/PR39 print the same chemical name but cite different preparation methods;
+a retained-source follow-up shows PR39's Table 4 ring atom `Y=N` conflicts with
+its naphthalene synthesis name. Its corrected identity remains unresolved
+alongside PR65/PR66. Source graph inclusion and roles remain unchanged. Official
+access did not retrieve reference 31 or the supplement; targeted original-source
+correspondence is still needed. Bibliography or synthesis citations alone do not
+establish Ki reuse.
+
 The [registered native-v3 integration](registered_native_v3_integration_20260930.md)
 connects the source-record descriptor to explicit graph/coordinate stereo,
 original XML charge tokens, a common receptor/method cohort and the installed
@@ -138,3 +149,16 @@ model equilibrium, select their baselines and establish software connection and
 reuse only. Their six successful initial force calls and twelve score calls do
 not establish iterative refinement benefit. Existing real sources still have
 zero newly admitted rows. SRO's separate 32-step rejection remains unchanged.
+
+The [registered Kekule compatibility fix](registered_kekule_compatibility_20260930.md)
+resolves a real SRO prepared-graph rejection caused by aromatic representation
+normalization. All four unchanged-input component checks now pass in the exact
+installed wheel, along with 89 affected regressions and synthetic installed
+comparison/reuse. This adds no real force/score calls or assay admission and
+does not change the earlier unconverged SRO result.
+
+The [same-budget SRO SD/L-BFGS comparison](sro_same_budget_comparison_20260930.md)
+has now been launched under its separately reviewed protocol: at most 417
+objective attempts and a common 7200-second operational watchdog per arm,
+original criteria, exact historical SD prefix and independently checked
+endpoints. The launch observation is not a final convergence or benefit result.

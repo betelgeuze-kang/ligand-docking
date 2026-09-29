@@ -1,0 +1,60 @@
+{
+  "execution_session_id": 33991,
+  "historical_sd_51_prefix": {
+    "bytes": 71,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/run/sd/historical-prefix.json",
+    "sha256": "e836584d55c51ec180e6b3b95b908628c4e384b755d6a7d17eec0f8a6ebec481"
+  },
+  "historical_sd_51_prefix_verified_utc": "2026-09-29T17:46:25.870262+00:00",
+  "independent_review": {
+    "bytes": 7156,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/independent-review-occurrence/v2-final-independent-review.json",
+    "sha256": "a5a8a5ecadeb3e0131ef5f77b384b6b897c51a97870ab5a48dd9e7fa27f9a103"
+  },
+  "last_finished_sd_attempt": 67,
+  "live_process_observation": {
+    "sd": {
+      "cmdline_sha256": "07a2d7b3cbaabe5b0cd0b8c280f6b9014cb48ad69796e5fbc560c8ed0859c261",
+      "pid": 342477,
+      "process_stat": "342477 (python3) R 342473 342473 342473 0 -1 4194304 177071 92 0 0 27730 38 0 0 20 0 1 0 1006420 8367542272 164741 18446744073709551615 100625621868544 100625624708621 140725167182944 0 0 0 0 16781312 2 0 0 0 17 12 0 0 0 0 0 100625627080752 100625627364824 100625660583936 140725167185246 140725167185388 140725167185388 140725167189991 0"
+    },
+    "wrapper": {
+      "cmdline_sha256": "8f089f1dd2bc65fa77e9d245aab953d6840b1d8dc094703b139d669d06146fba",
+      "pid": 342473,
+      "process_stat": "342473 (python3) S 4468 342473 342473 0 -1 4194304 9323 198 0 0 17 8 0 0 20 0 1 0 1006401 38141952 5990 18446744073709551615 97137134125056 97137136965133 140730375458240 0 0 0 0 16781312 2 1 0 0 17 11 0 0 0 0 0 97137139337264 97137139621336 97137155424256 140730375462866 140730375463028 140730375463028 140730375466983 0"
+    }
+  },
+  "new_assay_admissions": 0,
+  "no_final_refinement_or_cost_result": true,
+  "observed_sd_finished_attempts": 67,
+  "observed_utc": "2026-09-29T17:44:47.733816+00:00",
+  "preparation_manifest": {
+    "bytes": 11301,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/preparation-manifest.json",
+    "sha256": "b3083cd14356940be5d057e7d24269ab1efecbe4dfd7ed2d0ec562eafca0887a"
+  },
+  "protocol": {
+    "bytes": 216422,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/protocol.json",
+    "sha256": "b9031b7637d37c9fade5d539351f2132790ec006f2ab185c9ffcf78a35bd5196"
+  },
+  "root_review": {
+    "bytes": 2658,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/root-review-approval.json",
+    "sha256": "10bca837b5ef759ddb0fa3de66d0e70cbf5e057395796aa15f12b434c93c5004"
+  },
+  "schema_version": "sro_same_budget_comparison_launch_v2",
+  "scientifically_validated": false,
+  "source_roles_changed": false,
+  "start": {
+    "bytes": 611,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/run/start.json",
+    "sha256": "fe06b194a469526d9d9643517e8596a9fcd04bd5b26e2efe93a41eb6a15a4f06"
+  },
+  "status": "launched_no_final_result_at_snapshot",
+  "watchdog_review": {
+    "bytes": 4012,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-sd-lbfgs-comparison-20260930-v2/independent-review-occurrence/v2-watchdog-review-addendum.json",
+    "sha256": "a7b210f4b30078250a558580ddc8d7c782a9250f88f61f6a6d9ffbc60d0c325e"
+  }
+}

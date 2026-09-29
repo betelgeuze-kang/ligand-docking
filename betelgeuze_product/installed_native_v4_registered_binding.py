@@ -141,6 +141,30 @@ def _construct(receptor):
         for i in chain.residue_indices]} for chain in receptor.chains]
 
 
+def _check_aromatic_representations(ligand):
+    """Require each connected aromatic edge set to use one complete encoding."""
+    neighbors = {}
+    for bond in ligand.bonds:
+        if not bond.aromatic:
+            _require(bond.order != 1.5, "registered_ligand_changed_bond_graph")
+            continue
+        _require(bond.order in {1., 1.5, 2.}
+                 and ligand.atoms[bond.atom_i].aromatic and ligand.atoms[bond.atom_j].aromatic,
+                 "registered_ligand_unsupported_bond_graph")
+        for left, right in ((bond.atom_i, bond.atom_j), (bond.atom_j, bond.atom_i)):
+            neighbors.setdefault(left, []).append((right, bond.order == 1.5))
+    remaining = set(neighbors)
+    while remaining:
+        pending, encodings = [remaining.pop()], set()
+        while pending:
+            for neighbor, fractional in neighbors[pending.pop()]:
+                encodings.add(fractional)
+                if neighbor in remaining:
+                    remaining.remove(neighbor)
+                    pending.append(neighbor)
+        _require(len(encodings) == 1, "registered_ligand_mixed_aromatic_representation")
+
+
 def _ligand_identity(ligand, identity):
     """Rebuild the explicit graph and derive R/S and E/Z from actual coordinates."""
     from betelgeuze_engine_v2.molecular.serialization import (
@@ -150,6 +174,7 @@ def _ligand_identity(ligand, identity):
     _require(type(identity) is dict and identity.get("stereo_unspecified_count") == 0
              and not identity.get("unresolved_stereochemistry"),
              "registered_ligand_chemical_identity_unresolved")
+    _check_aromatic_representations(ligand)
     molecule = Chem.RWMol()
     atom_rows, bond_rows = [], []
     for atom in ligand.atoms:
@@ -159,7 +184,8 @@ def _ligand_identity(ligand, identity):
         _require(rd_atom.GetSymbol() == atom.element, "registered_ligand_element_identity_mismatch")
         rd_atom.SetFormalCharge(atom.formal_charge)
         rd_atom.SetIsotope(atom.isotope_mass_number or 0)
-        rd_atom.SetIsAromatic(atom.aromatic)
+        # Perceive aromaticity from the encoded bonds. Trusting aromatic flags
+        # here can let sanitization repair an invalid integer Kekule assignment.
         rd_atom.SetNoImplicit(True)
         molecule.AddAtom(rd_atom)
         atom_rows.append({"atomic_number": atom.atomic_number, "isotope": atom.isotope_mass_number or 0,
@@ -171,7 +197,6 @@ def _ligand_identity(ligand, identity):
         _require(bond.order in bond_types and bond.stereo in {"none", "NONE", "unspecified", "E", "Z"},
                  "registered_ligand_unsupported_bond_graph")
         molecule.AddBond(bond.atom_i, bond.atom_j, bond_types[bond.order])
-        molecule.GetBondBetweenAtoms(bond.atom_i, bond.atom_j).SetIsAromatic(bond.aromatic)
         bond_rows.append({"atom_i": bond.atom_i, "atom_j": bond.atom_j,
                           "order": bond.order, "aromatic": bond.aromatic, "stereo": bond.stereo})
     molecule = molecule.GetMol()
@@ -180,10 +205,15 @@ def _ligand_identity(ligand, identity):
     except Exception as exc:
         raise ValueError("registered_ligand_atom_graph_invalid") from exc
     _require(all(a.GetNumRadicalElectrons() == 0 and a.GetNumImplicitHs() == 0
+                 and a.GetNumExplicitHs() == 0
+                 and a.GetAtomicNum() == declared.atomic_number
+                 and a.GetFormalCharge() == declared.formal_charge
+                 and a.GetIsotope() == (declared.isotope_mass_number or 0)
                  and a.GetIsAromatic() == declared.aromatic
                  for a, declared in zip(molecule.GetAtoms(), ligand.atoms)),
              "registered_ligand_incomplete_or_changed_explicit_graph")
-    _require(all(molecule.GetBondBetweenAtoms(b.atom_i, b.atom_j).GetBondTypeAsDouble() == b.order
+    _require(all(molecule.GetBondBetweenAtoms(b.atom_i, b.atom_j).GetBondTypeAsDouble()
+                 == (1.5 if b.aromatic else b.order)
                  and molecule.GetBondBetweenAtoms(b.atom_i, b.atom_j).GetIsAromatic() == b.aromatic
                  for b in ligand.bonds), "registered_ligand_changed_bond_graph")
     conformer = Chem.Conformer(ligand.atom_count)
