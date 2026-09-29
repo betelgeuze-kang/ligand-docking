@@ -17,6 +17,7 @@ from betelgeuze_product import installed_native_v4_protocol_preflight as preflig
 from betelgeuze_product import installed_native_v4_source as source_verifier
 from betelgeuze_product import installed_native_v4_prepared_binding as binding
 from betelgeuze_product import native_v4_chemical_identity as chemical
+from betelgeuze_product.prepared_net_charge_screen import ligand_net_charge_screen
 from tools.product import train_public_chembl_selector as checkout_trainer
 from tools.product import public_assay_dataset as common
 from tools.product import public_assay_components as components
@@ -142,7 +143,8 @@ def _linked_protocol(bounded_source, tmp_path):
 
 def _two_linked_protocol(tmp_path, *, second_frame=False, second_method=False,
                          second_state=False, missing_origin=False,
-                         second_smiles="CC1CCOCC1", sd_value=None):
+                         second_smiles="CC1CCOCC1", sd_value=None,
+                         second_charge_tokens=None):
     root = tmp_path / "source"
     root.mkdir()
     manifest_ref, entries = synthetic_intake.__wrapped__(root)
@@ -209,6 +211,18 @@ def _two_linked_protocol(tmp_path, *, second_frame=False, second_method=False,
             request["prepared_input"]["source_declarations"]["prepared_state_id"] = (
                 "synthetic-other-ligand-state"
             )
+        if second_charge_tokens is not None and rid == "chembl:activity:8":
+            itp_ref = request["prepared_input"]["ligand_itp"]
+            itp_path = Path(itp_ref["path"])
+            lines = itp_path.read_text().splitlines()
+            first_atom_row = lines.index("[ atoms ]") + 1
+            for atom_row in range(first_atom_row, lines.index("[ bonds ]")):
+                tokens = lines[atom_row].split()
+                assert tokens[6] == "0.0"
+                tokens[6] = second_charge_tokens[int(atom_row != first_atom_row)]
+                lines[atom_row] = " ".join(tokens)
+            itp_path.write_text("\n".join(lines) + "\n")
+            itp_ref["sha256"] = common.file_sha(itp_path)
         observation = binding.derive_observation(row, request)
         origin_path = root / (rid.replace(":", "-") + "-prepared-origin.json")
         origin_path.write_bytes(comparison._canonical(observation) + b"\n")
@@ -375,6 +389,42 @@ def test_native_v2_preflight_allows_distinct_bound_ligand_state_ids(tmp_path):
     receipt = preflight.preflight_v2(protocol)
     assert receipt["status"] == "ready"
     assert receipt["same_prepared_assay_state_verified"] is False
+
+
+def test_native_v2_preflight_blocks_bound_but_unrankable_ligand_charge(tmp_path):
+    protocol = _two_linked_protocol(tmp_path, second_charge_tokens=("1.0", "0.0"))
+    row = next(row for row in source_verifier._verified_intake(protocol["source"])[2]
+               if row["record_id"] == "chembl:activity:8")
+    request = comparison._bound_json(protocol["requests"][row["record_id"]])
+    preflight_screen = binding.check_source_binding(
+        row, request, inspect_pose_geometry=True)["ligand_net_charge_screen"]
+    rank_screen = ligand_net_charge_screen(evaluate_rigid_pose_request(request))
+    assert preflight_screen == rank_screen
+    assert rank_screen["status"] == "different_integral_state_range"
+    assert rank_screen["rank_eligible"] is False
+
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "blocked"
+    assert receipt["protocol"] is None
+    assert receipt["numeric_validation_completed"] is False
+    assert receipt["evaluation_labels_read"] == 0
+    assert {"code": "prepared_ligand_net_charge_rank_ineligible",
+            "record_id": row["record_id"],
+            "reason": "different_integral_state_range"} in receipt["blockers"]
+
+
+def test_native_v2_preflight_uses_rank_print_resolution_for_ligand_charge(tmp_path):
+    protocol = _two_linked_protocol(tmp_path, second_charge_tokens=("0.001", "0.000"))
+    row = next(row for row in source_verifier._verified_intake(protocol["source"])[2]
+               if row["record_id"] == "chembl:activity:8")
+    request = comparison._bound_json(protocol["requests"][row["record_id"]])
+    preflight_screen = binding.check_source_binding(
+        row, request, inspect_pose_geometry=True)["ligand_net_charge_screen"]
+    rank_screen = ligand_net_charge_screen(evaluate_rigid_pose_request(request))
+    assert preflight_screen == rank_screen
+    assert rank_screen["status"] == "within_print_resolution"
+    assert rank_screen["rank_eligible"] is True
+    assert preflight.preflight_v2(protocol)["status"] == "ready"
 
 
 def test_native_v2_preflight_blocks_unusable_pose_geometry(tmp_path, capsys):

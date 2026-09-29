@@ -46,9 +46,14 @@ without a receptor-ligand atom pair closer than the ranking screen's 1.0 A
 threshold for each candidate. Only out-of-pocket poses or only hard-overlap
 in-pocket poses receive distinct typed blockers before a runnable protocol is
 written; a mixed set may still be attempted. Preflight and post-run ranking
-share the same all-atom distance kernel. These geometry checks perform no
-energy calculation and do not establish general clash freedom, pose recovery,
-or numeric validity.
+share the same all-atom distance kernel. Preflight also applies the ranking
+screen's source-bound ligand net-charge arithmetic before writing a runnable
+protocol. A candidate whose encoded SDF formal-charge total and printed ITP
+partial-charge total are rank-ineligible receives
+`prepared_ligand_net_charge_rank_ineligible`; the same print-resolution rule
+used after execution applies here. These checks perform no energy calculation
+and do not establish chemical-state identity, general clash freedom, pose
+recovery, or numeric validity.
 A ready receipt can write the canonical runnable
 protocol with `--output-protocol`; a blocked receipt lists candidate-specific
 reasons and creates no protocol file. Readiness only means that a provided-pose
@@ -61,8 +66,10 @@ format](https://discover.3ds.com/sites/default/files/2020-08/biovia_ctfileformat
 Canonical bond endpoints may be sorted, but SDF export and source-bound
 conformer preparation must preserve and verify that original direction.
 Missing or invalid direction metadata fails validation. A retained wedge is
-only a declaration: coordinate stereochemistry is unverified and cannot make a
-scientific or product claim ready. Nonstereo prepared v1/v2 identities remain
+only a declaration. The native-v4 prepared bridge separately requires one
+3D SDF conformer and compares stereochemistry rederived from its coordinates
+with the bound chemical identity. This does not make an assay-state, scientific,
+or product claim ready. Nonstereo prepared v1/v2 identities remain
 unchanged; a legacy directed-bond canonical record without its source endpoint
 must be reparsed from authenticated SDF bytes.
 
@@ -243,3 +250,27 @@ stereo tests passed 13. A temporary wheel contained the updated module and an
 isolated installed import exercised its geometry helper. These are software
 integrity checks, not evidence of a real prepared-target comparison or HIP
 numerical parity.
+
+## Exact-HEAD synthetic CPU cost audit (2026-09-29)
+
+An isolated wheel built from commit `967f9dda7b63dfe3613ea0021582e3463c40cfcc`
+matched all 506 packaged Python files byte-for-byte. Its SHA-256 was
+`404c68765c85b2cb6ad1cc5ec35310ac06677b1cc9c7778755d094e7d5b1fa58`.
+The two-chemical **synthetic** installed comparison made two evaluations in
+each arm and read zero evaluation labels. Three fresh runs had a median
+8.322 s total wall time; `verify-run` and completed `resume` medians were
+1.938 s and 1.943 s. The six normalized pose reports and the semantic
+comparison projection matched the earlier installed replay after excluding
+timing/cost fields. Canonical comparison bytes differ because code and runtime
+binding changed.
+
+The cProfile `verify-run` sample spent 1.446 s cumulatively in freeze
+(including cold imports) and 0.744 s cumulatively in summaries (including
+0.551 s of prediction recomputation). These scopes overlap; their durations
+must not be summed. JSON encode/parse cost about 0.003/0.008 s in this
+sample. The receipt is at
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cpu-v4-exact-head-20260929/receipt.json`
+with SHA-256
+`36f6be13fc07d3044338b3873dbfe80d57826130dcde74fb6874a3d26650720a`.
+This local fixture isolates workflow cost; it does not support a real-target
+speedup, learned-ranking gain, HIP parity, or product claim.

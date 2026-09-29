@@ -188,6 +188,12 @@ def preflight_v2(protocol: dict) -> dict:
                 continue
             binding_receipt = check_source_binding(
                 row, request, inspect_pose_geometry=True)
+            charge_screen = binding_receipt["ligand_net_charge_screen"]
+            if not charge_screen["rank_eligible"]:
+                result["blockers"].append(_block(
+                    "prepared_ligand_net_charge_rank_ineligible", rid,
+                    charge_screen["status"]))
+                continue
             pose_status = binding_receipt["pose_geometry_status"]
             if pose_status["inside_declared_pocket"] == 0:
                 result["blockers"].append(_block(

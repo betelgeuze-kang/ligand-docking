@@ -22,6 +22,7 @@ from . import public_assay_components as components
 from .prepared_hard_overlap_screen import (
     HARD_OVERLAP_DISTANCE_ANGSTROM, minimum_cross_distance_angstrom,
 )
+from .prepared_net_charge_screen import ligand_net_charge_source_screen
 
 
 SCHEMA = "native_v4_candidate_prepared_structural_binding_v1"
@@ -122,8 +123,8 @@ def _ligand_identity(prepared_input: dict, ligand, identity: dict) -> dict:
     }
 
 
-def _derive_observation_with_systems(row: dict, request: dict) -> tuple[dict, object, object]:
-    """Derive the exact observation and retain both parsed source systems."""
+def _derive_observation_with_systems(row: dict, request: dict) -> tuple[dict, object, object, dict]:
+    """Derive the exact observation and retain parsed systems and provenance."""
     _require(row["assigned_role"] == "development_test"
              and row["chemical_identity"] is not None
              and not row["prediction_issues"],
@@ -177,12 +178,12 @@ def _derive_observation_with_systems(row: dict, request: dict) -> tuple[dict, ob
         "parameter_sources_sha256": _sha({key: prepared[key]["sha256"]
                                           for key in PARAMETER_KEYS}),
     }
-    return observation, receptor, ligand
+    return observation, receptor, ligand, provenance
 
 
 def derive_observation(row: dict, request: dict) -> dict:
     """Derive the exact structural observation an origin must have recorded."""
-    observation, _, _ = _derive_observation_with_systems(row, request)
+    observation, _, _, _ = _derive_observation_with_systems(row, request)
     return observation
 
 
@@ -224,7 +225,7 @@ def check_source_binding(row: dict, request: dict, *, inspect_pose_geometry: boo
     _require(type(origin) is dict and set(origin) == {"path", "sha256"},
              "native_prepared_source_link_missing")
     supplied = bound.bound_json(origin)
-    expected, receptor, ligand = _derive_observation_with_systems(row, request)
+    expected, receptor, ligand, provenance = _derive_observation_with_systems(row, request)
     _require(type(supplied) is dict and supplied == expected,
              "native_prepared_source_link_mismatch")
     result = {
@@ -235,5 +236,7 @@ def check_source_binding(row: dict, request: dict, *, inspect_pose_geometry: boo
         "same_prepared_assay_state_verified": False,
     }
     if inspect_pose_geometry:
+        result["ligand_net_charge_screen"] = ligand_net_charge_source_screen(
+            ligand, provenance)
         result["pose_geometry_status"] = _pose_geometry_status(receptor, ligand, request)
     return result

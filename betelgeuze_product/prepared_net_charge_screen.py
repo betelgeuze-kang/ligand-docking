@@ -110,40 +110,13 @@ def _source_atoms(report, formal_status):
     return sum(formal), list(tokens)
 
 
-def ligand_net_charge_screen(report):
-    """Return a fixed rank-only decision; leave the numeric report untouched."""
-    shared = report.get("preparation")
-    provenance = shared.get("preparation_provenance") if type(shared) is dict else None
-    if type(provenance) is not dict:
-        raise ValueError("pose_report_ligand_charge_source_mismatch")
+def _prepared_charge_screen(provenance, formal_sum, tokens):
+    """Apply the same rank-only decision to a parsed source or pose report."""
     profile = provenance.get("schema_version")
     observation = provenance.get("ligand_source_net_charge_observation")
     sources = provenance.get("sources")
-    if profile in COMPILED_PROFILES:
-        expected_sources = ({"topology", "coordinates"}
-                            if profile == "compiled_gromacs_cross_particles_v1"
-                            else {"topology", "coordinates", "refined_coordinates"})
-        if (observation is not None or type(sources) is not dict
-                or set(sources) != expected_sources
-                or type(sources.get("topology")) is not dict
-                or type(sources["topology"].get("sha256")) is not str
-                or provenance.get("formal_charge_observations_available") is not False
-                or provenance.get("source_topology_sha256")
-                != sources["topology"]["sha256"]):
-            raise ValueError("pose_report_ligand_charge_source_mismatch")
-        _source_atoms(report, COMPILED_FORMAL_STATUS)
-        return {
-            "schema_version": SCHEMA, "profile": profile,
-            "status": "not_assessed_compiled_profile", "rank_eligible": True,
-            "sdf_formal_charge_sum_e": None,
-            "itp_printed_partial_charge_sum_e": None,
-            "difference_e": None, "print_resolution_bound_e": None,
-            "maximum_rank_difference_e": str(MAX_RANK_DIFFERENCE_E),
-            "scope": "no SDF formal-charge source in compiled particle profile; not chemical validation",
-        }
     if profile not in PREPARED_SOURCE_ROLES or type(observation) is not dict:
         raise ValueError("pose_report_ligand_charge_source_mismatch")
-    formal_sum, tokens = _source_atoms(report, SDF_FORMAL_STATUS)
     partial, difference, relation, reason, print_bound = _arithmetic(tokens, formal_sum)
     expected = {
         "selected_atom_count": len(tokens),
@@ -187,3 +160,59 @@ def ligand_net_charge_screen(report):
         "maximum_rank_difference_e": str(MAX_RANK_DIFFERENCE_E),
         "scope": "source net-charge arithmetic for research ranking only; not chemical or physical validation",
     }
+
+
+def ligand_net_charge_source_screen(ligand, provenance):
+    """Screen loader-verified direct GROMACS sources before numeric execution."""
+    try:
+        if (type(provenance) is not dict
+                or provenance.get("schema_version") not in {
+                    "prepared_gromacs_components_v1",
+                    "prepared_gromacs_components_v2",
+                    "prepared_gromacs_components_v3",
+                }
+                or provenance.get("source_hashes_postflight_verified") is not True):
+            raise ValueError
+        rows = provenance["original_topologies"]["ligand_itp"]["sections"]["atoms"]
+        if type(rows) is not list or len(rows) != ligand.atom_count:
+            raise ValueError
+        tokens = [row["tokens"][6] for row in rows]
+        formal_sum = sum(atom.formal_charge for atom in ligand.atoms)
+        return _prepared_charge_screen(provenance, formal_sum, tokens)
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError) as exc:
+        raise ValueError("prepared_ligand_charge_source_mismatch") from exc
+
+
+def ligand_net_charge_screen(report):
+    """Return a fixed rank-only decision; leave the numeric report untouched."""
+    shared = report.get("preparation")
+    provenance = shared.get("preparation_provenance") if type(shared) is dict else None
+    if type(provenance) is not dict:
+        raise ValueError("pose_report_ligand_charge_source_mismatch")
+    profile = provenance.get("schema_version")
+    observation = provenance.get("ligand_source_net_charge_observation")
+    sources = provenance.get("sources")
+    if profile in COMPILED_PROFILES:
+        expected_sources = ({"topology", "coordinates"}
+                            if profile == "compiled_gromacs_cross_particles_v1"
+                            else {"topology", "coordinates", "refined_coordinates"})
+        if (observation is not None or type(sources) is not dict
+                or set(sources) != expected_sources
+                or type(sources.get("topology")) is not dict
+                or type(sources["topology"].get("sha256")) is not str
+                or provenance.get("formal_charge_observations_available") is not False
+                or provenance.get("source_topology_sha256")
+                != sources["topology"]["sha256"]):
+            raise ValueError("pose_report_ligand_charge_source_mismatch")
+        _source_atoms(report, COMPILED_FORMAL_STATUS)
+        return {
+            "schema_version": SCHEMA, "profile": profile,
+            "status": "not_assessed_compiled_profile", "rank_eligible": True,
+            "sdf_formal_charge_sum_e": None,
+            "itp_printed_partial_charge_sum_e": None,
+            "difference_e": None, "print_resolution_bound_e": None,
+            "maximum_rank_difference_e": str(MAX_RANK_DIFFERENCE_E),
+            "scope": "no SDF formal-charge source in compiled particle profile; not chemical validation",
+        }
+    formal_sum, tokens = _source_atoms(report, SDF_FORMAL_STATUS)
+    return _prepared_charge_screen(provenance, formal_sum, tokens)

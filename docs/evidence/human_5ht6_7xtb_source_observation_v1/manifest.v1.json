@@ -1,0 +1,152 @@
+{
+  "schema_version": "human_5ht6_7xtb_source_observation_packet_v1",
+  "status": "SOURCE_OBSERVED_PREPARATION_AND_ADMISSION_BLOCKED",
+  "repository_head_at_execution": "967f9dda7b63dfe3613ea0021582e3463c40cfcc",
+  "repository_dirty_paths_preexisting": [
+    ".github/workflows/ci-prepared-candidate-comparison.yml",
+    "tests/ci/native_v4_wheel_probe.py"
+  ],
+  "bundle_root_hint": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-source-observation-20260929T031420Z",
+  "source_url": "https://files.rcsb.org/download/7XTB.cif",
+  "selection": {
+    "entry_id": "7XTB",
+    "label_asym_id": "F",
+    "component_id": "SRO",
+    "auth_seq_id": "501",
+    "model_number": "1"
+  },
+  "receptor_source_selection": {
+    "entity_id": "5",
+    "label_asym_id": "E",
+    "auth_asym_id": "R"
+  },
+  "files": [
+    {
+      "name": "7XTB.cif",
+      "bytes": 900097,
+      "sha256": "e81b271ee863340c0e1e65101be7695849bdd56f408c887b03b89929cc4e9cb7"
+    },
+    {
+      "name": "download-receipt.json",
+      "bytes": 330,
+      "sha256": "f698a1733cfe9cf1b96186c149679edf59bae726c0362b189a9c32211bdde713"
+    },
+    {
+      "name": "observation-request.json",
+      "bytes": 1071,
+      "sha256": "480d3d1ba5cfbdc3c7164a71aec1d62decf5f89b0ba6962686c0f18bd4b344fb"
+    },
+    {
+      "name": "observation-report.json",
+      "bytes": 544382,
+      "sha256": "642ebf9f804e677beb80d74d9e82fa3ce78c59596151e1d45697a78e30dd25f1"
+    },
+    {
+      "name": "source-preparation-inventory.json",
+      "bytes": 425637,
+      "sha256": "a757028c1dc716896996c352c4cedc41906ad134b9b16f5bfe1f1f0d8cdf522c"
+    },
+    {
+      "name": "repeat-verification.json",
+      "bytes": 19825,
+      "sha256": "ce5d5c78af7af1e895f42a2fb7188346ab3139cd25bc44b3015012ae38162b81"
+    }
+  ],
+  "source_observation_summary": {
+    "entry_atom_site_rows": 8101,
+    "receptor_atom_rows": 2124,
+    "receptor_modeled_residue_count": 278,
+    "receptor_observed_auth_number_segments": [
+      [
+        26,
+        227
+      ],
+      [
+        263,
+        338
+      ]
+    ],
+    "receptor_hydrogen_atom_rows": 0,
+    "receptor_altloc_atom_rows": 0,
+    "entry_water_atom_rows": 0,
+    "entry_nonpolymer_components": {
+      "SRO": 13
+    },
+    "ligand_atom_rows": 13,
+    "ligand_hydrogen_atom_rows": 0
+  },
+  "authority": {
+    "prepared_receptor": false,
+    "prepared_ligand": false,
+    "PR49_PR59_pose_supplied": false,
+    "assay_state_equivalence_verified": false,
+    "roles_assigned": false,
+    "training_admitted": false,
+    "evaluation_outcomes_read": false,
+    "protected_inputs_read": false,
+    "scientifically_validated": false,
+    "product_ranking_enabled": false
+  },
+  "preparation_decisions": [
+    {
+      "id": "fusion_construct",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "Entity 5 declares cytochrome b562 fusion and HTR6; P50406 mapping covers native residues 2-440; observed coordinates cover native 26-227 and 263-338. Determine intended computational construct without pretending it is the assayed construct."
+    },
+    {
+      "id": "loops_and_termini",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "Native 228-262 is unobserved between the observed segments; N/C terminal regions are also absent. Resolve reconstruction, truncation and terminal chemistry with an explicit source-to-prepared atom map."
+    },
+    {
+      "id": "missing_atom",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "The source declares SER26 OG unobserved. Do not silently delete the residue or invent its coordinates."
+    },
+    {
+      "id": "disulfide",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "Source declares CYS99-CYS180 disulfide, printed distance 2.028 A. Preserve the declaration and explicitly parameterize selected sulfur chemistry."
+    },
+    {
+      "id": "waters_and_membrane",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "No water, hydrogen or lipid coordinates are deposited. Select water, membrane, ions and environmental treatment explicitly; absence does not show physiological dispensability."
+    },
+    {
+      "id": "gs_nb35_context",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "Gs/Nb35 is part of the deposited complex. Decide whether/how to retain this active-state context; a receptor-only model does not establish antagonist-assay conformation."
+    },
+    {
+      "id": "microstates",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "All 13 selected SRO atom-site and embedded component formal charges are unknown; 12 embedded-component hydrogens lack coordinates. Receptor protonation and PR49/PR59 tautomers, protonation, charges and 3D states remain unresolved."
+    },
+    {
+      "id": "parameters_and_source_frame",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "No receptor/ligand topology, force-field parameters, prepared coordinate frame or admitted pocket is supplied. The 4 A source proximity list is descriptive only."
+    },
+    {
+      "id": "pr49_pr59_linkage",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "SRO is serotonin, not PR49 or PR59. No PR49/PR59 pose, assay construct match or assay-state equivalence follows from this source observation."
+    },
+    {
+      "id": "source_roles_and_endpoint",
+      "status": "unresolved",
+      "selected_action": null,
+      "observation_and_required_decision": "No fit/calibration/evaluation role assigned and no outcome or protected identity read. Existing roles and primary Ki provenance remain separate."
+    }
+  ]
+}

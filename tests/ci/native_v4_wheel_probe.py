@@ -24,11 +24,19 @@ def _write(path: Path, value: dict) -> None:
 
 
 def prepare(root: Path) -> None:
-    from betelgeuze_product import installed_synthetic_comparison as comparison
-    from tests.unit.test_installed_native_v4_comparison import (
-        _linked_protocol, _two_linked_protocol, bounded_source,
-    )
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
 
+    from betelgeuze_product import (
+        installed_native_v4_source as source_verifier,
+        native_v4_chemical_identity as chemical,
+    )
+    from betelgeuze_product import installed_synthetic_comparison as comparison
+    from tools.product import public_assay_dataset as common
+    from tests.unit.test_installed_native_v4_comparison import (
+        _bound_request, _linked_protocol, _replace_ligand_geometry,
+        _two_linked_protocol, bounded_source,
+    )
     root.mkdir(parents=True)
     bounded = bounded_source.__wrapped__(root)
     linked, _, candidate = _linked_protocol(bounded, root)
@@ -50,6 +58,72 @@ def prepare(root: Path) -> None:
         two_root, sd_value="SYNTHETIC_PRIVATE_SD_VALUE_DO_NOT_EXPORT",
     ))
 
+    # Exercise the actual installed prepared-binding module with a valid 3D
+    # conformer and with a flat 2D conformer whose SDF wedge asserts the same
+    # stereochemistry. Keep SDF and GRO coordinates coherent and refresh both
+    # bound hashes after mutation.
+    stereo_row = copy.deepcopy(
+        source_verifier._verified_intake(linked["source"])[2][-1])
+    smiles = "C[C@H](O)C(=O)O"
+    stereo_row["chemical_identity"] = chemical.chemical_identity(smiles)
+    valid_request = _bound_request(root / "stereo-valid", smiles)
+    flat_request = copy.deepcopy(valid_request)
+    flat_request["prepared_input"] = copy.deepcopy(valid_request["prepared_input"])
+    for name in ("ligand_sdf", "ligand_gro", "ligand_itp", "ligand_atomtypes"):
+        source_path = Path(valid_request["prepared_input"][name]["path"])
+        target_path = root / "stereo-flat-wedge" / source_path.name
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(source_path.read_bytes())
+        flat_request["prepared_input"][name]["path"] = str(target_path)
+    flat_sdf = Path(flat_request["prepared_input"]["ligand_sdf"]["path"])
+    flat_molecule = Chem.MolFromMolBlock(flat_sdf.read_text(), removeHs=False)
+    assert flat_molecule is not None
+    AllChem.Compute2DCoords(flat_molecule)
+    Chem.WedgeMolBonds(flat_molecule, flat_molecule.GetConformer())
+    assert not flat_molecule.GetConformer().Is3D()
+    assert any(bond.GetBondDir() != Chem.BondDir.NONE
+               for bond in flat_molecule.GetBonds())
+    _replace_ligand_geometry(flat_request, flat_molecule)
+    for request in (valid_request, flat_request):
+        for name in ("ligand_sdf", "ligand_gro"):
+            ref = request["prepared_input"][name]
+            assert ref["sha256"] == common.file_sha(Path(ref["path"]))
+    _write(root / "stereo-geometry.json", {
+        "row": stereo_row,
+        "valid_3d_request": valid_request,
+        "flat_wedge_request": flat_request,
+    })
+
+
+def check_stereo_geometry(root: Path, package_path: Path) -> None:
+    import betelgeuze_product
+
+    # This call runs in the isolated venv and imports prepared binding from the
+    # installed wheel. The flat SDF retains a correct wedge declaration but
+    # refreshed, coherent source hashes bind its 2D coordinates.
+    from betelgeuze_product import installed_native_v4_prepared_binding as prepared_binding
+
+    assert Path(betelgeuze_product.__file__).resolve() == package_path
+    assert Path(prepared_binding.__file__).resolve().is_relative_to(
+        Path(sys.prefix).resolve())
+    stereo = _read(root / "stereo-geometry.json")
+    valid_observation = prepared_binding.derive_observation(
+        stereo["row"], stereo["valid_3d_request"])
+    assert valid_observation["ligand"]["canonical_isomeric_smiles_sha256"] == (
+        stereo["row"]["chemical_identity"]["canonical_isomeric_smiles_sha256"])
+    try:
+        prepared_binding.derive_observation(
+            stereo["row"], stereo["flat_wedge_request"])
+    except ValueError as exc:
+        assert str(exc) == "native_prepared_ligand_geometry_stereochemistry_mismatch"
+    else:
+        raise AssertionError("installed wheel accepted flat-wedge prepared ligand")
+    _write(root / "stereo-binding-check.json", {
+        "installed_module": str(Path(prepared_binding.__file__).resolve()),
+        "valid_3d": "accepted_and_identity_bound",
+        "flat_wedge": "rejected_geometry_stereochemistry_mismatch",
+    })
+
 
 def check(root: Path) -> None:
     assert sys.prefix != sys.base_prefix, "wheel probe requires a fresh venv"
@@ -62,6 +136,7 @@ def check(root: Path) -> None:
     assert "site-packages" in package_path.parts
     config = (Path(sys.prefix) / "pyvenv.cfg").read_text().lower()
     assert "include-system-site-packages = false" in config
+    check_stereo_geometry(root, package_path)
 
     source = _read(root / "source-verification.json")
     assert source["requested_metadata_rows"] == 7
@@ -128,11 +203,22 @@ def check(root: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("prepare", "check"))
+    parser.add_argument("action", choices=("prepare", "check", "check-stereo"))
     parser.add_argument("root", type=Path)
     args = parser.parse_args()
     if args.action == "prepare":
         prepare(args.root)
+    elif args.action == "check-stereo":
+        assert sys.prefix != sys.base_prefix, "wheel probe requires a fresh venv"
+        assert importlib.util.find_spec("tools") is None, "checkout tools are importable"
+        import betelgeuze_product
+
+        package_path = Path(betelgeuze_product.__file__).resolve()
+        assert package_path.is_relative_to(Path(sys.prefix).resolve())
+        assert "site-packages" in package_path.parts
+        config = (Path(sys.prefix) / "pyvenv.cfg").read_text().lower()
+        assert "include-system-site-packages = false" in config
+        check_stereo_geometry(args.root, package_path)
     else:
         check(args.root)
 

@@ -396,6 +396,8 @@ jobs:
             .github/workflows/ci-prepared-candidate-comparison.yml
             ${{ runner.temp }}/native-v4-wheel-probe/wheel.sha256
             ${{ runner.temp }}/native-v4-wheel-probe/source-verification.json
+            ${{ runner.temp }}/native-v4-wheel-probe/stereo-geometry.json
+            ${{ runner.temp }}/native-v4-wheel-probe/stereo-binding-check.json
             ${{ runner.temp }}/native-v4-wheel-probe/run.json
             ${{ runner.temp }}/native-v4-wheel-probe/verify.json
             ${{ runner.temp }}/native-v4-wheel-probe/resume.json
