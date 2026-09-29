@@ -462,3 +462,349 @@ def test_mutation_during_diagnostic_is_rejected_at_postflight(tmp_path, monkeypa
     monkeypatch.setattr(diagnostic, "_method_key", changed)
     with pytest.raises(ValueError, match="readiness_input_changed_during_read"):
         diagnostic.build(*refs)
+
+
+def _registered_documents(tmp_path, row):
+    """Recorded synthetic v3 metadata only: molecular source paths do not exist."""
+    identity = row["chemical_identity"]["canonical_isomeric_smiles_sha256"]
+    files = {key: {"path": "/deliberately-unopened/" + key,
+                   "sha256": "a" * 64 if key == "receptor" else identity}
+             for key in diagnostic.REGISTERED_FILES}
+    budget = {"candidate_count": 1, "top_k": 1, "max_torsions": 0,
+              "translation_radius_angstrom": 0.0, "seed": 7, "max_refinement_steps": 32}
+    request = {"schema_id": diagnostic.REGISTERED_REQUEST, "backend": "python_cpu_reference",
+               **files, "solvation": None, "budget": budget, "receptor_margin_angstrom": 4.0,
+               "solver": {"minimization": {"max_iterations": 32, "max_backtracks": 12,
+                                            "force_tolerance_kcal_per_mol_angstrom": 0.001}},
+               "comparison": {"mode": "same_candidates", "require_convergence_for_selection": True},
+               "selection": {"top_k": 1},
+               "pocket": {"center_angstrom": [0.0, 0.0, 0.0], "radius_angstrom": 10.0,
+                          "coordinate_frame_id": "registered-frame"}}
+    pose = {"schema_id": "cpu_registered_input_single_pose_receipt/1.0.0",
+            "policy_id": diagnostic.REGISTERED_POLICY, "authority_input_receipt_sha256": "b" * 64,
+            "coordinate_frame_id": "registered-frame", "source_ligand_system_sha256": identity,
+            "candidate_id": "pose-0-" + identity[:8], "proposal_fingerprint_sha256": identity,
+            **{k: v for k, v in budget.items() if k != "max_refinement_steps"}}
+    pose["receipt_sha256"] = diagnostic._sha(pose)
+    score_descriptor = {"score_id": "betelgeuze.cpu_explicit_graph_pose_scorer/1.0.0",
+        "direction": "minimize", "unit": None,
+        "semantics": "uncalibrated_dimensionless_explicit_graph_chemistry_pose_ordering_score",
+        "calibrated": False, "reference_method": None,
+        "applicability_domain_id": "authenticated_known_pocket_complete_explicit_chemical_graph_partial_charge_v1"}
+    source = {"backend": diagnostic.REGISTERED_BACKEND, "request_sha256": diagnostic._sha(request),
+              "input_files": files, "pose_budget": budget, "solver": request["solver"],
+              "score_quantity": diagnostic.REGISTERED_SCORE, "score_descriptor": score_descriptor,
+              "candidate_source_admission_verified": False, "scientifically_validated": False,
+              "implementation_sha256": "b" * 64, "authority_sha256": "b" * 64,
+              "parameters_sha256": "c" * 64, "cross_parameters_sha256": "d" * 64,
+              "proposal_policy": pose,
+              "evaluator": {"evaluator_id": "cpu_fixed_receptor_reference/1.0.0",
+                            "parameter_fingerprint_sha256": "c" * 64, "cross_parameters_sha256": "d" * 64,
+                            "receptor_system_sha256": "e" * 64, "solvation_fingerprint_sha256": None},
+              "scorer": {"feature_model_id": "explicit_graph_hbond_features/1.0.0",
+                         "context": "f" * 64, "config": "f" * 64, "backend": "f" * 64}}
+    frame = {"schema_version": "native_v4_registered_prepared_cohort_v1", "target_chembl_id": "CHEMBL3371",
+             "receptor_source_sha256": files["receptor"]["sha256"], "receptor_system_sha256": "e" * 64,
+             "receptor_coordinates_sha256": "1" * 64, "receptor_construct_sha256": "2" * 64,
+             "receptor_cross_parameters_sha256": "3" * 64, "cross_model_sha256": "4" * 64,
+             "pocket_sha256": diagnostic._sha(request["pocket"]), "coordinate_frame_id": "registered-frame",
+             "protocol_settings_sha256": diagnostic._sha({k: request[k] for k in (
+                 "schema_id", "backend", "receptor_margin_angstrom", "budget", "solver", "comparison", "selection")})}
+    descriptor = {"schema_version": diagnostic.REGISTERED_DESCRIPTOR,
+        "record_id": row["record_id"], "assay_id": row["assay_id"],
+        "metadata_origin_sha256": row["source_origins"]["metadata_origin"]["sha256"],
+        "method_origin_sha256": row["source_origins"]["method_origin"]["sha256"],
+        "target_annotation_sha256": diagnostic._sha(row["target_annotation"]), "target_chembl_id": "CHEMBL3371",
+        "request_schema": diagnostic.REGISTERED_REQUEST, "request_sha256": diagnostic._sha(request),
+        "source_files": files, "coordinate_frame_id": "registered-frame", "pocket_sha256": frame["pocket_sha256"],
+        "charge_origin": {"path": "/deliberately-unopened/charge.json", "sha256": "5" * 64},
+        "charge_policy": "openmm_xml_decimal_charge_sum_v1", "cohort": frame,
+        "same_prepared_assay_state_verified": False, "source_authenticated": False, "scientifically_validated": False,
+        "ligand": {"system_sha256": identity, "coordinates_sha256": "6" * 64, "atom_graph_sha256": "7" * 64,
+                   "canonical_isomeric_smiles_sha256": identity, "formal_charge": 0, "atom_count": 3},
+        "receptor": {"system_sha256": "e" * 64, "coordinates_sha256": "1" * 64,
+                     "construct_sha256": "2" * 64, "atom_count": 8}}
+    request, receipt = _bind_descriptor(tmp_path, row, request, descriptor)
+    receipt.update(cohort=frame,
+        ligand_net_charge_screen={"schema_version": "registered_openmm_ligand_net_charge_screen_v1",
+            "profile": "openmm_system_xml_nonbonded_charge_tokens_v1", "status": "equal_as_encoded",
+            "rank_eligible": True, "canonical_formal_charge_sum_e": 0,
+            "openmm_printed_partial_charge_sum_e": "0.00", "difference_e": "0",
+            "print_resolution_bound_e": "0.001", "maximum_rank_difference_e": "0.5",
+            "charge_tokens_sha256": "8" * 64, "mapping_sha256": "9" * 64, "xml_sha256": "a" * 64,
+            "scope": "synthetic recorded charge decision; no source opened"},
+        pose_geometry_status={"requested": 1, "inside_declared_pocket": 1,
+            "rank_eligible_inside_pocket": 1, "cross_distance_unavailable_inside_pocket": 0,
+            "scope": "synthetic registered original pose"})
+    return request, receipt, source
+
+
+def _registered_summary(source, score=1.0):
+    pose = source["proposal_policy"]
+    return {"status": "evaluated", "reason": None, "score": score,
+        "score_quantity": diagnostic.REGISTERED_SCORE, "score_descriptor": source["score_descriptor"],
+        "proposal_policy_id": diagnostic.REGISTERED_POLICY,
+        "selected_candidates": [{"variant": "baseline", "score": score, "pose_valid": True,
+            "selection_eligible": True, "validity_complete": True, "candidate_id": pose["candidate_id"],
+            "proposal_index": 0, "proposal_fingerprint_sha256": pose["proposal_fingerprint_sha256"]}],
+        "refinement_attempts": 1, "refinement_failures": 0, "refinement_converged": 0,
+        "original_selected_count": 1, "refined_selected_count": 0,
+        "work": {"actual_force_evaluation_calls": 51, "failed_force_evaluation_calls": 0,
+                 "score_evaluation_calls": 2, "force_evaluations_reserved": 417, "pose_candidates_in_both_arms": 2},
+        "physical_affinity_computed": False, "candidate_source_admission_verified": False,
+        "scientifically_validated": False}
+
+
+def _reseal_registered(refs, frozen, result):
+    binding = diagnostic._sha(frozen)
+    result["binding"] = binding
+    for arm in result["arms"].values():
+        for row in arm["rows"]:
+            if "binding" in row:
+                row["binding"] = binding
+        arm["completion"]["binding"] = binding
+        if arm["worker_complete"] is not None:
+            arm["worker_complete"]["binding"] = binding
+    return (_write(Path(refs[0]["path"]), {"payload": frozen, "sha256": binding}),
+            _write(Path(refs[1]["path"]), result))
+
+
+def _registered_snapshots(tmp_path, *, rows=None):
+    rows = rows or [_row(1, "Ki", "CCO", method=True), _row(2, "Ki", "CCN", method=True)]
+    prepared = {r["record_id"]: _registered_documents(tmp_path, r) for r in rows}
+    refs = _snapshots(tmp_path, rows, prepared=prepared,
+                      scored={name: {r["record_id"] for r in rows} for name in diagnostic.ARMS})
+    frozen = json.loads(Path(refs[0]["path"]).read_bytes())["payload"]
+    result = json.loads(Path(refs[1]["path"]).read_bytes())
+    frozen["schema_version"] = diagnostic.REGISTERED_FROZEN
+    frozen["protocol"]["schema_version"], result["schema_version"] = diagnostic.VERSIONS[diagnostic.REGISTERED_FROZEN]
+    frozen["source_inputs"] = {rid: values[2] for rid, values in prepared.items()}
+    frozen["registered_cohort"] = {"method_sha256": diagnostic._method_key(rows[0]),
+                                   "frame": prepared[rows[0]["record_id"]][1]["cohort"]}
+    for name, arm in result["arms"].items():
+        if name != "similarity":
+            arm["score_quantity"] = diagnostic.REGISTERED_SCORE
+            for row in arm["rows"]:
+                row["registered_summary"] = _registered_summary(frozen["source_inputs"][row["record_id"]])
+                row["pose_report"] = {"path": f"{name}/{diagnostic._sha(row['record_id'])}.poses.json",
+                                      "bytes": 1, "sha256": "e" * 64}
+        reports = [] if name == "similarity" else [r["registered_summary"] for r in arm["rows"]]
+        arm["registered_work"] = {
+            "recorded_call_counters": {key: sum(r["work"][key] for r in reports) for key in (
+                "actual_force_evaluation_calls", "failed_force_evaluation_calls", "score_evaluation_calls",
+                "force_evaluations_reserved", "pose_candidates_in_both_arms")},
+            "candidate_reports": len(reports), "candidate_calls_without_returned_report": 0,
+            "all_candidate_molecular_work_recorded": True}
+    return _reseal_registered(refs, frozen, result)
+
+
+def test_v3_records_d3_fallback_separately_from_cross_energy_without_opening_molecular_inputs(tmp_path):
+    refs = _registered_snapshots(tmp_path)
+    before = {p: p.read_bytes() for p in tmp_path.iterdir()}
+    value = diagnostic.build(*refs)
+    assert value["four_arm_common_scored_ids"] == ["chembl:activity:1", "chembl:activity:2"]
+    assert value["denominator"]["largest_common_method_and_frame_group_distinct_Ki_identities"] == 2
+    assert value["arms"]["engine"]["score_quantity"] == diagnostic.REGISTERED_SCORE
+    assert value["arms"]["similarity"]["score_quantity"] == "predicted_negative_log10_molar_endpoint"
+    rows = value["arms"]["engine"]["recorded_registered_observations"]
+    assert all(r["original_selected_count"] == 1 and r["refinement_converged"] == 0 for r in rows.values())
+    work = value["arms"]["engine"]["recorded_registered_work"]
+    assert work["candidate_reports"] == 2
+    assert work["recorded_call_counters"]["actual_force_evaluation_calls"] == 102
+    assert value["registered_candidate_reports_reverified"] is False
+    assert value["registered_charge_origin_rederived"] is False
+    assert value["registered_initial_pose_status_recomputed"] is False
+    assert value["engine_calls_performed"] == 0
+    assert before == {p: p.read_bytes() for p in tmp_path.iterdir()}
+
+
+@pytest.mark.parametrize("change,reason", [
+    ("cross_score_unit", "readiness_score_quantity_mismatch"),
+    ("summary_score", "readiness_registered_summary_mismatch"),
+    ("summary_missing", "readiness_registered_summary_missing"),
+    ("summary_affinity", "readiness_registered_summary_mismatch"),
+    ("refined_without_convergence", "readiness_registered_nonconverged_refinement_selected"),
+    ("force_over_budget", "readiness_registered_work_denominator_mismatch"),
+    ("wrong_selected_candidate", "readiness_registered_selection_mismatch"),
+    ("similarity_summary", "readiness_similarity_has_registered_summary"),
+    ("cross_wired_report", "readiness_registered_report_reference_mismatch"),
+    ("aggregate_work", "readiness_registered_arm_work_mismatch"),
+])
+def test_resealed_v3_result_cannot_change_units_selection_or_costs(tmp_path, change, reason):
+    refs = _registered_snapshots(tmp_path)
+    result = json.loads(Path(refs[1]["path"]).read_bytes())
+    arm = result["arms"]["engine"]
+    row = arm["rows"][0]
+    summary = row["registered_summary"]
+    if change == "cross_score_unit":
+        arm["score_quantity"] = "existing_cross_only_kcal_per_mol"
+    elif change == "summary_score":
+        summary["score"] = 9.0
+    elif change == "summary_missing":
+        del row["registered_summary"]
+    elif change == "summary_affinity":
+        summary["physical_affinity_computed"] = True
+    elif change == "refined_without_convergence":
+        summary.update(original_selected_count=0, refined_selected_count=1)
+        summary["selected_candidates"][0]["variant"] = "refined"
+    elif change == "force_over_budget":
+        summary["work"]["actual_force_evaluation_calls"] = 418
+    elif change == "wrong_selected_candidate":
+        summary["selected_candidates"][0]["candidate_id"] = "other-candidate"
+    elif change == "similarity_summary":
+        result["arms"]["similarity"]["rows"][0]["registered_summary"] = summary
+    elif change == "cross_wired_report":
+        row["pose_report"]["path"] = arm["rows"][1]["pose_report"]["path"]
+    else:
+        arm["registered_work"]["recorded_call_counters"]["actual_force_evaluation_calls"] = 0
+    refs = refs[0], _write(Path(refs[1]["path"]), result)
+    with pytest.raises(ValueError, match=reason):
+        diagnostic.build(*refs)
+
+
+@pytest.mark.parametrize("change,reason", [
+    ("cohort_method", "readiness_registered_strict_method_or_frame_mismatch"),
+    ("cohort_frame", "readiness_registered_strict_method_or_frame_mismatch"),
+    ("request_hash", "readiness_registered_input_binding_mismatch"),
+    ("input_file", "readiness_registered_input_binding_mismatch"),
+    ("pose_receipt", "readiness_registered_original_pose_binding_mismatch"),
+    ("source_unit", "readiness_registered_score_descriptor_mismatch"),
+    ("source_identity", "readiness_registered_ligand_or_receptor_binding_mismatch"),
+    ("binding_cohort", "readiness_recorded_registered_binding_mismatch"),
+    ("charge", "readiness_registered_charge_status_mismatch"),
+    ("pose", "readiness_registered_initial_pose_status_mismatch"),
+])
+def test_resealed_v3_frozen_scope_and_binding_tampering_fails_closed(tmp_path, change, reason):
+    refs = _registered_snapshots(tmp_path)
+    frozen = json.loads(Path(refs[0]["path"]).read_bytes())["payload"]
+    result = json.loads(Path(refs[1]["path"]).read_bytes())
+    rid = frozen["pool"][0]
+    source, receipt = frozen["source_inputs"][rid], frozen["prepared_bindings"][rid]
+    if change == "cohort_method":
+        frozen["registered_cohort"]["method_sha256"] = "0" * 64
+    elif change == "cohort_frame":
+        frozen["registered_cohort"]["frame"]["cross_model_sha256"] = "0" * 64
+    elif change == "request_hash":
+        source["request_sha256"] = "0" * 64
+    elif change == "input_file":
+        source["input_files"]["extensions"]["sha256"] = "0" * 64
+    elif change == "pose_receipt":
+        source["proposal_policy"]["receipt_sha256"] = "0" * 64
+    elif change == "source_unit":
+        source["score_descriptor"]["unit"] = "kcal/mol"
+    elif change == "source_identity":
+        source["proposal_policy"]["source_ligand_system_sha256"] = "0" * 64
+        source["proposal_policy"]["receipt_sha256"] = diagnostic._sha({
+            k: v for k, v in source["proposal_policy"].items() if k != "receipt_sha256"})
+    elif change == "binding_cohort":
+        receipt["cohort"]["protocol_settings_sha256"] = "0" * 64
+    elif change == "charge":
+        receipt["ligand_net_charge_screen"]["rank_eligible"] = False
+    else:
+        receipt["pose_geometry_status"]["rank_eligible_inside_pocket"] = 0
+    with pytest.raises(ValueError, match=reason):
+        diagnostic.build(*_reseal_registered(refs, frozen, result))
+
+
+def test_v3_does_not_admit_one_identity_under_two_record_ids(tmp_path):
+    rows = [_row(1, "Ki", "CCO", method=True), _row(2, "Ki", "CCO", method=True)]
+    with pytest.raises(ValueError, match="readiness_registered_two_distinct_Ki_identities_required"):
+        diagnostic.build(*_registered_snapshots(tmp_path, rows=rows))
+
+
+def test_v3_different_recorded_methods_are_rejected_instead_of_merely_split_into_groups(tmp_path):
+    rows = [_row(1, "Ki", "CCO", method=True), _row(2, "Ki", "CCN", method=True)]
+    rows[1]["method_evidence"]["description"] += " different incubation"
+    with pytest.raises(ValueError, match="readiness_registered_strict_method_or_frame_mismatch"):
+        diagnostic.build(*_registered_snapshots(tmp_path, rows=rows))
+
+
+@pytest.mark.parametrize("known_calls", [True, False])
+def test_v3_call_without_report_keeps_missing_molecular_work_unknown(tmp_path, known_calls):
+    refs = _registered_snapshots(tmp_path)
+    result = json.loads(Path(refs[1]["path"]).read_bytes())
+    arm = result["arms"]["engine"]
+    row = arm["rows"][1]
+    row.update(status="failed", score=None, reason="synthetic evaluation failure")
+    del row["registered_summary"], row["pose_report"]
+    arm["denominator"] = {"requested": 2, "evaluated": 1, "failed": 1}
+    arm["ranked_record_ids"] = [arm["rows"][0]["record_id"]]
+    arm["registered_work"] = {
+        "recorded_call_counters": arm["rows"][0]["registered_summary"]["work"],
+        "candidate_reports": 1, "candidate_calls_without_returned_report": 1 if known_calls else None,
+        "all_candidate_molecular_work_recorded": False}
+    if not known_calls:
+        arm["worker_complete"] = None
+        arm["completion"]["status"] = "worker_failed"
+    value = diagnostic.build(refs[0], _write(Path(refs[1]["path"]), result))
+    observed = value["arms"]["engine"]["recorded_registered_work"]
+    assert observed["all_candidate_molecular_work_recorded"] is False
+    assert observed["candidate_calls_without_returned_report"] == (1 if known_calls else None)
+    assert observed["recorded_call_counters"]["actual_force_evaluation_calls"] == 51
+    assert value["denominator"]["four_arm_common_scored_records"] == 1
+
+
+@pytest.mark.parametrize("difference", ["-0.0001", "0.0001"])
+def test_v3_charge_screen_retains_signed_decimal_difference(tmp_path, difference):
+    refs = _registered_snapshots(tmp_path)
+    frozen = json.loads(Path(refs[0]["path"]).read_bytes())["payload"]
+    result = json.loads(Path(refs[1]["path"]).read_bytes())
+    for receipt in frozen["prepared_bindings"].values():
+        receipt["ligand_net_charge_screen"].update(
+            status="within_print_resolution", openmm_printed_partial_charge_sum_e=difference,
+            difference_e=difference)
+    assert diagnostic.build(*_reseal_registered(refs, frozen, result))["status"] == "diagnostic_only"
+
+
+@pytest.mark.parametrize("difference,resolution", [("0", "0.5"), ("-0.0001", "0.00001"), ("NaN", "0.001")])
+def test_v3_resealed_charge_rounding_claim_cannot_override_recorded_gate(tmp_path, difference, resolution):
+    refs = _registered_snapshots(tmp_path)
+    frozen = json.loads(Path(refs[0]["path"]).read_bytes())["payload"]
+    result = json.loads(Path(refs[1]["path"]).read_bytes())
+    receipt = frozen["prepared_bindings"][frozen["pool"][0]]
+    receipt["ligand_net_charge_screen"].update(
+        status="equal_as_encoded" if difference == "0" else "within_print_resolution",
+        openmm_printed_partial_charge_sum_e=difference, difference_e=difference,
+        print_resolution_bound_e=resolution)
+    with pytest.raises(ValueError, match="readiness_registered_charge_status_mismatch"):
+        diagnostic.build(*_reseal_registered(refs, frozen, result))
+
+
+def test_resealed_v3_descriptor_cannot_substitute_another_ligand_identity(tmp_path, monkeypatch):
+    original = _registered_documents
+
+    def changed(directory, row):
+        request, receipt, source = original(directory, row)
+        if row["record_id"] == "chembl:activity:1":
+            path = Path(row["source_origins"]["prepared_state_origin"]["path"])
+            descriptor = json.loads(path.read_bytes())
+            descriptor["ligand"]["canonical_isomeric_smiles_sha256"] = "0" * 64
+            ref = _write(path, descriptor)
+            row["source_origins"]["prepared_state_origin"] = ref
+            receipt.update(origin_sha256=ref["sha256"], observation_sha256=diagnostic._sha(descriptor))
+        return request, receipt, source
+
+    monkeypatch.setitem(globals(), "_registered_documents", changed)
+    with pytest.raises(ValueError, match="readiness_registered_ligand_or_receptor_binding_mismatch"):
+        diagnostic.build(*_registered_snapshots(tmp_path))
+
+
+def test_v3_cli_isolated_execution_never_imports_product_or_physics(tmp_path):
+    refs = _registered_snapshots(tmp_path)
+    script = Path(diagnostic.__file__)
+    harness = """import importlib.abc, runpy, sys
+class NoPhysics(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'betelgeuze_product', 'betelgeuze_engine', 'betelgeuze_engine_v2', 'torch', 'numpy', 'rdkit', 'openmm'}:
+            raise AssertionError('forbidden scientific import: ' + fullname)
+sys.meta_path.insert(0, NoPhysics())
+script = sys.argv.pop(1)
+runpy.run_path(script, run_name='__main__')
+"""
+    before = {p: p.read_bytes() for p in tmp_path.iterdir()}
+    result = subprocess.run([sys.executable, "-I", "-B", "-c", harness, str(script),
+        "--frozen", refs[0]["path"], "--frozen-sha256", refs[0]["sha256"],
+        "--comparison", refs[1]["path"], "--comparison-sha256", refs[1]["sha256"]],
+        capture_output=True, text=True, check=True)
+    assert json.loads(result.stdout)["status"] == "diagnostic_only"
+    assert before == {p: p.read_bytes() for p in tmp_path.iterdir()}

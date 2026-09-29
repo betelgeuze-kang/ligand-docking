@@ -145,6 +145,12 @@ def validate_entry(entry):
             if Path(origin["path"]).stat().st_size > 1024 * 1024:
                 raise ValueError("prepared_state_origin_exceeds_capacity")
             descriptor = bound.bound_json(origin)
+            if (type(descriptor) is dict and descriptor.get("schema_version")
+                    == "native_v4_candidate_registered_structural_binding_v1"):
+                from .installed_native_v4_registered_binding import validate_descriptor
+
+                validate_descriptor(descriptor)
+                continue
             if (type(descriptor) is not dict
                     or set(descriptor) != _PREPARED_STATE_FIELDS
                     or descriptor.get("schema_version")

@@ -9,9 +9,9 @@ is used. The five requirements remain:
 |---|---|---|
 | 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 computational preparation and a typed 205-occurrence source audit exist; 78 printed IDs and six repeated reports do not establish independent measurements. Source-family/identity/intake clearance remains incomplete; no newly admitted fit/calibration/evaluation rows |
 | 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | PR49 and a separately prepared observed-coordinate SRO development case have explicit chemistry and numerical observations; SRO passes four fixed same-math states and a later installed 32-step run with 8/8 scoped geometry and 2/2 initial/final numerical checks; raw force 8.428 > 0.001 still rejects refinement and pose recovery is unproved |
-| 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Registered-pose software execution/restart is verified within a narrow support boundary; scientific matched comparison is incomplete |
+| 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Source-bound registered-pose v3 now passes a two-candidate synthetic four-arm installed run and guarded reuse; independently cleared real candidates and scientific matched comparison are incomplete |
 | 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Deferred diagnostic formatting retains both fresh integrity passes; four-state SRO full outputs match with evaluation mean 6.18% lower, and the receptor integrity guard mean is 2.62% lower; full preparation-through-storage cost and broader throughput remain unproved |
-| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | Current-source regression passes 529 tests and the installed PR49 continuous/candidate-journal replay matches; valid baseline reuse requires zero new score/force calls. Fresh dependency installation, mid-minimizer resume and all five end-to-end requirements are not complete |
+| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | The prior CPU-normalization baseline passed 529 tests and installed PR49 candidate-journal replay. The newer native-v3 integration passes 255 relevant boundary tests and an exact-wheel synthetic replay with zero new score/force calls on completed reuse. Fresh v3 dependency installation, mid-minimizer resume and all five end-to-end requirements are not complete |
 
 The work-package priorities below do not replace these five goals.
 
@@ -128,3 +128,13 @@ The supplementary [five-row Ki correspondence](human_5ht6_2024_repeat_correspond
 resolves the missing Table 5 means/SDs and their Table 6 repeats while preserving
 the original occurrence inventory. This credits zero new independent measurements
 and does not clear source-family roles or prepared-state correspondence.
+
+The [registered native-v3 integration](registered_native_v3_integration_20260930.md)
+connects the source-record descriptor to explicit graph/coordinate stereo,
+original XML charge tokens, a common receptor/method cohort and the installed
+D3 four-arm comparator. Direct run and preflight share admission; invalid input
+cannot bypass a preflight-only check. Its two synthetic molecules start at
+model equilibrium, select their baselines and establish software connection and
+reuse only. Their six successful initial force calls and twelve score calls do
+not establish iterative refinement benefit. Existing real sources still have
+zero newly admitted rows. SRO's separate 32-step rejection remains unchanged.

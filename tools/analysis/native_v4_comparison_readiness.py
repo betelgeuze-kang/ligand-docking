@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
+from decimal import Decimal, DecimalException, localcontext
 import hashlib
 import json
 import math
@@ -26,7 +27,23 @@ VERSIONS = {
         "installed_native_v4_fit_prepared_comparison_protocol_v2",
         "installed_native_v4_fit_prepared_comparison_result_v2",
     ),
+    "installed_native_v4_registered_comparison_frozen_v3": (
+        "installed_native_v4_registered_comparison_protocol_v3",
+        "installed_native_v4_registered_comparison_result_v3",
+    ),
 }
+REGISTERED_FROZEN = "installed_native_v4_registered_comparison_frozen_v3"
+REGISTERED_BACKEND = "registered_pose_fixed_receptor_d3_v1"
+REGISTERED_SCORE = "uncalibrated_explicit_graph_scorer_dimensionless_minimize"
+REGISTERED_POLICY = "registered_input_single_pose/1.0.0"
+REGISTERED_REQUEST = "cpu_registered_pose_fixed_receptor_request/1.0.0"
+REGISTERED_DESCRIPTOR = "native_v4_candidate_registered_structural_binding_v1"
+REGISTERED_FILES = ("receptor", "ligand", "parameters", "extensions", "cross_parameters")
+REGISTERED_FRAME_FIELDS = (
+    "schema_version", "target_chembl_id", "receptor_source_sha256", "receptor_system_sha256",
+    "receptor_coordinates_sha256", "receptor_construct_sha256", "receptor_cross_parameters_sha256",
+    "cross_model_sha256", "pocket_sha256", "coordinate_frame_id", "protocol_settings_sha256",
+)
 ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 STATUSES = ("evaluated", "unsupported", "failed", "not_processed")
 AUTHORITY_FLAGS = (
@@ -283,8 +300,267 @@ def _prepared_frame(row, request, recorded, inputs):
     return frame, receptor_system
 
 
+def _recorded_file_reference(ref):
+    """Validate a recorded reference without opening a molecular source."""
+    _require(type(ref) is dict and set(ref) == {"path", "sha256"}
+             and type(ref["path"]) is str and Path(ref["path"]).is_absolute()
+             and type(ref["sha256"]) is str and SHA.fullmatch(ref["sha256"]),
+             "invalid_readiness_registered_source_reference")
+
+
+def _registered_input(request, source):
+    """Bind recorded adapter input metadata, without constructing its objects."""
+    _require(type(source) is dict and type(request) is dict
+             and request.get("schema_id") == REGISTERED_REQUEST
+             and request.get("backend") == "python_cpu_reference"
+             and request.get("solvation") is None
+             and source.get("backend") == REGISTERED_BACKEND
+             and source.get("request_sha256") == _sha(request)
+             and source.get("input_files") == {key: request[key] for key in REGISTERED_FILES}
+             and source.get("pose_budget") == request["budget"]
+             and source.get("solver") == request["solver"]
+             and source.get("score_quantity") == REGISTERED_SCORE
+             and source.get("candidate_source_admission_verified") is False
+             and source.get("scientifically_validated") is False,
+             "readiness_registered_input_binding_mismatch")
+    for ref in source["input_files"].values():
+        _recorded_file_reference(ref)
+    descriptor = source.get("score_descriptor")
+    _require(_canonical(descriptor) == _canonical({
+        "score_id": "betelgeuze.cpu_explicit_graph_pose_scorer/1.0.0",
+        "direction": "minimize", "unit": None,
+        "semantics": "uncalibrated_dimensionless_explicit_graph_chemistry_pose_ordering_score",
+        "calibrated": False, "reference_method": None,
+        "applicability_domain_id": "authenticated_known_pocket_complete_explicit_chemical_graph_partial_charge_v1",
+    }), "readiness_registered_score_descriptor_mismatch")
+    for key in ("implementation_sha256", "authority_sha256", "parameters_sha256", "cross_parameters_sha256"):
+        _require(type(source.get(key)) is str and SHA.fullmatch(source[key]),
+                 "invalid_readiness_registered_input_digest")
+    proposal = source.get("proposal_policy")
+    budget = request["budget"]
+    _require(all(type(budget.get(key)) is int and budget[key] >= 0 for key in (
+        "candidate_count", "top_k", "max_torsions", "seed", "max_refinement_steps")),
+        "readiness_registered_original_pose_binding_mismatch")
+    _require(type(proposal) is dict
+             and proposal.get("schema_id") == "cpu_registered_input_single_pose_receipt/1.0.0"
+             and proposal.get("policy_id") == REGISTERED_POLICY
+             and proposal.get("authority_input_receipt_sha256") == source["authority_sha256"]
+             and proposal.get("coordinate_frame_id") == request["pocket"]["coordinate_frame_id"]
+             and proposal.get("receipt_sha256") == _sha({k: v for k, v in proposal.items() if k != "receipt_sha256"})
+             and all(proposal.get(k) == budget[k] for k in (
+                 "candidate_count", "top_k", "max_torsions", "translation_radius_angstrom", "seed"))
+             and budget["candidate_count"] == budget["top_k"] == 1
+             and budget["max_torsions"] == budget["translation_radius_angstrom"] == 0
+             and request["comparison"]["require_convergence_for_selection"] is True
+             and request["comparison"]["mode"] == "same_candidates",
+             "readiness_registered_original_pose_binding_mismatch")
+    evaluator, scorer = source.get("evaluator"), source.get("scorer")
+    _require(type(evaluator) is dict
+             and evaluator.get("evaluator_id") == "cpu_fixed_receptor_reference/1.0.0"
+             and evaluator.get("parameter_fingerprint_sha256") == source["parameters_sha256"]
+             and evaluator.get("cross_parameters_sha256") == source["cross_parameters_sha256"]
+             and evaluator.get("solvation_fingerprint_sha256") is None
+             and type(scorer) is dict and set(scorer) == {"feature_model_id", "context", "config", "backend"}
+             and scorer["feature_model_id"] == "explicit_graph_hbond_features/1.0.0"
+             and all(type(scorer[k]) is str and SHA.fullmatch(scorer[k]) for k in ("context", "config", "backend")),
+             "readiness_registered_evaluator_or_scorer_mismatch")
+
+
+def _registered_frame(row, request, recorded, source, inputs):
+    if request is None:
+        _require(recorded is None and source is None, "readiness_binding_without_registered_request")
+        return None, None
+    _registered_input(request, source)
+    origin = row["source_origins"].get("prepared_state_origin")
+    _require(origin is not None and type(recorded) is dict,
+             "readiness_registered_source_binding_missing")
+    _require(row["assigned_role"] == "development_test" and _method_key(row) is not None
+             and row["chemical_identity"] is not None,
+             "readiness_registered_method_or_identity_mismatch")
+    descriptor = inputs.read(origin)
+    fields = {"schema_version", "record_id", "assay_id", "metadata_origin_sha256", "method_origin_sha256",
+              "target_annotation_sha256", "target_chembl_id", "request_schema", "request_sha256",
+              "source_files", "ligand", "receptor", "coordinate_frame_id", "pocket_sha256", "charge_origin",
+              "charge_policy", "cohort", "same_prepared_assay_state_verified", "source_authenticated",
+              "scientifically_validated"}
+    _require(type(descriptor) is dict and set(descriptor) == fields
+             and descriptor["schema_version"] == REGISTERED_DESCRIPTOR
+             and all(descriptor[k] is False for k in (
+                 "same_prepared_assay_state_verified", "source_authenticated", "scientifically_validated")),
+             "readiness_registered_descriptor_schema_or_authority_mismatch")
+    expected = {
+        "record_id": row["record_id"], "assay_id": row["assay_id"],
+        "metadata_origin_sha256": row["source_origins"]["metadata_origin"]["sha256"],
+        "method_origin_sha256": row["source_origins"]["method_origin"]["sha256"],
+        "target_annotation_sha256": _sha(row["target_annotation"]),
+        "target_chembl_id": row["native_metadata"]["target_chembl_id"],
+        "request_schema": REGISTERED_REQUEST, "request_sha256": _sha(request),
+        "source_files": source["input_files"], "coordinate_frame_id": request["pocket"]["coordinate_frame_id"],
+        "pocket_sha256": _sha(request["pocket"]), "charge_policy": "openmm_xml_decimal_charge_sum_v1",
+    }
+    _require(all(descriptor[key] == value for key, value in expected.items()),
+             "readiness_registered_candidate_join_mismatch")
+    _recorded_file_reference(descriptor["charge_origin"])
+    ligand, receptor = descriptor["ligand"], descriptor["receptor"]
+    _require(type(ligand) is dict and set(ligand) == {"system_sha256", "coordinates_sha256", "atom_graph_sha256",
+                "canonical_isomeric_smiles_sha256", "formal_charge", "atom_count"}
+             and type(receptor) is dict and set(receptor) == {
+                 "system_sha256", "coordinates_sha256", "construct_sha256", "atom_count"}
+             and ligand["canonical_isomeric_smiles_sha256"] == _identity(row)
+             and type(ligand["formal_charge"]) is int
+             and ligand["formal_charge"] == row["chemical_identity"]["formal_charge"]
+             and ligand["system_sha256"] == source["proposal_policy"]["source_ligand_system_sha256"]
+             and receptor["system_sha256"] == source["evaluator"]["receptor_system_sha256"],
+             "readiness_registered_ligand_or_receptor_binding_mismatch")
+    for system in (ligand, receptor):
+        _require(type(system["atom_count"]) is int and system["atom_count"] > 0
+                 and all(type(value) is str and SHA.fullmatch(value)
+                         for key, value in system.items() if key.endswith("_sha256")),
+                 "invalid_readiness_registered_system_metadata")
+    frame = descriptor["cohort"]
+    settings = {key: request[key] for key in (
+        "schema_id", "backend", "receptor_margin_angstrom", "budget", "solver", "comparison", "selection")}
+    _require(type(frame) is dict and set(frame) == set(REGISTERED_FRAME_FIELDS)
+             and frame["schema_version"] == "native_v4_registered_prepared_cohort_v1"
+             and frame["target_chembl_id"] == descriptor["target_chembl_id"]
+             and frame["receptor_source_sha256"] == request["receptor"]["sha256"]
+             and frame["receptor_system_sha256"] == receptor["system_sha256"]
+             and frame["receptor_coordinates_sha256"] == receptor["coordinates_sha256"]
+             and frame["receptor_construct_sha256"] == receptor["construct_sha256"]
+             and frame["pocket_sha256"] == descriptor["pocket_sha256"]
+             and frame["coordinate_frame_id"] == descriptor["coordinate_frame_id"]
+             and frame["protocol_settings_sha256"] == _sha(settings)
+             and all(type(value) is str and SHA.fullmatch(value)
+                     for key, value in frame.items() if key.endswith("_sha256")),
+             "readiness_registered_frame_mismatch")
+    _require(set(recorded) == {"schema_version", "origin_sha256", "observation_sha256",
+                "candidate_prepared_identity_bound", "same_prepared_assay_state_verified", "cohort",
+                "ligand_net_charge_screen", "pose_geometry_status"}
+             and recorded.get("schema_version") == REGISTERED_DESCRIPTOR
+             and recorded.get("origin_sha256") == origin["sha256"]
+             and recorded.get("observation_sha256") == _sha(descriptor)
+             and recorded.get("candidate_prepared_identity_bound") is True
+             and recorded.get("same_prepared_assay_state_verified") is False
+             and recorded.get("cohort") == frame,
+             "readiness_recorded_registered_binding_mismatch")
+    _registered_initial_status(recorded, ligand["formal_charge"])
+    return frame, receptor["system_sha256"]
+
+
+def _registered_initial_status(receipt, formal_charge):
+    """Validate the recorded admission decision; do not read its XML or pose."""
+    charge = receipt["ligand_net_charge_screen"]
+    fields = {"schema_version", "profile", "status", "rank_eligible", "canonical_formal_charge_sum_e",
+              "openmm_printed_partial_charge_sum_e", "difference_e", "print_resolution_bound_e",
+              "maximum_rank_difference_e", "charge_tokens_sha256", "mapping_sha256", "xml_sha256", "scope"}
+    _require(type(charge) is dict and set(charge) == fields
+             and charge["schema_version"] == "registered_openmm_ligand_net_charge_screen_v1"
+             and charge["profile"] == "openmm_system_xml_nonbonded_charge_tokens_v1"
+             and charge["status"] in {"equal_as_encoded", "within_print_resolution"}
+             and charge["rank_eligible"] is True
+             and type(charge["canonical_formal_charge_sum_e"]) is int
+             and charge["canonical_formal_charge_sum_e"] == formal_charge
+             and charge["maximum_rank_difference_e"] == "0.5"
+             and type(charge["scope"]) is str and bool(charge["scope"])
+             and all(type(charge[k]) is str and SHA.fullmatch(charge[k])
+                     for k in ("charge_tokens_sha256", "mapping_sha256", "xml_sha256")),
+             "readiness_registered_charge_status_mismatch")
+    try:
+        numbers = [charge[k] for k in ("openmm_printed_partial_charge_sum_e", "difference_e", "print_resolution_bound_e")]
+        _require(all(type(value) is str and len(value) <= 128 for value in numbers),
+                 "readiness_registered_charge_status_mismatch")
+        total, difference, resolution = map(Decimal, numbers)
+        _require(all(value.is_finite() for value in (total, difference, resolution))
+                 and all(abs(value.as_tuple().exponent) <= 4096 for value in (total, difference, resolution)),
+                 "readiness_registered_charge_status_mismatch")
+        with localcontext() as context:
+            context.prec = 8192
+            _require(difference == total - Decimal(formal_charge) and 0 <= resolution < Decimal("0.5")
+                     and (difference == 0 if charge["status"] == "equal_as_encoded"
+                          else 0 < abs(difference) <= resolution),
+                     "readiness_registered_charge_status_mismatch")
+    except DecimalException as exc:
+        raise ValueError("readiness_registered_charge_status_mismatch") from exc
+    pose = receipt["pose_geometry_status"]
+    fields = {"requested", "inside_declared_pocket", "rank_eligible_inside_pocket",
+              "cross_distance_unavailable_inside_pocket", "scope"}
+    _require(type(pose) is dict and set(pose) == fields
+             and all(type(pose[k]) is int for k in fields - {"scope"})
+             and pose["requested"] == pose["inside_declared_pocket"] == pose["rank_eligible_inside_pocket"] == 1
+             and pose["cross_distance_unavailable_inside_pocket"] == 0
+             and type(pose["scope"]) is str and bool(pose["scope"]),
+             "readiness_registered_initial_pose_status_mismatch")
+
+
+def _registered_summary(row, source):
+    """Check recorded D3 counters/selection semantics, without report replay."""
+    summary = row.get("registered_summary")
+    if summary is None:
+        _require(row["status"] != "evaluated" and "pose_report" not in row,
+                 "readiness_registered_summary_missing")
+        return None
+    report_ref = row.get("pose_report")
+    _require(type(report_ref) is dict and set(report_ref) == {"path", "bytes", "sha256"}
+             and report_ref["path"] == f"{row['arm']}/{_sha(row['record_id'])}.poses.json"
+             and type(report_ref["bytes"]) is int and report_ref["bytes"] > 0
+             and type(report_ref["sha256"]) is str and SHA.fullmatch(report_ref["sha256"])
+             and not {"pose_denominator", "numeric_denominator", "selected_pose",
+                      "hard_overlap_screen", "ligand_net_charge_screen"}.intersection(row),
+             "readiness_registered_report_reference_mismatch")
+    _require(type(source) is dict and type(summary) is dict
+             and summary.get("status") == row["status"]
+             and summary.get("score") == row["score"]
+             and summary.get("reason") == row["reason"]
+             and summary.get("score_quantity") == REGISTERED_SCORE
+             and summary.get("score_descriptor") == source["score_descriptor"]
+             and summary.get("proposal_policy_id") == REGISTERED_POLICY
+             and all(summary.get(k) is False for k in (
+                 "physical_affinity_computed", "candidate_source_admission_verified",
+                 "scientifically_validated")), "readiness_registered_summary_mismatch")
+    names = ("refinement_attempts", "refinement_failures", "refinement_converged",
+             "original_selected_count", "refined_selected_count")
+    _require(all(type(summary.get(k)) is int and summary[k] >= 0 for k in names)
+             and summary["refinement_attempts"] == 1
+             and summary["refinement_failures"] + summary["refinement_converged"] <= 1,
+             "readiness_registered_refinement_denominator_mismatch")
+    selected = summary.get("selected_candidates")
+    _require(type(selected) is list and len(selected) <= 1
+             and len(selected) == summary["original_selected_count"] + summary["refined_selected_count"]
+             and bool(selected) == (row["status"] == "evaluated"),
+             "readiness_registered_selection_mismatch")
+    for candidate in selected:
+        _require(type(candidate) is dict and candidate.get("variant") in {"baseline", "refined"}
+                 and type(candidate.get("score")) in (int, float)
+                 and math.isfinite(candidate["score"]) and candidate["score"] == row["score"]
+                 and all(candidate.get(k) is True for k in (
+                     "pose_valid", "selection_eligible", "validity_complete"))
+                 and candidate.get("candidate_id") == source["proposal_policy"]["candidate_id"]
+                 and candidate.get("proposal_index") == 0
+                 and candidate.get("proposal_fingerprint_sha256") == source["proposal_policy"]["proposal_fingerprint_sha256"],
+                 "readiness_registered_selection_mismatch")
+    for variant, field in (("baseline", "original_selected_count"), ("refined", "refined_selected_count")):
+        _require(sum(c["variant"] == variant for c in selected) == summary[field],
+                 "readiness_registered_selection_mismatch")
+    _require(summary["refined_selected_count"] <= summary["refinement_converged"],
+             "readiness_registered_nonconverged_refinement_selected")
+    work = summary.get("work")
+    work_fields = {"actual_force_evaluation_calls", "failed_force_evaluation_calls",
+                   "score_evaluation_calls", "force_evaluations_reserved", "pose_candidates_in_both_arms"}
+    minimum = source["solver"]["minimization"]
+    reserve = 1 + source["pose_budget"]["max_refinement_steps"] * (minimum["max_backtracks"] + 1)
+    _require(type(work) is dict and set(work) == work_fields
+             and all(type(v) is int and v >= 0 for v in work.values())
+             and work["force_evaluations_reserved"] == reserve
+             and work["failed_force_evaluation_calls"] <= work["actual_force_evaluation_calls"] <= reserve
+             and work["score_evaluation_calls"] <= 2
+             and work["pose_candidates_in_both_arms"] == 2,
+             "readiness_registered_work_denominator_mismatch")
+    return {**{key: summary[key] for key in names}, "work": dict(work)}
+
+
 def _arms(result, frozen, binding):
     pool = frozen["pool"]
+    registered = frozen["schema_version"] == REGISTERED_FROZEN
     _require(type(result.get("arms")) is dict and set(result["arms"]) == set(ARMS),
              "readiness_four_arm_set_mismatch")
     answer = {}
@@ -303,6 +579,7 @@ def _arms(result, frozen, binding):
         rows = arm["rows"]
         _require(list(_index(rows, "arm_rows")) == pool, "readiness_arm_denominator_mismatch")
         by_status = {status: [] for status in STATUSES}
+        registered_observations = {}
         for row in rows:
             status, score = row["status"], row["score"]
             _require(status in STATUSES and (
@@ -315,6 +592,13 @@ def _arms(result, frozen, binding):
             _require(name == "similarity" or status != "evaluated"
                      or frozen["requests"][row["record_id"]] is not None,
                      "readiness_engine_score_without_prepared_request")
+            if registered:
+                if name == "similarity":
+                    _require("registered_summary" not in row,
+                             "readiness_similarity_has_registered_summary")
+                else:
+                    registered_observations[row["record_id"]] = _registered_summary(
+                        row, frozen["source_inputs"][row["record_id"]])
             by_status[status].append(row["record_id"])
         expected = {"requested": len(pool), **dict(Counter(row["status"] for row in rows))}
         _require(arm["denominator"] == expected
@@ -335,13 +619,34 @@ def _arms(result, frozen, binding):
                  else calls >= len(by_status["evaluated"])), "readiness_engine_call_count_mismatch")
         _require(arm["score_quantity"] == (
             "predicted_negative_log10_molar_endpoint" if name == "similarity"
-            else "existing_cross_only_kcal_per_mol"), "readiness_score_quantity_mismatch")
+            else REGISTERED_SCORE if registered else "existing_cross_only_kcal_per_mol"),
+            "readiness_score_quantity_mismatch")
         answer[name] = {
             "status_ids": by_status,
             "denominator": {"requested": len(pool), **{k: len(v) for k, v in by_status.items()}},
             "recorded_engine_calls": calls,
             "score_quantity": arm["score_quantity"],
         }
+        if registered and name != "similarity":
+            answer[name]["recorded_registered_observations"] = registered_observations
+        if registered:
+            summaries = [value for value in registered_observations.values() if value is not None]
+            work_keys = ("actual_force_evaluation_calls", "failed_force_evaluation_calls",
+                         "score_evaluation_calls", "force_evaluations_reserved", "pose_candidates_in_both_arms")
+            candidate_calls = 0 if name == "similarity" else calls
+            _require(candidate_calls is None or candidate_calls >= len(summaries),
+                     "readiness_registered_report_call_count_mismatch")
+            recorded_work = {
+                "recorded_call_counters": {key: sum(row["work"][key] for row in summaries) for key in work_keys},
+                "candidate_reports": len(summaries),
+                "candidate_calls_without_returned_report": (
+                    None if candidate_calls is None else candidate_calls - len(summaries)),
+                "all_candidate_molecular_work_recorded": candidate_calls == len(summaries),
+            }
+            _require(type(arm.get("registered_work")) is dict
+                     and _canonical(arm["registered_work"]) == _canonical(recorded_work),
+                     "readiness_registered_arm_work_mismatch")
+            answer[name]["recorded_registered_work"] = recorded_work
     return answer
 
 
@@ -354,6 +659,7 @@ def build(frozen_ref, comparison_ref):
              "readiness_frozen_binding_mismatch")
     frozen, binding = envelope["payload"], envelope["sha256"]
     _require(frozen.get("schema_version") in VERSIONS, "unsupported_readiness_snapshot")
+    registered = frozen["schema_version"] == REGISTERED_FROZEN
     protocol_schema, result_schema = VERSIONS[frozen["schema_version"]]
     protocol, pool = frozen["protocol"], frozen["pool"]
     _require(type(pool) is list and 1 <= len(pool) <= MAX_ROWS
@@ -400,15 +706,24 @@ def build(frozen_ref, comparison_ref):
                  and projection["assay_id"] == row["assay_id"], "readiness_source_projection_mismatch")
         if row["assigned_role"] != "fit":
             _nonfit_outcomes_absent(row, projection)
-    arms = _arms(result, frozen, binding)
-    common = [rid for rid in pool if all(rid in arms[arm]["status_ids"]["evaluated"] for arm in ARMS)]
     v2 = "prepared_bindings" in frozen
-    _require(v2 == (protocol_schema.endswith("_v2")), "readiness_prepared_schema_mismatch")
+    _require(v2 == (protocol_schema.endswith("_v2") or registered), "readiness_prepared_schema_mismatch")
     if v2:
         _require(set(frozen["prepared_bindings"]) == set(pool)
                  and result["candidate_prepared_identity_bound"] == {
                      rid: frozen["prepared_bindings"][rid] is not None for rid in pool
                  }, "readiness_prepared_binding_denominator_mismatch")
+    if registered:
+        _require(type(frozen.get("source_inputs")) is dict and set(frozen["source_inputs"]) == set(pool)
+                 and type(frozen.get("registered_cohort")) is dict
+                 and set(frozen["registered_cohort"]) == {"method_sha256", "frame"},
+                 "readiness_registered_cohort_scope_mismatch")
+        for rid in pool:
+            _require(frozen["requests"][rid] is not None and frozen["prepared_bindings"][rid] is not None,
+                     "readiness_registered_candidate_binding_missing")
+            _registered_input(frozen["requests"][rid], frozen["source_inputs"][rid])
+    arms = _arms(result, frozen, binding)
+    common = [rid for rid in pool if all(rid in arms[arm]["status_ids"]["evaluated"] for arm in ARMS)]
     candidates, groups = [], defaultdict(list)
     for rid in pool:
         row, request = original[rid], frozen["requests"][rid]
@@ -422,8 +737,15 @@ def build(frozen_ref, comparison_ref):
         else:
             _require(v2 and inputs.read(protocol["requests"][rid]) == request,
                      "readiness_prepared_request_mismatch")
-        frame, receptor_system = _prepared_frame(
-            row, request, frozen["prepared_bindings"][rid] if v2 else None, inputs)
+        if registered:
+            frame, receptor_system = _registered_frame(
+                row, request, frozen["prepared_bindings"][rid], frozen["source_inputs"][rid], inputs)
+            _require(row["native_metadata"]["target_chembl_id"] == "CHEMBL3371"
+                     and frozen["registered_cohort"] == {"method_sha256": _method_key(row), "frame": frame},
+                     "readiness_registered_strict_method_or_frame_mismatch")
+        else:
+            frame, receptor_system = _prepared_frame(
+                row, request, frozen["prepared_bindings"][rid] if v2 else None, inputs)
         method_key = _method_key(row)
         ki = row["native_metadata"]["standard_type"] == "Ki"
         item = {
@@ -441,6 +763,9 @@ def build(frozen_ref, comparison_ref):
         candidates.append(item)
         if ki and identity is not None and method_key is not None and frame is not None:
             groups[_sha({"method": method_key, "frame": frame})].append(item)
+    if registered:
+        _require(len({r["chemical_identity_sha256"] for r in candidates}) >= 2,
+                 "readiness_registered_two_distinct_Ki_identities_required")
     cohort_groups = []
     for key, members in sorted(groups.items()):
         observed = [r for r in members if r["in_four_arm_common_scored_set"]]
@@ -474,8 +799,13 @@ def build(frozen_ref, comparison_ref):
         "requested_pool_ids": pool, "candidates": candidates, "denominator": denominator,
         "arms": arms, "four_arm_common_scored_ids": common,
         "method_and_receptor_pocket_frame_groups": cohort_groups,
-        "matching_frame_basis": list(FRAME_FIELDS),
+        "matching_frame_basis": list(REGISTERED_FRAME_FIELDS if registered else FRAME_FIELDS),
         "method_consistency_basis": "cached_v4_method_support_and_exact_method_metadata_equality",
+        **({"recorded_registered_cohort": frozen["registered_cohort"],
+            "recorded_candidate_report_schema": "policy_candidate_registered_pose_fixed_receptor_d3_v1",
+            "registered_candidate_reports_reverified": False,
+            "registered_initial_pose_status_recomputed": False,
+            "registered_charge_origin_rederived": False} if registered else {}),
         "score_quantities_combined": False,
         "runtime_replay_verified": False, "raw_source_rederived": False,
         "chemical_identity_recanonicalized": False, "numerical_scores_reverified": False,

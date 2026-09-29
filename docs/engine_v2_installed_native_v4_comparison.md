@@ -1,5 +1,9 @@
 # Installed receptor v4 fit comparison boundary
 
+The opt-in [registered-pose v3 contract](engine_v2_registered_native_v3.md) adds
+source-bound canonical D3 execution with a separate dimensionless score. The
+v1/v2 behaviors and historical receipts described below retain their scope.
+
 `betelgeuze-native-v4-source verify-source` rederives the bound ChEMBL receptor
 Ki v4 intake from raw metadata, role declarations, the complete identity graph,
 measurement captures, and supported primary correspondence records. Its receipt

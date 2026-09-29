@@ -3,6 +3,7 @@
 The v1 protocol remains null-only. V2 accepts prepared requests only when a
 source-record origin matches the rederived structural observation. Neither
 version claims that the prepared state matches the assayed physical state.
+V3 adds source-bound registered-pose D3 with a distinct dimensionless score.
 """
 
 from __future__ import annotations
@@ -16,22 +17,24 @@ from . import installed_synthetic_comparison as comparison
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("run", "resume", "verify-run", "preflight-v2"))
+    parser.add_argument("action", choices=(
+        "run", "resume", "verify-run", "preflight-v2", "preflight-v3"))
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path)
     parser.add_argument("--output-protocol", type=Path)
     args = parser.parse_args(argv)
     protocol = comparison._read_protocol(args.protocol)
     if protocol.get("schema_version") not in {
-        comparison.NATIVE_PROTOCOL, comparison.NATIVE_PROTOCOL_V2,
+        comparison.NATIVE_PROTOCOL, comparison.NATIVE_PROTOCOL_V2, comparison.NATIVE_PROTOCOL_V3,
     }:
         raise ValueError("native_v4_comparison_requires_native_protocol")
-    if args.action == "preflight-v2":
+    if args.action in {"preflight-v2", "preflight-v3"}:
         if args.run_dir is not None:
-            parser.error("preflight-v2 does not use --run-dir")
-        from .installed_native_v4_protocol_preflight import preflight_v2
+            parser.error(args.action + " does not use --run-dir")
+        from .installed_native_v4_protocol_preflight import preflight_v2, preflight_v3
 
-        outcome = preflight_v2(protocol)
+        outcome = (preflight_v3(protocol) if args.action == "preflight-v3"
+                   else preflight_v2(protocol))
         if outcome["status"] == "ready" and args.output_protocol is not None:
             comparison._publish(args.output_protocol, outcome["protocol"])
             outcome["output_protocol"] = str(args.output_protocol)
@@ -47,7 +50,9 @@ def main(argv=None) -> int:
     else:
         result = comparison.run(protocol, args.run_dir, resume=args.action == "resume")
         outcome = {
-            "schema_version": ("installed_native_v4_fit_prepared_comparison_cli_v2"
+            "schema_version": ("installed_native_v4_registered_comparison_cli_v3"
+                               if protocol["schema_version"] == comparison.NATIVE_PROTOCOL_V3 else
+                               "installed_native_v4_fit_prepared_comparison_cli_v2"
                                if protocol["schema_version"] == comparison.NATIVE_PROTOCOL_V2
                                else "installed_native_v4_fit_comparison_cli_v1"),
             "status": "committed", "exit_code": 0,

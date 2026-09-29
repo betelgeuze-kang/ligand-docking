@@ -1,8 +1,9 @@
 """Installed-wheel, budgeted four-arm comparison on bounded development inputs.
 
 Synthetic and native v4 fit sources use distinct versioned checkpoints. Native
-v4 v1 remains null-only; v2 requires a source-origin-bound structural bridge.
-Neither route opens checkout ``tools`` modules or evaluation outcomes.
+v4 v1 remains null-only; v2 binds prepared rigid poses, and v3 binds registered
+D3 poses to explicit candidate chemistry and original charge-token sources.
+None of these routes opens checkout ``tools`` modules or evaluation outcomes.
 """
 
 from __future__ import annotations
@@ -42,6 +43,9 @@ NATIVE_RESULT = "installed_native_v4_fit_comparison_result_v1"
 NATIVE_PROTOCOL_V2 = "installed_native_v4_fit_prepared_comparison_protocol_v2"
 NATIVE_FROZEN_V2 = "installed_native_v4_fit_prepared_comparison_frozen_v2"
 NATIVE_RESULT_V2 = "installed_native_v4_fit_prepared_comparison_result_v2"
+NATIVE_PROTOCOL_V3 = "installed_native_v4_registered_comparison_protocol_v3"
+NATIVE_FROZEN_V3 = "installed_native_v4_registered_comparison_frozen_v3"
+NATIVE_RESULT_V3 = "installed_native_v4_registered_comparison_result_v3"
 NATIVE_SOURCE_KIND = "native_chembl_receptor_research_v4_fit"
 MAX_BUDGET_SECONDS = 3600.0
 BOUND_ENVIRONMENT = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
@@ -277,10 +281,13 @@ def freeze(protocol: dict) -> dict:
     _require(type(protocol) is dict and set(protocol) == {
         "schema_version", "source", "requests", "budget_seconds_per_arm",
         "max_engine_calls_per_arm", "arm_order", "selection_seed", "tie_policy",
-    } and protocol["schema_version"] in {PROTOCOL, NATIVE_PROTOCOL, NATIVE_PROTOCOL_V2},
+    } and protocol["schema_version"] in {
+        PROTOCOL, NATIVE_PROTOCOL, NATIVE_PROTOCOL_V2, NATIVE_PROTOCOL_V3},
              "unsupported_installed_comparison_protocol")
-    native = protocol["schema_version"] in {NATIVE_PROTOCOL, NATIVE_PROTOCOL_V2}
-    native_prepared = protocol["schema_version"] == NATIVE_PROTOCOL_V2
+    native = protocol["schema_version"] in {
+        NATIVE_PROTOCOL, NATIVE_PROTOCOL_V2, NATIVE_PROTOCOL_V3}
+    native_registered = protocol["schema_version"] == NATIVE_PROTOCOL_V3
+    native_prepared = protocol["schema_version"] in {NATIVE_PROTOCOL_V2, NATIVE_PROTOCOL_V3}
     budget, cap = protocol["budget_seconds_per_arm"], protocol["max_engine_calls_per_arm"]
     _require(_finite(budget) and 0 < budget <= MAX_BUDGET_SECONDS
              and type(cap) is int and 1 <= cap <= MAX_POOL,
@@ -299,32 +306,41 @@ def freeze(protocol: dict) -> dict:
         rows, source_verification = (_native_rows(protocol["source"])
                                      if native else (_rows(protocol["source"]), None))
     pool = [row["record_id"] for row in rows if row["role"] == "development_test"]
-    _require(type(protocol["requests"]) is dict and set(protocol["requests"]) == set(pool),
-             "candidate_request_denominator_mismatch")
-    from betelgeuze_engine.product.prepared_pose_journal import _input_binding
+    if not native_registered:
+        _require(type(protocol["requests"]) is dict and set(protocol["requests"]) == set(pool),
+                 "candidate_request_denominator_mismatch")
+        from betelgeuze_engine.product.prepared_pose_journal import _input_binding
 
-    requests, source_inputs, prepared_bindings = {}, {}, {}
-    original_by_id = ({row["record_id"]: row for row in source_rows}
-                      if source_rows is not None else {})
-    for rid in pool:
-        ref = protocol["requests"][rid]
-        _require(not (native and not native_prepared) or ref is None,
-                 "native_prepared_candidate_identity_link_not_supported")
-        request = None if ref is None else _bound_json(ref)
-        _require(request is None or (type(request) is dict and request.get("schema_version")
-                 == "prepared_rigid_pose_cross_request_v1"),
-                 "requires_existing_rigid_pose_request")
-        if native_prepared and request is not None:
-            from .installed_native_v4_prepared_binding import check_source_binding
+        requests, source_inputs, prepared_bindings = {}, {}, {}
+        original_by_id = ({row["record_id"]: row for row in source_rows}
+                          if source_rows is not None else {})
+        for rid in pool:
+            ref = protocol["requests"][rid]
+            _require(not (native and not native_prepared) or ref is None,
+                     "native_prepared_candidate_identity_link_not_supported")
+            request = None if ref is None else _bound_json(ref)
+            _require(request is None or (type(request) is dict and request.get("schema_version")
+                     == "prepared_rigid_pose_cross_request_v1"),
+                     "requires_existing_rigid_pose_request")
+            if native_prepared and request is not None:
+                from .installed_native_v4_prepared_binding import check_source_binding
 
-            prepared_bindings[rid] = check_source_binding(original_by_id[rid], request)
-        elif native_prepared:
-            prepared_bindings[rid] = None
-        requests[rid] = request
-        source_inputs[rid] = None if request is None else _input_binding(request)
+                prepared_bindings[rid] = check_source_binding(original_by_id[rid], request)
+            elif native_prepared:
+                prepared_bindings[rid] = None
+            requests[rid] = request
+            source_inputs[rid] = None if request is None else _input_binding(request)
+    if native_registered:
+        from .installed_native_v4_registered_admission import require_candidates
+
+        admitted = require_candidates(protocol, source_rows)
+        requests = admitted["requests"]
+        source_inputs = admitted["source_inputs"]
+        prepared_bindings = admitted["prepared_bindings"]
     runtime = _comparison_runtime()
     frozen = {
-        "schema_version": (NATIVE_FROZEN_V2 if native_prepared else
+        "schema_version": (NATIVE_FROZEN_V3 if native_registered else
+                           NATIVE_FROZEN_V2 if native_prepared else
                            NATIVE_FROZEN if native else FROZEN),
         "protocol": copy.deepcopy(protocol),
         "rows": rows, "pool": pool, "requests": requests,
@@ -339,6 +355,8 @@ def freeze(protocol: dict) -> dict:
         frozen["source_verification"] = source_verification
     if native_prepared:
         frozen["prepared_bindings"] = prepared_bindings
+    if native_registered:
+        frozen["registered_cohort"] = admitted["cohort"]
     _require(len(_canonical(frozen)) <= MAX_JSON_BYTES,
              "frozen_comparison_capacity_exceeded")
     return frozen
@@ -351,7 +369,7 @@ def _envelope(run_dir: Path) -> tuple[dict, str]:
              and HEX.fullmatch(value["sha256"]) is not None
              and type(value["payload"]) is dict
              and value["payload"].get("schema_version") in {
-                 FROZEN, NATIVE_FROZEN, NATIVE_FROZEN_V2}
+                 FROZEN, NATIVE_FROZEN, NATIVE_FROZEN_V2, NATIVE_FROZEN_V3}
              and _sha(value["payload"]) == value["sha256"],
              "installed_frozen_binding_mismatch")
     return value["payload"], value["sha256"]
@@ -389,7 +407,7 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
     frozen, binding = _envelope(run_dir)
     _require(_comparison_runtime() == frozen["runtime"],
              "installed_worker_runtime_changed")
-    if frozen["schema_version"] == NATIVE_FROZEN_V2:
+    if frozen["schema_version"] in {NATIVE_FROZEN_V2, NATIVE_FROZEN_V3}:
         _require(freeze(frozen["protocol"]) == frozen,
                  "native_prepared_binding_changed_before_scoring")
     tick = time.perf_counter()
@@ -404,8 +422,16 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
         "setup_wall_seconds": time.perf_counter() - tick,
         "evaluation_labels_read": 0,
     })
+    registered = frozen["schema_version"] == NATIVE_FROZEN_V3
     if arm != "similarity":
-        from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
+        if registered:
+            from .cpu_refinement_v1_2 import registered_policy_adapter as adapter
+
+            evaluate_request = adapter.evaluate
+        else:
+            from betelgeuze_engine.product.prepared_rigid_poses import evaluate_rigid_pose_request
+
+            evaluate_request = evaluate_rigid_pose_request
     called, stop_reason = 0, "order_exhausted"
     for rid in order:
         if time.monotonic() >= deadline:
@@ -425,33 +451,39 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
                 row.update(status="evaluated", score=predictions[rid], reason=None)
             elif frozen["requests"][rid] is not None:
                 called += 1
-                raw_report = evaluate_rigid_pose_request(frozen["requests"][rid])
+                raw_report = evaluate_request(frozen["requests"][rid])
                 report = _json(_canonical(raw_report))
                 _require(_stable_mapping_keys(raw_report, report),
                          "pose_report_mapping_keys_changed")
-                checked = check_report(report)
+                checked = (adapter.summarize(report, request=frozen["requests"][rid])
+                           if registered else check_report(report))
                 path, relative = _report_ref(run_dir, arm, rid)
                 if not _publish(path, report, deadline=deadline, max_bytes=MAX_POSE_BYTES):
                     stop_reason = "deadline"
                     break
                 ref = _entry(relative, _regular_file(path, MAX_POSE_BYTES))
-                row.update(status="failed", reason="incomplete_or_failed_numeric_pose",
-                           pose_report=ref, pose_denominator=report["denominator"],
-                           numeric_denominator=checked["denominator"])
-                if checked["status"] == "passed":
-                    screen = hard_overlap_screen(report)
-                    charge_screen = ligand_net_charge_screen(report)
-                    selected = (screened_pose_selection(report, screen)
-                                if charge_screen["rank_eligible"] else None)
-                    row.update(hard_overlap_screen=screen,
-                               ligand_net_charge_screen=charge_screen,
-                               selected_pose=selected)
-                    if not charge_screen["rank_eligible"]:
-                        row["reason"] = "ligand_net_charge_rank_ineligible"
-                    elif selected is None:
-                        row["reason"] = "no_hard_overlap_screen_eligible_pose"
-                    else:
-                        row.update(status="evaluated", reason=None, score=selected["score"])
+                if registered:
+                    row.update(status=checked["status"], score=checked["score"],
+                               reason=checked["reason"], pose_report=ref,
+                               registered_summary=checked)
+                else:
+                    row.update(status="failed", reason="incomplete_or_failed_numeric_pose",
+                               pose_report=ref, pose_denominator=report["denominator"],
+                               numeric_denominator=checked["denominator"])
+                    if checked["status"] == "passed":
+                        screen = hard_overlap_screen(report)
+                        charge_screen = ligand_net_charge_screen(report)
+                        selected = (screened_pose_selection(report, screen)
+                                    if charge_screen["rank_eligible"] else None)
+                        row.update(hard_overlap_screen=screen,
+                                   ligand_net_charge_screen=charge_screen,
+                                   selected_pose=selected)
+                        if not charge_screen["rank_eligible"]:
+                            row["reason"] = "ligand_net_charge_rank_ineligible"
+                        elif selected is None:
+                            row["reason"] = "no_hard_overlap_screen_eligible_pose"
+                        else:
+                            row.update(status="evaluated", reason=None, score=selected["score"])
         except Exception as exc:
             row.update(status="failed", score=None,
                        reason=type(exc).__name__ + ":" + str(exc))
@@ -728,7 +760,8 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str, *,
             item = wrapped["payload"]
             _require(type(item) is dict and item.get("binding") == binding
                      and item.get("record_id") == rid and item.get("arm") == arm
-                     and _finite(item.get("completed_monotonic")),
+                     and _finite(item.get("completed_monotonic"))
+                     and item["completed_monotonic"] >= attempt["started_monotonic"],
                      "invalid_installed_row_identity")
             if item["completed_monotonic"] <= completion["deadline"]:
                 value = item
@@ -767,6 +800,12 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str, *,
                 _require(value["status"] in {"evaluated", "failed"},
                          "installed_prepared_row_state_mismatch")
         ref = value.get("pose_report")
+        if frozen["schema_version"] == NATIVE_FROZEN_V3 and "completed_monotonic" in value:
+            fields = {"record_id", "arm", "binding", "prediction", "status", "score",
+                      "reason", "cost", "completed_monotonic"}
+            if ref is not None:
+                fields.update({"pose_report", "registered_summary"})
+            _require(set(value) == fields, "installed_registered_row_fields_mismatch")
         report_path, _ = _report_ref(run_dir, arm, rid)
         if "completed_monotonic" in value:
             # The worker publishes a pose before its row. A deadline can leave
@@ -776,44 +815,58 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str, *,
         if ref is not None:
             _require(arm != "similarity", "similarity_has_pose_report")
             report = _read_report(run_dir, arm, rid, ref)
-            checked = check_report(report)
-            _check_pose_report_request(
-                report, frozen["requests"][rid], frozen["source_inputs"][rid])
-            _require(value.get("pose_denominator") == report["denominator"]
-                     and value.get("numeric_denominator") == checked["denominator"],
-                     "installed_pose_report_denominator_mismatch")
-            if checked["status"] == "passed":
-                screen = hard_overlap_screen(report)
-                charge_screen = ligand_net_charge_screen(report)
-                selected = (screened_pose_selection(report, screen)
-                            if charge_screen["rank_eligible"] else None)
-                _require(value.get("hard_overlap_screen") == screen,
-                         "installed_pose_report_hard_overlap_screen_mismatch")
-                _require(value.get("ligand_net_charge_screen") == charge_screen,
-                         "installed_pose_report_charge_screen_mismatch")
-                _require(value.get("selected_pose", "missing") == selected,
-                         "installed_pose_report_hard_overlap_screen_mismatch"
-                         if charge_screen["rank_eligible"]
-                         else "installed_pose_report_charge_screen_mismatch")
-                if not charge_screen["rank_eligible"]:
-                    _require(value["status"] == "failed" and value["score"] is None
-                             and value["reason"] == "ligand_net_charge_rank_ineligible",
-                             "installed_pose_report_charge_status_mismatch")
-                elif selected is None:
-                    _require(value["status"] == "failed" and value["score"] is None
-                             and value["reason"] == "no_hard_overlap_screen_eligible_pose",
-                             "installed_pose_report_hard_overlap_status_mismatch")
-                else:
-                    _require(value["status"] == "evaluated"
-                             and value["score"] == selected["score"]
-                             and value["reason"] is None,
-                             "installed_pose_report_score_mismatch")
+            if frozen["schema_version"] == NATIVE_FROZEN_V3:
+                from .cpu_refinement_v1_2 import registered_policy_adapter as adapter
+
+                checked = adapter.summarize(report, request=frozen["requests"][rid])
+                _require(value.get("registered_summary") == checked
+                         and all(value.get(key) == checked[key]
+                                 for key in ("status", "score", "reason"))
+                         and not {"pose_denominator", "numeric_denominator", "selected_pose",
+                                  "hard_overlap_screen", "ligand_net_charge_screen"}.intersection(value),
+                         "installed_registered_report_summary_mismatch")
+                _require(adapter.input_binding(frozen["requests"][rid])
+                         == frozen["source_inputs"][rid],
+                         "installed_registered_input_binding_mismatch")
             else:
-                _require(value["status"] == "failed"
-                         and "hard_overlap_screen" not in value
-                         and "ligand_net_charge_screen" not in value
-                         and "selected_pose" not in value,
-                         "installed_pose_report_status_mismatch")
+                checked = check_report(report)
+                _check_pose_report_request(
+                    report, frozen["requests"][rid], frozen["source_inputs"][rid])
+                _require(value.get("pose_denominator") == report["denominator"]
+                         and value.get("numeric_denominator") == checked["denominator"],
+                         "installed_pose_report_denominator_mismatch")
+                if checked["status"] == "passed":
+                    screen = hard_overlap_screen(report)
+                    charge_screen = ligand_net_charge_screen(report)
+                    selected = (screened_pose_selection(report, screen)
+                                if charge_screen["rank_eligible"] else None)
+                    _require(value.get("hard_overlap_screen") == screen,
+                             "installed_pose_report_hard_overlap_screen_mismatch")
+                    _require(value.get("ligand_net_charge_screen") == charge_screen,
+                             "installed_pose_report_charge_screen_mismatch")
+                    _require(value.get("selected_pose", "missing") == selected,
+                             "installed_pose_report_hard_overlap_screen_mismatch"
+                             if charge_screen["rank_eligible"]
+                             else "installed_pose_report_charge_screen_mismatch")
+                    if not charge_screen["rank_eligible"]:
+                        _require(value["status"] == "failed" and value["score"] is None
+                                 and value["reason"] == "ligand_net_charge_rank_ineligible",
+                                 "installed_pose_report_charge_status_mismatch")
+                    elif selected is None:
+                        _require(value["status"] == "failed" and value["score"] is None
+                                 and value["reason"] == "no_hard_overlap_screen_eligible_pose",
+                                 "installed_pose_report_hard_overlap_status_mismatch")
+                    else:
+                        _require(value["status"] == "evaluated"
+                                 and value["score"] == selected["score"]
+                                 and value["reason"] is None,
+                                 "installed_pose_report_score_mismatch")
+                else:
+                    _require(value["status"] == "failed"
+                             and "hard_overlap_screen" not in value
+                             and "ligand_net_charge_screen" not in value
+                             and "selected_pose" not in value,
+                             "installed_pose_report_status_mismatch")
         elif arm != "similarity" and value["status"] == "evaluated":
             raise ValueError("installed_evaluated_row_missing_pose_report")
         if arm == "similarity" and value["status"] == "evaluated":
@@ -854,16 +907,35 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str, *,
     direction = -1 if arm == "similarity" else 1
     ranked = sorted((row for row in rows if row["status"] == "evaluated"),
                     key=lambda row: (direction * row["score"], row["record_id"]))
-    return {
+    summary = {
         "priority": priority, "worker_complete": worker_complete,
         "completion": completion, "rows": rows,
         "denominator": {"requested": len(rows),
                         **dict(Counter(row["status"] for row in rows))},
         "ranked_record_ids": [row["record_id"] for row in ranked],
         "score_quantity": ("predicted_negative_log10_molar_endpoint"
-                           if arm == "similarity" else "existing_cross_only_kcal_per_mol"),
+                           if arm == "similarity" else
+                           "uncalibrated_explicit_graph_scorer_dimensionless_minimize"
+                           if frozen["schema_version"] == NATIVE_FROZEN_V3 else
+                           "existing_cross_only_kcal_per_mol"),
         "combined_assay_energy_score": None,
     }
+    if frozen["schema_version"] == NATIVE_FROZEN_V3:
+        keys = ("actual_force_evaluation_calls", "failed_force_evaluation_calls",
+                "score_evaluation_calls", "force_evaluations_reserved",
+                "pose_candidates_in_both_arms")
+        recorded = [row["registered_summary"]["work"] for row in processed
+                    if "pose_report" in row]
+        calls = 0 if arm == "similarity" else (
+            None if worker_complete is None else worker_complete["engine_calls"])
+        summary["registered_work"] = {
+            "recorded_call_counters": {key: sum(row[key] for row in recorded) for key in keys},
+            "candidate_reports": len(recorded),
+            "candidate_calls_without_returned_report": (
+                None if calls is None else calls - len(recorded)),
+            "all_candidate_molecular_work_recorded": calls == len(recorded),
+        }
+    return summary
 
 
 def _lock(path: Path, *, create: bool, shared: bool = False):
@@ -965,8 +1037,10 @@ def _read_protocol(path: Path) -> dict:
 def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
     protocol = frozen["protocol"]
     native = frozen["source_kind"] == NATIVE_SOURCE_KIND
-    native_prepared = frozen["schema_version"] == NATIVE_FROZEN_V2
-    expected_schema = (NATIVE_RESULT_V2 if native_prepared else
+    native_registered = frozen["schema_version"] == NATIVE_FROZEN_V3
+    native_prepared = frozen["schema_version"] in {NATIVE_FROZEN_V2, NATIVE_FROZEN_V3}
+    expected_schema = (NATIVE_RESULT_V3 if native_registered else
+                       NATIVE_RESULT_V2 if native_prepared else
                        NATIVE_RESULT if native else RESULT)
     expected_source_kind = NATIVE_SOURCE_KIND if native else "synthetic_constants"
     expected_fields = {
@@ -1007,6 +1081,11 @@ def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
                                  "arm_execution_and_summary_wall_seconds",
                                  "orchestrator_wall_seconds")),
              "invalid_installed_result_header")
+    enclosing = result["orchestrator_wall_seconds"]
+    _require(result["common_validation_seconds"]
+             + result["arm_execution_and_summary_wall_seconds"]
+             <= enclosing + max(1e-6, 1e-9 * enclosing),
+             "installed_result_subscopes_exceed_orchestrator_wall")
 
 
 def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
@@ -1045,7 +1124,8 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
         summary_seconds = time.perf_counter() - summary_started
         _require(freeze(protocol) == frozen, "installed_inputs_changed_during_comparison")
         result = {
-            "schema_version": (NATIVE_RESULT_V2 if frozen["schema_version"] == NATIVE_FROZEN_V2
+            "schema_version": (NATIVE_RESULT_V3 if frozen["schema_version"] == NATIVE_FROZEN_V3
+                               else NATIVE_RESULT_V2 if frozen["schema_version"] == NATIVE_FROZEN_V2
                                else NATIVE_RESULT if frozen["source_kind"] == NATIVE_SOURCE_KIND
                                else RESULT),
             "binding": binding, "pool": frozen["pool"],
@@ -1063,7 +1143,7 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
             "cost_scope": "installed_input_validation_fit_inference_supplied_pose_scoring_worker_io_and_summary",
             "upstream_acquisition_preparation_and_pose_generation_measured": False,
         }
-        if frozen["schema_version"] == NATIVE_FROZEN_V2:
+        if frozen["schema_version"] in {NATIVE_FROZEN_V2, NATIVE_FROZEN_V3}:
             result["candidate_prepared_identity_bound"] = {
                 rid: frozen["prepared_bindings"][rid] is not None for rid in frozen["pool"]}
         _publish(final, result)
@@ -1075,7 +1155,10 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
 def verify_run(protocol: dict, run_dir: Path) -> dict:
     """Read-only checkpoint/result verification with current input/runtime binding."""
     outcome = {
-        "schema_version": ("installed_native_v4_fit_prepared_comparison_verification_v2"
+        "schema_version": ("installed_native_v4_registered_comparison_verification_v3"
+                           if type(protocol) is dict
+                           and protocol.get("schema_version") == NATIVE_PROTOCOL_V3 else
+                           "installed_native_v4_fit_prepared_comparison_verification_v2"
                            if type(protocol) is dict
                            and protocol.get("schema_version") == NATIVE_PROTOCOL_V2 else
                            "installed_native_v4_fit_comparison_verification_v1"
@@ -1133,7 +1216,9 @@ def main(argv=None) -> int:
         outcome = verify_run(protocol, args.run_dir)
     else:
         result = run(protocol, args.run_dir, resume=args.command == "resume")
-        outcome = {"schema_version": ("installed_native_v4_fit_prepared_comparison_cli_v2"
+        outcome = {"schema_version": ("installed_native_v4_registered_comparison_cli_v3"
+                                      if protocol.get("schema_version") == NATIVE_PROTOCOL_V3 else
+                                      "installed_native_v4_fit_prepared_comparison_cli_v2"
                                       if protocol.get("schema_version") == NATIVE_PROTOCOL_V2 else
                                       "installed_native_v4_fit_comparison_cli_v1"
                                       if protocol.get("schema_version") == NATIVE_PROTOCOL else

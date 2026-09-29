@@ -3,7 +3,8 @@
 `tools/analysis/native_v4_comparison_readiness.py` inventories a caller-hash-bound
 native v4 frozen input and comparison result. It reads the exact cached public
 intake records named by the embedded source receipt. It supports the existing
-v1 null-only and v2 source-linked prepared schemas without rewriting either.
+v1 null-only and v2 source-linked prepared schemas, plus the v3 registered-pose
+comparison schema, without rewriting any snapshot.
 
 Run this standard-library script with bytecode writing disabled:
 
@@ -45,7 +46,7 @@ isomeric structure, not the independently established assayed microstate.
 
 Prepared-request presence, prepared-source-origin presence, and a recorded
 source-bound structural descriptor are separate counts. For the last count,
-the descriptor must agree with the frozen v2 binding, candidate/assay/target,
+the v2 descriptor must agree with the frozen binding, candidate/assay/target,
 chemical identity, prepared request, evaluation and frame declarations. These
 checks concern recorded metadata. They do not verify the current prepared source
 files or whether those physical states were present in an assay.
@@ -53,7 +54,7 @@ files or whether those physical states were present in an assay.
 Method consistency requires a Ki endpoint supported by the cached predictor,
 a method origin, non-empty method metadata with matching assay/document/target,
 and no cached `assay_method_not_verified_binding_Ki` exclusion. It retains the
-recorded intake decision and makes no new admission decision. Cohorts require
+recorded intake decision and makes no new admission decision. V1/v2 cohorts require
 exact equality of the full method metadata, receptor-source digest and construct,
 pocket, evaluation parameters, coordinate frame, parameter/charge source IDs
 and receptor parameter-source hashes. The receptor-source digest binds the
@@ -63,20 +64,67 @@ It compares recorded source bytes and parsing settings without opening those
 files. Candidate-specific ligand files and mappings remain bound to their own
 prepared descriptors but do not enter the receptor cohort digest.
 
-Each candidate retains `recorded_receptor_system_sha256` for audit. That existing
+Each candidate retains `recorded_receptor_system_sha256` for audit. The v2
 runtime hash also contains ligand-source provenance, so it is excluded from
-cohort equality: even a comment in a ligand topology changes it while leaving
-the receptor unchanged. Different methods or receptor source frames remain
+v2 cohort equality: even a comment in a ligand topology changes it while leaving
+the receptor unchanged. Different v1/v2 methods or receptor source frames remain
 separate groups, with their own distinct Ki identity counts; they are never
 summed into a single comparable denominator.
 
+V3 uses the exact schema family
+`installed_native_v4_registered_comparison_{protocol,frozen,result}_v3`.
+The protocol keeps its eight existing fields. Its frozen input adds
+`registered_cohort`, containing exactly `method_sha256` and `frame`. Every
+requested candidate must have a registered request, an adapter input binding,
+and a `native_v4_candidate_registered_structural_binding_v1` descriptor/receipt.
+The diagnostic joins their recorded request, five input-file references,
+candidate chemical identity, original pose receipt, scorer and evaluator
+identities. The frame binds the receptor source/system/coordinates/construct,
+receptor cross parameters, cross model, pocket, coordinate frame, target and
+protocol settings. V3 requires one identical method/frame cohort and at least
+two distinct recorded human 5-HT6 Ki chemical identities. Incompatible cohorts
+are rejected rather than combined. Unlike the v2 hash described above, the v3
+canonical receptor-system hash is part of its declared cohort.
+
+For v3 the charge receipt must record an eligible status with a consistent
+signed decimal charge difference and a print-resolution bound strictly below
+0.5 e. The single original pose must record that it lies inside the declared
+pocket and passes the recorded overlap screen. These are consistency checks of
+cached receipts. The diagnostic does not open the five molecular inputs, charge
+XML, atom mapping, or candidate pose reports; it does not rederive charges,
+geometry, molecular identity, scorer quantities, or convergence. The flags
+`registered_candidate_reports_reverified`,
+`registered_initial_pose_status_recomputed`, and
+`registered_charge_origin_rederived` remain false. Use the product runtime's
+`verify-run` for source and committed-report revalidation.
+
 The four-arm common scored set is an execution intersection. The similarity
-arm's predicted endpoint and the physical arms' cross-energy quantities remain
-separate. Within each matching method/frame group, the report also counts
+arm retains `predicted_negative_log10_molar_endpoint`. V1/v2 engine arms retain
+`existing_cross_only_kcal_per_mol`; v3 engine arms instead use
+`uncalibrated_explicit_graph_scorer_dimensionless_minimize`. These quantities
+are never combined into an assay or affinity score. V3 rows bind the recorded
+`registered_summary`, selected candidate and original/refined variant. An
+unconverged refinement cannot be selected; an eligible original pose may remain
+the selected fallback. The report also checks the declared force reserve and
+recorded force/score counters against the one-pose request.
+
+Within each matching method/frame group, the report also counts
 common scored records and distinct Ki identities. A singleton supplies no
 between-chemical ranking contrast. Missing worker call observations remain
 null. The scientifically eligible denominator remains unknown, and every
 scientific/product authority flag remains false regardless of counts.
+
+V3 retains each arm's `registered_work` separately: five recorded force/score
+counter totals, returned candidate-report count, candidate calls without a
+returned report, and whether all candidate molecular work is recorded. A failed
+candidate call without a report remains in the call denominator; its nested
+force and score work is unknown. Without worker completion, missing candidate
+calls remain null and completeness remains false, even when some reports were
+preserved. The similarity-only arm has zero molecular candidate calls. Recorded
+counter totals are not a complete cost estimate when reports are missing.
+Candidate, worker and orchestrator timing scopes are nested and must not be
+added together. This snapshot diagnostic neither reconstructs missing timing
+nor independently validates the original timer measurements.
 
 Read-only inspection of the 2026-09-28 public installed replay found development
 records `27765488` (Ki), `27765489` (kon), and `27765490` (k_off). They share one

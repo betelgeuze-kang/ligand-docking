@@ -60,8 +60,10 @@ def _implementation_binding() -> dict:
     }
     return {
         "modules_sha256": {
-            name: chemical.file_sha(Path(module.__file__))
-            for name, module in sorted(modules.items())
+            **{name: chemical.file_sha(Path(module.__file__))
+               for name, module in sorted(modules.items())},
+            "installed_native_v4_registered_binding": chemical.file_sha(
+                Path(__file__).with_name("installed_native_v4_registered_binding.py")),
         },
         "rdkit_version": rdBase.rdkitVersion,
         "distribution_version": distribution_version,

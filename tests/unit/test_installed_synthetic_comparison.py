@@ -286,6 +286,69 @@ def test_resealed_candidate_cost_cannot_exceed_worker_total(completed, tmp_path,
         installed.run(protocol, copied, resume=True)
 
 
+def test_resealed_completed_row_cannot_predate_its_attempt(completed, tmp_path, monkeypatch):
+    root, protocol, _ = completed
+    copied = tmp_path / "resealed-earlier-row"
+    shutil.copytree(root / "run", copied)
+    arm = "similarity"
+    priority = installed._json((copied / arm / "priority.json").read_bytes())
+    rid = priority["order"][0]
+    attempt = installed._json((copied / arm / "attempt.json").read_bytes())
+    row_path = copied / arm / f"{installed._sha(rid)}.row.json"
+    wrapped = installed._json(row_path.read_bytes())
+    wrapped["payload"]["completed_monotonic"] = attempt["started_monotonic"] - 1.0
+    wrapped["sha256"] = installed._sha(wrapped["payload"])
+    row_path.write_bytes(installed._canonical(wrapped) + b"\n")
+    result_path = copied / "comparison.json"
+    resealed = installed._json(result_path.read_bytes())
+    resealed["arms"][arm]["rows"] = [
+        wrapped["payload"] if row["record_id"] == rid else row
+        for row in resealed["arms"][arm]["rows"]]
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    before = {path: path.read_bytes() for path in copied.rglob("*") if path.is_file()}
+
+    def no_worker(*args, **kwargs):
+        pytest.fail("tampered completed run must not launch a worker")
+
+    monkeypatch.setattr(installed.subprocess, "Popen", no_worker)
+    frozen, binding = installed._envelope(copied)
+    reason = "invalid_installed_row_identity"
+    with pytest.raises(ValueError, match=reason):
+        installed._summary(copied, arm, frozen, binding)
+    assert installed.verify_run(protocol, copied)["reason"] == reason
+    with pytest.raises(ValueError, match=reason):
+        installed.run(protocol, copied, resume=True)
+    assert {path: path.read_bytes() for path in copied.rglob("*") if path.is_file()} == before
+
+
+def test_resealed_result_subscopes_cannot_exceed_orchestrator_wall(completed, tmp_path, monkeypatch):
+    root, protocol, _ = completed
+    copied = tmp_path / "resealed-total-wall"
+    shutil.copytree(root / "run", copied)
+    result_path = copied / "comparison.json"
+    resealed = installed._json(result_path.read_bytes())
+    outer = resealed["orchestrator_wall_seconds"]
+    assert outer > 0
+    # Each scope alone is plausible; the two disjoint scopes cannot both fit.
+    resealed["common_validation_seconds"] = outer * 0.75
+    resealed["arm_execution_and_summary_wall_seconds"] = outer * 0.75
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    before = {path: path.read_bytes() for path in copied.rglob("*") if path.is_file()}
+
+    def no_worker(*args, **kwargs):
+        pytest.fail("tampered completed run must not launch a worker")
+
+    monkeypatch.setattr(installed.subprocess, "Popen", no_worker)
+    frozen, binding = installed._envelope(copied)
+    reason = "installed_result_subscopes_exceed_orchestrator_wall"
+    with pytest.raises(ValueError, match=reason):
+        installed._validate_result_header(resealed, frozen, binding)
+    assert installed.verify_run(protocol, copied)["reason"] == reason
+    with pytest.raises(ValueError, match=reason):
+        installed.run(protocol, copied, resume=True)
+    assert {path: path.read_bytes() for path in copied.rglob("*") if path.is_file()} == before
+
+
 @pytest.mark.parametrize("arm,error", [
     ("engine", "installed_pose_report_row_presence_mismatch"),
     ("similarity", "installed_similarity_row_state_mismatch"),

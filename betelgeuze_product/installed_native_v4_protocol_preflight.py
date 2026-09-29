@@ -235,3 +235,45 @@ def preflight_v2(protocol: dict) -> dict:
                   protocol_sha256=_sha(frozen["protocol"]),
                   frozen_binding_sha256=_sha(frozen), cohort_sha256=next(iter(cohorts)))
     return result
+
+
+def preflight_v3(protocol: dict) -> dict:
+    """Use the same registered candidate admission as direct freeze/run.
+
+    Ready means an attempt may execute; source authentication, assayed-state
+    equivalence, and scientific or product qualification remain unproved.
+    """
+    from .installed_native_v4_registered_admission import RegisteredAdmissionError
+
+    result = {
+        "schema_version": "installed_native_v4_registered_protocol_preflight_v3",
+        "status": "blocked", "blockers": [], "protocol": None,
+        "protocol_sha256": None, "frozen_binding_sha256": None,
+        "candidate_count": None, "distinct_Ki_chemical_identity_count": None,
+        "cohort_sha256": None, "assigned_role_counts": None,
+        "evaluation_labels_read": 0, "numeric_validation_completed": False,
+        "source_authenticated": False, "same_prepared_assay_state_verified": False,
+        "scientifically_validated": False, "training_admitted": False,
+        "product_ranking_enabled": False,
+    }
+    if type(protocol) is not dict or protocol.get("schema_version") != comparison.NATIVE_PROTOCOL_V3:
+        result["blockers"].append(_block("native_v3_protocol_required"))
+        return result
+    try:
+        frozen = comparison.freeze(protocol)
+    except RegisteredAdmissionError as exc:
+        result.update(copy.deepcopy(exc.report))
+        return result
+    except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+        result["blockers"].append(_block("comparison_freeze_failed", reason=_reason(exc)))
+        return result
+    candidates = [row for row in frozen["rows"] if row["role"] == "development_test"]
+    result.update(
+        status="ready", protocol=copy.deepcopy(frozen["protocol"]),
+        protocol_sha256=_sha(frozen["protocol"]), frozen_binding_sha256=_sha(frozen),
+        candidate_count=len(candidates),
+        distinct_Ki_chemical_identity_count=len({row["smiles"] for row in candidates}),
+        cohort_sha256=_sha(frozen["registered_cohort"]),
+        assigned_role_counts=frozen["source_verification"]["assigned_role_counts"],
+    )
+    return result
