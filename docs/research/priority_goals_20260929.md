@@ -7,7 +7,7 @@ is used. The five requirements remain:
 
 | Goal | Evidence still required for completion | Current boundary |
 |---|---|---|
-| 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 source review and computational PR49 preparation exist; no newly admitted fit/calibration/evaluation rows |
+| 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 computational preparation and a typed 205-occurrence source audit exist; 78 printed IDs and six repeated reports do not establish independent measurements. Source-family/identity/intake clearance remains incomplete; no newly admitted fit/calibration/evaluation rows |
 | 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | PR49 and a separately prepared observed-coordinate SRO development case have explicit chemistry and numerical observations; SRO passes four fixed same-math states and initial scoped geometry checks, without raw-force or pose-recovery qualification |
 | 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Registered-pose software execution/restart is verified within a narrow support boundary; scientific matched comparison is incomplete |
 | 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Deferred diagnostic formatting retains both fresh integrity passes; four-state SRO full outputs match with evaluation mean 6.18% lower, and the receptor integrity guard mean is 2.62% lower; full preparation-through-storage cost and broader throughput remain unproved |
@@ -85,6 +85,10 @@ the implemented fix and narrow the remaining priorities:
 The [2024 source-lineage review](human_5ht6_2024_source_lineage_20260929.md)
 now separates binding Ki references from functional KB/EC50 and records 78
 printed test IDs. It is a blocked review, not a new full preflight or admission.
+The [bounded occurrence audit](human_5ht6_2024_occurrences_20260930.md)
+now binds 205 typed occurrences and their endpoint distinctions to retained
+source spans. Thirteen unresolved categories, null roles and unknown independent
+measurement denominator remain explicit; the original ledgers are unchanged.
 The [observed-pose readiness audit](7xtb_observed_pose_readiness_20260929.md)
 identifies serotonin/SRO with 13 observed heavy atoms and verifies 2,124 shared
 receptor coordinates. A separate [SRO preparation and numerical execution](sro_numerical_validation_20260929.md)

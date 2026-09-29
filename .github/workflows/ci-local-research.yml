@@ -24,6 +24,9 @@ on:
       - 'tests/unit/test_d3_*.py'
       - 'docs/research/human_5ht6_sro_numerical_preparation/**'
       - 'tests/unit/test_sro_*.py'
+      - 'tools/product/primary_5ht6_2024_occurrences_v1.py'
+      - 'tests/unit/test_primary_5ht6_2024_occurrences_v1.py'
+      - 'docs/evidence/human_5ht6_2024_occurrence*.json'
       - '.github/workflows/ci-local-research.yml'
   push:
     branches: [main]
@@ -46,6 +49,9 @@ on:
       - 'tests/unit/test_d3_*.py'
       - 'docs/research/human_5ht6_sro_numerical_preparation/**'
       - 'tests/unit/test_sro_*.py'
+      - 'tools/product/primary_5ht6_2024_occurrences_v1.py'
+      - 'tests/unit/test_primary_5ht6_2024_occurrences_v1.py'
+      - 'docs/evidence/human_5ht6_2024_occurrence*.json'
       - '.github/workflows/ci-local-research.yml'
   workflow_dispatch:
 permissions:
@@ -104,7 +110,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python -m ruff check --isolated --no-cache tools/product/primary_5ht6_2024_occurrences_v1.py tests/unit/test_primary_5ht6_2024_occurrences_v1.py
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
+            tests/unit/test_primary_5ht6_2024_occurrences_v1.py \
             tests/unit/test_d3_feasible_step.py \
             tests/unit/test_d3_feasible_step_runner.py \
             tests/unit/test_d3_feasible_trajectory.py \
