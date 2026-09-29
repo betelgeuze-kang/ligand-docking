@@ -133,7 +133,8 @@ class _Run:
         # The callback receives an isolated copy, so it cannot rewrite a receipt.
         self.call("record", self.record, copy.deepcopy(row))
 
-    def evaluate(self, xyz, trial_index, alpha, initial, direction_dot_gradient, bonds, lengths, protocol):
+    def evaluate(self, xyz, trial_index, alpha, initial, direction_dot_gradient, bonds, lengths, protocol,
+                 *, armijo_base=None):
         self.guard()
         self.counters["objective_point_attempts"] += 1
         if trial_index is not None:
@@ -196,12 +197,18 @@ class _Run:
                            + [slack for change in changes for slack in
                               ((bond_limit + float(change)) / bond_limit, (bond_limit - float(change)) / bond_limit)])
             if initial is not None:
-                bound = initial["total_energy_kcal_mol"] + protocol["armijo_c1"] * alpha * direction_dot_gradient
+                # Strain and bonds always retain the original references. A
+                # repeated research trajectory may supply a current Armijo base.
+                base = initial if armijo_base is None else armijo_base
+                bound = base["total_energy_kcal_mol"] + protocol["armijo_c1"] * alpha * direction_dot_gradient
                 require(math.isfinite(bound), "finite_armijo_bound_required")
                 row["armijo_upper_bound_kcal_mol"] = bound
-                checks.update(strict_total_energy_decrease=energy < initial["total_energy_kcal_mol"],
+                checks.update(strict_total_energy_decrease=energy < base["total_energy_kcal_mol"],
                               armijo_sufficient_decrease=energy <= bound,
                               distinct_original_coordinates=coordinate_key(xyz) != self.key)
+                if armijo_base is not None:
+                    row["armijo_base_objective_point_attempt"] = base["objective_point_attempt"]
+                    checks["distinct_current_coordinates"] = coordinate_key(xyz) != coordinate_key(base["coordinates_angstrom"])
             row.update(checks=checks, eligible=all(checks.values()),
                        outcome=("initial_feasible" if initial is None else "accepted") if all(checks.values())
                        else ("initial_infeasible" if initial is None else "rejected"))

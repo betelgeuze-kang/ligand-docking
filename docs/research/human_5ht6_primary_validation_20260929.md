@@ -26,6 +26,8 @@ Table 1의 SB-258585 8.9 nM는 이 논문의 새 측정이 아니라 reference 2
 
 Table 1 비교행의 누락은 보완했지만 논문 전체의 모든 endpoint·기준물질·문헌 계보까지 완료한 것은 아니다. 남은 9개도 독립성 승인을 받은 것이 아니다. **새 fit/calibration/independent-evaluation admission은 모두 0**이다. 기존 ledger와 좁은 입력의 과거 receipt는 보존했다.
 
+후속 [2024 출처 계보 검토](human_5ht6_2024_source_lineage_20260929.md)는 PR49/PR58/PR59와 같은 논문의 Table 6에서 olanzapine 결합 Ki 기준물질과 SB258585 기능시험 KB 기준물질을 구분해 기록했다. 기존 세 행의 `identity_clear_review_required`는 그 좁은 입력의 기록이며 admission이 아니다. 공개 메타데이터의 조건부 연결과 기존 차단 receipt를 확인했지만 보호 문맥을 다시 열거나 전체 preflight를 실행하지 않았으므로, 새 차단 행 수나 `blocked_identity` 판정을 만들지 않았다. 현재 추가 검토 상태는 `blocked_review`이며 기존 ledger·역할·판정은 그대로 보존한다.
+
 ## 고정 모델과 원문 실험값의 실제 대조
 
 원문 값은 이미 읽은 상태였다. [진단 계획](../evidence/human_5ht6_primary_retrospective_plan_v1.json)을 추론 전에 기록했지만, 이를 blind 평가로 부르지 않는다. 기존 체크포인트 `818f2b32...`와 원래 학습 평균만 사용하고, 논문별 결과를 분리했다. 데이터 범위는 이미 캡처된 30개 전부이며 결과를 보고 추가 제외하거나 문턱값을 바꾸지 않았다. SB-258585 인용행은 새 측정이 아니므로 처음부터 예측 비교 대상에 넣지 않았다.

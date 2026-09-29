@@ -1,16 +1,26 @@
 # Current molecular development goals
 
-These are the next work packages within the unfinished Engine V2 goal. The app
-goal remains `usageLimited`; creating a replacement was refused because that
-goal is unfinished. No goal was falsely marked complete. This document records
-the requested priorities and observable completion criteria.
+These are work packages within the five unfinished Engine V2 goals. The live
+app goal was rechecked as `active` on 2026-09-29; the earlier `usageLimited`
+observation is historical. No replacement goal or smaller completion definition
+is used. The five requirements remain:
+
+| Goal | Evidence still required for completion | Current boundary |
+|---|---|---|
+| 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 source review and computational PR49 preparation exist; no newly admitted fit/calibration/evaluation rows |
+| 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | One prepared case has explicit chemistry and numerical observations; raw-force admission and observed-pose recovery remain unproved |
+| 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Registered-pose software execution/restart is verified within a narrow support boundary; scientific matched comparison is incomplete |
+| 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Earlier bounded CPU measurements are retained; full preparation-through-storage cost and an overall speedup are unproved |
+| 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | Integrated local baseline and narrow installed replay exist; all five end-to-end requirements are not complete |
+
+The work-package priorities below do not replace these five goals.
 
 | Priority | Objective | Completion evidence | Current status |
 |---|---|---|---|
 | 1 | Transfer a complete, source-bound receptor chemical graph | Bond orders, aromaticity, formal charge, HIE/CYX/termini and atom mapping verified; coordinates, partial charges, masses and adjacency unchanged; unsupported states rejected | Implemented and verified on all 4,376 receptor atoms |
 | 2 | Preserve the prepared input and complete the CPU comparison | Explicit registered-pose request/plan, exact initial coordinates, normal and installed pause/resume agreement, failure denominator and verification | Implemented; actual one-pose/two-row execution and exact installed replay passed; valid baseline retained |
-| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | One exact-feasible energy-lowering step now retained: two native points, strain +0.325377, bond change 0.0327425 Å; force 484.651 remains unconverged; repeated-step refinement unresolved |
-| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Latest focused selection 89 passed (61 new, 28 reused); earlier CPU 806 / research 66 / constrained 86 scopes remain historical and overlapping; installed restart passed with shared dependencies; hosted CI separately pending |
+| 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Repeated run retained 8 steps / 78 points, strain +4.999753 and bond change 0.0654511 Å; blocked at the strain boundary with force 340.269; NOT_ADMITTED |
+| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Latest combined analytical/runner/geometry/workflow selection 231 passed; native product source unchanged; earlier test scopes overlap; prior installed restart is unchanged; new research CI is wired and hosted completion is separate |
 
 Preparation, arithmetic agreement, pose recovery, candidate prioritization and
 affinity are separate questions. PR49 has no observed reference pose here. The
@@ -55,9 +65,13 @@ the implemented fix and narrow the remaining priorities:
    from 399.913181390 to 316.053330633 while meeting exact strain/bond and all
    8+6 geometry gates. Both native states passed independent arithmetic checks.
    Its force remains 484.650668593, so no product refinement is admitted.
-   Next freeze a bounded repeated-step protocol that preserves the original
-   strain/bond reference throughout; report blocked steps, budget exhaustion
-   and raw-force convergence separately. Algorithm and budget changed together; a
+   The [bounded repeated-step execution](pr49_feasible_trajectory_20260929.md)
+   retained eight steps from 78 points and stopped on blocked backtracking. All
+   69 rejected points exceeded the original strain limit. Ten unique states
+   passed independent same-math checks; final force 340.269 still fails admission.
+   The next protocol must address feasible directions at a constraint boundary;
+   this finite negative-gradient-ray search does not prove constrained stationarity.
+   Algorithm and budget changed together; a
    matched-budget benefit remains unproven. Do not substitute research optimizers
    into the product. Repeated integrity checks are a measured research-harness
    cost; optimize them only with mutation detection preserved.
@@ -67,3 +81,10 @@ the implemented fix and narrow the remaining priorities:
    a complete preparation-through-storage service measurement remains absent.
    These remain prerequisites to stronger product claims and a justified HIP
    performance decision.
+
+The [2024 source-lineage review](human_5ht6_2024_source_lineage_20260929.md)
+now separates binding Ki references from functional KB/EC50 and records 78
+printed test IDs. It is a blocked review, not a new full preflight or admission.
+The [observed-pose readiness audit](7xtb_observed_pose_readiness_20260929.md)
+identifies serotonin/SRO with 13 observed heavy atoms and verifies 2,124 shared
+receptor coordinates. Its chemical state and distinct preparation remain pending.

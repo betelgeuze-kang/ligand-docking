@@ -1,0 +1,363 @@
+{
+  "audit_date": "2026-09-29",
+  "checks_performed": {
+    "SRO_selection_and_heavy_template_coverage": "PASS_13_OF_13",
+    "download_or_database_restore": 0,
+    "existing_packet_or_runtime_source_edits": 0,
+    "new_energy_evaluations": 0,
+    "new_force_evaluations": 0,
+    "new_preparation_runs": 0,
+    "protected_context_or_outcome_reads": 0,
+    "retained_receptor_PDB_and_atom_map_manifest_hashes": "PASS",
+    "source_CIF_size_and_sha256": "PASS",
+    "source_receptor_atom_mapping_and_decimal_coordinates": "PASS_2124_OF_2124"
+  },
+  "development_readiness": {
+    "complete_parameterized_SRO_request_verified": false,
+    "independent_evaluation_ready": false,
+    "needed_before_pose_test": [
+      "Freeze a separate development protocol and its reference/starting-state use before any force or score call.",
+      "Distinguish source-pose retention from recovery after a declared displacement. Starting exactly at the observed pose is not demonstrated redocking.",
+      "Use fixed source-frame heavy-atom correspondence, explicit symmetry policy, failure denominator and unchanged geometry/strain/convergence criteria; report deviations separately from energy.",
+      "Treat this one source-informed case as development evidence, not a blind pose benchmark, affinity prediction or active/inactive classification."
+    ],
+    "needed_before_preparation": [
+      "Declare an allowed development role and chemical-state decision for a separate SRO case without relabelling any reserved source.",
+      "Freeze the source selection and 13-heavy-atom reference map, preserving unknown charge and category-specific author numbering.",
+      "Create a new ligand preparation with an explicitly declared protonation/tautomer/charge model, generated-H provenance and full parameters; observed heavy coordinates must remain identifiable.",
+      "Bind it to the reviewed receptor state with a new immutable request and independent atom/coordinate/chemistry checks. Do not reuse PR49 charges, ligand parameters or request identity."
+    ],
+    "redocking_recovery_test_ready": false,
+    "runtime_parameterization_support_verified": false,
+    "source_observed_heavy_pose_available": true,
+    "source_pose_retention_test_candidate": true
+  },
+  "embedded_chemical_template": {
+    "aromatic_atom_rows": 9,
+    "aromatic_bond_rows": 10,
+    "assayed_or_bound_protonation_established": false,
+    "atom_rows": 25,
+    "bond_order_counts": {
+      "doub": 4,
+      "sing": 22
+    },
+    "component_atom_charge_field_present": false,
+    "component_bond_rows": 26,
+    "formal_charge_inferred": null,
+    "heavy_atom_bond_rows": 14,
+    "heavy_atom_names_exactly_match_observed": true,
+    "heavy_atom_rows": 13,
+    "hydrogen_atom_rows": 12,
+    "hydrogens_lacking_observed_coordinates": [
+      "HOH",
+      "HH2",
+      "HZ2",
+      "HNE1",
+      "HD1",
+      "HE3",
+      "HB1",
+      "HB2",
+      "HA1",
+      "HA2",
+      "HNZ1",
+      "HNZ2"
+    ],
+    "preparation_state_selected": null,
+    "state_caution": "The embedded formula, names and connectivity support a source chemical template, not a measured protonation/tautomer population. Missing charge fields are not zero charges."
+  },
+  "entry": {
+    "assembly_id": "1",
+    "assembly_label_asym_ids": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F"
+    ],
+    "assembly_operation": "1",
+    "id": "7XTB",
+    "method": "ELECTRON MICROSCOPY",
+    "operation_is_identity": true,
+    "reported_resolution_angstrom": "3.3",
+    "resolution_method": "FSC 0.143 CUT-OFF",
+    "source_heavy_coordinates_are_deposited_model_observations_not_per_atom_ground_truth": true,
+    "source_url": "https://files.rcsb.org/download/7XTB.cif"
+  },
+  "existing_PR49_boundary": {
+    "PR49_or_PR59_Ki_link_to_SRO_pose": false,
+    "PR49_pose_is": "iteratively constructed computational rigid placement",
+    "SRO_to_PR49_atom_map": null,
+    "SRO_used_as": "public spatial anchor only in prior PR49 preparation",
+    "observed_PR49_pose": false,
+    "same_chemical_state_or_same_ligand": false
+  },
+  "inputs": {
+    "PR49_computational_complex_manifest": {
+      "byte_count": 4291,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-complex-20260929-final2/manifest.v1.json",
+      "sha256": "95128a77c3dd416371371966b9d7cbd2ca22dbfbff4499cce70bd14d6899af33"
+    },
+    "prior_source_role_and_PR49_boundary_readme": {
+      "byte_count": 13715,
+      "path": "docs/research/human_5ht6_d3_complex/README.md",
+      "sha256": "15798f9e4706820755789043b359100fb4197305078c3e7b1e534132d9c575e5"
+    },
+    "receptor_projection_atom_map": {
+      "byte_count": 205175,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-openmm-projection-20260929/atom-provenance.csv",
+      "sha256": "2ee487ba8e9fed265083acc14973bdaff5838e0244973691ad091b3f8836245d"
+    },
+    "receptor_projection_coordinates": {
+      "byte_count": 429841,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-openmm-projection-20260929/receptor-prepared.pdb",
+      "sha256": "20a849eeca2624801768d680a781271d465e6e789ce081ad7da1a09930d351b3"
+    },
+    "receptor_projection_manifest": {
+      "byte_count": 3432,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-openmm-projection-20260929/manifest.v1.json",
+      "sha256": "a761368e162a3ce5b502702d9ba689451386e0dd424619da371df8e4d0a16f12"
+    },
+    "receptor_projection_readme": {
+      "byte_count": 4168,
+      "path": "docs/research/human_5ht6_7xtb_openmm_projection/README.md",
+      "sha256": "47b8429906eb9926b5658dda1cf7006924257fcf7b1e28cd466717228a01b46f"
+    },
+    "source_cif": {
+      "byte_count": 900097,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-source-observation-20260929T031420Z/7XTB.cif",
+      "sha256": "e81b271ee863340c0e1e65101be7695849bdd56f408c887b03b89929cc4e9cb7"
+    },
+    "source_observation_manifest": {
+      "byte_count": 5948,
+      "path": "docs/evidence/human_5ht6_7xtb_source_observation_v1/manifest.v1.json",
+      "sha256": "c532f6fa4e7d2b73fa00b06ccfe8d2bd245329c9e7a1569ad924999f22a5aa43"
+    },
+    "source_observation_readme": {
+      "byte_count": 5293,
+      "path": "docs/evidence/human_5ht6_7xtb_source_observation_v1/README.md",
+      "sha256": "07d0025bd3741e2ee1057fe194c22d076cd6a378475619a5cdd144356187b3fb"
+    }
+  },
+  "known_source_role_boundary": {
+    "allowed_scope_in_this_audit": "public source/preparation metadata review only",
+    "assigned_role": null,
+    "fit_calibration_evaluation_admission": false,
+    "global_identity_clearance": false,
+    "prior_documented_statement": "human_5ht6_d3_complex/README.md states serotonin metadata is transitively connected to reserved components under the current policy and its use here is numerical development only.",
+    "protected_policy_component_id": null,
+    "source_role_universe_opened": false,
+    "statement_revalidated_against_protected_context": false
+  },
+  "next_concrete_action": "Review and freeze a separate SRO development-state/reference manifest using the retained 13-heavy-atom map and existing receptor coordinate correspondence. Resolve role and microstate explicitly before any new preparation. Keep current PR49 execution and all source packets immutable.",
+  "observed_small_molecule": {
+    "B_iso_or_equiv_values": [
+      "65.86"
+    ],
+    "HETATM_component_counts": {
+      "SRO": 13
+    },
+    "altloc_values": [
+      "."
+    ],
+    "atom_site_auth_asym_id": "R",
+    "atom_site_auth_seq_id": "501",
+    "atom_site_insertion_code": "?",
+    "atom_site_label_seq_id": ".",
+    "entry_SRO_struct_conn_records": 0,
+    "entry_SRO_unobserved_or_zero_occupancy_records": 0,
+    "formal_charge_tokens": [
+      "?"
+    ],
+    "identifier_caution": "nonpoly_scheme.auth_seq_num is 1 whereas atom_site.auth_seq_id and nonpoly_scheme.pdb_seq_num are 501; preserve category-specific identifiers.",
+    "label_asym_id": "F",
+    "label_entity_id": "6",
+    "model_number": "1",
+    "nonpoly_scheme": {
+      "asym_id": "F",
+      "auth_mon_id": "SRO",
+      "auth_seq_num": "1",
+      "entity_id": "6",
+      "mon_id": "SRO",
+      "ndb_seq_num": "1",
+      "pdb_ins_code": ".",
+      "pdb_mon_id": "SRO",
+      "pdb_seq_num": "501",
+      "pdb_strand_id": "R"
+    },
+    "observed_atoms": [
+      {
+        "atom_site_id": "8089",
+        "element": "O",
+        "name": "OH",
+        "xyz_angstrom_printed": [
+          "82.164",
+          "112.678",
+          "80.076"
+        ]
+      },
+      {
+        "atom_site_id": "8090",
+        "element": "C",
+        "name": "CZ3",
+        "xyz_angstrom_printed": [
+          "82.868",
+          "112.080",
+          "81.138"
+        ]
+      },
+      {
+        "atom_site_id": "8091",
+        "element": "C",
+        "name": "CH2",
+        "xyz_angstrom_printed": [
+          "82.693",
+          "112.705",
+          "82.382"
+        ]
+      },
+      {
+        "atom_site_id": "8092",
+        "element": "C",
+        "name": "CZ2",
+        "xyz_angstrom_printed": [
+          "83.334",
+          "112.208",
+          "83.502"
+        ]
+      },
+      {
+        "atom_site_id": "8093",
+        "element": "C",
+        "name": "CE2",
+        "xyz_angstrom_printed": [
+          "84.166",
+          "111.076",
+          "83.395"
+        ]
+      },
+      {
+        "atom_site_id": "8094",
+        "element": "N",
+        "name": "NE1",
+        "xyz_angstrom_printed": [
+          "84.905",
+          "110.390",
+          "84.325"
+        ]
+      },
+      {
+        "atom_site_id": "8095",
+        "element": "C",
+        "name": "CD1",
+        "xyz_angstrom_printed": [
+          "85.529",
+          "109.368",
+          "83.698"
+        ]
+      },
+      {
+        "atom_site_id": "8096",
+        "element": "C",
+        "name": "CG",
+        "xyz_angstrom_printed": [
+          "85.179",
+          "109.412",
+          "82.372"
+        ]
+      },
+      {
+        "atom_site_id": "8097",
+        "element": "C",
+        "name": "CD2",
+        "xyz_angstrom_printed": [
+          "84.339",
+          "110.467",
+          "82.187"
+        ]
+      },
+      {
+        "atom_site_id": "8098",
+        "element": "C",
+        "name": "CE3",
+        "xyz_angstrom_printed": [
+          "83.680",
+          "110.974",
+          "81.034"
+        ]
+      },
+      {
+        "atom_site_id": "8099",
+        "element": "C",
+        "name": "CB",
+        "xyz_angstrom_printed": [
+          "85.798",
+          "108.313",
+          "81.481"
+        ]
+      },
+      {
+        "atom_site_id": "8100",
+        "element": "C",
+        "name": "CA",
+        "xyz_angstrom_printed": [
+          "87.124",
+          "108.839",
+          "80.859"
+        ]
+      },
+      {
+        "atom_site_id": "8101",
+        "element": "N",
+        "name": "NZ",
+        "xyz_angstrom_printed": [
+          "87.567",
+          "107.943",
+          "79.842"
+        ]
+      }
+    ],
+    "observed_heavy_atoms": 13,
+    "observed_hydrogens": 0,
+    "occupancy_values": [
+      "1.00"
+    ],
+    "source_component_id": "SRO",
+    "source_formula": "C10 H12 N2 O",
+    "source_name": "SEROTONIN",
+    "source_synonym": "3-(2-AMINOETHYL)-1H-INDOL-5-OL",
+    "these_tokens_do_not_establish_pose_uncertainty_or_microstate": true
+  },
+  "receptor_coordinate_correspondence": {
+    "assay_construct_or_full_assembly_equivalence_verified": false,
+    "atom_name_and_element_matches": 2124,
+    "exact_decimal_xyz_matches": 2124,
+    "generated_heavy_atoms": 3,
+    "generated_hydrogen_compatibility_with_SRO_checked": false,
+    "generated_hydrogens": 2249,
+    "ligand_included_in_receptor_packet": false,
+    "ligand_receptor_force_evaluated": false,
+    "maximum_printed_source_xyz_change_angstrom": "0",
+    "prepared_atoms": 4376,
+    "prepared_native_residue_segments": {
+      "A": [
+        26,
+        227
+      ],
+      "B": [
+        263,
+        338
+      ]
+    },
+    "source_atom_ids_unique_and_complete": true,
+    "source_auth_asym_id": "R",
+    "source_frame_compatibility": "The observed SRO heavy coordinates and retained receptor source-heavy coordinates share the same deposited frame; no inferred PR49 transform or ligand-centroid relocation is needed to represent that frame.",
+    "source_label_asym_id": "E",
+    "source_label_entity_id": "5",
+    "source_observed_heavy_atoms": 2124,
+    "source_residue_count": 278
+  },
+  "schema_version": "7xtb_observed_pose_readiness_metadata_v1",
+  "scope": "Read-only source-coordinate and retained preparation audit; no new chemical preparation, model/force evaluation or role-universe query.",
+  "status": "SOURCE_COORDINATES_AVAILABLE_PREPARATION_AND_ADMISSION_UNRESOLVED"
+}
