@@ -1,0 +1,287 @@
+{
+  "assay_chemical_state_known": false,
+  "bound_ligand_protonation_measured": false,
+  "builder_source": {
+    "bytes": 34076,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/human_5ht6_sro_numerical_preparation/prepare_sro.py",
+    "sha256": "cfa955ec3d92384fd9c920569db290fcc959d041af52a4e5ee96097ef8ae0e82"
+  },
+  "checks": {
+    "independent_verifier": "separate owner; not claimed by this builder receipt",
+    "manifest_output_hashes_verified": 19,
+    "prepared_reader_coordinate_roundtrip_passed": true,
+    "receptor_reader_coordinate_matches": 4376,
+    "source_heavy_coordinate_exact_matches": 13,
+    "synthetic_test_command": "python3 -m pytest -q tests/unit/test_sro_numerical_preparation.py",
+    "synthetic_tests_passed": 12
+  },
+  "computational_microstate": {
+    "assay_chemical_state": null,
+    "atom_count": 26,
+    "experimentally_measured_bound_protonation": null,
+    "formal_charge_e": 1,
+    "formal_charge_site": "NZ",
+    "formula": "C10H13N2O+",
+    "heavy_atom_count": 13,
+    "hydrogen_count": 13,
+    "indole_NH_retained": true,
+    "phenol_OH_retained": true,
+    "selection": "single_predeclared_computational_assumption",
+    "terminal_amine_hydrogen_count": 3
+  },
+  "counts": {
+    "atoms": 26,
+    "bonds": 27,
+    "formal_charge_sum_e": 1,
+    "heavy_atoms": 13,
+    "hydrogens": 13,
+    "openmm_constraints": 0,
+    "openmm_exceptions": 131,
+    "openmm_forces": [
+      "NonbondedForce",
+      "PeriodicTorsionForce",
+      "HarmonicAngleForce",
+      "HarmonicBondForce",
+      "CMMotionRemover"
+    ],
+    "partial_charge_sum_e": 0.9999999999999993
+  },
+  "date": "2026-09-29",
+  "deposited_em_buffer_pH": "7.4",
+  "executed": {
+    "DB_restores": 0,
+    "downloads": 0,
+    "energy_evaluations": 0,
+    "explicit_NAGL_charge_assignment_calls": 1,
+    "failed_preparation_runs": 0,
+    "force_evaluations": 0,
+    "minimizations": 0,
+    "model_training_or_retraining": 0,
+    "new_protected_context_reads": 0,
+    "preparation_runs": 1
+  },
+  "geometry_observations": {
+    "closest_pair": {
+      "ligand_index": 17,
+      "ligand_name": "HD1",
+      "receptor_index": 1292,
+      "receptor_name": "HB2",
+      "receptor_residue_index": 84
+    },
+    "force_energy_or_minimization_evaluations": 0,
+    "generated_H_parent_distance_max_angstrom": 1.1000525351091226,
+    "generated_H_parent_distance_min_angstrom": 0.989995762617202,
+    "generated_hydrogens": 13,
+    "geometry_role": "descriptive distances only; no pose rejection, relaxation, selection or physical validation",
+    "heavy_atoms_exactly_preserved": 13,
+    "minimum_heavy_receptor_ligand_distance_angstrom": 2.9142319742944247,
+    "minimum_receptor_ligand_distance_angstrom": 1.5493495344821338,
+    "source_centroid_angstrom": [
+      84.56507692307693,
+      110.49638461538461,
+      82.02238461538461
+    ],
+    "source_heavy_coordinate_change_angstrom": 0.0
+  },
+  "ligand_system_sha256": "7736058c5af99dbbdeca8de80eb7029bbd870f8c40186a00838f6601ab026972",
+  "ligand_topology_sha256": "b9550701d7081986dd3823950d726cd41ba41909eac28df74b90bfc92087af2b",
+  "next_step": "independent source/graph/reader/XML verification before separately owned initial-plus-three same-math audit; not independent pose recovery",
+  "outputs": {
+    "atom-provenance.json": {
+      "bytes": 24124,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/atom-provenance.json",
+      "sha256": "723d9f42546bffed99f203bb0b7dc39aa4c560efb180c04b2d1c599dc0b1738d"
+    },
+    "atomtypes.itp": {
+      "bytes": 1614,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/atomtypes.itp",
+      "sha256": "1c2c57f2e04bd62071cf1870ce840e117adab779260840efa2c5de62b1865baa"
+    },
+    "defaults.itp": {
+      "bytes": 84,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/defaults.itp",
+      "sha256": "253b6eca50ade5c1b9be1a7e48714cab31f52d8ee81350c46244f79fdabd8362"
+    },
+    "geometry.json": {
+      "bytes": 825,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/geometry.json",
+      "sha256": "50927b497e154e6279c56d82a1ca62201d11d60d8016471b6b5cf4dc05ba13a4"
+    },
+    "ligand-canonical.json": {
+      "bytes": 66662,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand-canonical.json",
+      "sha256": "aee0cdee35491fc44998a14c69c5e888b2de5e6c0c85b35bfedfb0562832445c"
+    },
+    "ligand-reader-canonical.json": {
+      "bytes": 46183,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand-reader-canonical.json",
+      "sha256": "4c099d18adcc4b86034fe0c0e71c807526dc2b7d73ba340d6a8a64b9736c2101"
+    },
+    "ligand-unconstrained-openmm-system.xml": {
+      "bytes": 29989,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand-unconstrained-openmm-system.xml",
+      "sha256": "6446b0f2babfab9748fc445653d8cd2453e5d98ad1483320da197e55192734ea"
+    },
+    "ligand.gro": {
+      "bytes": 1806,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand.gro",
+      "sha256": "2b6ad50323e4cbbdf1a1fd800656dde6d5c3a58057ab422939b458af2bd1a2eb"
+    },
+    "ligand.itp": {
+      "bytes": 1600,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand.itp",
+      "sha256": "971732aa63bb334b4445e5b64aba2b9ce47df0de37fb82c27313986e3b5c5583"
+    },
+    "ligand.sdf": {
+      "bytes": 2579,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand.sdf",
+      "sha256": "c70b5c8c5634b5b718846cf647e33c5eb7070be5b0b5a072cfffff011d03818c"
+    },
+    "particle-parameters.json": {
+      "bytes": 5006,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/particle-parameters.json",
+      "sha256": "a95f0c5150cca7293389bf4115333da06e524140eb5abcb21a0ba7a62467069f"
+    },
+    "prepare-sro-source.py": {
+      "bytes": 34076,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/prepare-sro-source.py",
+      "sha256": "cfa955ec3d92384fd9c920569db290fcc959d041af52a4e5ee96097ef8ae0e82"
+    },
+    "prepared-input.json": {
+      "bytes": 3678,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/prepared-input.json",
+      "sha256": "9acae0cf06d6a358f25386f5b230f614afbfe2c3a21e707ea8ba1d2d258fbd0a"
+    },
+    "protocol.json": {
+      "bytes": 3049,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/protocol.json",
+      "sha256": "3a6271334d97ff76bd451dbfc7f48d0eee2a981782568d94b4833da378b22dbc"
+    },
+    "reader-evidence.json": {
+      "bytes": 2669414,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/reader-evidence.json",
+      "sha256": "06865a7938a6de25c079fae21c645f7878e82087ec10b11f22ecf51754d1522f"
+    },
+    "reader-parameters.json": {
+      "bytes": 4406,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/reader-parameters.json",
+      "sha256": "c8aa568bca7b9f9deab21a68b6be62fe55b57a7af06c496b49329cb07a9617ef"
+    },
+    "runtime-and-parameter-sources.json": {
+      "bytes": 1122,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/runtime-and-parameter-sources.json",
+      "sha256": "1353c19ffef14457ca0fdbb2a71026606f5b0da443899632701093c0e5fa12f9"
+    },
+    "source-graph.json": {
+      "bytes": 18352,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/source-graph.json",
+      "sha256": "7d93efefd0b82fd94eed8ed23575e523b6f8515d5fd28b4b0f494ff746c089f2"
+    },
+    "unconstrained-forcefield.offxml": {
+      "bytes": 80276,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/unconstrained-forcefield.offxml",
+      "sha256": "dbcc6f7b9d2b66e5c94f06508b4b7c8fa22e3d5d281b7109c4f5d9116d9bae50"
+    }
+  },
+  "packet_manifest": {
+    "bytes": 7136,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/manifest.v1.json",
+    "sha256": "77480f536cc5e920e4a577f838b8b9c444de7922ff6e85480e4a3cd84fa61ad7"
+  },
+  "packet_total_bytes": 3001981,
+  "protocol": {
+    "bytes": 3049,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/protocol.json",
+    "sha256": "3a6271334d97ff76bd451dbfc7f48d0eee2a981782568d94b4833da378b22dbc"
+  },
+  "receptor_refs": {
+    "atom_provenance": {
+      "bytes": 205175,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-openmm-projection-20260929/atom-provenance.csv",
+      "sha256": "2ee487ba8e9fed265083acc14973bdaff5838e0244973691ad091b3f8836245d"
+    },
+    "canonical": {
+      "bytes": 7511796,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-chemical-graph-20260929-final1/receptor-canonical.json",
+      "sha256": "2c0970bcaf9e994f382e0f0c0fdacbfd1359bef60a10b879f757b31628658c4c"
+    },
+    "chemical_manifest": {
+      "bytes": 5523,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-chemical-graph-20260929-final1/manifest.v1.json",
+      "sha256": "566b38cc63013184a063cd336cdcd170b2e57e134162d7844b4f6909b9b1d5d1"
+    },
+    "openmm_xml": {
+      "bytes": 4873968,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-openmm-projection-20260929/openmm-system.xml",
+      "sha256": "7c5aeeeafed880dfee5f294fc34b6a0e2ec5a31d9482245b5cab93c10d4d1cc6"
+    },
+    "prepared_manifest": {
+      "bytes": 3432,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-openmm-projection-20260929/manifest.v1.json",
+      "sha256": "a761368e162a3ce5b502702d9ba689451386e0dd424619da371df8e4d0a16f12"
+    }
+  },
+  "repository_head_at_build": "071c48cc8d0521b01d82c6fddc9d3a9359fde48a",
+  "runtime_and_parameter_sources": {
+    "charge_inference_role": "NAGL predicted AM1-BCC-like computational partial charges, not experimental charge or toolkit AM1-BCC",
+    "charge_model": {
+      "bytes": 16809947,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-openff-runtime-y2epeamt/env/lib/python3.11/site-packages/openff/nagl_models/models/am1bcc/openff-gnn-am1bcc-1.0.0.pt",
+      "sha256": "7981e7f5b0b1e424c9e10a40d9e7606d96dcd3dd2b095cb4eeff6829f92238ee"
+    },
+    "forcefield": {
+      "bytes": 80644,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-openff-runtime-y2epeamt/env/lib/python3.11/site-packages/openforcefields/offxml/openff-2.2.1.offxml",
+      "sha256": "1b24deb47970bae2d179a5b4e023d4a57c9c78614fe431f1670e3f75e0012c3a"
+    },
+    "model_inference_count_requested": 1,
+    "runtime_versions": {
+      "openff_interchange": "0.5.2",
+      "openff_toolkit": "0.18.0",
+      "openmm": "8.6.1.dev-b399af4",
+      "python": "3.11.16 (main, Sep  2 2026, 23:39:52) [GCC 15.3.0]",
+      "rdkit": "2026.03.6"
+    },
+    "source_experimental_charge_inferred": false,
+    "training_or_retraining": false
+  },
+  "schema_id": "sro_numerical_preparation_receipt/1.0.0",
+  "scope": {
+    "calibration_admitted": false,
+    "experimental_Ki_used": false,
+    "independent_evaluation_admitted": false,
+    "independent_pose_recovery_claimed": false,
+    "numerical_development_only": true,
+    "pose_recovery_admitted": false,
+    "product_qualified": false,
+    "protected_context_read": false,
+    "reserved_source_role_unchanged": true,
+    "scientifically_validated": false,
+    "training_admitted": false
+  },
+  "source": {
+    "bytes": 900097,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-source-observation-20260929T031420Z/7XTB.cif",
+    "sha256": "e81b271ee863340c0e1e65101be7695849bdd56f408c887b03b89929cc4e9cb7"
+  },
+  "status": "PREPARED_NUMERICAL_DEVELOPMENT_NOT_SCIENTIFICALLY_QUALIFIED",
+  "xml_term_inventory": {
+    "CMMotionRemover": {},
+    "HarmonicAngleForce": {
+      "Angles": 46
+    },
+    "HarmonicBondForce": {
+      "Bonds": 27
+    },
+    "NonbondedForce": {
+      "ExceptionOffsets": 0,
+      "Exceptions": 131,
+      "GlobalParameters": 0,
+      "ParticleOffsets": 0,
+      "Particles": 26
+    },
+    "PeriodicTorsionForce": {
+      "Torsions": 95
+    }
+  }
+}
