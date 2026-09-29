@@ -10,7 +10,7 @@ is used. The five requirements remain:
 | 1. Source-linked human-target inputs and experimental endpoints | Prepared chemistry and comparable active/inactive endpoints with explicit, independently cleared train/calibration/evaluation roles | Human 5-HT6 source review and computational PR49 preparation exist; no newly admitted fit/calibration/evaluation rows |
 | 2. Preparation quality and numerical validity | Contact, completeness, stereochemistry, charge and same-math checks; execution separated from eligibility | PR49 and a separately prepared observed-coordinate SRO development case have explicit chemistry and numerical observations; SRO passes four fixed same-math states and initial scoped geometry checks, without raw-force or pose-recovery qualification |
 | 3. Similarity/native/native+AI comparison | Same eligible candidates, declared compute budget, all requested/failing candidates, independently interpreted outcomes | Registered-pose software execution/restart is verified within a narrow support boundary; scientific matched comparison is incomplete |
-| 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | New isolated guard profiling attributes 95.74% of measured guard wall time to fixed-receptor integrity; optimization, matched-output benefit and full preparation-through-storage cost remain unproved |
+| 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Deferred diagnostic formatting retains both fresh integrity passes; four-state SRO full outputs match with evaluation mean 6.18% lower, and the receptor integrity guard mean is 2.62% lower; full preparation-through-storage cost and broader throughput remain unproved |
 | 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | Integrated local baseline and narrow installed replay exist; all five end-to-end requirements are not complete |
 
 The work-package priorities below do not replace these five goals.
@@ -20,7 +20,7 @@ The work-package priorities below do not replace these five goals.
 | 1 | Transfer a complete, source-bound receptor chemical graph | Bond orders, aromaticity, formal charge, HIE/CYX/termini and atom mapping verified; coordinates, partial charges, masses and adjacency unchanged; unsupported states rejected | Implemented and verified on all 4,376 receptor atoms |
 | 2 | Preserve the prepared input and complete the CPU comparison | Explicit registered-pose request/plan, exact initial coordinates, normal and installed pause/resume agreement, failure denominator and verification | Implemented; actual one-pose/two-row execution and exact installed replay passed; valid baseline retained |
 | 3 | Improve useful D3 refinement without weakening acceptance | Fixed development protocol; independent energy-force checks; strain and convergence limits unchanged; rejection retained if limits fail | Repeated run retained 8 steps / 78 points, strain +4.999753 and bond change 0.0654511 Å; blocked at the strain boundary with force 340.269; NOT_ADMITTED |
-| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Latest combined research/SRO/runner/geometry/workflow selection 293 passed; native product source unchanged; fixed-receptor guard stage is measured as the next CPU target; prior installed restart is unchanged; research CI is wired and hosted completion is separate |
+| 4 | Remove measured redundant work and integrate | Mutation checks preserved, numerical identity demonstrated, measured cost scope stated, focused tests and exact-head draft PR updated | Canonical normalization now defers diagnostic-path construction while retaining fresh traversal and both digests; controlled fixed-state SRO evaluation has 18/18 completed attempts and exact full outputs. Current-source regression and installed replay evidence is tracked in the CPU normalization report; hosted completion is separate |
 
 Preparation, arithmetic agreement, pose recovery, candidate prioritization and
 affinity are separate questions. PR49 has no observed reference pose here. The
@@ -97,9 +97,15 @@ The initial force is 128.436, not converged. Existing source reservations and
 zero admission remain. This numerical case cannot substitute for independently
 allowed active/inactive experimental endpoints.
 
-The [guard profile](pr49_integrity_profile_20260929.md) retained all integrity
-operations for one warm-up and nine measured calls, without force evaluations.
-The fixed-receptor stage occupies 95.74% of measured guard wall time; its internal
-serialization/validation split is not yet measured. The next CPU change must
-preserve full state and mutation detection and demonstrate equal outputs with
-enclosing cost; file-stat caching or an unmeasured HIP move is not a substitute.
+The earlier [guard profile](pr49_integrity_profile_20260929.md) retained all
+integrity operations and identified the fixed-receptor stage as 95.74% of its
+measured guard wall time. The subsequent
+[canonical-normalization change](cpu_canonical_normalization_20260929.md)
+retains fresh raw and canonical digests while deferring diagnostic-path strings.
+Separately replayed normalization measurements are 22.40% lower; the full
+receptor integrity guard is 2.62% lower. Those separate timings are not additive
+subspans. The controlled four-state SRO evaluator has identical complete outputs
+with mean wall time 1.826910 to 1.714064 seconds (6.18% lower). Small warm
+single-host measurements do not establish full-workflow speedup or justify a HIP
+transition. Remaining work includes eligible experimental contrasts, useful
+converged refinement and complete preparation-through-storage cost.

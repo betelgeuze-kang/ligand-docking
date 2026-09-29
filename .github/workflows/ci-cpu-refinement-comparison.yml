@@ -11,6 +11,8 @@ on:
       - 'tests/unit/test_engine_v2_*.py'
       - 'tests/unit/test_refinement_comparison_workflow.py'
       - 'tests/unit/test_cpu_refinement_source_boundaries.py'
+      - 'tests/unit/test_molecular_canonical_normalization_equivalence.py'
+      - 'tests/unit/test_cpu_fixed_receptor_integrity_cost.py'
       - 'tests/unit/frozen_engine_v2_historical_sources.py'
       - 'tests/fixtures/engine_v2_python_sources_eb07925cf.json'
       - '.github/workflows/ci-cpu-refinement-comparison.yml'
@@ -58,6 +60,8 @@ jobs:
       - name: Lint changed implementation and tests
         run: |
           python -m ruff check --isolated --no-cache \
+            betelgeuze_engine_v2/molecular/serialization.py \
+            tests/unit/test_molecular_canonical_normalization_equivalence.py \
             betelgeuze_product/cpu_refinement/reference_forcefield_v1_1.py \
             betelgeuze_product/cpu_refinement/reference_minimization_v1_1.py \
             betelgeuze_product/cpu_refinement/energy_refinement_v1_1.py \
@@ -74,6 +78,10 @@ jobs:
         run: |
           set -euo pipefail
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
+            tests/unit/test_molecular_canonical_normalization_equivalence.py \
+            tests/unit/test_engine_v2_stack_round3_molecular.py \
+            tests/unit/test_engine_v2_stack_round3_compatibility.py \
+            tests/unit/test_cpu_fixed_receptor_integrity_cost.py \
             tests/unit/test_engine_v2_reference_angle_boundary.py \
             tests/unit/test_engine_v2_refinement_comparison.py \
             tests/unit/test_engine_v2_numerics_v1_1_contracts.py \

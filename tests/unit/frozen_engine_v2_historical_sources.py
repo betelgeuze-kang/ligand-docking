@@ -1,8 +1,10 @@
 """Exercise frozen protocols against their pinned pre-3ad331560 source view.
 
-The fixture records the 187 Python source hashes at eb07925cf. Only the five
-files changed by 3ad331560 are projected back to their historical hashes;
-every other live source byte and the exact set of source paths must still agree.
+The fixture records the 187 Python source hashes at eb07925cf. Only explicitly
+reviewed source changes are projected back to historical
+hashes for these protocol-metadata tests; every live byte, including each
+reviewed file, and the exact source path set must agree with the current pins.
+This view does not execute historical code or authorize the live frozen protocol.
 This keeps historical protocol tests useful without changing their frozen seal.
 """
 
@@ -26,7 +28,7 @@ HISTORICAL_MANIFEST_SHA256 = (
     "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7"
 )
 CURRENT_MANIFEST_SHA256 = (
-    "9e97390e7e7a4fba80376c42147bd59765ac8c4a8b1d471679b98c54804822e4"
+    "6f8f3797a3b97d3f04cba224a579a3dcd10e108b79dc5ab43e8825a33e95e6c6"
 )
 HISTORICAL_PROTOCOL_SHA256 = (
     "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3"
@@ -51,6 +53,18 @@ KNOWN_3AD331560_SOURCE_SHA256 = {
     ),
     "betelgeuze_engine_v2/molecular/validation.py": (
         "e33cd30641aaf07ae9eaf6912525ec50ae0b7abf23e3fa0976a6a4a647b80ba5"
+    ),
+}
+
+
+# The canonical-normalization change preserves bytes, SHA identities, diagnostics
+# and fresh mutation checks; its differential and real-state evidence is recorded
+# in docs/research/cpu_canonical_normalization_20260929.md. Keep the historical
+# fixture/protocol seals untouched and continue rejecting any unreviewed byte.
+REVIEWED_CURRENT_SOURCE_SHA256 = {
+    **KNOWN_3AD331560_SOURCE_SHA256,
+    "betelgeuze_engine_v2/molecular/serialization.py": (
+        "5a697e413368137308076632437452a7fcb39a1e949f56ace14c749d271195b6"
     ),
 }
 
@@ -87,7 +101,7 @@ def historical_python_source_rows() -> list[dict[str, str]]:
 
 def verify_known_live_source_delta() -> dict[str, str]:
     historical = {row["path"]: row["sha256"] for row in historical_python_source_rows()}
-    if not set(KNOWN_3AD331560_SOURCE_SHA256) <= set(historical):
+    if not set(REVIEWED_CURRENT_SOURCE_SHA256) <= set(historical):
         raise HistoricalSourceViewError("allowed changed source paths are unbound")
     root = REPOSITORY_ROOT / "betelgeuze_engine_v2"
     paths = {
@@ -104,7 +118,7 @@ def verify_known_live_source_delta() -> dict[str, str]:
                 f"live Python source is not a regular file: {relative_path}"
             )
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
-        expected = KNOWN_3AD331560_SOURCE_SHA256.get(
+        expected = REVIEWED_CURRENT_SOURCE_SHA256.get(
             relative_path, historical[relative_path]
         )
         if actual != expected:
@@ -124,8 +138,8 @@ def historical_file_sha256(
 
     def read_hash(relative_path: str) -> str:
         observed = live_file_sha256(relative_path)
-        if relative_path in KNOWN_3AD331560_SOURCE_SHA256:
-            if observed != KNOWN_3AD331560_SOURCE_SHA256[relative_path]:
+        if relative_path in REVIEWED_CURRENT_SOURCE_SHA256:
+            if observed != REVIEWED_CURRENT_SOURCE_SHA256[relative_path]:
                 raise HistoricalSourceViewError(
                     f"unreviewed live Python source drift: {relative_path}"
                 )

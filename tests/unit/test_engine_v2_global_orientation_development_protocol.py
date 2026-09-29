@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -79,10 +80,14 @@ def test_current_source_fails_frozen_global_orientation_protocol(
         verify_protocol(_protocol())
 
 
+@pytest.mark.parametrize("relative_path", [
+    "betelgeuze_engine_v2/io/sdf.py",
+    "betelgeuze_engine_v2/molecular/serialization.py",
+])
 def test_historical_view_rejects_new_mutation_to_changed_source(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, relative_path: str,
 ) -> None:
-    target = _REPO_ROOT / "betelgeuze_engine_v2/io/sdf.py"
+    target = _REPO_ROOT / relative_path
     original_read_bytes = Path.read_bytes
 
     def drifted_read_bytes(path: Path) -> bytes:
@@ -94,7 +99,7 @@ def test_historical_view_rejects_new_mutation_to_changed_source(
     monkeypatch.setattr(Path, "read_bytes", drifted_read_bytes)
     with pytest.raises(
         HistoricalSourceViewError,
-        match="unreviewed live Python source drift: betelgeuze_engine_v2/io/sdf.py",
+        match=re.escape("unreviewed live Python source drift: " + relative_path),
     ):
         verify_protocol(_protocol())
 

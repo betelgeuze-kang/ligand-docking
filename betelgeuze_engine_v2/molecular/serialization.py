@@ -36,13 +36,24 @@ def _float_token(value: float, *, path: str) -> dict[str, str]:
     return {"$float_hex": number.hex()}
 
 
-def canonical_json_value(value: Any, *, path: str = "$") -> Any:
-    """Return a JSON-safe value with deterministic ordering and float encoding."""
+class _CanonicalPathError(Exception):
+    """Carry diagnostics without constructing paths during successful traversal."""
+
+    def __init__(self, reason: str, suffix: str = "") -> None:
+        self.reason = reason
+        self.suffix = suffix
+        self.parts: list[str] = []
+
+
+def _canonical_json_value(value: Any) -> Any:
 
     if value is None or isinstance(value, (bool, int, str)):
         return value
     if isinstance(value, float):
-        return _float_token(value, path=path)
+        number = float(value)
+        if not math.isfinite(number):
+            raise _CanonicalPathError("non-finite float")
+        return {"$float_hex": number.hex()}
     if isinstance(value, Path):
         return {"$path": value.as_posix()}
     if isinstance(value, torch.Tensor):
@@ -51,10 +62,14 @@ def canonical_json_value(value: Any, *, path: str = "$") -> Any:
         elif value.dtype == torch.bool:
             data = [bool(item) for item in value.detach().cpu().reshape(-1).tolist()]
         else:
-            data = [
-                _float_token(float(item), path=f"{path}.values[{index}]")
-                for index, item in enumerate(value.detach().cpu().reshape(-1).tolist())
-            ]
+            data = []
+            for index, item in enumerate(value.detach().cpu().reshape(-1).tolist()):
+                number = float(item)
+                if not math.isfinite(number):
+                    error = _CanonicalPathError("non-finite float")
+                    error.parts.append(f".values[{index}]")
+                    raise error
+                data.append({"$float_hex": number.hex()})
         return {
             "$tensor": {
                 "dtype": str(value.dtype).removeprefix("torch."),
@@ -63,31 +78,58 @@ def canonical_json_value(value: Any, *, path: str = "$") -> Any:
             }
         }
     if is_dataclass(value):
-        return {
-            field.name: canonical_json_value(
-                getattr(value, field.name),
-                path=f"{path}.{field.name}",
-            )
-            for field in fields(value)
-        }
+        normalized_fields = {}
+        for field in fields(value):
+            output_key = field.name
+            child = getattr(value, field.name)
+            diagnostic_field = field.name
+            try:
+                normalized_fields[output_key] = _canonical_json_value(child)
+            except _CanonicalPathError as error:
+                error.parts.append(f".{diagnostic_field}")
+                raise
+        return normalized_fields
     if isinstance(value, Mapping):
         normalized: dict[str, Any] = {}
         for key in sorted(value, key=lambda item: str(item)):
             text = str(key)
             if text in normalized:
-                raise CanonicalSerializationError(
-                    f"mapping keys collide after string conversion at {path}: {text!r}"
+                raise _CanonicalPathError(
+                    "mapping keys collide after string conversion", f": {text!r}"
                 )
-            normalized[text] = canonical_json_value(value[key], path=f"{path}.{text}")
+            try:
+                normalized[text] = _canonical_json_value(value[key])
+            except _CanonicalPathError as error:
+                error.parts.append(f".{text}")
+                raise
         return normalized
     if isinstance(value, (tuple, list)):
-        return [
-            canonical_json_value(item, path=f"{path}[{index}]")
-            for index, item in enumerate(value)
-        ]
-    raise CanonicalSerializationError(
-        f"unsupported canonical value at {path}: {type(value).__name__}"
+        normalized_items = []
+        for index, item in enumerate(value):
+            try:
+                normalized_items.append(_canonical_json_value(item))
+            except _CanonicalPathError as error:
+                error.parts.append(f"[{index}]")
+                raise
+        return normalized_items
+    raise _CanonicalPathError(
+        "unsupported canonical value", f": {type(value).__name__}"
     )
+
+
+def canonical_json_value(value: Any, *, path: str = "$") -> Any:
+    """Return a JSON-safe value with deterministic ordering and float encoding.
+
+    Every value is traversed anew. Only error-path string construction is deferred;
+    field access, mapping ordering, tensor conversion and float encoding stay fresh.
+    """
+    try:
+        return _canonical_json_value(value)
+    except _CanonicalPathError as error:
+        location = f"{path}" + "".join(reversed(error.parts))
+        raise CanonicalSerializationError(
+            f"{error.reason} at {location}{error.suffix}"
+        ) from None
 
 
 def canonical_json_bytes(value: Any) -> bytes:
