@@ -46,6 +46,9 @@ NATIVE_RESULT_V2 = "installed_native_v4_fit_prepared_comparison_result_v2"
 NATIVE_PROTOCOL_V3 = "installed_native_v4_registered_comparison_protocol_v3"
 NATIVE_FROZEN_V3 = "installed_native_v4_registered_comparison_frozen_v3"
 NATIVE_RESULT_V3 = "installed_native_v4_registered_comparison_result_v3"
+NATIVE_PROTOCOL_V4 = "installed_native_v4_registered_cartesian_comparison_protocol_v4"
+NATIVE_FROZEN_V4 = "installed_native_v4_registered_cartesian_comparison_frozen_v4"
+NATIVE_RESULT_V4 = "installed_native_v4_registered_cartesian_comparison_result_v4"
 NATIVE_SOURCE_KIND = "native_chembl_receptor_research_v4_fit"
 MAX_BUDGET_SECONDS = 3600.0
 BOUND_ENVIRONMENT = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
@@ -278,6 +281,10 @@ def _comparison_runtime() -> dict:
 
 
 def freeze(protocol: dict) -> dict:
+    if type(protocol) is dict and protocol.get("schema_version") == NATIVE_PROTOCOL_V4:
+        from .installed_native_v4_cartesian_comparison import freeze as cartesian_freeze
+
+        return cartesian_freeze(protocol)
     _require(type(protocol) is dict and set(protocol) == {
         "schema_version", "source", "requests", "budget_seconds_per_arm",
         "max_engine_calls_per_arm", "arm_order", "selection_seed", "tie_policy",
@@ -369,7 +376,7 @@ def _envelope(run_dir: Path) -> tuple[dict, str]:
              and HEX.fullmatch(value["sha256"]) is not None
              and type(value["payload"]) is dict
              and value["payload"].get("schema_version") in {
-                 FROZEN, NATIVE_FROZEN, NATIVE_FROZEN_V2, NATIVE_FROZEN_V3}
+                 FROZEN, NATIVE_FROZEN, NATIVE_FROZEN_V2, NATIVE_FROZEN_V3, NATIVE_FROZEN_V4}
              and _sha(value["payload"]) == value["sha256"],
              "installed_frozen_binding_mismatch")
     return value["payload"], value["sha256"]
@@ -405,6 +412,10 @@ def worker(run_dir: Path, arm: str, deadline: float) -> None:
     directory = run_dir / arm
     _private_dir(directory)
     frozen, binding = _envelope(run_dir)
+    if frozen["schema_version"] == NATIVE_FROZEN_V4:
+        from .installed_native_v4_cartesian_comparison import worker as cartesian_worker
+
+        return cartesian_worker(run_dir, arm, deadline)
     _require(_comparison_runtime() == frozen["runtime"],
              "installed_worker_runtime_changed")
     if frozen["schema_version"] in {NATIVE_FROZEN_V2, NATIVE_FROZEN_V3}:
@@ -677,6 +688,10 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
 
 def _summary(run_dir: Path, arm: str, frozen: dict, binding: str, *,
              selector_cache: _SelectorCache | None = None) -> dict:
+    if frozen["schema_version"] == NATIVE_FROZEN_V4:
+        from .installed_native_v4_cartesian_comparison import _summary as cartesian_summary
+
+        return cartesian_summary(run_dir, arm, frozen, binding, selector_cache=selector_cache)
     directory = run_dir / arm
     _private_dir(directory)
     completion = _committed(directory / "completion.json")
@@ -1089,6 +1104,10 @@ def _validate_result_header(result: dict, frozen: dict, binding: str) -> None:
 
 
 def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
+    if type(protocol) is dict and protocol.get("schema_version") == NATIVE_PROTOCOL_V4:
+        from .installed_native_v4_cartesian_comparison import run as cartesian_run
+
+        return cartesian_run(protocol, output_dir, resume=resume)
     started = time.perf_counter()
     frozen = freeze(protocol)
     setup_seconds = time.perf_counter() - started
@@ -1154,6 +1173,10 @@ def run(protocol: dict, output_dir: Path, *, resume: bool = False) -> dict:
 
 def verify_run(protocol: dict, run_dir: Path) -> dict:
     """Read-only checkpoint/result verification with current input/runtime binding."""
+    if type(protocol) is dict and protocol.get("schema_version") == NATIVE_PROTOCOL_V4:
+        from .installed_native_v4_cartesian_comparison import verify_run as cartesian_verify
+
+        return cartesian_verify(protocol, run_dir)
     outcome = {
         "schema_version": ("installed_native_v4_registered_comparison_verification_v3"
                            if type(protocol) is dict
@@ -1216,7 +1239,9 @@ def main(argv=None) -> int:
         outcome = verify_run(protocol, args.run_dir)
     else:
         result = run(protocol, args.run_dir, resume=args.command == "resume")
-        outcome = {"schema_version": ("installed_native_v4_registered_comparison_cli_v3"
+        outcome = {"schema_version": ("installed_native_v4_registered_cartesian_comparison_cli_v4"
+                                      if protocol.get("schema_version") == NATIVE_PROTOCOL_V4 else
+                                      "installed_native_v4_registered_comparison_cli_v3"
                                       if protocol.get("schema_version") == NATIVE_PROTOCOL_V3 else
                                       "installed_native_v4_fit_prepared_comparison_cli_v2"
                                       if protocol.get("schema_version") == NATIVE_PROTOCOL_V2 else

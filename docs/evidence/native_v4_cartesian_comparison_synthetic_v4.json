@@ -1,0 +1,293 @@
+{
+  "accepted_refinement_steps_observed": 0,
+  "archive_manifest": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/archive-manifest-final.json",
+    "sha256": "e9685ba19ae489ea05f85aca1b73e6d9aaa1842b9927c0bdf5e37f1d287ca3f4",
+    "size_bytes": 55904
+  },
+  "archive_payload_bytes": 5105143,
+  "archive_payload_file_count": 269,
+  "archive_root": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4",
+  "arm_execution_and_summary_wall_seconds": 14.366309642999113,
+  "arms": {
+    "ai_engine": {
+      "candidate_calls_without_returned_report": 0,
+      "cartesian_partial_work": {},
+      "completion": {
+        "binding": "1a6ccc0c0d8c498a304bba77d0aba2fc83cdc92f26ed0323e8cfd1433fa5453d",
+        "budget_seconds": 20.0,
+        "deadline": 30329.374889048,
+        "measured_process_wall_seconds": 3.820280891002767,
+        "status": "complete",
+        "termination_overhead_seconds": 0.0
+      },
+      "denominator": {
+        "evaluated": 2,
+        "requested": 2
+      },
+      "recorded_call_counters": {
+        "actual_force_calls": 2,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "force_evaluations_reserved": 6,
+        "known_completed_force_calls": 2,
+        "optimizer_force_calls": 2,
+        "optimizer_graph_calls": 2,
+        "optimizer_objective_attempts": 2,
+        "pose_candidates_in_both_arms": 4,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "score_evaluation_calls": 4,
+        "unknown_pending_attempts": 0
+      },
+      "score_quantity": "uncalibrated_explicit_graph_scorer_dimensionless_minimize"
+    },
+    "engine": {
+      "candidate_calls_without_returned_report": 0,
+      "cartesian_partial_work": {},
+      "completion": {
+        "binding": "1a6ccc0c0d8c498a304bba77d0aba2fc83cdc92f26ed0323e8cfd1433fa5453d",
+        "budget_seconds": 20.0,
+        "deadline": 30336.37901983,
+        "measured_process_wall_seconds": 3.2697619529972144,
+        "status": "complete",
+        "termination_overhead_seconds": 0.0
+      },
+      "denominator": {
+        "evaluated": 2,
+        "requested": 2
+      },
+      "recorded_call_counters": {
+        "actual_force_calls": 2,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "force_evaluations_reserved": 6,
+        "known_completed_force_calls": 2,
+        "optimizer_force_calls": 2,
+        "optimizer_graph_calls": 2,
+        "optimizer_objective_attempts": 2,
+        "pose_candidates_in_both_arms": 4,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "score_evaluation_calls": 4,
+        "unknown_pending_attempts": 0
+      },
+      "score_quantity": "uncalibrated_explicit_graph_scorer_dimensionless_minimize"
+    },
+    "similarity": {
+      "candidate_calls_without_returned_report": 0,
+      "cartesian_partial_work": {},
+      "completion": {
+        "binding": "1a6ccc0c0d8c498a304bba77d0aba2fc83cdc92f26ed0323e8cfd1433fa5453d",
+        "budget_seconds": 20.0,
+        "deadline": 30334.052693489,
+        "measured_process_wall_seconds": 2.318589106998843,
+        "status": "complete",
+        "termination_overhead_seconds": 0.0
+      },
+      "denominator": {
+        "evaluated": 2,
+        "requested": 2
+      },
+      "recorded_call_counters": {
+        "actual_force_calls": 0,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "force_evaluations_reserved": 0,
+        "known_completed_force_calls": 0,
+        "optimizer_force_calls": 0,
+        "optimizer_graph_calls": 0,
+        "optimizer_objective_attempts": 0,
+        "pose_candidates_in_both_arms": 0,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "score_evaluation_calls": 0,
+        "unknown_pending_attempts": 0
+      },
+      "score_quantity": "predicted_negative_log10_molar_endpoint"
+    },
+    "similarity_engine": {
+      "candidate_calls_without_returned_report": 0,
+      "cartesian_partial_work": {},
+      "completion": {
+        "binding": "1a6ccc0c0d8c498a304bba77d0aba2fc83cdc92f26ed0323e8cfd1433fa5453d",
+        "budget_seconds": 20.0,
+        "deadline": 30340.056149531,
+        "measured_process_wall_seconds": 3.274888062998798,
+        "status": "complete",
+        "termination_overhead_seconds": 0.0
+      },
+      "denominator": {
+        "evaluated": 2,
+        "requested": 2
+      },
+      "recorded_call_counters": {
+        "actual_force_calls": 2,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "force_evaluations_reserved": 6,
+        "known_completed_force_calls": 2,
+        "optimizer_force_calls": 2,
+        "optimizer_graph_calls": 2,
+        "optimizer_objective_attempts": 2,
+        "pose_candidates_in_both_arms": 4,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "score_evaluation_calls": 4,
+        "unknown_pending_attempts": 0
+      },
+      "score_quantity": "uncalibrated_explicit_graph_scorer_dimensionless_minimize"
+    }
+  },
+  "assigned_role_counts": {
+    "calibration": 0,
+    "development_test": 2,
+    "fit": 6
+  },
+  "candidate_count": 2,
+  "common_validation_seconds": 0.2928268530013156,
+  "comparison": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/probe-final/run/comparison.json",
+    "sha256": "22eb732a78109ba19126d548e467cf58fefd3729410dab4a390389354e8afa02",
+    "size_bytes": 41791
+  },
+  "completed_resume_new_force_calls": 0,
+  "completed_resume_new_score_calls": 0,
+  "completed_resume_new_worker_calls": 0,
+  "created_utc": "2026-09-29T23:26:59.484594+00:00",
+  "evaluation_labels_read": 0,
+  "executed_installed_package_path": "/tmp/native-v4-cartesian-final-10fe4baf/site-final/betelgeuze_product/__init__.py",
+  "executed_wheel_python_members_equal_current_source": 523,
+  "executed_wheel_source_byte_mismatches": 0,
+  "execution_cost_scope": "installed_original_source_admission_fit_inference_cartesian_refinement_durable_io_and_summary",
+  "existing_v3_comparison_receipt_requires_original_exact_wheel_runtime": true,
+  "fixture_starts_at_declared_internal_equilibrium": true,
+  "force_evaluation_calls": 6,
+  "fresh_dependency_environment": false,
+  "hosted_ci_executed": false,
+  "independent_training_timing_measured": false,
+  "installed_site_archived": false,
+  "nested_cost_scopes_must_not_be_summed": true,
+  "new_real_source_labels_admitted": 0,
+  "orchestrator_wall_seconds": 14.959120557999995,
+  "original_probe_root": "/tmp/native-v4-cartesian-final-10fe4baf/probe-final",
+  "preserved_v1_2_v1_3_source_file_count": 36,
+  "probe": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/probe-final/installed-probe.json",
+    "sha256": "7339c656785aa156713925805712328aafaa478469b2f5e76a64c147ed6720cc",
+    "size_bytes": 1532
+  },
+  "probe_enclosing_wall_seconds": 18.756072384003346,
+  "product_ranking_enabled": false,
+  "protocol": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/probe-final/protocol.json",
+    "sha256": "c81d9cc5331b53f562f738191e99ac4536a2a24ae729e68026e0b2306e5ff088",
+    "size_bytes": 1468
+  },
+  "protocol_schema": "installed_native_v4_registered_cartesian_comparison_protocol_v4",
+  "real_case_comparison_executed": false,
+  "real_label_training_performed": false,
+  "restore_original_bound_paths_required_for_exact_checkpoint_replay": true,
+  "same_prepared_assay_state_verified": false,
+  "schema_version": "native_v4_cartesian_comparison_synthetic_v4",
+  "scientifically_validated": false,
+  "score_evaluation_calls": 12,
+  "shared_dependency_root": "/home/betelgeuze/.local/lib/python3.10/site-packages",
+  "solver_source_preservation": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/solver-source-preservation.json",
+    "sha256": "bc491c51acc9b61ea01231c18416e4bf5f36e35914c3887f5f7d04e82bf38290",
+    "size_bytes": 9588
+  },
+  "source_authenticated": false,
+  "source_checkout": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559",
+  "source_head_context": "47806adeebf7d30185199f518c90fbefe3980805",
+  "source_head_is_a_commit_of_this_change": false,
+  "stages": [
+    {
+      "exit_code": 0,
+      "name": "preflight",
+      "wall_seconds": 0.4548437989978993
+    },
+    {
+      "exit_code": 0,
+      "name": "run-receipt",
+      "wall_seconds": 14.966966236999724
+    },
+    {
+      "exit_code": 0,
+      "name": "verification",
+      "wall_seconds": 1.5027856849992531
+    },
+    {
+      "exit_code": 0,
+      "name": "resume",
+      "wall_seconds": 1.479913741000928
+    },
+    {
+      "exit_code": 2,
+      "name": "blocked-cap-preflight",
+      "wall_seconds": 0.1415991979993123
+    },
+    {
+      "exit_code": 2,
+      "name": "swapped-candidates-preflight",
+      "wall_seconds": 0.034193013998446986
+    }
+  ],
+  "status": "software_validation_passed",
+  "synthetic_inputs_only": true,
+  "synthetic_selector_fit_and_inference_included_in_worker_wall": true,
+  "tested_uncommitted_source_sha256": {
+    ".github/workflows/ci-prepared-candidate-comparison.yml": "b5be193f204136a10cda124472242c1536a07a58f4d6e1b48367043018dd5c25",
+    "betelgeuze_product/installed_native_v4_cartesian_comparison.py": "8a3d2e3ba12199a98778478dcd5f03455e5968ecbf3e7ac097cfdba4400a5eb7",
+    "betelgeuze_product/installed_native_v4_comparison.py": "1ae74e8d738bb2dfd56547a878d6328fff7802315c3b702c3ea0f1cf5c7340ca",
+    "betelgeuze_product/installed_native_v4_protocol_preflight.py": "df85237a31a630a0ce826c9beddcd4cced1a55ddf9403dabdcdc7b67bcaf4f9e",
+    "betelgeuze_product/installed_synthetic_comparison.py": "b34452a89f16175bf45e8ac3d9883269156acad1c38743b3c687fcfe475cf30a",
+    "betelgeuze_product/registered_cartesian_policy_adapter.py": "b854972415fe3cf1b7836de318110ed2936068a2e214b83aa38bbbbd0e0d5a83",
+    "tests/ci/native_v4_cartesian_wheel_probe.py": "0b90ee9463a211e00d3ed020bdd4b6ee86041ff9c9f6a6664a07cfc987bf5d13",
+    "tests/unit/test_installed_native_v4_cartesian_comparison.py": "3c25645e555aec8c7dca98c7aa4c56228e6056daa6d30ec7a82a4bedd21f6e3f"
+  },
+  "tests": {
+    "errors": 0,
+    "failures": 0,
+    "final_frozen_source_native_boundary_tests": 324,
+    "focused_v3_plus_v4": {
+      "errors": 0,
+      "failures": 0,
+      "junit": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/focused-final-junit.xml",
+        "sha256": "d4b86755855c9a3f9905ae46c16111dce87703456b3417ea7c4bb4e54f36e229",
+        "size_bytes": 6305
+      },
+      "tests": 35
+    },
+    "git_diff_check": "passed",
+    "junit": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/boundary-final-junit.xml",
+      "sha256": "bf1312b39148f01c2aaf100d88ebf325ba736b03c13bf6f213081da6cc59bc5e",
+      "size_bytes": 56630
+    },
+    "ruff": {
+      "receipt": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/ruff-final.txt",
+        "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+        "size_bytes": 19
+      },
+      "status": "passed"
+    },
+    "seconds": 155.262,
+    "workflow_yaml_parse": "passed"
+  },
+  "upstream_acquisition_preparation_pose_generation_measured": false,
+  "verification_new_force_calls": 0,
+  "verification_new_score_calls": 0,
+  "wheel": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/wheel-final/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+    "sha256": "043763fa8553a6747b8967064b03dcc2e427559e1d366d2e4e1fa7e58445883e",
+    "size_bytes": 2493199
+  }
+}

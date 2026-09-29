@@ -277,3 +277,10 @@ def preflight_v3(protocol: dict) -> dict:
         assigned_role_counts=frozen["source_verification"]["assigned_role_counts"],
     )
     return result
+
+
+def preflight_v4(protocol: dict) -> dict:
+    """Explicit Cartesian conversion follows the unchanged original-source admission."""
+    from .installed_native_v4_cartesian_comparison import preflight
+
+    return preflight(protocol)

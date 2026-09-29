@@ -21,6 +21,9 @@ on:
       - 'tests/unit/test_installed_native_v4_*.py'
       - 'tests/ci/native_v4_wheel_probe.py'
       - 'tests/ci/native_v4_registered_wheel_probe.py'
+      - 'tests/ci/native_v4_cartesian_wheel_probe.py'
+      - 'betelgeuze_product/registered_cartesian_policy_adapter.py'
+      - 'docs/engine_v2_registered_cartesian_native_v4.md'
       - 'betelgeuze_product/cpu_refinement*/**'
       - 'tests/unit/test_registered_policy_adapter.py'
       - 'docs/engine_v2_registered_native_v3.md'
@@ -69,6 +72,9 @@ on:
       - 'tests/unit/test_installed_native_v4_*.py'
       - 'tests/ci/native_v4_wheel_probe.py'
       - 'tests/ci/native_v4_registered_wheel_probe.py'
+      - 'tests/ci/native_v4_cartesian_wheel_probe.py'
+      - 'betelgeuze_product/registered_cartesian_policy_adapter.py'
+      - 'docs/engine_v2_registered_cartesian_native_v4.md'
       - 'betelgeuze_product/cpu_refinement*/**'
       - 'tests/unit/test_registered_policy_adapter.py'
       - 'docs/engine_v2_registered_native_v3.md'
@@ -335,7 +341,8 @@ jobs:
           files += [root / 'betelgeuze_product/prepared_net_charge_screen.py']
           files += [root / 'betelgeuze_engine/product/prepared_gromacs_input.py']
           files += sorted(root.glob('tests/unit/test_installed_native_v4_*.py'))
-          files += [root / 'tests/ci/native_v4_wheel_probe.py', root / 'tests/ci/native_v4_registered_wheel_probe.py']
+          files += [root / 'tests/ci/native_v4_wheel_probe.py', root / 'tests/ci/native_v4_registered_wheel_probe.py', root / 'tests/ci/native_v4_cartesian_wheel_probe.py']
+          files += [root / 'betelgeuze_product/registered_cartesian_policy_adapter.py']
           files += sorted(root.glob('betelgeuze_product/cpu_refinement*/**/*.py'))
           files += [root / 'tests/unit/test_registered_policy_adapter.py']
           files += [root / 'tools/analysis/native_v4_comparison_readiness.py', root / 'tests/unit/test_native_v4_comparison_readiness.py']
@@ -350,14 +357,15 @@ jobs:
           PY
       - name: Lint and test source and prepared binding boundaries
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_product/installed_native_v4_*.py betelgeuze_product/native_v4_*.py betelgeuze_product/installed_synthetic_comparison.py betelgeuze_product/prepared_net_charge_screen.py tests/unit/test_installed_native_v4_*.py tests/ci/native_v4_wheel_probe.py tests/ci/native_v4_registered_wheel_probe.py betelgeuze_product/cpu_refinement_v1_2/registered_policy_adapter.py tests/unit/test_registered_policy_adapter.py tools/analysis/native_v4_comparison_readiness.py tests/unit/test_native_v4_comparison_readiness.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_installed_native_v4_source.py tests/unit/test_installed_native_v4_comparison.py tests/unit/test_installed_native_v4_replay_cli.py tests/unit/test_installed_synthetic_comparison.py tests/unit/test_native_v4_comparison_readiness.py tests/unit/test_installed_native_v4_registered_binding.py tests/unit/test_installed_native_v4_registered_comparison.py tests/unit/test_registered_policy_adapter.py --junitxml=native-v4-boundary-junit.xml
-      - name: Build exact checkout wheel and prepare synthetic v2 and v3 probes
+          python -m ruff check --isolated --no-cache betelgeuze_product/installed_native_v4_*.py betelgeuze_product/native_v4_*.py betelgeuze_product/installed_synthetic_comparison.py betelgeuze_product/prepared_net_charge_screen.py tests/unit/test_installed_native_v4_*.py tests/ci/native_v4_wheel_probe.py tests/ci/native_v4_registered_wheel_probe.py tests/ci/native_v4_cartesian_wheel_probe.py betelgeuze_product/registered_cartesian_policy_adapter.py betelgeuze_product/cpu_refinement_v1_2/registered_policy_adapter.py tests/unit/test_registered_policy_adapter.py tools/analysis/native_v4_comparison_readiness.py tests/unit/test_native_v4_comparison_readiness.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_installed_native_v4_source.py tests/unit/test_installed_native_v4_comparison.py tests/unit/test_installed_native_v4_replay_cli.py tests/unit/test_installed_synthetic_comparison.py tests/unit/test_native_v4_comparison_readiness.py tests/unit/test_installed_native_v4_registered_binding.py tests/unit/test_installed_native_v4_registered_comparison.py tests/unit/test_installed_native_v4_cartesian_comparison.py tests/unit/test_registered_policy_adapter.py --junitxml=native-v4-boundary-junit.xml
+      - name: Build exact checkout wheel and prepare synthetic v2, v3 and Cartesian v4 probes
         run: |
           python -m pip install build==1.3.0 setuptools==75.8.2 wheel==0.45.1
           python -m build --wheel --no-isolation --outdir "$RUNNER_TEMP/native-v4-wheels"
           PYTHONPATH="$PWD" python tests/ci/native_v4_wheel_probe.py prepare "$RUNNER_TEMP/native-v4-wheel-probe"
           PYTHONPATH="$PWD" python tests/ci/native_v4_registered_wheel_probe.py prepare "$RUNNER_TEMP/native-v4-registered-wheel-probe"
+          PYTHONPATH="$PWD" python tests/ci/native_v4_cartesian_wheel_probe.py prepare "$RUNNER_TEMP/native-v4-cartesian-wheel-probe"
           sha256sum "$RUNNER_TEMP"/native-v4-wheels/*.whl > "$RUNNER_TEMP/native-v4-wheel-probe/wheel.sha256"
       - name: Install exact wheel in a fresh Python 3.10 environment
         run: |
@@ -397,6 +405,10 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$RUNNER_TEMP/native-v4-wheel-venv/bin/python" -I "$GITHUB_WORKSPACE/tests/ci/native_v4_registered_wheel_probe.py" execute "$RUNNER_TEMP/native-v4-registered-wheel-probe" --installed-root "$RUNNER_TEMP/native-v4-wheel-venv" --require-fresh-environment
+      - name: Execute Cartesian v4 from the installed wheel and verify zero-work reuse
+        run: |
+          cd "$RUNNER_TEMP"
+          env -u PYTHONPATH -u PYTHONUSERBASE PYTHONNOUSERSITE=1 "$RUNNER_TEMP/native-v4-wheel-venv/bin/python" -I "$GITHUB_WORKSPACE/tests/ci/native_v4_cartesian_wheel_probe.py" execute "$RUNNER_TEMP/native-v4-cartesian-wheel-probe" --installed-root "$RUNNER_TEMP/native-v4-wheel-venv" --require-fresh-environment
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -406,7 +418,9 @@ jobs:
             native-v4-boundary-junit.xml
             tests/ci/native_v4_wheel_probe.py
             tests/ci/native_v4_registered_wheel_probe.py
+            tests/ci/native_v4_cartesian_wheel_probe.py
             ${{ runner.temp }}/native-v4-registered-wheel-probe/**
+            ${{ runner.temp }}/native-v4-cartesian-wheel-probe/**
             tools/analysis/native_v4_comparison_readiness.py
             tests/unit/test_native_v4_comparison_readiness.py
             docs/native_v4_comparison_readiness.md
