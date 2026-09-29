@@ -36,6 +36,12 @@ selection. Fit-only Morgan/Tanimoto and Ridge predictions are recalculated
 on verification, and saved order must match the prescribed seeded order.
 Saved rows must form a prefix of that order. Engine scores are checked
 against saved pose reports and independent scalar energy/force arithmetic.
+Verification also checks completed row-state transitions: a similarity row
+must retain its predicted score, a candidate without a prepared request must
+remain unsupported, and each completed candidate row must reference its
+existing pose report. A deadline can leave a published report without a row
+only for an uncommitted attempt; it cannot silently remove a completed
+candidate from the rank.
 For each evaluated pose, verification also reparses the frozen prepared files
 and reconstructs the requested rigid transform without scoring it again. The
 saved receptor, ligand coordinates and parameters, pose identity, evaluation

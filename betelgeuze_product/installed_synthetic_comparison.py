@@ -737,7 +737,25 @@ def _summary(run_dir: Path, arm: str, frozen: dict, binding: str) -> dict:
                              and value["cost"][key] >= 0
                              for key in ("wall_seconds", "cpu_seconds")),
                      "installed_row_priority_or_cost_mismatch")
+            if arm == "similarity":
+                _require(value["status"] == "evaluated"
+                         and value["score"] == priority["predictions"][rid]
+                         and value.get("reason") is None,
+                         "installed_similarity_row_state_mismatch")
+            elif frozen["requests"][rid] is None:
+                _require(value["status"] == "unsupported"
+                         and value.get("reason") == "prepared_input_missing",
+                         "installed_missing_prepared_row_state_mismatch")
+            else:
+                _require(value["status"] in {"evaluated", "failed"},
+                         "installed_prepared_row_state_mismatch")
         ref = value.get("pose_report")
+        report_path, _ = _report_ref(run_dir, arm, rid)
+        if "completed_monotonic" in value:
+            # The worker publishes a pose before its row. A deadline can leave
+            # an orphan only for an uncommitted row, never a completed one.
+            _require(os.path.lexists(report_path) == (ref is not None),
+                     "installed_pose_report_row_presence_mismatch")
         if ref is not None:
             _require(arm != "similarity", "similarity_has_pose_report")
             report = _read_report(run_dir, arm, rid, ref)

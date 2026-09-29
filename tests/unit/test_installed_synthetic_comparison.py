@@ -232,6 +232,44 @@ def test_resealed_candidate_cost_cannot_exceed_worker_total(completed, tmp_path,
         installed.run(protocol, copied, resume=True)
 
 
+@pytest.mark.parametrize("arm,error", [
+    ("engine", "installed_pose_report_row_presence_mismatch"),
+    ("similarity", "installed_similarity_row_state_mismatch"),
+])
+def test_resealed_completed_row_cannot_suppress_ranked_candidate(
+    completed, tmp_path, arm, error,
+):
+    root, protocol, result = completed
+    rid = "a"
+    assert rid in result["arms"][arm]["ranked_record_ids"]
+    copied = tmp_path / f"resealed-rank-{arm}"
+    shutil.copytree(root / "run", copied)
+    row_path = copied / arm / f"{installed._sha(rid)}.row.json"
+    wrapped = installed._json(row_path.read_bytes())
+    row = wrapped["payload"]
+    assert row["status"] == "evaluated"
+    if arm == "engine":
+        assert (copied / arm / f"{installed._sha(rid)}.poses.json").is_file()
+        for key in ("pose_report", "pose_denominator", "numeric_denominator",
+                    "hard_overlap_screen", "ligand_net_charge_screen", "selected_pose"):
+            row.pop(key, None)
+    row.update(status="failed", score=None, reason="RuntimeError:synthetic failure")
+    wrapped["sha256"] = installed._sha(row)
+    row_path.write_bytes(installed._canonical(wrapped) + b"\n")
+    result_path = copied / "comparison.json"
+    resealed = installed._json(result_path.read_bytes())
+    summary = resealed["arms"][arm]
+    summary["rows"] = [row if item["record_id"] == rid else item
+                       for item in summary["rows"]]
+    summary["denominator"]["evaluated"] -= 1
+    summary["denominator"]["failed"] = summary["denominator"].get("failed", 0) + 1
+    summary["ranked_record_ids"].remove(rid)
+    result_path.write_bytes(installed._canonical(resealed) + b"\n")
+    assert installed.verify_run(protocol, copied)["reason"] == error
+    with pytest.raises(ValueError, match=error):
+        installed.run(protocol, copied, resume=True)
+
+
 def test_resealed_row_and_result_cannot_detach_score_from_pose(completed, tmp_path):
     root, protocol, _ = completed
     copied = tmp_path / "resealed-score"
