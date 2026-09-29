@@ -377,6 +377,51 @@ def test_native_v2_preflight_allows_distinct_bound_ligand_state_ids(tmp_path):
     assert receipt["same_prepared_assay_state_verified"] is False
 
 
+def test_native_v2_preflight_blocks_unusable_pose_geometry(tmp_path, capsys):
+    protocol = _two_linked_protocol(tmp_path)
+    for ref in protocol["requests"].values():
+        path = Path(ref["path"])
+        request = json.loads(path.read_text())
+        request["poses"][0]["translation_angstrom"] = [100.0, 0.0, 0.0]
+        path.write_bytes(comparison._canonical(request) + b"\n")
+        ref["sha256"] = common.file_sha(path)
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "blocked"
+    assert receipt["candidate_count"] == 2
+    assert receipt["distinct_Ki_chemical_identity_count"] == 2
+    assert {item["record_id"] for item in receipt["blockers"]
+            if item["code"] == "prepared_pose_geometry_unusable"} == set(protocol["requests"])
+    assert receipt["protocol"] is None
+    assert receipt["numeric_validation_completed"] is False
+    assert receipt["evaluation_labels_read"] == 0
+    assert receipt["scientifically_validated"] is False
+    draft = tmp_path / "out-of-pocket-draft.json"
+    draft.write_bytes(comparison._canonical(protocol) + b"\n")
+    admitted = tmp_path / "must-not-exist.json"
+    assert native_cli.main(["preflight-v2", "--protocol", str(draft),
+                            "--output-protocol", str(admitted)]) == 2
+    assert not admitted.exists()
+    assert not (tmp_path / "run").exists()
+    assert json.loads(capsys.readouterr().out)["status"] == "blocked"
+
+
+def test_native_v2_preflight_keeps_candidate_with_one_usable_pose(tmp_path):
+    protocol = _two_linked_protocol(tmp_path)
+    ref = next(iter(protocol["requests"].values()))
+    path = Path(ref["path"])
+    request = json.loads(path.read_text())
+    unusable = copy.deepcopy(request["poses"][0])
+    unusable["pose_id"] = "out-of-pocket"
+    unusable["translation_angstrom"] = [100.0, 0.0, 0.0]
+    request["poses"].append(unusable)
+    path.write_bytes(comparison._canonical(request) + b"\n")
+    ref["sha256"] = common.file_sha(path)
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "ready"
+    assert receipt["candidate_count"] == 2
+    assert receipt["numeric_validation_completed"] is False
+
+
 @pytest.mark.parametrize("change,blocker", [
     ("one_identity", "two_distinct_Ki_chemical_identities_required"),
     ("duplicate_identity", "two_distinct_Ki_chemical_identities_required"),

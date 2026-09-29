@@ -186,7 +186,14 @@ def preflight_v2(protocol: dict) -> dict:
             if not _supported_execution(request.get("execution")):
                 result["blockers"].append(_block("prepared_execution_unsupported", rid))
                 continue
-            check_source_binding(row, request)
+            binding_receipt = check_source_binding(
+                row, request, inspect_pose_pocket=True)
+            pose_status = binding_receipt["pose_pocket_status"]
+            if pose_status["inside_declared_pocket"] == 0:
+                result["blockers"].append(_block(
+                    "prepared_pose_geometry_unusable", rid,
+                    f"0/{pose_status['requested']} poses inside declared pocket"))
+                continue
             cohorts.add(_sha({"method": method, "frame": _frame(row, request)}))
         except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
             result["blockers"].append(_block("prepared_source_binding_failed", rid,

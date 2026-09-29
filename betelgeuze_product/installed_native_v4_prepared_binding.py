@@ -10,7 +10,10 @@ from __future__ import annotations
 from rdkit import Chem
 
 from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
-from betelgeuze_engine.product.prepared_rigid_poses import EVALUATION_FIELDS, _transform
+from betelgeuze_engine.product.prepared_rigid_poses import (
+    EVALUATION_FIELDS, _inside_declared_pocket, _number,
+    _rigid_pose_coordinates, _transform,
+)
 from betelgeuze_engine_v2.molecular import canonical_system_sha256
 
 from . import native_v4_bound as bound
@@ -100,8 +103,8 @@ def _ligand_identity(prepared_input: dict, ligand, identity: dict) -> dict:
     }
 
 
-def derive_observation(row: dict, request: dict) -> dict:
-    """Derive the exact structural observation an origin must have recorded."""
+def _derive_observation_with_ligand(row: dict, request: dict) -> tuple[dict, object]:
+    """Derive the exact structural observation and retain the parsed ligand."""
     _require(row["assigned_role"] == "development_test"
              and row["chemical_identity"] is not None
              and not row["prediction_issues"],
@@ -133,7 +136,7 @@ def derive_observation(row: dict, request: dict) -> dict:
     _require(target["chembl_target_id"] == row["native_metadata"]["target_chembl_id"]
              and row["assay_id"] == "chembl:assay:" + row["native_metadata"]["assay_chembl_id"],
              "native_prepared_assay_target_mismatch")
-    return {
+    observation = {
         "schema_version": SCHEMA,
         "record_id": row["record_id"],
         "assay_id": row["assay_id"],
@@ -155,21 +158,52 @@ def derive_observation(row: dict, request: dict) -> dict:
         "parameter_sources_sha256": _sha({key: prepared[key]["sha256"]
                                           for key in PARAMETER_KEYS}),
     }
+    return observation, ligand
 
 
-def check_source_binding(row: dict, request: dict) -> dict:
+def derive_observation(row: dict, request: dict) -> dict:
+    """Derive the exact structural observation an origin must have recorded."""
+    observation, _ = _derive_observation_with_ligand(row, request)
+    return observation
+
+
+def _pose_pocket_status(ligand, request: dict) -> dict:
+    """Count supplied rigid poses inside the declared pocket, without scoring."""
+    evaluation = request["evaluation"]
+    center = evaluation["pocket_center_angstrom"]
+    radius = evaluation["pocket_radius_angstrom"]
+    _require(type(center) is list and len(center) == 3,
+             "invalid_native_prepared_pocket")
+    try:
+        center = [_number(value) for value in center]
+        radius = _number(radius)
+    except (ValueError, OverflowError) as exc:
+        raise ValueError("invalid_native_prepared_pocket") from exc
+    _require(radius > 0, "invalid_native_prepared_pocket")
+    inside = 0
+    for pose in request["poses"]:
+        rotation, translation = _transform(pose)
+        coordinates, _ = _rigid_pose_coordinates(ligand.coordinates, rotation, translation)
+        inside += _inside_declared_pocket(coordinates, center, radius)
+    return {"requested": len(request["poses"]), "inside_declared_pocket": inside}
+
+
+def check_source_binding(row: dict, request: dict, *, inspect_pose_pocket: bool = False) -> dict:
     """Require a source-record origin matching newly parsed prepared sources."""
     origin = row["source_origins"].get(SOURCE_FIELD)
     _require(type(origin) is dict and set(origin) == {"path", "sha256"},
              "native_prepared_source_link_missing")
     supplied = bound.bound_json(origin)
-    expected = derive_observation(row, request)
+    expected, ligand = _derive_observation_with_ligand(row, request)
     _require(type(supplied) is dict and supplied == expected,
              "native_prepared_source_link_mismatch")
-    return {
+    result = {
         "schema_version": SCHEMA,
         "origin_sha256": origin["sha256"],
         "observation_sha256": _sha(expected),
         "candidate_prepared_identity_bound": True,
         "same_prepared_assay_state_verified": False,
     }
+    if inspect_pose_pocket:
+        result["pose_pocket_status"] = _pose_pocket_status(ligand, request)
+    return result

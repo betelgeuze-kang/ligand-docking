@@ -468,18 +468,14 @@ def _check_geometry_authority(observation) -> None:
 
 def _inside_declared_pocket(coordinates, pocket_center: list, pocket_radius: float) -> bool:
     """Match the producer's CPU float64 predicate, including the exact boundary."""
-    import torch
+    from betelgeuze_engine.product.prepared_rigid_poses import _inside_declared_pocket as inside
 
-    center = torch.tensor(pocket_center, dtype=torch.float64, device="cpu")
-    return not bool((torch.linalg.vector_norm(
-        coordinates[0] - center, dim=-1) > pocket_radius).any())
+    return inside(coordinates, pocket_center, pocket_radius)
 
 
 def _check_pose_report_request(report: dict, request: dict, source_inputs: list) -> None:
     """Bind scored poses to the frozen request without repeating the energy work."""
     from dataclasses import replace
-
-    import torch
 
     from betelgeuze_engine.product import prepared_rigid_poses as pose_adapter
     from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
@@ -564,7 +560,6 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
                  == ligand.coordinates[0].tolist()
                  and report.get("execution") == request["execution"], reason)
         receptor_source = source(receptor, rp)
-        center = ligand.coordinates.mean(dim=1, keepdim=True)
         evaluation = request["evaluation"]
         model = {
             "id": "existing_v2_switched_cross_lj_screened_coulomb_v1",
@@ -585,10 +580,8 @@ def _check_pose_report_request(report: dict, request: dict, source_inputs: list)
         for row in evaluated:
             pose = poses[row["request_index"]]
             rotation, translation = pose_adapter._transform(pose)
-            if torch.equal(rotation, torch.eye(3, dtype=torch.float64)):
-                coordinates = ligand.coordinates + translation
-            else:
-                coordinates = (ligand.coordinates - center) @ rotation.T + center + translation
+            coordinates, center = pose_adapter._rigid_pose_coordinates(
+                ligand.coordinates, rotation, translation)
             _require(_inside_declared_pocket(coordinates, pocket_center, pocket_radius),
                      "installed_pose_outside_declared_pocket")
             derivation = {

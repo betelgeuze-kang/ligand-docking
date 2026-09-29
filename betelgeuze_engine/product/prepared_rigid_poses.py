@@ -85,6 +85,25 @@ def _transform(pose):
     return rotation, translation
 
 
+def _rigid_pose_coordinates(source, rotation, translation):
+    """Apply a supplied transform about the source all-atom centroid."""
+    center = source.mean(dim=1, keepdim=True)
+    if torch.equal(rotation, torch.eye(3, dtype=torch.float64)):
+        coordinates = source + translation
+    else:
+        coordinates = (source - center) @ rotation.T + center + translation
+    if not torch.isfinite(coordinates).all():
+        raise ValueError("pose transform produced nonfinite coordinates")
+    return coordinates, center
+
+
+def _inside_declared_pocket(coordinates, pocket_center, pocket_radius):
+    """Use the cross evaluator's inclusive CPU float64 pocket boundary."""
+    center = torch.tensor(pocket_center, dtype=torch.float64, device="cpu")
+    return not bool((torch.linalg.vector_norm(
+        coordinates[0] - center, dim=-1) > pocket_radius).any())
+
+
 def _verify_sources(provenance):
     # Reuse the original loader's exact byte limits/hash/regular-file policy.
     for label, ref in provenance["sources"].items():
@@ -250,15 +269,9 @@ def _evaluate_rigid_pose_request(request: dict, *, journal=None) -> dict:
                 }
             AllAtomSystem.assert_integrity(receptor)
             AllAtomSystem.assert_integrity(ligand)
-            center = ligand.coordinates.mean(dim=1, keepdim=True)
-            if torch.equal(rotation, torch.eye(3, dtype=torch.float64)):
-                coordinates = ligand.coordinates + translation
-            else:
-                coordinates = (
-                    (ligand.coordinates - center) @ rotation.T + center + translation
-                )
-            if not torch.isfinite(coordinates).all():
-                raise ValueError("pose transform produced nonfinite coordinates")
+            coordinates, center = _rigid_pose_coordinates(
+                ligand.coordinates, rotation, translation
+            )
             row["evaluated_ligand_coordinates_angstrom"] = coordinates[0].tolist()
             derivation = {
                 "pose_id": pose_id,
