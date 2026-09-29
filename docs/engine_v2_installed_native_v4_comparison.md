@@ -40,12 +40,15 @@ current receipts.
 rederives the source, requires at least two distinct selector-supported Ki
 development chemicals, an origin-bound prepared request for every candidate,
 one exact method/receptor/pocket/evaluation/frame cohort, and an engine-call
-cap covering the pool. It also uses the supplied ligand coordinates and rigid
-transforms to require at least one pose inside the declared pocket for each
-candidate. A candidate with only out-of-pocket poses receives a typed blocker
-before a runnable protocol is written; mixed valid/out-of-pocket pose sets may
-still be attempted. This geometry check performs no energy calculation and
-does not establish clash freedom, pose recovery, or numeric validity.
+cap covering the pool. It uses the supplied ligand coordinates and rigid
+transforms to require at least one pose inside the declared pocket **and**
+without a receptor-ligand atom pair closer than the ranking screen's 1.0 A
+threshold for each candidate. Only out-of-pocket poses or only hard-overlap
+in-pocket poses receive distinct typed blockers before a runnable protocol is
+written; a mixed set may still be attempted. Preflight and post-run ranking
+share the same all-atom distance kernel. These geometry checks perform no
+energy calculation and do not establish general clash freedom, pose recovery,
+or numeric validity.
 A ready receipt can write the canonical runnable
 protocol with `--output-protocol`; a blocked receipt lists candidate-specific
 reasons and creates no protocol file. Readiness only means that a provided-pose

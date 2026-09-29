@@ -28,6 +28,27 @@ def _points(value):
     return array if np.isfinite(array).all() else None
 
 
+def minimum_cross_distance_angstrom(receptor, ligand):
+    """Use one all-source-atom distance calculation for preflight and ranking."""
+    if (not isinstance(receptor, np.ndarray) or not isinstance(ligand, np.ndarray)
+            or receptor.ndim != 2 or ligand.ndim != 2
+            or receptor.shape[1] != 3 or ligand.shape[1] != 3
+            or not len(receptor) or not len(ligand)
+            or not np.isfinite(receptor).all() or not np.isfinite(ligand).all()):
+        return None
+    minimum = math.inf
+    for start in range(0, len(receptor), 64):
+        with np.errstate(over="ignore", invalid="ignore"):
+            delta = receptor[start:start + 64, None, :] - ligand[None, :, :]
+            distances = np.hypot(
+                np.hypot(delta[:, :, 0], delta[:, :, 1]), delta[:, :, 2]
+            )
+        if not np.isfinite(distances).all():
+            return None
+        minimum = min(minimum, float(distances.min()))
+    return minimum if math.isfinite(minimum) else None
+
+
 def hard_overlap_screen(report):
     """Exhaust all receptor-ligand pairs and fail closed on absent coordinates."""
     preparation = report.get("preparation")
@@ -37,21 +58,8 @@ def hard_overlap_screen(report):
     for index, row in enumerate(report["rows"]):
         ligand = (_points(row.get("evaluated_ligand_coordinates_angstrom"))
                   if type(row) is dict else None)
-        distance = None
-        if receptor is not None and ligand is not None:
-            minimum = math.inf
-            for start in range(0, len(receptor), 64):
-                with np.errstate(over="ignore", invalid="ignore"):
-                    delta = receptor[start:start + 64, None, :] - ligand[None, :, :]
-                    distances = np.hypot(
-                        np.hypot(delta[:, :, 0], delta[:, :, 1]), delta[:, :, 2]
-                    )
-                if not np.isfinite(distances).all():
-                    minimum = math.inf
-                    break
-                minimum = min(minimum, float(distances.min()))
-            if math.isfinite(minimum):
-                distance = minimum
+        distance = (minimum_cross_distance_angstrom(receptor, ligand)
+                    if receptor is not None and ligand is not None else None)
         status = ("unavailable" if distance is None else
                   "hard_overlap" if distance < HARD_OVERLAP_DISTANCE_ANGSTROM
                   else "eligible")

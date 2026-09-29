@@ -422,6 +422,64 @@ def test_native_v2_preflight_keeps_candidate_with_one_usable_pose(tmp_path):
     assert receipt["numeric_validation_completed"] is False
 
 
+def _source_atom_overlap_translation(request, distance_angstrom=0.0):
+    gro = Path(request["prepared_input"]["ligand_gro"]["path"]).read_text().splitlines()
+    atoms = [
+        [10.0 * float(line[start:start + 8]) for start in (20, 28, 36)]
+        for line in gro[2:-1]
+    ]
+    leftmost = min(atoms, key=lambda point: point[0])
+    return [distance_angstrom - leftmost[0], -leftmost[1], -leftmost[2]]
+
+
+def test_native_v2_preflight_blocks_only_hard_overlap_poses(tmp_path):
+    protocol = _two_linked_protocol(tmp_path)
+    for ref in protocol["requests"].values():
+        path = Path(ref["path"])
+        request = json.loads(path.read_text())
+        request["poses"][0]["translation_angstrom"] = (
+            _source_atom_overlap_translation(request))
+        path.write_bytes(comparison._canonical(request) + b"\n")
+        ref["sha256"] = common.file_sha(path)
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "blocked"
+    assert receipt["candidate_count"] == 2
+    assert {item["record_id"] for item in receipt["blockers"]
+            if item["code"] == "prepared_pose_hard_overlap_unusable"} == set(protocol["requests"])
+    assert receipt["protocol"] is None
+    assert receipt["evaluation_labels_read"] == 0
+    assert receipt["numeric_validation_completed"] is False
+
+
+def test_native_v2_preflight_keeps_candidate_with_nonoverlapping_pose(tmp_path):
+    protocol = _two_linked_protocol(tmp_path)
+    ref = next(iter(protocol["requests"].values()))
+    path = Path(ref["path"])
+    request = json.loads(path.read_text())
+    overlapping = copy.deepcopy(request["poses"][0])
+    overlapping["pose_id"] = "hard-overlap"
+    overlapping["translation_angstrom"] = _source_atom_overlap_translation(
+        request, distance_angstrom=0.9)
+    request["poses"].append(overlapping)
+    path.write_bytes(comparison._canonical(request) + b"\n")
+    ref["sha256"] = common.file_sha(path)
+    receipt = preflight.preflight_v2(protocol)
+    assert receipt["status"] == "ready"
+    assert receipt["candidate_count"] == 2
+    assert receipt["numeric_validation_completed"] is False
+    result = comparison.run(protocol, tmp_path / "mixed-run")
+    rows = {row["record_id"]: row for row in result["arms"]["engine"]["rows"]}
+    row = rows[next(iter(protocol["requests"]))]
+    assert row["numeric_denominator"] == {
+        "requested": 2, "passed": 2, "failed": 0, "not_compared": 0}
+    assert [item["status"] for item in row["hard_overlap_screen"]["poses"]] == [
+        "eligible", "hard_overlap"]
+    assert 0.8 < row["hard_overlap_screen"]["poses"][1][
+        "minimum_cross_distance_angstrom"] < 1.0
+    assert row["selected_pose"]["pose_id"] == "synthetic-ring"
+    assert comparison.verify_run(protocol, tmp_path / "mixed-run")["status"] == "verified"
+
+
 @pytest.mark.parametrize("change,blocker", [
     ("one_identity", "two_distinct_Ki_chemical_identities_required"),
     ("duplicate_identity", "two_distinct_Ki_chemical_identities_required"),

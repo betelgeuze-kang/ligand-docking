@@ -19,6 +19,9 @@ from betelgeuze_engine_v2.molecular import canonical_system_sha256
 from . import native_v4_bound as bound
 from . import native_v4_chemical_identity as chemical
 from . import public_assay_components as components
+from .prepared_hard_overlap_screen import (
+    HARD_OVERLAP_DISTANCE_ANGSTROM, minimum_cross_distance_angstrom,
+)
 
 
 SCHEMA = "native_v4_candidate_prepared_structural_binding_v1"
@@ -103,8 +106,8 @@ def _ligand_identity(prepared_input: dict, ligand, identity: dict) -> dict:
     }
 
 
-def _derive_observation_with_ligand(row: dict, request: dict) -> tuple[dict, object]:
-    """Derive the exact structural observation and retain the parsed ligand."""
+def _derive_observation_with_systems(row: dict, request: dict) -> tuple[dict, object, object]:
+    """Derive the exact observation and retain both parsed source systems."""
     _require(row["assigned_role"] == "development_test"
              and row["chemical_identity"] is not None
              and not row["prediction_issues"],
@@ -158,17 +161,17 @@ def _derive_observation_with_ligand(row: dict, request: dict) -> tuple[dict, obj
         "parameter_sources_sha256": _sha({key: prepared[key]["sha256"]
                                           for key in PARAMETER_KEYS}),
     }
-    return observation, ligand
+    return observation, receptor, ligand
 
 
 def derive_observation(row: dict, request: dict) -> dict:
     """Derive the exact structural observation an origin must have recorded."""
-    observation, _ = _derive_observation_with_ligand(row, request)
+    observation, _, _ = _derive_observation_with_systems(row, request)
     return observation
 
 
-def _pose_pocket_status(ligand, request: dict) -> dict:
-    """Count supplied rigid poses inside the declared pocket, without scoring."""
+def _pose_geometry_status(receptor, ligand, request: dict) -> dict:
+    """Count in-pocket poses that also pass the ranking cross-distance rule."""
     evaluation = request["evaluation"]
     center = evaluation["pocket_center_angstrom"]
     radius = evaluation["pocket_radius_angstrom"]
@@ -180,21 +183,32 @@ def _pose_pocket_status(ligand, request: dict) -> dict:
     except (ValueError, OverflowError) as exc:
         raise ValueError("invalid_native_prepared_pocket") from exc
     _require(radius > 0, "invalid_native_prepared_pocket")
-    inside = 0
+    inside = eligible = unavailable = 0
+    receptor_coordinates = receptor.coordinates[0].detach().cpu().numpy()
     for pose in request["poses"]:
         rotation, translation = _transform(pose)
         coordinates, _ = _rigid_pose_coordinates(ligand.coordinates, rotation, translation)
-        inside += _inside_declared_pocket(coordinates, center, radius)
-    return {"requested": len(request["poses"]), "inside_declared_pocket": inside}
+        if not _inside_declared_pocket(coordinates, center, radius):
+            continue
+        inside += 1
+        minimum = minimum_cross_distance_angstrom(
+            receptor_coordinates, coordinates[0].detach().cpu().numpy())
+        if minimum is None:
+            unavailable += 1
+        elif minimum >= HARD_OVERLAP_DISTANCE_ANGSTROM:
+            eligible += 1
+    return {"requested": len(request["poses"]), "inside_declared_pocket": inside,
+            "rank_eligible_inside_pocket": eligible,
+            "cross_distance_unavailable_inside_pocket": unavailable}
 
 
-def check_source_binding(row: dict, request: dict, *, inspect_pose_pocket: bool = False) -> dict:
+def check_source_binding(row: dict, request: dict, *, inspect_pose_geometry: bool = False) -> dict:
     """Require a source-record origin matching newly parsed prepared sources."""
     origin = row["source_origins"].get(SOURCE_FIELD)
     _require(type(origin) is dict and set(origin) == {"path", "sha256"},
              "native_prepared_source_link_missing")
     supplied = bound.bound_json(origin)
-    expected, ligand = _derive_observation_with_ligand(row, request)
+    expected, receptor, ligand = _derive_observation_with_systems(row, request)
     _require(type(supplied) is dict and supplied == expected,
              "native_prepared_source_link_mismatch")
     result = {
@@ -204,6 +218,6 @@ def check_source_binding(row: dict, request: dict, *, inspect_pose_pocket: bool 
         "candidate_prepared_identity_bound": True,
         "same_prepared_assay_state_verified": False,
     }
-    if inspect_pose_pocket:
-        result["pose_pocket_status"] = _pose_pocket_status(ligand, request)
+    if inspect_pose_geometry:
+        result["pose_geometry_status"] = _pose_geometry_status(receptor, ligand, request)
     return result

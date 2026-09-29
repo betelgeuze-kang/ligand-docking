@@ -187,12 +187,21 @@ def preflight_v2(protocol: dict) -> dict:
                 result["blockers"].append(_block("prepared_execution_unsupported", rid))
                 continue
             binding_receipt = check_source_binding(
-                row, request, inspect_pose_pocket=True)
-            pose_status = binding_receipt["pose_pocket_status"]
+                row, request, inspect_pose_geometry=True)
+            pose_status = binding_receipt["pose_geometry_status"]
             if pose_status["inside_declared_pocket"] == 0:
                 result["blockers"].append(_block(
                     "prepared_pose_geometry_unusable", rid,
                     f"0/{pose_status['requested']} poses inside declared pocket"))
+                continue
+            if pose_status["rank_eligible_inside_pocket"] == 0:
+                code = ("prepared_pose_cross_distance_unavailable"
+                        if pose_status["cross_distance_unavailable_inside_pocket"]
+                        else "prepared_pose_hard_overlap_unusable")
+                result["blockers"].append(_block(
+                    code, rid,
+                    f"0/{pose_status['inside_declared_pocket']} in-pocket poses "
+                    "pass the 1.0 Å cross-distance ranking screen"))
                 continue
             cohorts.add(_sha({"method": method, "frame": _frame(row, request)}))
         except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
