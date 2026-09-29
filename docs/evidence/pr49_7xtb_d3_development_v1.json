@@ -1,0 +1,176 @@
+{
+  "case": "neutral PR49 in computationally registered fragmented 7XTB receptor",
+  "evidence": {
+    "final_canonical_export": {
+      "bytes": 68191,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/registered/final-canonical.json",
+      "sha256": "4b8eed215b4e541e1d30443801b0486a58fbdbe448182fec1543aaa6086cf818"
+    },
+    "final_numerical_audit": {
+      "bytes": 110949,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/numerical-final.json",
+      "sha256": "a7a40127072713f54b1f5d9ba7b12d8bd70aa3e52069bb9bf4c9ff2281b7ed0f"
+    },
+    "full_checkpoint": {
+      "bytes": 23239,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/registered/full-checkpoint.json",
+      "sha256": "3d58c4db8b8cc9434d3f1e301634f6a50687d758b71fe9c6222bddfd09b44ba6"
+    },
+    "initial_numerical_audit": {
+      "bytes": 94404,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/numerical-initial.json",
+      "sha256": "26393ed2ed82dbe736182894a4dfd1c520db00c134454574d3d4dcb285ea5586"
+    },
+    "paused_checkpoint": {
+      "bytes": 8604,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/registered/paused-checkpoint.json",
+      "sha256": "fc5a678e2edbe75167f2cb73921f8b35ea00dd14700f7a003faf9d050f7b7d9f"
+    },
+    "pre_execution_plan": {
+      "bytes": 5712,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/plan.json",
+      "sha256": "f3da69a8a7c57942b0fcfc665f01836a94130f242e5ece09b3de8c6c62849da6"
+    },
+    "registered_run": {
+      "bytes": 6139,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/registered/report.json",
+      "sha256": "49c1a69dc212e17422de624169a76b46c7e8a09cb87f753fe29bb2fed521cf2f"
+    },
+    "registration_verification": {
+      "bytes": 870,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/registration-verification.json",
+      "sha256": "db6bfd78db36cb624a7676726159095cb703428d08bf579b58e497ed2fe7866f"
+    },
+    "request": {
+      "bytes": 3314,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/request.json",
+      "sha256": "a198ccd06d35920e017e4aa2b43e8282dfaf4d11175645012f6b4304fcbb3718"
+    },
+    "resumed_checkpoint": {
+      "bytes": 23239,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/registered/resumed-checkpoint.json",
+      "sha256": "3d58c4db8b8cc9434d3f1e301634f6a50687d758b71fe9c6222bddfd09b44ba6"
+    },
+    "whole_comparison_failure": {
+      "bytes": 2875,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-execution-20260929/comparison-failure.json",
+      "sha256": "f43168803ce68cdff768a517cfe093cffd6d33fa4fe95725796fe2f7bddd38d5"
+    }
+  },
+  "geometry": {
+    "ligand_atoms": 39,
+    "prepared_manifest": {
+      "bytes": 4291,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-complex-20260929-final2/manifest.v1.json",
+      "sha256": "95128a77c3dd416371371966b9d7cbd2ca22dbfbff4499cce70bd14d6899af33"
+    },
+    "receptor_atoms": 4376,
+    "status": "PASS_COMPUTATIONAL_REGISTRATION_ONLY"
+  },
+  "interpretation": {
+    "HIP_parity_validated": false,
+    "affinity_validated": false,
+    "new_physical_affinity_labels": 0,
+    "new_training_rows": 0,
+    "observed_PR49_reference_pose_available": false,
+    "pose_recovery_validated": false,
+    "product_qualified": false,
+    "scientifically_validated": false,
+    "timing_is_single_execution_not_speedup_or_total_development_cost": true,
+    "validation_from_installed_wheel": false
+  },
+  "local_tests": {
+    "full_repository_CI_pass_claimed": false,
+    "passed": 205,
+    "scope": "focused bridge, numeric reference, D3, publication, resume, binding, geometry suites",
+    "subtests_passed": 3
+  },
+  "native_execution": {
+    "accepted_optimization_steps": 32,
+    "admission_reasons": [
+      "not_converged",
+      "ligand_internal_strain_limit_exceeded"
+    ],
+    "candidate_admission": "NOT_ADMITTED",
+    "candidate_selection_actually_run": false,
+    "continuous_wall_seconds": 97.11067469400587,
+    "converged": false,
+    "exact_continuous_resume_checkpoint_and_coordinates": true,
+    "failed_force_evaluations": 0,
+    "final_components": {
+      "cross_lennard_jones": 145.6818308917131,
+      "cross_screened_coulomb": 0.6163965541458265,
+      "ligand_internal": -243.06113286357942,
+      "total": -96.76290541772049
+    },
+    "final_max_force_kcal_mol_angstrom": 37.95144208186961,
+    "final_total_energy_kcal_per_mol": -96.76290541772049,
+    "force_calls_with_resume": 39,
+    "force_convergence_tolerance": 0.001,
+    "force_evaluations": 38,
+    "initial_components": {
+      "cross_lennard_jones": 676.9182084594613,
+      "cross_screened_coulomb": 6.1346231364391155,
+      "ligand_internal": -283.1396502061511,
+      "total": 399.91318138974935
+    },
+    "initial_total_energy_kcal_per_mol": 399.91318138974935,
+    "internal_energy_increase_kcal_per_mol": 40.07851734257167,
+    "internal_increase_limit_kcal_per_mol": 5.0,
+    "pause_resume_wall_seconds": 100.7580079610052
+  },
+  "numerical_validation": {
+    "absolute_tolerance_energy_kcal_per_mol": 1e-08,
+    "absolute_tolerance_force_kcal_per_mol_angstrom": 1e-08,
+    "coulomb_constants": {
+      "OpenMM_builtin_measured_at_unit_charges_one_nm": 332.06371329919205,
+      "native_and_same_math_reference": 332.063713299,
+      "native_minus_builtin": -1.9201706891180947e-10
+    },
+    "denominator": {
+      "evaluated": 5,
+      "passed": 5,
+      "rejected": 0,
+      "requested": 5
+    },
+    "maxima": {
+      "cross": {
+        "maximum_absolute_energy_error_kcal_per_mol": 2.1032064978498966e-11,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 3.9335645851679146e-11
+      },
+      "internal": {
+        "maximum_absolute_energy_error_kcal_per_mol": 6.821210263296962e-13,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 1.971933727418218e-11
+      },
+      "total": {
+        "maximum_absolute_energy_error_kcal_per_mol": 2.0691004465334117e-11,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 5.206857167650014e-11
+      }
+    },
+    "source_XML_equivalence_claimed": false,
+    "status": "PASS_FOR_DECLARED_MODEL_AND_FIVE_COORDINATE_STATES"
+  },
+  "original_constrained_source": {
+    "error_code": "constrained_bond_terms_missing",
+    "executed": true,
+    "source": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr49-pr59-openff-projection-20260929/PR49/openmm-system.xml",
+      "sha256": "edf02aab9acb609243040fe5af6f3a6a84419980e428bedd3da6235c138d782d"
+    }
+  },
+  "schema_id": "pr49_7xtb_d3_development_evidence/1.0.0",
+  "status": "NUMERICAL_BRIDGE_EXECUTED_PRODUCT_COMPARISON_BLOCKED",
+  "whole_comparison": {
+    "candidate_count_executed": 0,
+    "chemical_typing_audit": {
+      "bytes": 79494,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-chemical-typing-audit-20260929.json",
+      "sha256": "7008b6b8a9cb92cafd0fa3651e626afc9d1f62a3a4c4b16664ea330071be65b6"
+    },
+    "complete_receptor_chemical_graph_required": true,
+    "formal_charge_annotation_missing": true,
+    "planned_candidates_per_arm": 2,
+    "reproduced_exit_code": 1,
+    "status": "BLOCKED_AT_SCORER_CONSTRUCTION"
+  }
+}

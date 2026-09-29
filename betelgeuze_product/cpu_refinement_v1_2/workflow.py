@@ -39,6 +39,9 @@ def _parameter_row(parameter_type, document):
 def _extension(document, base):
     if not isinstance(document, dict):
         raise ResearchError("explicit extension document required")
+    from .openmm_periodic_extension import OpenMMPeriodicParameters, OPENMM_PERIODIC_PARAMETER_SCHEMA
+    if document.get("schema_id") == OPENMM_PERIODIC_PARAMETER_SCHEMA:
+        return OpenMMPeriodicParameters.from_dict(document, base)
     result = ReferenceForceFieldV2Parameters(base,
         impropers=tuple(_parameter_row(HarmonicOutOfPlaneImproperParameter, row) for row in document["impropers"]),
         constraints=tuple(_parameter_row(DistanceConstraintParameter, row) for row in document["constraints"]),

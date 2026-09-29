@@ -137,11 +137,14 @@ def _verify(doc):
         if plan["cross_parameters"] is None
         else CrossParameters.from_dict(plan["cross_parameters"])
     )
-    same(
-        plan["evaluator"]["evaluator_id"],
-        EVALUATOR_ID if cross is None else FIXED_EVALUATOR_ID,
-        "objective identity",
-    )
+    if cross is not None:
+        same(plan["evaluator"]["evaluator_id"], FIXED_EVALUATOR_ID, "objective identity")
+    else:
+        from .openmm_periodic_extension import OPENMM_PERIODIC_EVALUATOR_ID
+        if plan["evaluator"]["evaluator_id"] not in {EVALUATOR_ID, OPENMM_PERIODIC_EVALUATOR_ID}:
+            raise ResearchError("unsupported objective identity")
+        if plan["evaluator"]["evaluator_id"] == OPENMM_PERIODIC_EVALUATOR_ID:
+            same(plan["evaluator"]["solvation_fingerprint_sha256"], None, "unsupported solvent composition")
     if cross is not None:
         same(
             plan["coordinate_frame"],

@@ -284,7 +284,15 @@ def verify_execution_evidence(report: dict) -> None:
     if fixed_mode:
         evaluator_fields |= {"receptor_system_sha256", "cross_parameters_sha256"}
     exact_fields(report["evaluator"], evaluator_fields)
-    same(report["evaluator"]["evaluator_id"], FIXED_EVALUATOR_ID if fixed_mode else "cpu_corrected_extended_reference/1.2.0", "evaluator")
+    if fixed_mode:
+        same(report["evaluator"]["evaluator_id"], FIXED_EVALUATOR_ID, "evaluator")
+    else:
+        from .openmm_periodic_extension import OPENMM_PERIODIC_EVALUATOR_ID
+        if report["evaluator"]["evaluator_id"] not in {
+                "cpu_corrected_extended_reference/1.2.0", OPENMM_PERIODIC_EVALUATOR_ID}:
+            raise ResearchError("unsupported evaluator identity")
+        if report["evaluator"]["evaluator_id"] == OPENMM_PERIODIC_EVALUATOR_ID:
+            same(report["evaluator"]["solvation_fingerprint_sha256"], None, "unsupported solvent composition")
     if fixed_mode:
         same(report["evaluator"]["receptor_system_sha256"], cross.receptor_system_sha256, "fixed receptor identity")
         same(report["evaluator"]["cross_parameters_sha256"], cross.fingerprint_sha256, "cross parameter identity")
