@@ -195,3 +195,38 @@ three requested records but one distinct Ki chemical identity, zero prepared
 or method-consistent records, and zero four-arm common scored records. No
 actual-target ranking comparison, assay-state verification, or scientific
 qualification follows from this replay.
+
+## Hard-overlap preflight and source ledger replay (2026-09-29)
+
+Commit `45df10ae4535bacf9476142c04ef378ee135f5d3` adds the shared
+cross-distance kernel to preflight and ranking, plus a separate source-only
+2024 5-HT6 Ki ledger verifier. The official local 2024 PDF and exact ledger
+matched their pinned hashes; its receipt kept every role, prepared-state,
+training, ranking and scientific authority flag false. The ledger does not
+alter the installed native-v4 source cohort.
+
+From an archive of that exact commit, a Python 3.10 product wheel with SHA-256
+`31841c5d971edffb126b936be4444dd57f07ed4b6a813280b3daed9511a5813b`
+was built outside the checkout. All 410 package Python files matched the
+wheel byte-for-byte. A clone of the previous isolated replay venv received
+this wheel, had no system site packages, passed `pip check`, and resolved
+RDKit, Torch and the product under the cloned venv with `python -I`. This
+was a wheel replacement in an isolated environment, not another dependency
+bootstrap.
+
+The installed CLI verified a wholly synthetic, two-chemical source. When
+both candidates had only in-pocket receptor-ligand hard-overlap poses,
+`preflight-v2` returned candidate-specific
+`prepared_pose_hard_overlap_unusable` blockers and wrote no protocol. With
+one eligible and one 0.9 Å hard-overlap pose for one candidate, preflight
+admitted the protocol; all four arms evaluated both candidates, and the
+engine-bearing arms selected the eligible pose. `verify-run` returned
+`verified` and completed-run `resume` returned `committed`. Checkout tests
+passed separately: 68 native/installed comparison tests, 300 shared-screen
+and prepared-interaction tests, and 17 official-PDF ledger tests; the focused
+mixed-pose end-to-end regression passed after its final adjustment. The local
+artifacts are under
+`/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-hardoverlap-ledger-20260929`.
+These are software integrity observations on synthetic structures. A
+source-linked real prepared receptor and ligand, independent roles and
+evaluation outcomes remain absent.
