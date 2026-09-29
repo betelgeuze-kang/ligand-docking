@@ -8,7 +8,6 @@ from betelgeuze_engine_v2.docking.guided_placement import (
     build_guided_placement_context,
     generate_guided_docking_proposals,
 )
-from betelgeuze_engine_v2.docking.scorer_v1 import ChemistryPoseScorerV1
 from betelgeuze_engine_v2.molecular import canonical_system_sha256
 from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig,
@@ -16,7 +15,10 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import (
 )
 from betelgeuze_product.reference_minimization_workflow import _directory, _publish
 from .candidate_journal import open_journal, _load, _envelope
-from .scoring_profile import LEGACY_MODEL, EXPLICIT_MODEL, EXPLICIT_PLAN_SCHEMA, scorer_class, require_model
+from .scoring_profile import (LEGACY_MODEL, EXPLICIT_MODEL, EXPLICIT_PLAN_SCHEMA,
+    REGISTERED_PLAN_SCHEMA, DEFAULT_PROPOSAL_POLICY, REGISTERED_PROPOSAL_POLICY,
+    scorer_class, require_model, validate_proposal_settings)
+from .registered_pose import generate_registered_pose
 from .candidate_execution import CandidateExecution
 from .comparison import choose_variant
 from .evaluation import ExtendedEvaluator
@@ -56,6 +58,7 @@ def run_candidate_comparison(
     fixed_environment=None,
     request_sha256=None,
     scoring_model=LEGACY_MODEL,
+    proposal_policy=DEFAULT_PROPOSAL_POLICY,
 ):
     require_model(scoring_model)
     if scoring_model == EXPLICIT_MODEL and fixed_environment is None:
@@ -64,6 +67,10 @@ def run_candidate_comparison(
         require_digest(request_sha256)
     comparison = RefinementComparisonConfig() if comparison is None else comparison
     selection = SelectionConfig(budget.top_k) if selection is None else selection
+    validate_proposal_settings(proposal_policy, budget, comparison)
+    registered = proposal_policy == REGISTERED_PROPOSAL_POLICY
+    if registered and (scoring_model != EXPLICIT_MODEL or fixed_environment is None):
+        raise ResearchError("registered pose requires explicit chemical features and fixed receptor")
     if type(resume) is not bool or selection.top_k != budget.top_k:
         raise ResearchError("invalid resume flag or selection budget")
     before, after, bound = plan_refinement_comparison(
@@ -99,16 +106,24 @@ def run_candidate_comparison(
         evaluator.fingerprint_sha256
 
     check()
-    context = build_guided_placement_context(authority, receptor_system, ligand_system)
+    context = None if registered else build_guided_placement_context(authority, receptor_system, ligand_system)
     plans = []
+    registered_receipt = None
     for name, arm_budget in (("baseline", before), ("refined", after)):
-        proposals, receipt = generate_guided_docking_proposals(
-            authority,
-            arm_budget,
-            context,
-            receptor_system=receptor_system,
-            ligand_system=ligand_system,
-        )
+        if registered:
+            proposals, receipt = generate_registered_pose(authority, arm_budget, ligand_system)
+            observed_receipt = receipt.to_dict()
+            if registered_receipt is not None and registered_receipt != observed_receipt:
+                raise ResearchError("registered comparison arms have different initial pose receipts")
+            registered_receipt = observed_receipt
+        else:
+            proposals, receipt = generate_guided_docking_proposals(
+                authority,
+                arm_budget,
+                context,
+                receptor_system=receptor_system,
+                ligand_system=ligand_system,
+            )
         plans.append((name, arm_budget, proposals, receipt))
     bound_scorer = scorer_class(scoring_model)(
         authority, receptor_system, ligand_system, implementation_source_sha256=source
@@ -148,6 +163,9 @@ def run_candidate_comparison(
             for name, arm, proposals, receipt in plans
         },
     }
+    if registered:
+        plan["schema_id"] = REGISTERED_PLAN_SCHEMA
+        plan["proposal_policy"] = registered_receipt
     records = {}
     costs = {}
     offset = 0

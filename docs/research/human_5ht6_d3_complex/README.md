@@ -178,3 +178,20 @@ recovery without an observed PR49 reference pose.
 
 See [current goals](../priority_goals_20260929.md) for completion evidence and
 remaining scientific and operational work.
+
+## Registered-pose execution
+
+`run_registered_policy.py` selects the opt-in
+`cpu_registered_pose_fixed_receptor_request/1.0.0` schema for exactly one prepared
+pose. It records its plan before execution, confirms binary64 coordinate identity
+in both arms, verifies the product result and independently audits initial/final
+energy and force. The installed-package interrupted replay reproduces the actual
+case exactly when runtime settings match. The valid baseline is selected because
+the unchanged D3 refinement fails geometry, strain and convergence criteria.
+
+`lbfgs_development_experiment.py` separately freezes a 128-accepted-step /
+192-force-attempt research protocol on the original pose. Its final result also
+remains NOT_ADMITTED; it does not replace the product solver. See the
+[executed report](../pr49_registered_pose_execution_20260929.md) for complete
+denominators, numerical checks, runtime identity, retained harness failures and
+the remaining acceptance conditions.

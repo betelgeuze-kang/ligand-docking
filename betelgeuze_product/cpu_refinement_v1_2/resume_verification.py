@@ -5,14 +5,9 @@ coherently rewriting every retained observation is outside this verification.
 """
 
 from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
-from betelgeuze_engine_v2.docking.scorer_v1 import (
-    ScorerV1Terms,
-    SCORER_V1_SCORE_ID,
-    SCORER_V1_APPLICABILITY_DOMAIN_ID,
-)
-from betelgeuze_engine_v2.docking.scoring import DockingScoreDescriptor, ScoreDirection
 from .score_replay import _IDENTITIES, _VALUES, _COUNTS
-from .scoring_profile import plan_model, descriptor as expected_score_descriptor, terms_class
+from .scoring_profile import (plan_model, descriptor as expected_score_descriptor, terms_class,
+    REGISTERED_PLAN_SCHEMA, plan_policy, validate_proposal_settings)
 from .provenance import (
     ResearchError,
     digest,
@@ -115,7 +110,7 @@ def _verify(doc):
             "selection",
             "force_bound",
             "arms",
-        },
+        } | ({'proposal_policy'} if plan['schema_id'] == REGISTERED_PLAN_SCHEMA else set()),
     )
     scoring_model = plan_model(plan)
     same(digest(plan), doc["plan_sha256"], "plan digest")
@@ -129,6 +124,17 @@ def _verify(doc):
     budget, solver, comparison, before, after, bound, effective = execution_plan(
         plan["budget"], plan["solver"], plan["comparison"]
     )
+    validate_proposal_settings(plan_policy(plan), budget, comparison)
+    if plan['schema_id'] == REGISTERED_PLAN_SCHEMA:
+        from .registered_evidence import verify_registered_evidence
+        receipt = verify_registered_evidence(plan['proposal_policy'], atom_count=n,
+            authority=plan['authority'], seed=budget.seed, coordinate_frame=plan['coordinate_frame'],
+            receptor_system_sha256=plan['evaluator']['receptor_system_sha256'],
+            problem=plan['problem'], search_space=plan['search_space'],
+            rows=doc['rows'], attempts=doc['attempts'])
+        for arm in plan['arms'].values():
+            same(arm['guidance'], receipt['receipt_sha256'], 'registered proposal policy receipt')
+            same(arm['proposals'], [receipt['proposal_fingerprint_sha256']], 'registered proposal identities')
     same(doc["mode"], comparison.mode, "comparison mode")
     same(plan["force_bound"], bound, "force reservation")
     selection = selection_config(plan["selection"], budget.top_k)

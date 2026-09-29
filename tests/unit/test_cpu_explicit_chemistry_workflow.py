@@ -2,7 +2,6 @@
 from copy import deepcopy
 import hashlib
 import json
-from pathlib import Path
 import math
 
 import pytest
@@ -47,7 +46,8 @@ def request_fixture(tmp_path):
     for name, raw in {'receptor':canonical_system_json_bytes(receptor),'ligand':canonical_system_json_bytes(ligand),
         'parameters':json.dumps(base.to_dict()).encode(),'extensions':json.dumps(params.to_dict()).encode(),
         'cross_parameters':json.dumps(cross.to_dict()).encode()}.items():
-        path=tmp_path/(name+'-explicit.json');path.write_bytes(raw)
+        path=tmp_path/(name+'-explicit.json')
+        path.write_bytes(raw)
         request[name]={'path':str(path),'sha256':hashlib.sha256(raw).hexdigest()}
     request['schema_id']=EXPLICIT_REQUEST_SCHEMA
     request['budget'].update(candidate_count=2,top_k=1,max_torsions=0)

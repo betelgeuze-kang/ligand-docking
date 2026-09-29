@@ -13,7 +13,7 @@ from betelgeuze_product import refinement_comparison_workflow as previous
 from betelgeuze_product.local_research_workflow import _decode, _json
 from betelgeuze_product.reference_minimization_workflow import _bound, _directory, _publish, _read
 from .comparison import run_comparison
-from .fixed_receptor import CrossParameters, FixedReceptorEnvironment, FIXED_REQUEST_SCHEMA, FIXED_REPORT_SCHEMA
+from .fixed_receptor import CrossParameters, FixedReceptorEnvironment
 from .evidence_contracts import (
     REPORT_SCHEMA, request_binding, verify_request_settings, verify_work, same,
 )
@@ -22,7 +22,7 @@ from .provenance import ResearchError, canonical, digest, environment, exact_fie
 from .selection import SelectionConfig
 from .verification import verify_report
 from .work import WorkMeter, verify_admitted_bytes
-from .scoring_profile import FIXED_REQUEST_SCHEMAS, FIXED_REPORT_SCHEMAS, request_model, outer_report_schema
+from .scoring_profile import FIXED_REQUEST_SCHEMAS, FIXED_REPORT_SCHEMAS, request_model, request_policy, outer_report_schema
 
 REQUEST_SCHEMA = "cpu_extended_comparison_request/1.2.0"
 
@@ -104,6 +104,7 @@ def run_request(request: dict, output: str | Path) -> dict:
             result = run_comparison(authority, budget, receptor_system=receptor, ligand_system=ligand,
                 parameters=parameters, solver=solver, solvation=solvent, comparison=comparison, selection=selection,
                 scoring_model=request_model(request),
+                proposal_policy=request_policy(request),
                 **({} if fixed is None else {"fixed_environment": fixed}))
         result["request_binding"] = binding
         result["report_sha256"] = digest({key: value for key, value in result.items() if key != "report_sha256"})

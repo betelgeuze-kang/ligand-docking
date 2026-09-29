@@ -9,14 +9,14 @@ from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
 from betelgeuze_engine_v2.docking.scoring import DockingScoreDescriptor, ScoreDirection
 from betelgeuze_engine_v2.docking.scorer_v1 import _sha256 as score_receipt_digest
 from .comparison import choose_variant
-from .fixed_receptor import FIXED_REPORT_SCHEMA, FIXED_POLICY_ID
+from .fixed_receptor import FIXED_POLICY_ID
 from .evidence_contracts import (
     REPORT_SCHEMA, LEGACY_REPORT_SCHEMA, POLICY_ID, same, selection_config,
     verify_execution_evidence,
 )
 from .provenance import ResearchError, canonical, decode_coordinates, digest, finite, integer
 from .selection import candidate_from_row, select_final_candidates, refinement_admissible
-from .scoring_profile import FIXED_REPORT_SCHEMAS, EXPLICIT_REPORT_SCHEMA, report_model, descriptor as expected_score_descriptor, terms_class
+from .scoring_profile import FIXED_REPORT_SCHEMAS, EXPLICIT_REPORT_SCHEMAS, REGISTERED_REPORT_SCHEMA, report_model, descriptor as expected_score_descriptor, terms_class
 from .score_replay import _IDENTITIES, _COUNTS, _VALUES
 
 
@@ -41,6 +41,14 @@ def _verify_report(report: dict) -> dict:
         same(report["selection_policy_id"], FIXED_POLICY_ID if report["schema_id"] in FIXED_REPORT_SCHEMAS else POLICY_ID, "selection policy")
     n = integer(report["atom_count"], 1, 256)
     verify_execution_evidence(report)
+    if report['schema_id'] == REGISTERED_REPORT_SCHEMA:
+        from .registered_evidence import verify_registered_evidence
+        verify_registered_evidence(report['proposal_policy'], atom_count=n,
+            authority=report['authority_input_receipt_sha256'], seed=report['budget']['seed'],
+            coordinate_frame=report['cross_parameters']['coordinate_frame_id'],
+            receptor_system_sha256=report['evaluator']['receptor_system_sha256'],
+            rows={name: arm['rows'] for name, arm in report['arms'].items()},
+            attempts=report['attempts'])
     k = integer(report["budget"]["top_k"], 1, 256)
     arms = report["arms"]
     if set(arms) != {"baseline", "refined"}:
@@ -62,7 +70,7 @@ def _verify_report(report: dict) -> dict:
                 restored = terms_class(report_model(report))(**{k: terms[k] for k in _IDENTITIES + _COUNTS},
                     **{k: float.fromhex(terms[k + "_binary64_hex"]) for k in _VALUES})
                 same(restored.to_dict(), terms, "versioned score terms")
-                if report["schema_id"] == EXPLICIT_REPORT_SCHEMA:
+                if report["schema_id"] in EXPLICIT_REPORT_SCHEMAS:
                     for term_key, scorer_key in (
                         ("context_fingerprint_sha256", "context"),
                         ("config_fingerprint_sha256", "config"),

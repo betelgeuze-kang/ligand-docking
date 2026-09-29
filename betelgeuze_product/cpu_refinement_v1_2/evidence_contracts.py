@@ -13,12 +13,15 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig, plan_refinement_comparison,
 )
 from .minimization import SolverConfig
-from .fixed_receptor import (FIXED_REPORT_SCHEMA, FIXED_REQUEST_SCHEMA, FIXED_EVALUATOR_ID,
+from .fixed_receptor import (FIXED_REQUEST_SCHEMA, FIXED_EVALUATOR_ID,
                              FIXED_ATTEMPT_SCHEMA, ENERGY_BASIS, CrossParameters, validate_components)
 from .provenance import ResearchError, canonical, exact_fields, finite, integer, require_digest
 from .selection import SelectionConfig
 from .work import STAGES
-from .scoring_profile import (FIXED_REQUEST_SCHEMAS, FIXED_REPORT_SCHEMAS, EXPLICIT_REQUEST_SCHEMA, EXPLICIT_REPORT_SCHEMA, EXPLICIT_MODEL)
+from .scoring_profile import (FIXED_REQUEST_SCHEMAS, FIXED_REPORT_SCHEMAS, EXPLICIT_REQUEST_SCHEMA,
+    EXPLICIT_REPORT_SCHEMA, EXPLICIT_REPORT_SCHEMAS, EXPLICIT_MODEL,
+    REGISTERED_REQUEST_SCHEMA, REGISTERED_REPORT_SCHEMA,
+    request_policy, report_policy, validate_proposal_settings)
 
 REPORT_SCHEMA = "cpu_extended_comparison/1.2.1"
 LEGACY_REPORT_SCHEMA = "cpu_extended_comparison/1.2.0"
@@ -79,7 +82,8 @@ def request_binding(request: dict) -> dict:
     if (request["schema_id"] not in ({"cpu_extended_comparison_request/1.2.0"} | FIXED_REQUEST_SCHEMAS)
             or request["backend"] != "python_cpu_reference"):
         raise ResearchError("unsupported prepared request")
-    budget, *_ = execution_plan(request["budget"], request["solver"], request["comparison"])
+    budget, _, comparison, *_ = execution_plan(request["budget"], request["solver"], request["comparison"])
+    validate_proposal_settings(request_policy(request), budget, comparison)
     if budget.candidate_count > 64:
         raise ResearchError("CLI candidate capacity exceeded")
     selection_config(request["selection"], budget.top_k)
@@ -259,7 +263,9 @@ def verify_execution_evidence(report: dict) -> None:
     if fixed_mode:
         names.add("cross_parameters")
         cross = CrossParameters.from_dict(report["cross_parameters"])
-    if report["schema_id"] == EXPLICIT_REPORT_SCHEMA:
+    if report["schema_id"] == REGISTERED_REPORT_SCHEMA:
+        names.add("proposal_policy")
+    if report["schema_id"] in EXPLICIT_REPORT_SCHEMAS:
         names.add("scorer")
         exact_fields(report["scorer"], {"feature_model_id", "context", "config", "backend"})
         same(report["scorer"]["feature_model_id"], EXPLICIT_MODEL, "scorer identity model")
@@ -271,7 +277,8 @@ def verify_execution_evidence(report: dict) -> None:
             combined = {**report["request_binding"], **{name: report[name] for name in ("budget", "solver", "comparison")},
                         "selection": report["selection_config"]}
             same(report["request_binding"], request_binding(combined), "request binding metadata")
-            same(combined["schema_id"], EXPLICIT_REQUEST_SCHEMA if report["schema_id"] == EXPLICIT_REPORT_SCHEMA
+            same(combined["schema_id"], REGISTERED_REQUEST_SCHEMA if report["schema_id"] == REGISTERED_REPORT_SCHEMA
+                 else EXPLICIT_REQUEST_SCHEMA if report["schema_id"] == EXPLICIT_REPORT_SCHEMA
                  else FIXED_REQUEST_SCHEMA if fixed_mode else "cpu_extended_comparison_request/1.2.0", "request objective")
             if fixed_mode:
                 same(combined["pocket"]["coordinate_frame_id"], cross.coordinate_frame_id,
@@ -282,6 +289,7 @@ def verify_execution_evidence(report: dict) -> None:
     exact_fields(report["per_arm_selection"], {"baseline", "refined"})
     budget, solver, comparison, before, after, bound, effective = execution_plan(
         report["budget"], report["solver"], report["comparison"])
+    validate_proposal_settings(report_policy(report), budget, comparison)
     same(report["mode"], comparison.mode, "comparison mode")
     same(report["force_evaluation_bound_per_candidate"], bound, "force bound")
     count(report["force_evaluation_bound_per_candidate"])
