@@ -636,6 +636,86 @@ def test_native_v2_rejects_unresolved_candidate_stereo(bounded_source, tmp_path)
         binding.derive_observation(row, request)
 
 
+def _replace_ligand_geometry(request, molecule):
+    """Write coherent SDF/GRO coordinates and refresh their source hashes."""
+    prepared = request["prepared_input"]
+    sdf_path = Path(prepared["ligand_sdf"]["path"])
+    sdf_path.write_text(Chem.MolToMolBlock(molecule) + "$$$$\n")
+    prepared["ligand_sdf"]["sha256"] = common.file_sha(sdf_path)
+    gro_path = Path(prepared["ligand_gro"]["path"])
+    lines = gro_path.read_text().splitlines()
+    for index in range(molecule.GetNumAtoms()):
+        position = molecule.GetConformer().GetAtomPosition(index)
+        lines[index + 2] = (
+            lines[index + 2][:20]
+            + f"{position.x / 10:8.3f}{position.y / 10:8.3f}{position.z / 10:8.3f}")
+    gro_path.write_text("\n".join(lines) + "\n")
+    prepared["ligand_gro"]["sha256"] = common.file_sha(gro_path)
+
+
+@pytest.mark.parametrize("geometry", ["embedded", "flat_wedge", "flat_3d_header", "mirrored"])
+def test_native_v2_prepared_stereo_must_match_3d_geometry(
+    bounded_source, tmp_path, geometry,
+):
+    protocol, _, _ = _linked_protocol(bounded_source, tmp_path / "source")
+    row = copy.deepcopy(source_verifier._verified_intake(protocol["source"])[2][-1])
+    smiles = "C[C@H](O)C(=O)O"
+    row["chemical_identity"] = chemical.chemical_identity(smiles)
+    request = _bound_request(tmp_path / geometry, smiles)
+    sdf_path = Path(request["prepared_input"]["ligand_sdf"]["path"])
+    molecule = Chem.MolFromMolBlock(sdf_path.read_text(), removeHs=False)
+    assert molecule is not None
+    if geometry in {"flat_wedge", "flat_3d_header"}:
+        AllChem.Compute2DCoords(molecule)
+        assert " 2D" in Chem.MolToMolBlock(molecule).splitlines()[1]
+        Chem.WedgeMolBonds(molecule, molecule.GetConformer())
+        assert any(bond.GetStereo() != Chem.BondStereo.STEREONONE
+                   or bond.GetBondDir() != Chem.BondDir.NONE
+                   for bond in molecule.GetBonds())
+        # Even a molecule carrying the correct wedge tag must fail when its
+        # declared 3D conformer has zero chiral volume.
+        if geometry == "flat_3d_header":
+            molecule.GetConformer().Set3D(True)
+            assert binding._geometry_isomeric_smiles(molecule) != (
+                row["chemical_identity"]["canonical_isomeric_smiles"])
+        _replace_ligand_geometry(request, molecule)
+    elif geometry == "mirrored":
+        conformer = molecule.GetConformer()
+        for index in range(molecule.GetNumAtoms()):
+            position = conformer.GetAtomPosition(index)
+            conformer.SetAtomPosition(index, (-position.x, position.y, position.z))
+        _replace_ligand_geometry(request, molecule)
+    for name in ("ligand_sdf", "ligand_gro"):
+        ref = request["prepared_input"][name]
+        assert ref["sha256"] == common.file_sha(Path(ref["path"]))
+    if geometry == "embedded":
+        observation = binding.derive_observation(row, request)
+        assert observation["ligand"]["canonical_isomeric_smiles_sha256"] == (
+            row["chemical_identity"]["canonical_isomeric_smiles_sha256"])
+    else:
+        reason = ("native_prepared_ligand_geometry_stereochemistry_mismatch"
+                  if geometry == "flat_wedge" else
+                  "native_prepared_ligand_chemical_identity_mismatch")
+        with pytest.raises(ValueError, match=reason):
+            binding.derive_observation(row, request)
+
+
+@pytest.mark.parametrize("smiles", ["C/C=C/C", "C/C=C\\C"])
+def test_native_v2_prepared_alkene_stereo_is_geometry_derived(
+    bounded_source, tmp_path, smiles,
+):
+    protocol, _, _ = _linked_protocol(bounded_source, tmp_path / "source")
+    row = copy.deepcopy(source_verifier._verified_intake(protocol["source"])[2][-1])
+    row["chemical_identity"] = chemical.chemical_identity(smiles)
+    request = _bound_request(tmp_path / "alkene", smiles)
+    observation = binding.derive_observation(row, request)
+    assert observation["ligand"]["canonical_isomeric_smiles_sha256"] == (
+        row["chemical_identity"]["canonical_isomeric_smiles_sha256"])
+    molecule = Chem.MolFromMolBlock(Path(request["prepared_input"]["ligand_sdf"]["path"]).read_text())
+    assert binding._geometry_isomeric_smiles(molecule) == (
+        row["chemical_identity"]["canonical_isomeric_smiles"])
+
+
 def test_native_v2_installed_source_rejects_outcome_in_prepared_descriptor(
     bounded_source, tmp_path,
 ):

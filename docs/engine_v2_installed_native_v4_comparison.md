@@ -230,3 +230,16 @@ artifacts are under
 These are software integrity observations on synthetic structures. A
 source-linked real prepared receptor and ligand, independent roles and
 evaluation outcomes remain absent.
+
+The prepared native-v4 ligand bridge also now requires an SDF conformer marked
+3D and rederives tetrahedral and alkene stereochemistry from its coordinates
+after clearing file-declared stereo. This rejects a correctly wedged but flat
+2D drawing that previously passed the candidate SMILES check. Synthetic
+embedded 3D, flat-wedge, planar-3D-header, mirrored, and E/Z cases are covered.
+The planar-3D-header and mirrored cases were already caught by the prior
+RDKit identity check and are retained as regression cases. The comparison test file
+passed 39 tests, adjacent source/replay tests passed 77, and source-bound SDF
+stereo tests passed 13. A temporary wheel contained the updated module and an
+isolated installed import exercised its geometry helper. These are software
+integrity checks, not evidence of a real prepared-target comparison or HIP
+numerical parity.

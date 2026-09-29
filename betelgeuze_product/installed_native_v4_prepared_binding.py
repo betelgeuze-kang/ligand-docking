@@ -56,6 +56,17 @@ def _construct(receptor) -> list[dict]:
     ]
 
 
+def _geometry_isomeric_smiles(mol: Chem.Mol) -> str:
+    """Derive stereo from the prepared conformer, ignoring SDF declarations."""
+    _require(mol.GetNumConformers() == 1 and mol.GetConformer().Is3D(),
+             "native_prepared_ligand_geometry_stereochemistry_mismatch")
+    geometry = Chem.Mol(mol)
+    Chem.RemoveStereochemistry(geometry)
+    Chem.AssignStereochemistryFrom3D(geometry)
+    return Chem.MolToSmiles(
+        Chem.RemoveHs(geometry, sanitize=True), canonical=True, isomericSmiles=True)
+
+
 def _ligand_identity(prepared_input: dict, ligand, identity: dict) -> dict:
     ref = prepared_input["ligand_sdf"]
     raw = bound.read_bound(ref["path"], ref["sha256"])
@@ -97,6 +108,11 @@ def _ligand_identity(prepared_input: dict, ligand, identity: dict) -> dict:
              and chemical.digest(canonical) == identity["canonical_isomeric_smiles_sha256"]
              and Chem.GetFormalCharge(normalized) == identity["formal_charge"],
              "native_prepared_ligand_chemical_identity_mismatch")
+    # MolFromMolBlock honors wedge bonds and atom parity. Re-derive stereo from
+    # coordinates alone so a 2D drawing cannot inherit a correct SMILES from
+    # those declarations.
+    _require(_geometry_isomeric_smiles(mol) == canonical,
+             "native_prepared_ligand_geometry_stereochemistry_mismatch")
     return {
         "sdf_sha256": ref["sha256"],
         "atom_graph_sha256": _sha({"atoms": atoms, "bonds": bonds}),
