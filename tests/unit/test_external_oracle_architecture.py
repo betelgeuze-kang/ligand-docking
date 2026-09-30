@@ -702,3 +702,38 @@ def test_product_image_mode_does_not_require_repository_only_files(
 def test_checker_cli_is_executable_source() -> None:
     assert CHECKER_PATH.is_file()
     assert shutil.which("python3") is not None
+
+
+@pytest.mark.parametrize("relative", [
+    "docs/evidence/scripts/installed_pair_endpoint_openmm_20260930.py",
+    "docs/evidence/scripts/prepared_pair_independent_numerics_20260930.py",
+    "tools/analysis/prepare_pr59_common_frame_development.py",
+])
+def test_retained_pair_research_scripts_cannot_enter_product_image_or_import_closure(
+    tmp_path: Path, relative: str,
+) -> None:
+    _minimal_packaging(tmp_path)
+    _write(tmp_path / relative, "import openmm\n")
+    module = relative[:-3].replace("/", ".")
+    _write(tmp_path / "support/bridge.py", f"import {module}\n")
+    _write(tmp_path / "api/start.py", "import support.bridge\n")
+    # The checker takes one source inventory per root: construct the complete
+    # attempted import chain before asking any inspector to read that root.
+    assert architecture.inspect_python_boundary(tmp_path) == []
+    assert "oracle_script_in_product_image" in _codes(
+        architecture.inspect_packaging_boundary(tmp_path, product_image=True)
+    )
+    assert "product_imports_external_oracle" in _codes(
+        architecture.inspect_product_import_boundary(tmp_path)
+    )
+
+
+def test_setup_profile_remains_in_oracle_boundary(tmp_path: Path) -> None:
+    _write(tmp_path / "benchmarks/oracles/profile_installed_paper_development_setup_v1.py",
+           "import openmm\n")
+    _write(tmp_path / "api/start.py",
+           "import benchmarks.oracles.profile_installed_paper_development_setup_v1\n")
+    assert architecture.inspect_python_boundary(tmp_path) == []
+    assert "product_imports_external_oracle" in _codes(
+        architecture.inspect_product_import_boundary(tmp_path)
+    )

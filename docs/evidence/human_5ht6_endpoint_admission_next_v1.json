@@ -1,0 +1,3226 @@
+{
+  "schema_version": "human_5ht6_endpoint_admission_next_v1",
+  "recorded_at_utc": "2026-09-30T02:34:46+00:00",
+  "source_checkout_head": "24c3c3475174695ecd6a6d4b47b17440e7164553",
+  "status": "PRIMARY_ENDPOINT_TRANSCRIPTION_EXPANDED_ROLE_ADMISSION_UNCHANGED",
+  "boundary": {
+    "assigned_role": null,
+    "source_authenticated": false,
+    "assayed_microstate_verified": false,
+    "same_prepared_assay_state_verified": false,
+    "independent_measurement_denominator": null,
+    "training_admitted": false,
+    "calibration_admitted": false,
+    "independent_evaluation_admitted": false,
+    "product_ranking_enabled": false,
+    "scientifically_validated": false
+  },
+  "read_only_primary_audit": {
+    "existing_ledgers_pdfs_zip_and_roles_preserved": true,
+    "protected_context_or_outcomes_read": false,
+    "new_primary_downloads": 0,
+    "new_model_training": false,
+    "new_force_calls": 0,
+    "new_score_calls": 0,
+    "new_real_optimizations": 0
+  },
+  "inputs": {
+    "prior_2024_ledger": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_ki_2024_source_ledger_v1.json",
+      "bytes": 3005,
+      "sha256": "277f62f7cad26e85f4401aa4e53cfe5992da19dddec692500b7b552d21d33189"
+    },
+    "prior_multi_paper_ledger": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_ki_multi_paper_source_ledger_v1.json",
+      "bytes": 27675,
+      "sha256": "e5b5af4caa0e4efa3e5e3a502236357276051044431f45bda77b8b5163ca0452"
+    },
+    "occurrence_contract": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_occurrence_contract_v1.json",
+      "bytes": 31266,
+      "sha256": "55fab87416d876a0ffd24313446590a5d2e1b0d775b3f7389d4b321c4b2292cc"
+    },
+    "occurrence_inventory": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_occurrences_v1.json",
+      "bytes": 154330,
+      "sha256": "6261d248b41d68a4754ea800b1a577c2de1442846b54c17b16e0a2fc1740dd64"
+    },
+    "identity_manifest": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_identity_manifest_v1.json",
+      "bytes": 9067,
+      "sha256": "d7a82bacb00c18f27cbf82cae393422bc4e8be0f0c2ac2f33b0abf18a9a4067e"
+    },
+    "supplement_review": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_supplement_review_v1.json",
+      "bytes": 18686,
+      "sha256": "7cceca45b8d899d0a001b5a1e7ed71b68914fa75078713790ec1d551b05b30ad"
+    },
+    "supplement_access": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_supplement_access_v1.json",
+      "bytes": 1858,
+      "sha256": "c0727e764f69a6ae436bcaf78d732343f2d75135e34e9180e93c097ef419987e"
+    },
+    "repeat_correspondence": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_repeat_correspondence_v1.json",
+      "bytes": 13106,
+      "sha256": "e4cdef57c1377e3dc27af0ecf6d95579618358035dce22831e88bdd3f288703f"
+    },
+    "historical_installed_comparison": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/installed_paper_development_comparison_v1.json",
+      "bytes": 6226,
+      "sha256": "35a6e6aaafc19159bfa55b7b73ec87b6b40981b0d1db28159084259494204fca"
+    },
+    "installed_paper_implementation": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/installed_paper_development_comparison.head24c3c3475.py",
+      "bytes": 24408,
+      "sha256": "dfe8fd99a79608ae6edfcd387b100d03a4f2e5004fd2f8038be7855d98f75891",
+      "original_workspace_path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/betelgeuze_product/installed_paper_development_comparison.py",
+      "git_commit": "24c3c3475174695ecd6a6d4b47b17440e7164553",
+      "retrieval": "git show commit:path; immutable snapshot"
+    },
+    "primary_ledger_verifier": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tools/product/primary_5ht6_ki_2024_source_v1.py",
+      "bytes": 10048,
+      "sha256": "2eca69c35c588903d454e7302fb4b894045827645d26a15f122408b532f1117e"
+    },
+    "article_pdf": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+      "bytes": 7957708,
+      "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+    },
+    "article_retained_layout": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-layout.txt",
+      "bytes": 455125,
+      "sha256": "0d0a82e71aec1b94febbe739cacb2434ea783c3dd636d53a910747e362bba5b2"
+    },
+    "retained_official_supplement_zip": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-supplement-s001.zip",
+      "bytes": 16820378,
+      "sha256": "f27fbee99054e7b3d866e1e46164961758d4c5fd3c031e871aff9c454f3a8363"
+    },
+    "current_archived_protocol": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/protocol.json",
+      "bytes": 2141,
+      "sha256": "94b4589c6755119ead7c4e8d91fad533fa4e70c4d4a91773e6ee80561c55b254"
+    },
+    "original_protocol": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/original-protocol-default.json",
+      "bytes": 1801,
+      "sha256": "96313d9712a308e093150202ac2b4f014d51eb08e41b4f79ecd551d8263854d7"
+    },
+    "PR49_source": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR49-source.json",
+      "bytes": 2139,
+      "sha256": "809b45fd6ac9ceb7a208f7a012d2f7667df28444de168d4b4e051be9bf9cb989"
+    },
+    "PR49_identity": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR49-identity.json",
+      "bytes": 1171,
+      "sha256": "6d94ef42b068fe4d40182e90b4870334f7e6119302e4795de6886a7c0c42010e"
+    },
+    "PR49_prepared_evidence": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR49-prepared-evidence.json",
+      "bytes": 4635,
+      "sha256": "2b3e94b3d2dd096646d831c3f9418fb14d191c851f63d5e4586a021bfadf9d40"
+    },
+    "PR49_original_request": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-aromatic-annotation-20260930-wjlhkyh8/derived/request.json",
+      "bytes": 3424,
+      "sha256": "064969aa0ce6428da76b2697e2266ded8c1690af1e65949ab34afb00e22d5ef1"
+    },
+    "PR59_source": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR59-source.json",
+      "bytes": 2136,
+      "sha256": "4a1374aa96455899677768afa9690b1244787bcf17151d6fa155b20a9a07117c"
+    },
+    "PR59_identity": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR59-identity.json",
+      "bytes": 1168,
+      "sha256": "985b26ae785f19a05b8d6c903c0ef86524121ef923a83c9564515418016020f8"
+    },
+    "PR59_prepared_evidence": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR59-prepared-evidence.json",
+      "bytes": 4644,
+      "sha256": "abac1e05062fb61de09a7f66ff2419c21a12b5960b0e55d0874f6f726e01f646"
+    },
+    "PR59_original_request": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/request.json",
+      "bytes": 3400,
+      "sha256": "1a227a415796278b753345f1a8086d7f80350416cfbf6988481a407b8010e816"
+    }
+  },
+  "source": {
+    "doi": "10.3390/ijms251910287",
+    "official_article_url": "https://www.mdpi.com/1422-0067/25/19/10287",
+    "retained_university_pdf_url": "https://ruj.uj.edu.pl/server/api/core/bitstreams/db463f70-771f-42ec-8060-ab5423b38e45/content",
+    "retained_pdf_sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca",
+    "official_supplement_resolved_url": "https://mdpi-res.com/d_attachment/ijms/ijms-25-10287/article_deploy/ijms-25-10287-s001.zip",
+    "primary_article_file_traceability_verified": true,
+    "live_primary_retrieval_confirmed_this_audit": false,
+    "license_notice": "CC BY 4.0",
+    "reported_summary_count": 78,
+    "independent_measurement_denominator": null,
+    "new_labels_admitted": 0,
+    "prior_2024_ledger_rows": 3,
+    "additional_numeric_transcriptions_relative_to_that_ledger": 75,
+    "unseen_holdout_claim": false
+  },
+  "software_authority_boundary": {
+    "source_authenticated": false,
+    "meaning": "An immutable false field in installed_paper_development_comparison.BOUNDARY; _source requires exact equality. The entrypoint validates bytes and declared identity metadata, and does not issue source authentication or dataset-role permission.",
+    "primary_traceability_is_missing": false,
+    "one_more_pdf_download_can_enable_this_flag": false,
+    "required_next_authority_artifact": "separately defined and sanctioned source/role admission decision for an explicit consumer, while retaining this label-free development entrypoint boundary"
+  },
+  "assay_method": {
+    "primary_sections": [
+      "3.2.1",
+      "3.2.2"
+    ],
+    "physical_pages": [
+      39,
+      40
+    ],
+    "species": "Homo sapiens",
+    "target": "5-HT6 receptor",
+    "system": "HEK293 cells with stable expression; membrane competition binding",
+    "buffer_ingredients": [
+      "50 mM Tris-HCl",
+      "0.5 mM EDTA",
+      "4 mM MgCl2"
+    ],
+    "buffer_pH": null,
+    "radioligand": "2 nM [3H]-LSD",
+    "nonspecific_binding_control": "10 µM methiothepine",
+    "volume": "200 µL",
+    "incubation": "1 hour at 37 C",
+    "concentrations": "8 concentrations from 10^-4 to 10^-11 M",
+    "within_concentration_replicates": "triplicate",
+    "reported_independent_experiments": "means of at least two separate experiments",
+    "per_row_experiment_N": null,
+    "Ki_conversion": "Cheng-Prusoff",
+    "radioligand_Kd_for_recomputation": null,
+    "construct_sequence": null,
+    "raw_repeat_measurements_available": false
+  },
+  "endpoint_transcriptions": [
+    {
+      "occurrence_id": "table1:PR1",
+      "printed_compound_id": "PR1",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.157",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.539"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR2",
+      "printed_compound_id": "PR2",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "49.220",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.2305"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR3",
+      "printed_compound_id": "PR3",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.148",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.037"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR4",
+      "printed_compound_id": "PR4",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.330",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.083"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR5",
+      "printed_compound_id": "PR5",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "14.760",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "3.690"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR6",
+      "printed_compound_id": "PR6",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.704",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.176"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR7",
+      "printed_compound_id": "PR7",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.946",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.737"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR8",
+      "printed_compound_id": "PR8",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.133",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.033"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR9",
+      "printed_compound_id": "PR9",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.318",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.018"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false,
+      "numeric_source_issue": "Table1_mean_0.318_uM_versus_page8_prose_PR9_Ki_0.133_uM_unresolved"
+    },
+    {
+      "occurrence_id": "table1:PR10",
+      "printed_compound_id": "PR10",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.716",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.429"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR11",
+      "printed_compound_id": "PR11",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.325",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.081"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table1:PR12",
+      "printed_compound_id": "PR12",
+      "physical_pdf_page": 7,
+      "table_number": 1,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "41.930",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "10.483"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR13",
+      "printed_compound_id": "PR13",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.606",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.651"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR14",
+      "printed_compound_id": "PR14",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.441",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.610"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR15",
+      "printed_compound_id": "PR15",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "5.273",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.328"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR16",
+      "printed_compound_id": "PR16",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "5.097",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.274"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR17",
+      "printed_compound_id": "PR17",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "9.851",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "2.463"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR18",
+      "printed_compound_id": "PR18",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.803",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.451"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR19",
+      "printed_compound_id": "PR19",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.521",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.130"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR20",
+      "printed_compound_id": "PR20",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.293",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.073"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR21",
+      "printed_compound_id": "PR21",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.025",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.256"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR22",
+      "printed_compound_id": "PR22",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.457",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.364"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR23",
+      "printed_compound_id": "PR23",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.609",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.152"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR24",
+      "printed_compound_id": "PR24",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.906",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.227"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR25",
+      "printed_compound_id": "PR25",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "4.638",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.160"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR26",
+      "printed_compound_id": "PR26",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "4.310",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.078"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR27",
+      "printed_compound_id": "PR27",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.688",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.422"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table2:PR28",
+      "printed_compound_id": "PR28",
+      "physical_pdf_page": 8,
+      "table_number": 2,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "4.025",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.006"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR29",
+      "printed_compound_id": "PR29",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "3.634",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.909"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR30",
+      "printed_compound_id": "PR30",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.972",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.242"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR31",
+      "printed_compound_id": "PR31",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.167",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.538"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR32",
+      "printed_compound_id": "PR32",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.948",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.212"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR33",
+      "printed_compound_id": "PR33",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.961",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.434"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR34",
+      "printed_compound_id": "PR34",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.702",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.152"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR35",
+      "printed_compound_id": "PR35",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.383",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.593"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR36",
+      "printed_compound_id": "PR36",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "29.440",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "7.356"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR37",
+      "printed_compound_id": "PR37",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "2.216",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.534"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table3:PR38",
+      "printed_compound_id": "PR38",
+      "physical_pdf_page": 9,
+      "table_number": 3,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.407",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.331"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR39",
+      "printed_compound_id": "PR39",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "4.271",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.983"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "unresolved_primary_conflict",
+      "identity_issue": "table_synthesis_ring_element_conflict",
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR40",
+      "printed_compound_id": "PR40",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.651",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.135"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR41",
+      "printed_compound_id": "PR41",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.210",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.048"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR42",
+      "printed_compound_id": "PR42",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.268",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.063"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR43",
+      "printed_compound_id": "PR43",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.258",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.046"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR44",
+      "printed_compound_id": "PR44",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.282",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.065"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR45",
+      "printed_compound_id": "PR45",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.736",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.169"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR46",
+      "printed_compound_id": "PR46",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.160",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.036"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR47",
+      "printed_compound_id": "PR47",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.341",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.076"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR48",
+      "printed_compound_id": "PR48",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.668",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.156"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR49",
+      "printed_compound_id": "PR49",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.077",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.018"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR50",
+      "printed_compound_id": "PR50",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.451",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.102"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR51",
+      "printed_compound_id": "PR51",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.866",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.199"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR52",
+      "printed_compound_id": "PR52",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.133",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.033"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR53",
+      "printed_compound_id": "PR53",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.189",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.042"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR54",
+      "printed_compound_id": "PR54",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.381",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.088"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR55",
+      "printed_compound_id": "PR55",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.792",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.412"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR56",
+      "printed_compound_id": "PR56",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.876",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.201"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR57",
+      "printed_compound_id": "PR57",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.025",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.235"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR58",
+      "printed_compound_id": "PR58",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.172",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.041"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR59",
+      "printed_compound_id": "PR59",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.964",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.452"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR60",
+      "printed_compound_id": "PR60",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.414",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.326"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR61",
+      "printed_compound_id": "PR61",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.412",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.095"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR62",
+      "printed_compound_id": "PR62",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.653",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.151"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR63",
+      "printed_compound_id": "PR63",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.151",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.035"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR64",
+      "printed_compound_id": "PR64",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.851",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.192"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR65",
+      "printed_compound_id": "PR65",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "4.703",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "1.081"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "unresolved_primary_conflict",
+      "identity_issue": "table_synthesis_methylpiperazine_morpholine_conflict",
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table4:PR66",
+      "printed_compound_id": "PR66",
+      "physical_pdf_page": 10,
+      "table_number": 4,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "11.560",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "2.656"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "unresolved_primary_conflict",
+      "identity_issue": "table_synthesis_methylpiperazine_morpholine_conflict",
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR67",
+      "printed_compound_id": "PR67",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.236",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.058"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR68",
+      "printed_compound_id": "PR68",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.037",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.008"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR69",
+      "printed_compound_id": "PR69",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.372",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.093"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR70",
+      "printed_compound_id": "PR70",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.985",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.245"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR71",
+      "printed_compound_id": "PR71",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.061",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.014"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR72",
+      "printed_compound_id": "PR72",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.997",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.249"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR73",
+      "printed_compound_id": "PR73",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.043",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.011"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR74",
+      "printed_compound_id": "PR74",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.038",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.260"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR75",
+      "printed_compound_id": "PR75",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.484",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.121"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR76",
+      "printed_compound_id": "PR76",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.103",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.025"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR77",
+      "printed_compound_id": "PR77",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.373",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.092"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    },
+    {
+      "occurrence_id": "table5:PR78",
+      "printed_compound_id": "PR78",
+      "physical_pdf_page": 11,
+      "table_number": 5,
+      "target_context": "human_5HT6_reported_by_section_3.2",
+      "endpoint": "radioligand_binding_Ki",
+      "reported_summary": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.273",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.068"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "source_origin": "primary_article_report_as_transcribed",
+      "observed_outcome_in_this_audit": true,
+      "binary_label": null,
+      "censoring": {
+        "status": "no_numeric_censor_operator_printed",
+        "bound": null,
+        "inactivity_imputed": false
+      },
+      "chemical_identity_status": "not_newly_verified_by_this_endpoint_transcription",
+      "identity_issue": null,
+      "assigned_role": null,
+      "admitted": false,
+      "raw_replicates_available": false
+    }
+  ],
+  "prepared_pair_source_correspondence": [
+    {
+      "candidate_id": "paper:10.3390/ijms251910287:table4:PR49",
+      "occurrence_id": "table4:PR49",
+      "source": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR49-source.json",
+        "bytes": 2139,
+        "sha256": "809b45fd6ac9ceb7a208f7a012d2f7667df28444de168d4b4e051be9bf9cb989"
+      },
+      "prepared_evidence": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR49-prepared-evidence.json",
+        "bytes": 4635,
+        "sha256": "2b3e94b3d2dd096646d831c3f9418fb14d191c851f63d5e4586a021bfadf9d40"
+      },
+      "original_request": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-aromatic-annotation-20260930-wjlhkyh8/derived/request.json",
+        "bytes": 3424,
+        "sha256": "064969aa0ce6428da76b2697e2266ded8c1690af1e65949ab34afb00e22d5ef1"
+      },
+      "chemical_identity": {
+        "canonical_isomeric_smiles": "O=S(=O)(NC1=Nc2c(Cl)cccc2CN1)c1cccc2ccccc12",
+        "canonical_isomeric_smiles_sha256": "35c70225fe55b39e5aeb3383ae48f1b0da3cd10d59959ca4528ff639476f81ac",
+        "canonicalization": "rdkit_MolFromSmiles_MolToSmiles_isomeric_true_no_salt_or_state_change",
+        "connectivity_smiles_sha256": "35c70225fe55b39e5aeb3383ae48f1b0da3cd10d59959ca4528ff639476f81ac",
+        "elements": [
+          "C",
+          "Cl",
+          "N",
+          "O",
+          "S"
+        ],
+        "formal_charge": 0,
+        "fragment_count": 1,
+        "heavy_atom_count": 25,
+        "isotope_atoms": 0,
+        "radical_electrons": 0,
+        "rdkit_inchikey": "QQYXUBNTHMWUNC-UHFFFAOYSA-N",
+        "rdkit_version": "2022.09.5",
+        "scaffold_group": "a048a19157a69e2b951e58a4602a2d81763f0416273d5dd0b548dc9e2cec301a",
+        "scaffold_smiles": "O=S(=O)(NC1=Nc2ccccc2CN1)c1cccc2ccccc12",
+        "stereo_unspecified_count": 1
+      },
+      "chemical_identity_relation": "same_proposed_neutral_graph_as_declared_prepared_source_descriptor",
+      "exact_published_name": "N-(8-chloro-3,4-dihydroquinazolin-2-yl)naphthalene-1-sulfonamide",
+      "reported_purity_percent": "92",
+      "reported_binding_Ki": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "0.077",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.018"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "assay_method": {
+        "endpoint_context": "reported_human_5ht6_radioligand_binding_Ki",
+        "evidence": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+        },
+        "local_method_id": "section_3.2.2",
+        "physical_pages": [
+          39,
+          40
+        ]
+      },
+      "published_assay_supplement_relation": {
+        "curve_label": "PR49",
+        "member": "SI_biological_research.pdf",
+        "physical_pdf_page": 3,
+        "kind": "published_representative_binding_curve_not_raw_independent_remeasurement"
+      },
+      "source_graph_assayed_batch_correspondence_verified": false,
+      "assay_batch_id": null,
+      "assayed_construct_sequence": null,
+      "assay_buffer_pH": null,
+      "salt_or_protonation_or_tautomer_assignment": null,
+      "boundary": {
+        "assigned_role": null,
+        "source_authenticated": false,
+        "assayed_microstate_verified": false,
+        "same_prepared_assay_state_verified": false,
+        "independent_measurement_denominator": null,
+        "training_admitted": false,
+        "calibration_admitted": false,
+        "independent_evaluation_admitted": false,
+        "product_ranking_enabled": false,
+        "scientifically_validated": false
+      }
+    },
+    {
+      "candidate_id": "paper:10.3390/ijms251910287:table4:PR59",
+      "occurrence_id": "table4:PR59",
+      "source": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR59-source.json",
+        "bytes": 2136,
+        "sha256": "4a1374aa96455899677768afa9690b1244787bcf17151d6fa155b20a9a07117c"
+      },
+      "prepared_evidence": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/PR59-prepared-evidence.json",
+        "bytes": 4644,
+        "sha256": "abac1e05062fb61de09a7f66ff2419c21a12b5960b0e55d0874f6f726e01f646"
+      },
+      "original_request": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/request.json",
+        "bytes": 3400,
+        "sha256": "1a227a415796278b753345f1a8086d7f80350416cfbf6988481a407b8010e816"
+      },
+      "chemical_identity": {
+        "canonical_isomeric_smiles": "COc1ccc2c(c1)CNC(NS(=O)(=O)c1cccc3ccccc13)=N2",
+        "canonical_isomeric_smiles_sha256": "162fa22ab54f5a14c809ad6627e3c8a2808809fd33560683463d761defc77b99",
+        "canonicalization": "rdkit_MolFromSmiles_MolToSmiles_isomeric_true_no_salt_or_state_change",
+        "connectivity_smiles_sha256": "162fa22ab54f5a14c809ad6627e3c8a2808809fd33560683463d761defc77b99",
+        "elements": [
+          "C",
+          "N",
+          "O",
+          "S"
+        ],
+        "formal_charge": 0,
+        "fragment_count": 1,
+        "heavy_atom_count": 26,
+        "isotope_atoms": 0,
+        "radical_electrons": 0,
+        "rdkit_inchikey": "PKYFJQXPMNODTI-UHFFFAOYSA-N",
+        "rdkit_version": "2022.09.5",
+        "scaffold_group": "a048a19157a69e2b951e58a4602a2d81763f0416273d5dd0b548dc9e2cec301a",
+        "scaffold_smiles": "O=S(=O)(NC1=Nc2ccccc2CN1)c1cccc2ccccc12",
+        "stereo_unspecified_count": 1
+      },
+      "chemical_identity_relation": "same_proposed_neutral_graph_as_declared_prepared_source_descriptor",
+      "exact_published_name": "N-(6-methoxy-3,4-dihydroquinazolin-2-yl)naphthalene-1-sulfonamide",
+      "reported_purity_percent": "96",
+      "reported_binding_Ki": {
+        "relation": "=",
+        "relation_basis": "numeric_mean_and_SD_no_inequality_operator_printed",
+        "mean": "1.964",
+        "uncertainty": {
+          "kind": "SD",
+          "value": "0.452"
+        },
+        "unit": "µM",
+        "reported_as_independent_remeasurement": false
+      },
+      "assay_method": {
+        "endpoint_context": "reported_human_5ht6_radioligand_binding_Ki",
+        "evidence": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+        },
+        "local_method_id": "section_3.2.2",
+        "physical_pages": [
+          39,
+          40
+        ]
+      },
+      "published_assay_supplement_relation": {
+        "curve_label": "PR59",
+        "member": "SI_biological_research.pdf",
+        "physical_pdf_page": 4,
+        "kind": "published_representative_binding_curve_not_raw_independent_remeasurement"
+      },
+      "source_graph_assayed_batch_correspondence_verified": false,
+      "assay_batch_id": null,
+      "assayed_construct_sequence": null,
+      "assay_buffer_pH": null,
+      "salt_or_protonation_or_tautomer_assignment": null,
+      "boundary": {
+        "assigned_role": null,
+        "source_authenticated": false,
+        "assayed_microstate_verified": false,
+        "same_prepared_assay_state_verified": false,
+        "independent_measurement_denominator": null,
+        "training_admitted": false,
+        "calibration_admitted": false,
+        "independent_evaluation_admitted": false,
+        "product_ranking_enabled": false,
+        "scientifically_validated": false
+      }
+    }
+  ],
+  "excluded_extended_panel_occurrences": {
+    "binding_Ki_repeats": [
+      "PR49",
+      "PR68",
+      "PR71",
+      "PR73",
+      "PR76",
+      "PR77"
+    ],
+    "repeat_means_same_as_primary_tables": true,
+    "independent_remeasurement_established": false,
+    "PR66_5HT6_Ki": "ND",
+    "functional_KB_PR49": "0.081 µM",
+    "functional_EC50_PR76": "0.199 µM",
+    "olanzapine_binding_Ki": "0.007 µM reference; independent measurement origin unresolved",
+    "SB258585_functional_KB": "0.0003 µM reference; never binding Ki",
+    "NA": "endpoint-specific not active; no numeric Ki bound",
+    "ND": "not determined; no inactivity imputed",
+    "NT": "nontoxic in 50 µM HEK293 condition; unrelated to receptor binding",
+    "PR49_D2_Ki": "9999.999 µM printed other-target token; not a 5HT6 censor bound"
+  },
+  "censoring_review": {
+    "scope": "all 78 Table1-5 human5HT6 Ki printed rows, Table6 endpoint ownership",
+    "numeric_inequality_rows_found": 0,
+    "no_pseudo_exact_point_created_from_inequality": true,
+    "no_binary_labels_created": true,
+    "reviewed_summary_relation": "= means a published numeric mean, not exact true affinity or an unbounded claim of detectability",
+    "future_required_fields": [
+      "printed_relation",
+      "bound_value",
+      "unit",
+      "assay_limit_and_criteria",
+      "source_anchor",
+      "chemical_identity",
+      "assigned_role_before_allowed_new_use"
+    ],
+    "future_transform_rule": "If a legitimate Ki > L is supplied, pKi is < -log10(L in M); preserve the inequality. NA/ND must not be converted into either an exact point or a Ki bound."
+  },
+  "rights_review": {
+    "article_copyright_holder": "authors",
+    "article_license_notice_page": 1,
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "legalcode_url": "https://creativecommons.org/licenses/by/4.0/legalcode.en",
+    "legalcode_live_verified": true,
+    "publisher_policy_live_verified_this_audit": false,
+    "observed_third_party_exception_notice_in_reviewed_pages": false,
+    "reviewed_article_pages_for_this_bounded_rights_observation": [
+      1,
+      7,
+      8,
+      9,
+      10,
+      11,
+      39,
+      40,
+      45
+    ],
+    "whole_article_and_supplement_exception_review_complete": false,
+    "proposed_attribution": {
+      "creator": "Zaręba, P. et al.",
+      "title": "Low-Basicity 5-HT6 Receptor Ligands from the Group of Cyclic Arylguanidine Derivatives and Their Antiproliferative Activity Evaluation",
+      "journal_year_volume_article": "Int. J. Mol. Sci. 2024, 25, 10287",
+      "doi_url": "https://doi.org/10.3390/ijms251910287",
+      "copyright_notice": "© 2024 by the authors",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "modifications": "DOI/table/page-bound Ki mean and SD transcription; endpoint and missingness annotations added. No new experiments or source-author endorsement."
+    },
+    "intended_use_permission_or_role_decision": null,
+    "copyright_scope_does_not_establish_scientific_or_repository_admission": true
+  },
+  "public_access_review": [
+    {
+      "url": "https://www.mdpi.com/1422-0067/25/19/10287",
+      "route": "web.open",
+      "outcome": "HTTP429 stopped without retry"
+    },
+    {
+      "url": "https://www.mdpi.com/openaccess",
+      "route": "web.open",
+      "outcome": "HTTP429 stopped without retry"
+    },
+    {
+      "url": "https://ruj.uj.edu.pl/server/api/core/bitstreams/db463f70-771f-42ec-8060-ab5423b38e45/content",
+      "route": "web.open",
+      "outcome": "not accessible through web tool; retained bytes used, no retry or bypass"
+    },
+    {
+      "url": "https://mdpi-res.com/d_attachment/ijms/ijms-25-10287/article_deploy/ijms-25-10287-s001.zip",
+      "route": "web.open",
+      "outcome": "not accessible through web tool; retained official-access receipt and ZIP used"
+    },
+    {
+      "url": "https://creativecommons.org/licenses/by/4.0/legalcode.en",
+      "route": "web.open",
+      "outcome": "success; response bytes not retained"
+    }
+  ],
+  "primary_data_availability_statement": {
+    "physical_pdf_page": 45,
+    "observed_statement": "No new data were created or analyzed in this study. Data sharing is not applicable to this article.",
+    "assessment": "Tension with reported binding experiments: no conclusion about independence or origin can be inferred; clarification needed. This statement supplies no raw-data download path."
+  },
+  "smallest_missing_artifacts": [
+    {
+      "id": "measurement_sidecar",
+      "minimum_artifact": "78 DOI/table/page-bound mean, SD, unit and censoring transcriptions",
+      "status": "completed_as_source_report_in_this_audit",
+      "public_primary_path_can_resolve": true,
+      "resolution": "endpoint_transcriptions in this sidecar; no consumer admission"
+    },
+    {
+      "id": "rights_record",
+      "minimum_artifact": "source authors/title/DOI/license/modification attribution and reviewed material-level exceptions for intended use",
+      "status": "article_notice_and_proposed_attribution_bound_exception_review_incomplete",
+      "public_primary_path_can_resolve": "partially",
+      "resolution": "retained p1 notice and live CC legal code; publisher policy live refresh was HTTP429; no intended-use approval recorded"
+    },
+    {
+      "id": "source_family_role",
+      "minimum_artifact": "frozen occurrence-inclusion contract extension, resolved identities, sanctioned whole-family identity/role receipt",
+      "status": "unresolved_no_preflight_run",
+      "public_primary_path_can_resolve": "partially",
+      "resolution": "source occurrences available; public texts do not assign fit/calibration/evaluation roles or clear protected component links"
+    },
+    {
+      "id": "sample_batch_raw",
+      "minimum_artifact": "PR49/59 tested sample/batch identity and raw eight-concentration triplicate curves for each independent experiment, controls and per-row N plus Table1-5 value origin clarification",
+      "status": "not_supplied_by_reviewed_article_or_three_supplement_members",
+      "public_primary_path_can_resolve": false,
+      "resolution": "author or originating assay laboratory sanctioned data/protocol deposit or direct clarification; no message sent"
+    },
+    {
+      "id": "construct_pH_state",
+      "minimum_artifact": "HTR6 expression construct sequence/variant, binding-buffer pH, tested formulation/state and justified relation to prepared neutral graph and active 7XTB receptor model",
+      "status": "unknown",
+      "public_primary_path_can_resolve": "not_from_the_reviewed_public_artifacts",
+      "resolution": "primary methods specify human HEK293 membrane system and buffer ingredients but no binding pH or exact receptor sequence; computational Epik pH does not fill this gap"
+    },
+    {
+      "id": "true_censored_endpoint",
+      "minimum_artifact": "primary Ki inequality with bound, concentration protocol and detection/fitting limit tied to a chemical identity",
+      "status": "none_found_in_Table1_to5_scope",
+      "public_primary_path_can_resolve": "not_by_relabelling_this_source",
+      "resolution": "seek another lawfully accessible primary assay source under frozen source/role rules; Table6 NA/ND and D2 9999.999 are ineligible substitutes"
+    },
+    {
+      "id": "scientific_validation",
+      "minimum_artifact": "unseen permitted component roles, prespecified decision rule and independent observations appropriate to the intended claim",
+      "status": "not_established",
+      "public_primary_path_can_resolve": false,
+      "resolution": "this exposed source is a retrospective development source; software receipt or added transcription is not independent validation"
+    }
+  ],
+  "verification": {
+    "all_78_unique_printed_IDs_present": true,
+    "manual_mean_SD_transcriptions_visually_reviewed": true,
+    "all_78_mean_SD_tokens_corroborated_in_fresh_extracted_text": true,
+    "Table2_PR21_SD_high_resolution_verified": "0.256",
+    "Table3_PR35_mean_high_resolution_verified": "2.383",
+    "PR49_PR59_prior_ledger_values_unchanged": true,
+    "PR49_PR59_current_archived_descriptor_identity_and_method_equal_original_protocol_sources": true,
+    "current_archived_protocol_and_source_and_identity_and_prepared_and_request_hashes_verified": true,
+    "all_source_boundaries_role_null_and_false_verified": true,
+    "visual_review": [
+      {
+        "physical_pdf_page": 7,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "7",
+          "-singlefile",
+          "-r",
+          "105",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page7"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page7.png",
+          "bytes": 119833,
+          "sha256": "0b2d6470f3a866e1fbf813368b5da0ad219202637cd4195edb7ff9a8e0d63646"
+        },
+        "reviewed": true
+      },
+      {
+        "physical_pdf_page": 8,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "8",
+          "-singlefile",
+          "-r",
+          "105",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page8"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page8.png",
+          "bytes": 284549,
+          "sha256": "3f98afe4d1bfa1be5357f0c657eef3ee32910b44c8d81adbab0bd8d67dd9fa22"
+        },
+        "reviewed": true
+      },
+      {
+        "physical_pdf_page": 9,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "9",
+          "-singlefile",
+          "-r",
+          "105",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page9"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page9.png",
+          "bytes": 294741,
+          "sha256": "ad240b8cd26962fd05f2ac356af9f03aca42a23720fc56d6aed35f4afd5df9f7"
+        },
+        "reviewed": true
+      },
+      {
+        "physical_pdf_page": 10,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "10",
+          "-singlefile",
+          "-r",
+          "105",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page10"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page10.png",
+          "bytes": 193778,
+          "sha256": "88c01cdb9c90862de4550448a5fd9df39f345abfe5abec6cb5cceddeef9e0644"
+        },
+        "reviewed": true
+      },
+      {
+        "physical_pdf_page": 11,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "11",
+          "-singlefile",
+          "-r",
+          "105",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page11"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page11.png",
+          "bytes": 237587,
+          "sha256": "c1e65d7c00810e03aa00f5b146aaf01c01b5e7ff412730407d39bdfb33ee5a5f"
+        },
+        "reviewed": true
+      },
+      {
+        "physical_pdf_page": 8,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "8",
+          "-singlefile",
+          "-r",
+          "180",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page8-high"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page8-high.png",
+          "bytes": 533314,
+          "sha256": "cac95ec734a21fbb33861ce0d84f985edc0d046ce7bbec42b6be42f58f8b098b"
+        },
+        "reviewed": true,
+        "purpose": "confirm_small_SD_and_mean_digits"
+      },
+      {
+        "physical_pdf_page": 9,
+        "render_command": [
+          "pdftoppm",
+          "-f",
+          "9",
+          "-singlefile",
+          "-r",
+          "180",
+          "-png",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page9-high"
+        ],
+        "render": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/page9-high.png",
+          "bytes": 548709,
+          "sha256": "2b58f4c9656d7e0d1b61d13e714357af1d034b2ebfa71254bfb5fba7ad0f1f43"
+        },
+        "reviewed": true,
+        "purpose": "confirm_small_SD_and_mean_digits"
+      }
+    ],
+    "fresh_extracted_table_text": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-endpoint-admission-next-20260930-p3ezy9by/tables.txt",
+      "bytes": 93727,
+      "sha256": "2548684f1fadc6788d6210f826c660bede403639394b1f4cfe0fa92d055dd602"
+    },
+    "new_implementation_tests_run": false,
+    "evidence_limit": "hash and metadata equality and source transcription consistency; no raw experiment replication or physical/scientific qualification",
+    "parallel_live_implementation_change_observed": true,
+    "software_authority_boundary_review_scope": "starting HEAD24c3c3475 immutable implementation snapshot; later live code not resealed into this audit"
+  },
+  "newly_noted_primary_conflicts": [
+    {
+      "compound_id": "PR9",
+      "table_report": {
+        "physical_pdf_page": 7,
+        "table": 1,
+        "Ki_mean": "0.318",
+        "SD": "0.018",
+        "unit": "µM"
+      },
+      "prose_report": {
+        "physical_pdf_page": 8,
+        "Ki_mean": "0.133",
+        "unit": "µM"
+      },
+      "status": "unresolved",
+      "automatic_correction_or_merge": false,
+      "note": "The prose number equals the Table1 PR8 mean; that observation does not prove a label typo or establish a corrected PR9 value."
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "allowed_symmetry_mappings": [
+    [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ]
+  ],
+  "coordinate_frame_id": "7XTB_original_cartesian_angstrom_development",
+  "coordinates_angstrom": [
+    [
+      82.164,
+      112.678,
+      80.076
+    ],
+    [
+      82.868,
+      112.08,
+      81.138
+    ],
+    [
+      82.693,
+      112.705,
+      82.382
+    ],
+    [
+      83.334,
+      112.208,
+      83.502
+    ],
+    [
+      84.166,
+      111.076,
+      83.395
+    ],
+    [
+      84.905,
+      110.39,
+      84.325
+    ],
+    [
+      85.529,
+      109.368,
+      83.698
+    ],
+    [
+      85.179,
+      109.412,
+      82.372
+    ],
+    [
+      84.339,
+      110.467,
+      82.187
+    ],
+    [
+      83.68,
+      110.974,
+      81.034
+    ],
+    [
+      85.798,
+      108.313,
+      81.481
+    ],
+    [
+      87.124,
+      108.839,
+      80.859
+    ],
+    [
+      87.567,
+      107.943,
+      79.842
+    ]
+  ],
+  "heavy_atom_map": [
+    {
+      "canonical_index": 0,
+      "element": "O",
+      "name": "OH",
+      "source_atom_site_id": "8089"
+    },
+    {
+      "canonical_index": 1,
+      "element": "C",
+      "name": "CZ3",
+      "source_atom_site_id": "8090"
+    },
+    {
+      "canonical_index": 2,
+      "element": "C",
+      "name": "CH2",
+      "source_atom_site_id": "8091"
+    },
+    {
+      "canonical_index": 3,
+      "element": "C",
+      "name": "CZ2",
+      "source_atom_site_id": "8092"
+    },
+    {
+      "canonical_index": 4,
+      "element": "C",
+      "name": "CE2",
+      "source_atom_site_id": "8093"
+    },
+    {
+      "canonical_index": 5,
+      "element": "N",
+      "name": "NE1",
+      "source_atom_site_id": "8094"
+    },
+    {
+      "canonical_index": 6,
+      "element": "C",
+      "name": "CD1",
+      "source_atom_site_id": "8095"
+    },
+    {
+      "canonical_index": 7,
+      "element": "C",
+      "name": "CG",
+      "source_atom_site_id": "8096"
+    },
+    {
+      "canonical_index": 8,
+      "element": "C",
+      "name": "CD2",
+      "source_atom_site_id": "8097"
+    },
+    {
+      "canonical_index": 9,
+      "element": "C",
+      "name": "CE3",
+      "source_atom_site_id": "8098"
+    },
+    {
+      "canonical_index": 10,
+      "element": "C",
+      "name": "CB",
+      "source_atom_site_id": "8099"
+    },
+    {
+      "canonical_index": 11,
+      "element": "C",
+      "name": "CA",
+      "source_atom_site_id": "8100"
+    },
+    {
+      "canonical_index": 12,
+      "element": "N",
+      "name": "NZ",
+      "source_atom_site_id": "8101"
+    }
+  ],
+  "independent_or_heldout_reference": false,
+  "role": "evaluation_only",
+  "schema_id": "sro_evaluation_reference/1",
+  "source_uncertainty": "reserved_3.3_angstrom_cryoEM_model_occupancy1_no_altloc; no_per_atom_ground_truth; bound_protonation_unknown",
+  "symmetry_definition": "graph_elements_formal_charge_isotope_aromatic_stereo_explicitH_and_bond_order; aromatic_Kekule_normalized"
+}

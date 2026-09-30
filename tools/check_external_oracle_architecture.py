@@ -41,6 +41,9 @@ RETAINED_RESEARCH_ORACLE_SCRIPTS = frozenset(
         "docs/research/human_5ht6_pr49_pr59_openff_projection/verify_projection.py",
         "docs/research/human_5ht6_sro_numerical_preparation/prepare_sro.py",
         "tools/analysis/openmm_d3_numerical_audit.py",
+        "docs/evidence/scripts/installed_pair_endpoint_openmm_20260930.py",
+        "docs/evidence/scripts/prepared_pair_independent_numerics_20260930.py",
+        "tools/analysis/prepare_pr59_common_frame_development.py",
     }
 )
 

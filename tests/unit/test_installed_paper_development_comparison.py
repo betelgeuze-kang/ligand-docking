@@ -87,6 +87,157 @@ def test_preflight_preserves_null_roles_original_requests_and_missing_denominato
     assert frozen["candidates"][1]["blockers"] == ["paper_registered_preparation_missing"]
 
 
+def test_preparation_reuses_only_its_verified_original_admission_and_preserves_bindings(tmp_path, monkeypatch):
+    from betelgeuze_product import refinement_comparison_workflow as original_loader
+    protocol = _protocol(tmp_path)
+    _forbid(monkeypatch)
+    admitted_objects, used_objects, decoded = [], [], []
+    original_admit = paper.original_adapter._admit
+    actual_decode = all_atom_system_from_canonical_json
+    geometry = paper.structural._pose_geometry_status
+    def admit(request):
+        result = original_admit(request)
+        admitted_objects.append((result[0][1], result[0][2], deepcopy(result[2])))
+        return result
+    def decode(*args, **kwargs):
+        result = actual_decode(*args, **kwargs)
+        decoded.append(result)
+        return result
+    def inspect(receptor, ligand, request):
+        used_objects.append((receptor, ligand))
+        assert receptor is admitted_objects[-1][0]
+        assert ligand is admitted_objects[-1][1]
+        return geometry(receptor, ligand, request)
+    monkeypatch.setattr(paper.original_adapter, "_admit", admit)
+    monkeypatch.setattr(original_loader, "all_atom_system_from_canonical_json", decode)
+    monkeypatch.setattr(workflow, "all_atom_system_from_canonical_json", decode)
+    monkeypatch.setattr(paper.structural, "_pose_geometry_status", inspect)
+    first = paper.freeze(protocol)
+    assert len(decoded) == 8  # Two systems in each original and Cartesian admission, for two candidates.
+    assert len(admitted_objects) == len(used_objects) == 2
+    for row, (_, _, binding) in zip(first["candidates"], admitted_objects):
+        assert row["prepared_evidence"]["original_binding_sha256"] == paper._sha(binding)
+        assert row["input_binding"] == paper.adapter.input_binding(row["request"])
+    # No verified mutable system or authority persists into the next freeze.
+    second = paper.freeze(protocol)
+    assert first == second
+    assert len(admitted_objects) == 4
+    assert all(admitted_objects[i][j] is not admitted_objects[i+2][j] for i in (0, 1) for j in (0, 1))
+
+
+@pytest.mark.parametrize("system_name", ["receptor", "ligand"])
+@pytest.mark.parametrize("mutation", ["coordinate", "metadata"])
+def test_verified_preparation_snapshot_detects_mutable_content_changes(tmp_path, monkeypatch, system_name, mutation):
+    protocol = _protocol(tmp_path)
+    _forbid(monkeypatch)
+    actual = paper.structural._pose_geometry_status
+    calls = 0
+    def mutate(receptor, ligand, request):
+        nonlocal calls
+        result = actual(receptor, ligand, request)
+        calls += 1
+        if calls == 1:
+            system = receptor if system_name == "receptor" else ligand
+            if mutation == "coordinate":
+                system.coordinates[0, 0, 0] += .01
+            else:
+                system.metadata["synthetic_mid_preparation_mutation"] = True
+        return result
+    monkeypatch.setattr(paper.structural, "_pose_geometry_status", mutate)
+    frozen = paper.freeze(protocol)
+    assert frozen["requested_candidate_count"] == 2
+    assert frozen["prepared_candidate_count"] == 1
+    assert frozen["candidates"][0]["blockers"]
+    assert frozen["candidates"][0]["input_binding"] is None
+    assert frozen["boundary"] == paper.BOUNDARY
+
+
+@pytest.mark.parametrize("name", ["receptor", "ligand", "parameters", "extensions", "cross_parameters",
+                                  "article", "identity_statement", "source", "request", "charge_xml", "prepared_evidence"])
+def test_after_read_byte_replacement_fails_before_freeze_admission(tmp_path, monkeypatch, name):
+    protocol = _protocol(tmp_path)
+    first = protocol["candidates"][0]
+    original = json.loads(Path(first["original_request"]["path"]).read_bytes())
+    source = json.loads(Path(first["source"]["path"]).read_bytes())
+    evidence = json.loads(Path(first["prepared_evidence"]["path"]).read_bytes())
+    charge = json.loads(Path(evidence["charge_origin"]["path"]).read_bytes())
+    refs = {**original, **source["evidence"], "source":first["source"], "request":first["original_request"],
+            "charge_xml":charge["openmm_system"], "prepared_evidence":first["prepared_evidence"]}
+    target = Path(refs[name]["path"])
+    _forbid(monkeypatch)
+    actual = paper.structural._pose_geometry_status
+    calls = 0
+    def replace_after_read(*args):
+        nonlocal calls
+        result = actual(*args)
+        calls += 1
+        if calls == 1:
+            # Same canonical path, semantically equivalent JSON/XML bytes, new inode.
+            replacement = target.with_name(target.name + ".replacement")
+            replacement.write_bytes(target.read_bytes() + b"\n")
+            replacement.replace(target)
+        return result
+    monkeypatch.setattr(paper.structural, "_pose_geometry_status", replace_after_read)
+    if name == "article":
+        # The article is shared: the next candidate's mandatory source gate
+        # rejects the entire malformed protocol before execution.
+        with pytest.raises(ValueError, match="source_hash_mismatch"):
+            paper.freeze(protocol)
+        return
+    frozen = paper.freeze(protocol)
+    assert frozen["requested_candidate_count"] == 2
+    assert frozen["prepared_candidate_count"] < 2
+    assert frozen["candidates"][0]["blockers"]
+    assert frozen["candidates"][0]["request"] is None
+
+
+def test_preparation_source_bytes_changed_during_cartesian_binding_remain_blocked(tmp_path, monkeypatch):
+    protocol = _protocol(tmp_path)
+    _forbid(monkeypatch)
+    actual = paper.adapter.input_binding
+    def mutate(request):
+        result = actual(request)
+        entry = protocol["candidates"][0]
+        Path(entry["source"]["path"]).write_bytes(Path(entry["source"]["path"]).read_bytes() + b"\n")
+        return result
+    monkeypatch.setattr(paper.adapter, "input_binding", mutate)
+    frozen = paper.freeze(protocol)
+    assert frozen["requested_candidate_count"] == 2
+    assert frozen["candidates"][0]["blockers"]
+    assert frozen["candidates"][0]["input_binding"] is None
+
+
+@pytest.mark.parametrize("damage", ["canonical_seal", "duplicate_json", "nonfinite_json", "noncanonical_path", "symlink"])
+def test_resealed_input_still_requires_canonical_parser_and_path_admission(tmp_path, monkeypatch, damage):
+    protocol = _protocol(tmp_path)
+    entry = protocol["candidates"][0]
+    request = json.loads(Path(entry["original_request"]["path"]).read_bytes())
+    path = Path(request["ligand"]["path"])
+    raw = path.read_bytes()
+    if damage == "canonical_seal":
+        document = json.loads(raw)
+        document["system_sha256"] = "0" * 64
+        request["ligand"] = _write(path, document)
+    elif damage == "duplicate_json":
+        request["ligand"] = _write(path, b'{"schema_id":"duplicate",' + raw[1:])
+    elif damage == "nonfinite_json":
+        request["ligand"] = _write(path, b'{"untrusted":NaN,' + raw[1:])
+    elif damage == "noncanonical_path":
+        request["ligand"]["path"] = str(path.parent) + "/./" + path.name
+    else:
+        linked = path.with_name("symlink-ligand.json")
+        linked.symlink_to(path)
+        request["ligand"]["path"] = str(linked)
+    entry["original_request"] = _write(Path(entry["original_request"]["path"]), request)
+    _forbid(monkeypatch)
+    frozen = paper.freeze(protocol)
+    assert frozen["requested_candidate_count"] == 2
+    assert frozen["prepared_candidate_count"] == 1
+    assert frozen["candidates"][0]["blockers"]
+    assert frozen["candidates"][0]["input_binding"] is None
+    assert frozen["boundary"] == paper.BOUNDARY
+
+
 @pytest.mark.parametrize("change", ["role", "fit", "chembl", "outcome", "identity_candidate", "target"])
 def test_source_forgery_and_outcome_fields_fail_before_execution(tmp_path, monkeypatch, change):
     protocol = _protocol(tmp_path)

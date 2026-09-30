@@ -1,0 +1,221 @@
+{
+  "all_24_semantic_comparisons_equal": true,
+  "boundary": {
+    "assayed_microstate_verified": false,
+    "assigned_role": null,
+    "calibration_admitted": false,
+    "independent_evaluation_admitted": false,
+    "independent_measurement_denominator": null,
+    "product_ranking_enabled": false,
+    "same_prepared_assay_state_verified": false,
+    "scientifically_validated": false,
+    "source_authenticated": false,
+    "training_admitted": false
+  },
+  "external_archive": {
+    "bytes": 38945,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/manifest.json",
+    "sha256": "8a1226aef9830e552088a8013fad6c6feb522ac5a0b1b426e95b0eb619407680"
+  },
+  "failed_full_stage_calls": 0,
+  "final_validation": {
+    "failed": 0,
+    "git_diff_check": "passed",
+    "independent_review": "No concrete introduced bug or trust-check weakening found; read-only inspection only",
+    "passed": 42,
+    "ruff": "All checks passed with --no-cache",
+    "test_suite": "tests/unit/test_installed_paper_development_comparison.py",
+    "wall_seconds": 14.95
+  },
+  "formatted_reproduction_script": {
+    "bytes": 22078,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/source-snapshots/formatted_reproduction_profile_script.py",
+    "sha256": "c4308b7890d41559af506d0ce4815cc709f9aedaadfdd4b3e93861c3fdfb3dd1"
+  },
+  "full_freeze_equivalence": {
+    "bytes": 3815492,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/final-paired/full-freeze-equivalence.json",
+    "sha256": "0a7057a48ab79597bb31fe98a92d68020aa4317caa8b0e3e29e456c415066aa6"
+  },
+  "full_freeze_equivalence_compressed": {
+    "bytes": 147635,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/final-paired/full-freeze-equivalence.json.gz",
+    "sha256": "797b2b5db6e8e791d4fa3a489f044f4f4aa0b78107d985870cc1747bc2ca5ef2"
+  },
+  "known_existing_window": "The existing whole-freeze later-candidate input byte-mutation window is unchanged. Source validation outside the candidate try can still abort a malformed protocol, as before.",
+  "measured_baseline_source": {
+    "bytes": 24408,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/baseline-snapshots/installed_paper_development_comparison.py",
+    "sha256": "dfe8fd99a79608ae6edfcd387b100d03a4f2e5004fd2f8038be7855d98f75891"
+  },
+  "measured_candidate_source": {
+    "bytes": 25913,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/source-snapshots/candidate_installed_paper_development_comparison.py",
+    "sha256": "f9c7a9ee102875c1d738d9b33803ba0d3bc9f389d3ce0d288d9b1d173bea9f04"
+  },
+  "measured_profile_script": {
+    "bytes": 18197,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/source-snapshots/measured_profile_script.py",
+    "sha256": "269269b614ed2eaf8946e971d737514df58a33678d0fc5660d9356b3a2d75477"
+  },
+  "partial_profile": {
+    "completed_full_stage_calls": 1,
+    "elapsed_ns_for_interrupted_call": null,
+    "excluded_from_primary_summary": true,
+    "failed_candidates_in_interrupted_call": null,
+    "interrupted_unknown_full_stage_calls": 1,
+    "operation_inferred_from_script_order": "baseline.freeze.profiled",
+    "path": "/tmp/paper-setup-profile-paired-20260930/profile.json",
+    "prepared_candidates_in_interrupted_call": null,
+    "reason": "Stopped own synthetic profiler with SIGINT before changing candidate source to repair integrity-exception accounting",
+    "requested_candidates_in_interrupted_call": 2
+  },
+  "per_full_stage_counts": {
+    "baseline": {
+      "canonical.decode": [
+        12
+      ],
+      "canonical.system_hash": [
+        96
+      ],
+      "scorer.construct": [
+        4
+      ]
+    },
+    "candidate": {
+      "canonical.decode": [
+        8
+      ],
+      "canonical.system_hash": [
+        92
+      ],
+      "scorer.construct": [
+        4
+      ]
+    }
+  },
+  "primary_profile_raw_completed_calls": 24,
+  "profile_receipt_sha256": "f3ac0806afd5b7e8dc31986aa074a07d176ff7c0d5a823c81972e44ddabdb97a",
+  "profiling_overhead_interpretation": "Signed whole-stage deltas are mixed with ambient run variability; negative deltas do not mean negative wrapper overhead. No cost is subtracted. Nested timers are inclusive and never summed.",
+  "raw_profile": {
+    "bytes": 59410,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-setup-profile-20260930-wk8rnmr3/final-paired/profile.json",
+    "sha256": "f3ac0806afd5b7e8dc31986aa074a07d176ff7c0d5a823c81972e44ddabdb97a"
+  },
+  "reuse_lifetime": "One _preparation call; no shared systems, authority or scorer across candidates or public calls.",
+  "schema_version": "synthetic_paper_setup_profile_summary_v1",
+  "script_formatting_ast_identical": true,
+  "semantics_identity_exclusions": [
+    "runtime_sha256",
+    "frozen_sha256 derived only from runtime_sha256"
+  ],
+  "summary": {
+    "freeze": {
+      "baseline": {
+        "instrumented_median_wall_ns": 14057522100,
+        "instrumented_vs_uninstrumented_median_delta_percent": -1.8028506679772627,
+        "instrumented_wall_ns": [
+          14934819265,
+          13851328046,
+          14057522100
+        ],
+        "max_wall_ns": 14640076592,
+        "min_wall_ns": 14048605436,
+        "uninstrumented_median_wall_ns": 14315611192,
+        "uninstrumented_wall_ns": [
+          14640076592,
+          14048605436,
+          14315611192
+        ]
+      },
+      "candidate": {
+        "instrumented_median_wall_ns": 13360586465,
+        "instrumented_vs_uninstrumented_median_delta_percent": -0.480144600805521,
+        "instrumented_wall_ns": [
+          13360586465,
+          13417820272,
+          11340960500
+        ],
+        "max_wall_ns": 13652181072,
+        "min_wall_ns": 11373878950,
+        "uninstrumented_median_wall_ns": 13425046099,
+        "uninstrumented_wall_ns": [
+          13652181072,
+          13425046099,
+          11373878950
+        ]
+      },
+      "median_reduction_percent": 6.220936577948377
+    },
+    "preflight": {
+      "baseline": {
+        "instrumented_median_wall_ns": 13859978297,
+        "instrumented_vs_uninstrumented_median_delta_percent": -2.690982743010717,
+        "instrumented_wall_ns": [
+          14673359041,
+          13859978297,
+          13345114338
+        ],
+        "max_wall_ns": 14917452052,
+        "min_wall_ns": 13106988714,
+        "uninstrumented_median_wall_ns": 14243262020,
+        "uninstrumented_wall_ns": [
+          14917452052,
+          14243262020,
+          13106988714
+        ]
+      },
+      "candidate": {
+        "instrumented_median_wall_ns": 13258192146,
+        "instrumented_vs_uninstrumented_median_delta_percent": 2.245218805539495,
+        "instrumented_wall_ns": [
+          13468200084,
+          13258192146,
+          11315902612
+        ],
+        "max_wall_ns": 13174467278,
+        "min_wall_ns": 11478099696,
+        "uninstrumented_median_wall_ns": 12967053424,
+        "uninstrumented_wall_ns": [
+          12967053424,
+          13174467278,
+          11478099696
+        ]
+      },
+      "median_reduction_percent": 8.96008649007497
+    }
+  },
+  "synthetic_only": true,
+  "validation_attempts": [
+    {
+      "failed": 0,
+      "passed": 20,
+      "source_sha256": null,
+      "stage": "existing_focused_suite_after_initial_reuse",
+      "wall_seconds": 8.78
+    },
+    {
+      "failed": 2,
+      "failure": "MolecularIntegrityError escaped per-candidate blocker catch",
+      "passed": 35,
+      "source_sha256": "d21e5670873ba067cf77c1b8924a8202cf8bd95fb1e41d2f08c937c5ff656736",
+      "stage": "new_mutation_suite_before_specific_integrity_catch",
+      "wall_seconds": 13.57
+    },
+    {
+      "failed": 0,
+      "passed": 37,
+      "source_sha256": "f9c7a9ee102875c1d738d9b33803ba0d3bc9f389d3ce0d288d9b1d173bea9f04",
+      "stage": "corrected_mutation_suite",
+      "wall_seconds": 15.67
+    },
+    {
+      "failed": 0,
+      "passed": 42,
+      "source_sha256": "f9c7a9ee102875c1d738d9b33803ba0d3bc9f389d3ce0d288d9b1d173bea9f04",
+      "stage": "final_parser_path_and_mutation_suite",
+      "test_sha256": "d970a9afa847bc2ce21ece821139332ffc388d433ff5e23409a18ba4ea87bd9e",
+      "wall_seconds": 14.95
+    }
+  ]
+}

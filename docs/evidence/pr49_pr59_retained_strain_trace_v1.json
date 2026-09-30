@@ -1,0 +1,113 @@
+{
+  "analysis": {
+    "bytes": 7423,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pair-retained-strain-20260930-j4qo79au/summary.json",
+    "sha256": "cbcd18e10ddfed1423e1202a01643984b2bfe5d9125802329a53a7541ccdafb3"
+  },
+  "analysis_role": "posthoc_development_diagnostic_no_new_observations",
+  "archive_manifest": {
+    "bytes": 1580,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pair-retained-strain-20260930-j4qo79au/manifest.json",
+    "sha256": "22eb0c50b79ccdd2c098c0fb0ec93685cb4a6ce8863c5c7a214a8907215e406d"
+  },
+  "figure": {
+    "bytes": 201428,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pair-retained-strain-20260930-j4qo79au/strain-force-trace.png",
+    "sha256": "1897ae6d9d0dc360f5392a630d0085d3ff47ae145631fad10206459a51ec92f9"
+  },
+  "models": {
+    "PR49": {
+      "accepted_including_initial": 377,
+      "accepted_states_passing_strain_and_force": 0,
+      "accepted_states_within_strain_cap": 2,
+      "final_state": {
+        "attempt": 385,
+        "cross_lennard_jones_kcal_per_mol": 88.4232793752072,
+        "cross_screened_coulomb_kcal_per_mol": -10.90139826251093,
+        "decision": "accepted",
+        "internal_increase_kcal_per_mol": 20.525871055084167,
+        "ligand_internal_kcal_per_mol": -262.6137791510669,
+        "maximum_raw_atom_force_kcal_per_mol_angstrom": 0.0008883592153140763,
+        "total_energy_kcal_per_mol": -185.09189803837066
+      },
+      "first_accepted_state_over_strain_cap": {
+        "attempt": 3,
+        "cross_lennard_jones_kcal_per_mol": 511.7779994967719,
+        "cross_screened_coulomb_kcal_per_mol": 6.219077773157716,
+        "decision": "accepted",
+        "internal_increase_kcal_per_mol": 6.133424699351451,
+        "ligand_internal_kcal_per_mol": -277.00622550679964,
+        "maximum_raw_atom_force_kcal_per_mol_angstrom": 358.78370978275115,
+        "total_energy_kcal_per_mol": 240.99085176312997
+      },
+      "full_geometry_each_trial_evaluated": false,
+      "historical_final_selection_overridden": false,
+      "later_return_to_strain_cap_after_first_crossing": 0,
+      "minimum_force_within_strain_cap": 484.6506685932101,
+      "optimizer_observations": 385,
+      "rejected_trials": 8,
+      "work": {
+        "actual_force_calls": 386,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 386,
+        "optimizer_force_calls": 385,
+        "optimizer_graph_calls": 385,
+        "optimizer_objective_attempts": 385,
+        "restart_force_calls": 1,
+        "restart_graph_calls": 1,
+        "restart_verification_attempts": 1,
+        "unknown_pending_attempts": 0
+      }
+    },
+    "PR59": {
+      "accepted_including_initial": 341,
+      "accepted_states_passing_strain_and_force": 0,
+      "accepted_states_within_strain_cap": 2,
+      "final_state": {
+        "attempt": 348,
+        "cross_lennard_jones_kcal_per_mol": 19.668682713788243,
+        "cross_screened_coulomb_kcal_per_mol": -16.1556201639821,
+        "decision": "accepted",
+        "internal_increase_kcal_per_mol": 28.855716128645724,
+        "ligand_internal_kcal_per_mol": -259.0958417430396,
+        "maximum_raw_atom_force_kcal_per_mol_angstrom": 0.0006848388496510577,
+        "total_energy_kcal_per_mol": -255.58277919323345
+      },
+      "first_accepted_state_over_strain_cap": {
+        "attempt": 3,
+        "cross_lennard_jones_kcal_per_mol": 339.0805552411999,
+        "cross_screened_coulomb_kcal_per_mol": -7.330673122920514,
+        "decision": "accepted",
+        "internal_increase_kcal_per_mol": 5.7227315302869215,
+        "ligand_internal_kcal_per_mol": -282.2288263413984,
+        "maximum_raw_atom_force_kcal_per_mol_angstrom": 229.49022950774102,
+        "total_energy_kcal_per_mol": 49.52105577688094
+      },
+      "full_geometry_each_trial_evaluated": false,
+      "historical_final_selection_overridden": false,
+      "later_return_to_strain_cap_after_first_crossing": 0,
+      "minimum_force_within_strain_cap": 341.9887296577856,
+      "optimizer_observations": 348,
+      "rejected_trials": 7,
+      "work": {
+        "actual_force_calls": 349,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 349,
+        "optimizer_force_calls": 348,
+        "optimizer_graph_calls": 348,
+        "optimizer_objective_attempts": 348,
+        "restart_force_calls": 1,
+        "restart_graph_calls": 1,
+        "restart_verification_attempts": 1,
+        "unknown_pending_attempts": 0
+      }
+    }
+  },
+  "new_native_force_score_graph_optimizer_openmm_calls": 0,
+  "schema_version": "pr49_pr59_retained_strain_trace_v1",
+  "scientific_or_product_qualification": false,
+  "source_head_context": "24c3c3475174695ecd6a6d4b47b17440e7164553",
+  "training_or_label_admission": false
+}

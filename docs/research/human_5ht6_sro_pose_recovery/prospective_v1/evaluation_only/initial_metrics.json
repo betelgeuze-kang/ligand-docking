@@ -1,0 +1,106 @@
+{
+  "cases": {
+    "observed_start_control": {
+      "direct_heavy_rmsd_angstrom": 0.0,
+      "minimum_mapping": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "symmetry_heavy_rmsd_angstrom": 0.0,
+      "translation_or_rotation_fit": false
+    },
+    "perturbed_01": {
+      "direct_heavy_rmsd_angstrom": 2.5,
+      "minimum_mapping": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "symmetry_heavy_rmsd_angstrom": 2.5,
+      "translation_or_rotation_fit": false
+    },
+    "perturbed_02": {
+      "direct_heavy_rmsd_angstrom": 2.5,
+      "minimum_mapping": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "symmetry_heavy_rmsd_angstrom": 2.5,
+      "translation_or_rotation_fit": false
+    },
+    "perturbed_03": {
+      "direct_heavy_rmsd_angstrom": 2.68163562320807,
+      "minimum_mapping": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "symmetry_heavy_rmsd_angstrom": 2.68163562320807,
+      "translation_or_rotation_fit": false
+    },
+    "perturbed_04": {
+      "direct_heavy_rmsd_angstrom": 2.721494736275551,
+      "minimum_mapping": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "symmetry_heavy_rmsd_angstrom": 2.721494736275551,
+      "translation_or_rotation_fit": false
+    }
+  },
+  "schema_id": "sro_initial_coordinate_metrics/1",
+  "scope": "coordinate_arithmetic_only_no_results_observed"
+}

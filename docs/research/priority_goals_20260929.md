@@ -13,6 +13,46 @@ is used. The five requirements remain:
 | 4. Integrity-preserving CPU efficiency | Equivalent results and mutation detection with enclosing measured cost | Deferred diagnostic formatting retains both fresh integrity passes; four-state SRO full outputs match with evaluation mean 6.18% lower, and the receptor integrity guard mean is 2.62% lower; full preparation-through-storage cost and broader throughput remain unproved |
 | 5. Integrated reproducible baseline | Compatible implementation, installed execution/restart/report, exact-source verification and preserved historical work | The sulfonyl-compatible baseline passes 120 affected tests and a fresh 44-runtime dependency installation. A separate Cartesian SD/L-BFGS product path implements durable trial-level restart, full-force continuation checks and completed zero-work reuse. Current-source recovery tests pass; installed synthetic iteration/resume and the later real SRO pause/resume/verify pass with exact retained-trajectory agreement. Native comparator integration and wider installation/workflow validation remain open. All five real end-to-end requirements remain open; historical test counts are not added across changed versions |
 
+
+## 2026-09-30 integrated evidence update
+
+The five goals remain active. The [installed PR49/PR59 campaign](installed_pr49_pr59_real_cartesian_campaign_20260930.md)
+now closes the retained-paper preparation-to-Cartesian-run/restart/verify connection
+for two explicitly declared computational models. It recorded 735 native force
+observations and four ordering-score observations; both terminal refinements were
+rejected and their baselines retained. This narrow installed route does not close
+the independently cleared real four-arm comparison or service qualification.
+The [final independent endpoint checks](installed_pr49_pr59_final_independent_numerics_20260930.md)
+preserve source-XML and same-math scopes. Historical completion statements below
+remain historical, rather than being treated as current gaps on this narrow route.
+
+The [primary endpoint audit](human_5ht6_endpoint_admission_next_20260930.md)
+transcribes all 78 printed human 5-HT6 Ki mean/SD rows, including 75 newly
+transcribed rows beyond the prior three-row ledger. This is additional source
+transcription, not new experiments or 78 independent measurements. The PR9 table
+and prose conflict is retained; raw replicates, row-to-batch/chemical-state
+linkage, censored inactive coverage and independently cleared source-family
+roles remain missing. No new fit, calibration or evaluation rows are admitted.
+
+The [CPU setup profile](installed_paper_development_setup_profile_20260930.md)
+reduces verified canonical decodes from 12 to 8 per two-candidate freeze while
+keeping separate original/Cartesian authorities and fresh byte/content checks.
+Three paired synthetic repeats observed median setup reductions of 6.2209% for
+freeze and 8.9601% for preflight. They exclude installation, fixture generation
+and result serialization, and use CPU execution in an existing ROCm-capable
+Torch distribution. They establish neither whole-product nor HIP speedup.
+
+The [retained strain trace](pr49_pr59_retained_strain_trace_20260930.md)
+shows that both paths exceed the unchanged strain cap at objective attempt 3
+and never return within it. No accepted stored state meets both force and strain
+limits. Last accepted state selection and all negative results are preserved.
+The [prospective SRO recovery packet](human_5ht6_sro_pose_recovery/README.md)
+therefore declares four nonzero perturbations with an unchanged denominator,
+gates and budget, keeping the known start control separate. Packet arithmetic
+is not an executed recovery result. Runtime input/binding, execution accounting,
+endpoint verification and receipt-authenticated saved evaluation are required
+before reporting a recovery rate. Fresh-128 remains untouched.
+
 The work-package priorities below do not replace these five goals.
 
 | Priority | Objective | Completion evidence | Current status |
@@ -210,3 +250,13 @@ addresses the observed `development-protocol` CI failure: nine unchanged
 OpenMM preparation/validation scripts are outside the product import and
 Docker-image closure. Its 101 local architecture tests and original guard
 command pass. Hosted CI on the eventual integrated commit remains unverified.
+
+### Integrated setup and actual SRO input follow-through
+
+The [current milestone](integrated_setup_and_sro_inputs_20260930.md) closes the local CPU setup change and
+reference-free four-case SRO input adapter: all actual derivatives and old-wheel
+bindings pass. It retains the 501 boundary / 108 architecture results, final
+48 adapter checks after equivalent formatting, and a 13-force/10-score installed
+synthetic probe. Full fresh installation, four-case recovery execution and
+independent endpoint/export verification remain open. No stored negative
+PR49/PR59 state, source role, gate, experimental label or protected holdout changed.

@@ -1,0 +1,47 @@
+{
+  "files": {
+    "calculation_inputs/candidates.json": {
+      "bytes": 10266,
+      "sha256": "5fa2b65522197a395c1dd6d88d6add82cfdb61ddaa2e5bced7a4cf528be5541b"
+    },
+    "calculation_inputs/chemistry.json": {
+      "bytes": 11392,
+      "sha256": "1d960edf1ee7c450af7594b0fad6c6f605439e045da8292bfa48a74d4f95a3dc"
+    },
+    "calculation_inputs/input_contract.json": {
+      "bytes": 2751,
+      "sha256": "c861a92c9bda6613dcc84aaf035d696fee75c33dff661c690cf7de3ea7280182"
+    },
+    "evaluation_only/initial_metrics.json": {
+      "bytes": 1881,
+      "sha256": "3a6084570e9838f235e4d652b5a1cf5d40a6e9c865126e0f5f4f56c0e4e8f5a5"
+    },
+    "evaluation_only/reference.json": {
+      "bytes": 2962,
+      "sha256": "17709daf58b0601a0ec72cd687542a088c8e4a49b93eb637ade798eba14e4914"
+    },
+    "freeze_status.json": {
+      "bytes": 204,
+      "sha256": "dcf75fb25a692c8ae97b98ece7c03cc805d52bf879314b63d5ecfffb61ac9b6d"
+    },
+    "generator_evaluator_source.py": {
+      "bytes": 41141,
+      "sha256": "cd2b926ec63fcd2af17ecca2e316d48b5b224fbf62c6ab75b3bf8dcb4a7c19b7"
+    },
+    "lineage.json": {
+      "bytes": 3230,
+      "sha256": "0e647bc5ee5ae37e98305596ad218b98da72965d5baabefc7f790a7c1f76e9cf"
+    },
+    "protocol.json": {
+      "bytes": 7198,
+      "sha256": "5977f12ee7e35710e6a8eb09a19337ff579750f2573fa442d31b89fe3a94ca23"
+    },
+    "stability_control/candidate.json": {
+      "bytes": 1666,
+      "sha256": "38ec981678acf692ae0e1e2f674e72bfaeea87d2f3743463714d40c87805c319"
+    }
+  },
+  "protocol_sha256": "5977f12ee7e35710e6a8eb09a19337ff579750f2573fa442d31b89fe3a94ca23",
+  "schema_id": "sro_prospective_packet_manifest/1",
+  "status": "PROSPECTIVE_NOT_EXECUTED"
+}

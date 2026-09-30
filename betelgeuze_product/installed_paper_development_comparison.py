@@ -116,26 +116,37 @@ def candidate_id(source):
     return "paper:" + source["doi"] + ":" + source["occurrence_id"]
 
 
+def _verify_preparation_sources(source_ref, request_ref, charge_ref, initial_protocol_ref, model_evidence_ref):
+    """Reopen metadata and its upstream evidence; never treat paths as authority."""
+    _source(source_ref)
+    for ref in (source_ref, request_ref, charge_ref, initial_protocol_ref, model_evidence_ref):
+        _raw(ref)
+    _raw(_document(charge_ref)["openmm_system"])
+
+
 def _preparation(source_ref, request_ref, charge_ref, initial_protocol_ref, model_evidence_ref):
     """Rederive representation checks, never fabricate a native assay row."""
     from betelgeuze_engine_v2.molecular.serialization import (
-        all_atom_system_from_canonical_json, canonical_coordinates_sha256, canonical_system_sha256,
+        canonical_coordinates_sha256, canonical_system_sha256,
     )
-    from .reference_minimization_workflow import _parameters
-    from .cpu_refinement_v1_2.workflow import _extension
-    from .cpu_refinement_v1_2.fixed_receptor import CrossParameters, FixedReceptorEnvironment
 
     source, request = _source(source_ref), _document(request_ref)
     _raw(initial_protocol_ref)
     _raw(model_evidence_ref)
-    original_binding = original_adapter.input_binding(request)
-    receptor, ligand = (all_atom_system_from_canonical_json(_raw(request[k])) for k in ("receptor", "ligand"))
-    base = _parameters(_document(request["parameters"]))
-    parameters = _extension(_document(request["extensions"]), base)
+    # Version 1 verified preparation snapshot: consume the original admission
+    # once, only in this call. Its canonical loader still verifies payload and
+    # reconstructed identities, and _admit retains the original binding and
+    # fresh input/source exit checks. No authority, scorer, modified pose or
+    # settings are reused for the separate Cartesian admission below.
+    admitted, fixed, original_binding, original_sources = original_adapter._admit(original_adapter._request(request))
+    authority, receptor, ligand, parameters, *_ = admitted
+    base = parameters.base_parameters
+    # Preserve the bridge's stricter canonical-path and single-link raw checks
+    # even though the original admission has already reopened these sources.
+    for name in original_adapter.FILE_FIELDS:
+        _raw(request[name])
     _require(not parameters.constraints, "paper_development_unconstrained_model_required")
     cross_doc = _document(request["cross_parameters"])
-    fixed = FixedReceptorEnvironment(receptor, CrossParameters.from_dict(cross_doc))
-    fixed.validate_ligand(ligand, base)
     identity = structural._ligand_identity(ligand, source["chemical_identity"])
     charge = structural._charge_screen(charge_ref, request, ligand, base)
     _require(charge["rank_eligible"] is True, "paper_development_charge_representation_ineligible")
@@ -167,8 +178,16 @@ def _preparation(source_ref, request_ref, charge_ref, initial_protocol_ref, mode
                   "parameter_model_scope": "declared_native_model_not_automatic_XML_conversion_equivalence",
                   "ligand": identity, "receptor": receptor_doc, "charge_screen": charge,
                   "geometry": geometry, "cohort": cohort, "boundary": deepcopy(BOUNDARY)}
-    for ref in (source_ref, request_ref, charge_ref, initial_protocol_ref, model_evidence_ref):
-        _raw(ref)
+    original_adapter._verify_sources(request, original_sources)
+    _verify_preparation_sources(source_ref, request_ref, charge_ref, initial_protocol_ref, model_evidence_ref)
+    # A frozen dataclass does not freeze tensors or nested metadata. Recompute
+    # content identities after every preparation gate and reopen all original
+    # input bytes/source identities before returning this local snapshot.
+    fixed.assert_intact()
+    _require(canonical_system_sha256(ligand) == authority.ligand_system_sha256,
+             "paper_development_preparation_ligand_changed")
+    _require(receptor_doc["system_sha256"] == authority.receptor_system_sha256,
+             "paper_development_preparation_receptor_changed")
     return descriptor, request
 
 
@@ -179,6 +198,8 @@ def derive_prepared_evidence(source_ref, original_request_ref, charge_origin_ref
 
 
 def freeze(protocol):
+    from betelgeuze_engine_v2.molecular import MolecularIntegrityError
+
     _fields(protocol, {"schema_version", "candidates", "cartesian_solver"})
     _require(protocol["schema_version"] == PROTOCOL, "explicit_paper_development_protocol_required")
     config = SolverConfig.from_dict(protocol["cartesian_solver"])
@@ -210,9 +231,12 @@ def freeze(protocol):
             _require(_canonical(expected) == _canonical(supplied), "paper_registered_prepared_evidence_mismatch")
             converted = workflow.prepare_cartesian_request(original, config)
             binding = adapter.input_binding(converted)
+            _raw(entry["prepared_evidence"])
+            _verify_preparation_sources(entry["source"], entry["original_request"], supplied["charge_origin"],
+                                        supplied["initial_pose_protocol"], supplied["declared_model_evidence"])
             row.update(original_request=original, prepared_evidence=expected, request=converted, input_binding=binding)
             cohorts.add(_sha(expected["cohort"]))
-        except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+        except (OSError, ValueError, TypeError, KeyError, OverflowError, MolecularIntegrityError) as exc:
             row["blockers"].append(type(exc).__name__ + ":" + str(exc))
     if len(cohorts) > 1:
         for row in rows:

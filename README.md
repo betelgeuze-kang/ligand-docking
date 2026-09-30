@@ -32,6 +32,8 @@ promotion and public claims remain disabled.
 
 A separate opt-in [installed retained-paper development workflow](docs/engine_v2_installed_paper_development.md) connects declared prepared structures to Cartesian CPU baseline/refinement, checkpoint continuation and result verification. Its observations retain unassigned source roles and an unknown experimental denominator. The [installed PR49/PR59 campaign](docs/research/installed_pr49_pr59_real_cartesian_campaign_20260930.md) completed both declared models with independently checked endpoint arithmetic; both refinements were rejected and their baselines retained.
 
+The [current evidence update](docs/research/priority_goals_20260929.md#2026-09-30-integrated-evidence-update) links the complete primary endpoint transcription, bounded CPU setup profile, retained strain diagnosis and prospective SRO pose-recovery packet. Source roles remain unassigned; the prospective packet has no recovery execution outcomes.
+
 Implemented and GitHub-hosted CPU tested:
 
 - canonical all-atom state, validation stages, and SHA-256 identities;
@@ -297,3 +299,8 @@ Not acceptable without additional evidence:
 Implementation, scientific validation, public benchmark evidence, and product
 qualification are separate stages. A green source-level test does not collapse
 those stages.
+
+The [integrated setup and actual SRO input milestone](docs/research/integrated_setup_and_sro_inputs_20260930.md)
+records the installed synthetic probe, local boundary tests, unchanged-gate
+negative results and four correctly rebound SRO inputs. The prospective recovery
+cases have not been optimized; scientific and service qualification remain open.
