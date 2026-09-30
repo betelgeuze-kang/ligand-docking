@@ -1,0 +1,270 @@
+{
+  "active_pair_count": 15881,
+  "case_id": "perturbed_02",
+  "combined_minus_separate_lj_q_max": 2.9103830456733704e-10,
+  "completed_native_backward_returns": 48,
+  "costs_not_additive": {
+    "complete_child_execute_wall_seconds": 7.859861209999508,
+    "entry_wall_seconds": 7.32601697499922,
+    "numerical_wall_seconds": 2.6776195269994787,
+    "scope": "nested observational costs, not a speed comparison"
+  },
+  "created_utc": "2026-09-30T20:13:48.365464+00:00",
+  "events_ref": {
+    "bytes": 299478,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/numerical/events.jsonl",
+    "sha256": "d5e14bd74aa0380292c23e84362e6de6f1d6b33afd9efc6dc131fe06a3705373"
+  },
+  "exact_r3_provenance_failure_module": "unknown",
+  "executed_plan_ref": {
+    "bytes": 78302,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/prepared/plan.json",
+    "sha256": "ed1c697f634421ad774363c9d0221082d75dc940313043724313a00b8cf4eb39"
+  },
+  "executed_r3_source_refs": {
+    "diagnostic": {
+      "bytes": 44386,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/prepared/source/sro_cross_force_decomposition_diagnostic_v1.py",
+      "sha256": "3b2fab601d97805516c4f633562fc2368b8aa8aaa6e6242e1eaa79f1cd01c41b"
+    },
+    "document": {
+      "bytes": 12162,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/prepared/source/sro_cross_force_decomposition_diagnostic_plan_20261001.md",
+      "sha256": "29fbd3a44548aa7d1db859417c5f8af7fb3d98d94e068d910996d7e5b21da3a7"
+    },
+    "stdlib_helper": {
+      "bytes": 40372,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/prepared/source/sro_particle_roundtrip_diagnostic_v1.py",
+      "sha256": "f9d860e150542596457e546802ef8594365c112c424f8a1abf8e82a1734e9c3a"
+    },
+    "tests": {
+      "bytes": 26614,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/prepared/source/test_sro_cross_force_decomposition_diagnostic_v1.py",
+      "sha256": "1eede763463442e3f6528231dc78f69d8a8841ec3db16e697e8be11f475c2ed5"
+    }
+  },
+  "external_github_publication_of_local_r4_performed": false,
+  "frozen_gate": 1e-08,
+  "frozen_r2_campaign_unchanged": true,
+  "frozen_r2_recovery_count": 0,
+  "frozen_r2_total_cases": 4,
+  "goal_status": "active",
+  "hip_parity_or_ai_gain_or_service_readiness_qualified": false,
+  "independent_arithmetic_review_communication_ref": {
+    "bytes": 3265,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-arithmetic-review-communication-20261001-ws5788vd/final-scoped-review-communication.json",
+    "sha256": "79eaaa537dd9baff04c2a8a94d61b8d23a659470f485e65aefb7a215f7e67e43"
+  },
+  "independent_arithmetic_review_scope": "Root-recorded final scoped independent review communication; no standalone independent archive/reproducer was authored",
+  "independent_arithmetic_review_state": "final_scoped_completed_checks_reported",
+  "independent_review_completion_not_claimed_for": [
+    "Independent final receipt-seal audit",
+    "Full durable event-order audit",
+    "Nested cost reconciliation",
+    "Standalone independent script/archive verification",
+    "Independent newR file SHA rehash; supplied file ref only",
+    "Direct authoritative returned-force vs reaccumulated-force comparison",
+    "Independent external energy deltas/gates",
+    "Independent combined-minus-LJ/Q vector recomputation; its reported maximum is stored C observation"
+  ],
+  "independent_standalone_arithmetic_reproducer_available": false,
+  "math_fsum_block_force_change_max": {
+    "baseline.combined": 5.820766091346741e-11,
+    "diagnostic.combined": 5.820766091346741e-11,
+    "diagnostic.coulomb": 7.105427357601002e-15,
+    "diagnostic.lj": 5.820766091346741e-11
+  },
+  "maximum_call_reservations": {
+    "baseline_combined_backward": 18,
+    "cross_entries": 2,
+    "diagnostic_combined_backward": 18,
+    "diagnostic_coulomb_backward": 18,
+    "diagnostic_lj_backward": 18,
+    "total_reserved": 74
+  },
+  "native_numerical_observations_retained": true,
+  "new_internal_score_optimizer_openmm_calls": 0,
+  "new_native_baseline_diagnostic_full_output_exact": true,
+  "new_native_vs_stored_newR_initial_components": {
+    "combined": {
+      "argmax_atom_index": 19,
+      "argmax_axis": "z",
+      "energy_delta_hex": "0x1.5c00000000000p-28",
+      "force_max_absolute_component": 4.761386662721634e-08,
+      "passed_energy_gate": true,
+      "passed_force_gate": false
+    },
+    "coulomb": {
+      "argmax_atom_index": 24,
+      "argmax_axis": "z",
+      "energy_delta_hex": "0x1.1800000000000p-42",
+      "force_max_absolute_component": 6.536993168992922e-13,
+      "passed_energy_gate": true,
+      "passed_force_gate": true
+    },
+    "lj": {
+      "argmax_atom_index": 19,
+      "argmax_axis": "z",
+      "energy_delta_hex": "0x1.5c00000000000p-28",
+      "force_max_absolute_component": 4.7672074288129807e-08,
+      "passed_energy_gate": true,
+      "passed_force_gate": false
+    }
+  },
+  "numerical_error_or_unknown_calls": 0,
+  "numerical_receipt_ref": {
+    "bytes": 341609,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/numerical/receipt.json",
+    "sha256": "2cee8fe89f9ba9c450dda6ba25d1f031e0fea05635228ef01526f0229350507b"
+  },
+  "numerical_root_cause_established": false,
+  "observed_call_counts": {
+    "baseline.combined": {
+      "completed": 12,
+      "error": 0,
+      "maximum_reserved": 18,
+      "not_dispatched": 6,
+      "unknown": 0
+    },
+    "cross_entry": {
+      "completed": 2,
+      "error": 0,
+      "maximum_reserved": 2,
+      "not_dispatched": 0,
+      "unknown": 0
+    },
+    "diagnostic.combined": {
+      "completed": 12,
+      "error": 0,
+      "maximum_reserved": 18,
+      "not_dispatched": 6,
+      "unknown": 0
+    },
+    "diagnostic.coulomb": {
+      "completed": 12,
+      "error": 0,
+      "maximum_reserved": 18,
+      "not_dispatched": 6,
+      "unknown": 0
+    },
+    "diagnostic.lj": {
+      "completed": 12,
+      "error": 0,
+      "maximum_reserved": 18,
+      "not_dispatched": 6,
+      "unknown": 0
+    }
+  },
+  "original_or_fresh128_roles_promoted": false,
+  "overall_execution_status": "failed",
+  "post_execution_failure": {
+    "reason": "bounded_input_required",
+    "type": "ValueError"
+  },
+  "published_r4_source_refs": {
+    "diagnostic": {
+      "bytes": 46800,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/benchmarks/oracles/sro_cross_force_decomposition_diagnostic_v1.py",
+      "sha256": "812f6cbad63b4e8dc4c5b3b3a491c5298ce0f5cd05812998861bf0d351ae42b0"
+    },
+    "mock_tests": {
+      "bytes": 34545,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tests/unit/test_sro_cross_force_decomposition_diagnostic_v1.py",
+      "sha256": "f1804fee01d4f610124530daf866fa4b56197e3ca069177fb4a962e791361916"
+    },
+    "plan_document": {
+      "bytes": 12162,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/research/sro_cross_force_decomposition_diagnostic_plan_20261001.md",
+      "sha256": "29fbd3a44548aa7d1db859417c5f8af7fb3d98d94e068d910996d7e5b21da3a7"
+    },
+    "workflow": {
+      "bytes": 2312,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/.github/workflows/ci-sro-cross-force-decomposition-diagnostic.yml",
+      "sha256": "caa979c1dcd6f2c6aa9cd61287dbaaef7aeb0a444a9f6467c383d75a4f46c97f"
+    },
+    "workflow_contract": {
+      "bytes": 7117,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tests/unit/test_sro_cross_force_decomposition_ci_registration_v1.py",
+      "sha256": "679a19a3eee8e064fc8d247c841539a0920aec40604a996cad87cc4a3ff066f9"
+    }
+  },
+  "published_r4_source_refs_field_is_legacy_local_source_label": true,
+  "r3_final_environment_manifest_and_post_input_rehash_available": false,
+  "r4_mock_qa_ref": {
+    "bytes": 13934,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-r4-provenance-mockqa-20261001-5b0t8w55/qa.receipt.json",
+    "sha256": "44652104a4a2d03bc7489ff37cf5dd99f2d281f4df01dd2b2e9c71e378a58716"
+  },
+  "r4_mock_test_count": 81,
+  "r4_molecular_numerical_execution_performed": false,
+  "r4_provenance_only_probe": {
+    "dtype_device_fields_are_declared_diagnostic_policy": true,
+    "empty_python_source_pins": 10,
+    "explicit_unresolved_module_origins": 39,
+    "file_backed_module_pins": 742,
+    "full_shared_library_or_provenance_admission": false,
+    "molecular_body_reads": 0,
+    "new_force_score_optimizer_openmm_calls": 0,
+    "normal_native_library_initialization_work": "not quantified",
+    "provenance_ref": {
+      "bytes": 198280,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-r4-provenance-only-20261001-ybvng0pc/provenance.json",
+      "sha256": "e847505146fc15658e883edccbacec5ef6db9cff016f23256930b42851a01c9d"
+    },
+    "r3_failed_receipt_repaired_or_replaced": false,
+    "read_only_review_ref": {
+      "bytes": 7018,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-r4-provenance-only-static-review-20261001-v1/completed-probe-receipt-review-20261001-v1.json",
+      "sha256": "40c94fbac2271ac5346f7a24edcb12c96a03c1aeed320fcb54a0c06a7bf6bc8c"
+    },
+    "root_receipt_ref": {
+      "bytes": 3210,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-r4-provenance-only-20261001-ybvng0pc/receipt.json",
+      "sha256": "8bd7b3eaa60e5e2ec6ac9c989ace8368238100c80e91f7b87d793e1e9529ea2e"
+    },
+    "status": "completed"
+  },
+  "r4_scoped_source_review_ref": {
+    "bytes": 5379,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-r4-provenance-only-static-review-20261001-v1/independent-combined-code-review.json",
+    "sha256": "ec7a51efcc99760f904729263dc5adfc4ad6dbcaca5acf999a0f419e357a4038"
+  },
+  "root_execution_ref": {
+    "bytes": 4101,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/root-execution-observation.json",
+    "sha256": "14484c1ae30f5de7f08d04df9b62ae1835374eb12231c46b942d82c1747b8e36"
+  },
+  "root_review_phase_binding_ref": {
+    "bytes": 3040,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-decomposition-20261001-fitq45_l/root-source-review-phase-binding.json",
+    "sha256": "95e1dc04eea18438ea93622f52eeba37be6e9fd55a73de6f73af9a38474a95f9"
+  },
+  "root_saved_arithmetic_review": {
+    "authoritative_force_reconstruction_exact": true,
+    "authority": "Root-owned independent stdlib arithmetic implementation; not an external laboratory or independent scientific qualification.",
+    "both_receipt_file_pins_and_self_seals_verified": true,
+    "decomposition_vectors_and_external_energy_force_gates_match": true,
+    "journal_rows_verified": 260,
+    "missing_r3_environment_reconstructed": false,
+    "nested_cost_scopes_checked_without_summing": true,
+    "new_force_or_energy_evaluations": 0,
+    "recorded_observation_boundary_order_verified": true,
+    "report_ref": {
+      "bytes": 3931,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-saved-cross-arithmetic-review-20261001-qrh8ez6j/review.json",
+      "sha256": "c5306e63b951bc9d9b6534aad51aab8a653e9b9769308c14f1a454548a430abf"
+    },
+    "scientific_qualification": false,
+    "status": "completed"
+  },
+  "schema_id": "sro_cross_force_decomposition_observation_evidence/1",
+  "scientific_or_training_admission_issued": false,
+  "scope": "one stored development state",
+  "state_label": "initial",
+  "stored_r2_initial_component_energy_hex_exact": true,
+  "zero_source_stat_diagnostic_ref": {
+    "bytes": 1087,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-cross-r3-zero-module-stat-review-20261001-v1/verification-receipt.json",
+    "sha256": "136654952ef01645f7c908af938e2a979fee9c44619778f0e3289320db59cdd4"
+  }
+}
