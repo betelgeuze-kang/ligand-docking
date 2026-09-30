@@ -1,0 +1,190 @@
+{
+  "affinity_or_pose_recovery_or_HIP_or_service_validated": false,
+  "archive_manifest": {
+    "bytes": 17376,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/archive-manifest-final.json",
+    "sha256": "4da2d7c86c2a82a26428c6e50337d818b8acf91cd584ae921b7766d10778e3bc"
+  },
+  "archive_payload_bytes": 51105510,
+  "archive_payload_files": 56,
+  "archive_root": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ",
+  "aromatic_atom_count": 16,
+  "aromatic_bond_count": 17,
+  "assayed_microstate_or_receptor_state_equivalence_verified": false,
+  "atom_count": 43,
+  "bond_count": 46,
+  "candidate_id": "PR59",
+  "charge_origin": {
+    "bytes": 9389,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/charge-origin.json",
+    "sha256": "839ca9c5d144a5c099a86ebe1333873c8a32002b72af34dc31143fdb490f4a32"
+  },
+  "commit_or_push_performed": false,
+  "component_results": {
+    "parameters_extensions_cross_metadata": {
+      "status": "passed"
+    },
+    "registered_geometry": {
+      "observation": {
+        "cross_distance_unavailable_inside_pocket": 0,
+        "inside_declared_pocket": 1,
+        "rank_eligible_inside_pocket": 1,
+        "requested": 1,
+        "scope": "single_unmodified_registered_pose_all_atoms_pocket_and_1_angstrom_cross_overlap_only"
+      },
+      "status": "passed"
+    },
+    "source_graph_identity": {
+      "observation": {
+        "atom_count": 43,
+        "atom_graph_sha256": "e7d27498934db992a51c069cdebee30304f2a3a05f0b50022f558ae1588aca05",
+        "canonical_isomeric_smiles_sha256": "162fa22ab54f5a14c809ad6627e3c8a2808809fd33560683463d761defc77b99",
+        "coordinates_sha256": "78ae84a88876bb00e13b07fd49c0e6589fa2cb8db84f539c8e07c0018db7591e",
+        "formal_charge": 0,
+        "system_sha256": "2f473275ce76a63bdc78602d21f6b6ff855e6f0ef5041e3861af34c5ae73647b"
+      },
+      "status": "passed"
+    },
+    "xml_decimal_charge_representation": {
+      "observation": {
+        "canonical_formal_charge_sum_e": 0,
+        "charge_tokens_sha256": "b23faf0ae58ceeda76fa22b7b0fe1dca5baef38e070af3c392c24468cdc9570c",
+        "difference_e": "1.48E-16",
+        "mapping_sha256": "a90d675522e07451a016aa3c81b157ead8a2fe6648a4d99a65342d37f37ff92b",
+        "maximum_rank_difference_e": "0.5",
+        "openmm_printed_partial_charge_sum_e": "1.48E-16",
+        "print_resolution_bound_e": "3.211E-15",
+        "profile": "openmm_system_xml_nonbonded_charge_tokens_v1",
+        "rank_eligible": true,
+        "schema_version": "registered_openmm_ligand_net_charge_screen_v1",
+        "scope": "original_xml_token_arithmetic_and_complete_index_map_only_not_assayed_state",
+        "status": "within_print_resolution",
+        "xml_sha256": "71594281504c42f935d2ec3fed6e5276117db8ccfb9c939d2819f56fa161ed37"
+      },
+      "status": "passed"
+    }
+  },
+  "constrained_dynamics_equivalence_claimed": false,
+  "declared_unconstrained_constraint_count": 0,
+  "derived_pair_geometry": {
+    "bytes": 7814,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/derived-pair-geometry.json",
+    "sha256": "241461049cb182a6c666fb2e5520796894d80058f5eb4df5a580aca79a09cf28"
+  },
+  "derived_pair_geometry_protocol": {
+    "bytes": 3656,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/derived-pair-geometry-protocol.json",
+    "sha256": "77840d019502aef2dc0edc9e60994c662345e1bac82d23e3288b8a5377e39e3e"
+  },
+  "execution_context": {
+    "bytes": 14920,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/execution-context.json",
+    "sha256": "1f07d5daa61f6b7d2518ec1bf7c3609743202fed8965c95fac426941fad8847b"
+  },
+  "fit_calls": 0,
+  "focused_subtests_passed": 3,
+  "focused_test_cases_passed": 25,
+  "force_calls": 0,
+  "full_repository_CI_claimed": false,
+  "geometry_attempts_final_and_reproduced": 13911,
+  "geometry_metrics": {
+    "maximum_ligand_heavy_radius_angstrom": 8.419591043709527,
+    "minimum_all_atom_distance_angstrom": 1.4496568076617264,
+    "minimum_all_atom_radius_sum_ratio": 0.6040236698590528,
+    "minimum_heavy_atom_distance_angstrom": 2.5618413475467117,
+    "minimum_heavy_atom_radius_sum_ratio": 0.7956029029648174
+  },
+  "heavy_atom_count": 26,
+  "independent_numerical_audit_scope": "Performed separately by independent reviewer; no numerical parity claim made by this preparation receipt.",
+  "native_source_admission": false,
+  "new_FIT_rows": 0,
+  "original_constraint_count": 17,
+  "original_constraints_rejection": {
+    "bytes": 367,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/original-constrained-rejection.json",
+    "sha256": "b9a3e4223a4838aee42a2f00be00730b18ad9c0bf77c7cf9ec279aa9f19873aa"
+  },
+  "original_input_pins": {
+    "bytes": 3844,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/input-pins.json",
+    "sha256": "39f255159defe76812d05f430521e51618e22efb5e1c95ed4af60eaf215bafd7"
+  },
+  "original_inputs_preserved": true,
+  "preliminary_geometry_probe": {
+    "bytes": 20025886,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/preliminary-system-python-geometry-probe.json",
+    "sha256": "1d2c4376373fb4401bf004a08d89a8006301c9337a403e7f1a9416abb79c1c71"
+  },
+  "preliminary_geometry_runtime": {
+    "bytes": 298,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/preliminary-probe-runtime.json",
+    "sha256": "fefd737a6fa4b81f0f080457e61e835c96bde988df9646c7f7bab6f00c38780b"
+  },
+  "preliminary_other_runtime_attempts": 17972,
+  "prepared_manifest": {
+    "bytes": 7272,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/manifest.json",
+    "sha256": "aaaed0f0c4943ba194950abac6aee665f9ed344c907d52bef346ebb12a7cf78b"
+  },
+  "prior_geometry_diagnostic_pair_readiness": false,
+  "reproduced_manifest": {
+    "bytes": 7275,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/reproduced/manifest.json",
+    "sha256": "ad35ff95d5200f50b637bd4b0ff5616190b750b50fc51ad5652bbf447916f479"
+  },
+  "request": {
+    "bytes": 3400,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/request.json",
+    "sha256": "1a227a415796278b753345f1a8086d7f80350416cfbf6988481a407b8010e816"
+  },
+  "restored_harmonic_bond_count": 17,
+  "same_PR49_frozen_geometry_protocol_sha256": "01c1f5f2c0fa8e253a997565e64c4d319d2025a1f49a1221976bc9fde730af8b",
+  "same_PR49_preparation_runtime_versions": true,
+  "same_PR49_receptor_pocket_frame_cross_formula_and_solver": true,
+  "schema_id": "pr59_common_frame_development_evidence/1",
+  "score_calls": 0,
+  "source_boundary_checks": {
+    "bytes": 1932,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/source-checks.json",
+    "sha256": "6ce9729f8da202f3556317761d02bc70e536a4d2438c15d9e70a141957480266"
+  },
+  "source_boundary_checks_passed": 10,
+  "source_boundary_runner": {
+    "bytes": 6832,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/source-checks-runner.py",
+    "sha256": "97bba6eb5629fea102c40e3edb43060d2721f1198be7a3a2d62d30f7260b4e9e"
+  },
+  "source_graph_correspondence": {
+    "bytes": 9204,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/atom-correspondence.json",
+    "sha256": "f0d4f73e4cc21f5f8675b6090148b1480ee8f3190a2b11726ab0c2f0625c50f8"
+  },
+  "source_observed_receptor_heavy_coordinate_matches": 2124,
+  "source_roles_assigned": false,
+  "status": "COMPONENT_PREPARATION_AND_GEOMETRY_PASSED",
+  "test_receipt": {
+    "bytes": 795,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/local-tests.json",
+    "sha256": "1751a942241f298f11fd6c7d297ae2c2d1dfb5015b07cfb1c93d953ffaeb0f35"
+  },
+  "timing_scope": "Separate measured executions; geometry is nested inside final/reproduced preparation and must not be summed again. Excludes source development, independent numerics, fitting and installed execution.",
+  "timings_seconds": {
+    "final_geometry_search_inside_preparation": 7.841690926994488,
+    "final_preparation_total": 16.651248818998283,
+    "preliminary_geometry_probe_only": 10.905649786996946,
+    "reproduced_preparation_total": 15.97412134300248
+  },
+  "two_candidate_geometry_passed": true,
+  "unconstrained_model": {
+    "bytes": 52406,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/ligand-unconstrained-openmm-system.xml",
+    "sha256": "71594281504c42f935d2ec3fed6e5276117db8ccfb9c939d2819f56fa161ed37"
+  },
+  "unconstrained_model_difference": {
+    "bytes": 4206,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr59-common-frame-20260930-SIB6znrQ/prepared/parameterization-difference.json",
+    "sha256": "c48d8270756169aef7a4acde0935924e106369e0ff1ed5b9132c4e754f4ff7c7"
+  },
+  "v1_2_v1_3_solver_source_files_verified": 36,
+  "v1_2_v1_3_solver_sources_changed": false
+}

@@ -27,6 +27,7 @@ betelgeuze-cleanup = "betelgeuze_cleanup.cli:main"
 betelgeuze-dock = "betelgeuze_engine_v2.standalone_cli:main"
 betelgeuze-comparison-receipt = "betelgeuze_product.comparison_receipts:main"
 betelgeuze-comparison = "betelgeuze_product.installed_synthetic_comparison:main"
+betelgeuze-paper-development = "betelgeuze_product.installed_paper_development_comparison:main"
 betelgeuze-native-v4-source = "betelgeuze_product.installed_native_v4_replay_cli:source_main"
 betelgeuze-native-v4-comparison = "betelgeuze_product.installed_native_v4_replay_cli:comparison_main"
 

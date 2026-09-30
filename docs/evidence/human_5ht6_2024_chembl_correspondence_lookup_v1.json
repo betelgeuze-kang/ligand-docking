@@ -1,0 +1,176 @@
+{
+  "schema_id": "human_5ht6_2024_chembl_correspondence_lookup/1",
+  "receipt_written_at_utc": "2026-09-30T00:39:25.155002+00:00",
+  "source_head_context": "fb62c46944ba59b468cca701a127f70c5741e91d",
+  "source_ledger": {
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/human_5ht6_ki_2024_source_ledger_v1.json",
+    "bytes": 3005,
+    "sha256": "277f62f7cad26e85f4401aa4e53cfe5992da19dddec692500b7b552d21d33189"
+  },
+  "api_script": {
+    "path": "/home/betelgeuze/.codex/plugins/cache/openai-curated-remote/life-science-research/1.0.3/skills/chembl-skill/scripts/rest_request.py",
+    "bytes": 10728,
+    "sha256": "78ddae6460e3dd701cda67df4454532899d20851f8212a74ec8d5b6e2988b690"
+  },
+  "queries": [
+    {
+      "subject": "PR49",
+      "method": "GET",
+      "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+      "path": "molecule.json",
+      "params": {
+        "molecule_structures__standard_inchi_key": "QQYXUBNTHMWUNC-UHFFFAOYSA-N",
+        "limit": 10
+      },
+      "url": "https://www.ebi.ac.uk/chembl/api/data/molecule.json?molecule_structures__standard_inchi_key=QQYXUBNTHMWUNC-UHFFFAOYSA-N&limit=10",
+      "record_path": "molecules",
+      "max_items": 10,
+      "observed_http_status": 200,
+      "records_available": 0,
+      "records_returned": 0,
+      "truncated": false,
+      "response": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/PR49-molecule-raw.json",
+        "bytes": 138,
+        "sha256": "65728e280c7ccd71f622202165766538b6081589c10b206e6bdee13d0471bb46"
+      },
+      "original_saved_path": "/tmp/engine-v2-5ht6-chembl-record-lookup-20260930/PR49-molecule-raw.json"
+    },
+    {
+      "subject": "PR59",
+      "method": "GET",
+      "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+      "path": "molecule.json",
+      "params": {
+        "molecule_structures__standard_inchi_key": "PKYFJQXPMNODTI-UHFFFAOYSA-N",
+        "limit": 10
+      },
+      "url": "https://www.ebi.ac.uk/chembl/api/data/molecule.json?molecule_structures__standard_inchi_key=PKYFJQXPMNODTI-UHFFFAOYSA-N&limit=10",
+      "record_path": "molecules",
+      "max_items": 10,
+      "observed_http_status": 200,
+      "records_available": 0,
+      "records_returned": 0,
+      "truncated": false,
+      "response": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/PR59-molecule-raw.json",
+        "bytes": 138,
+        "sha256": "65728e280c7ccd71f622202165766538b6081589c10b206e6bdee13d0471bb46"
+      },
+      "original_saved_path": "/tmp/engine-v2-5ht6-chembl-record-lookup-20260930/PR59-molecule-raw.json"
+    },
+    {
+      "subject": "paper",
+      "method": "GET",
+      "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+      "path": "document.json",
+      "params": {
+        "doi": "10.3390/ijms251910287",
+        "limit": 10
+      },
+      "url": "https://www.ebi.ac.uk/chembl/api/data/document.json?doi=10.3390%2Fijms251910287&limit=10",
+      "record_path": "documents",
+      "max_items": 10,
+      "observed_http_status": 200,
+      "records_available": 0,
+      "records_returned": 0,
+      "truncated": false,
+      "response": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/paper-document-raw.json",
+        "bytes": 138,
+        "sha256": "1ba163fa47980157b782f99e704d8799e644bd701c5e33dec636fc816fd7300c"
+      },
+      "original_saved_path": "/tmp/engine-v2-5ht6-chembl-record-lookup-20260930/paper-document-raw.json"
+    },
+    {
+      "subject": "PR49",
+      "method": "GET",
+      "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+      "path": "molecule.json",
+      "params": {
+        "molecule_structures__standard_inchi_key__startswith": "QQYXUBNTHMWUNC",
+        "limit": 10
+      },
+      "url": "https://www.ebi.ac.uk/chembl/api/data/molecule.json?molecule_structures__standard_inchi_key__startswith=QQYXUBNTHMWUNC&limit=10",
+      "record_path": "molecules",
+      "max_items": 10,
+      "observed_http_status": 200,
+      "records_available": 0,
+      "records_returned": 0,
+      "truncated": false,
+      "response": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/PR49-connectivity-raw.json",
+        "bytes": 138,
+        "sha256": "65728e280c7ccd71f622202165766538b6081589c10b206e6bdee13d0471bb46"
+      },
+      "original_saved_path": "/tmp/engine-v2-5ht6-chembl-record-lookup-20260930/PR49-connectivity-raw.json"
+    },
+    {
+      "subject": "PR59",
+      "method": "GET",
+      "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+      "path": "molecule.json",
+      "params": {
+        "molecule_structures__standard_inchi_key__startswith": "PKYFJQXPMNODTI",
+        "limit": 10
+      },
+      "url": "https://www.ebi.ac.uk/chembl/api/data/molecule.json?molecule_structures__standard_inchi_key__startswith=PKYFJQXPMNODTI&limit=10",
+      "record_path": "molecules",
+      "max_items": 10,
+      "observed_http_status": 200,
+      "records_available": 0,
+      "records_returned": 0,
+      "truncated": false,
+      "response": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/PR59-connectivity-raw.json",
+        "bytes": 138,
+        "sha256": "65728e280c7ccd71f622202165766538b6081589c10b206e6bdee13d0471bb46"
+      },
+      "original_saved_path": "/tmp/engine-v2-5ht6-chembl-record-lookup-20260930/PR59-connectivity-raw.json"
+    },
+    {
+      "subject": "paper",
+      "method": "GET",
+      "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+      "path": "document.json",
+      "params": {
+        "doi__iexact": "10.3390/ijms251910287",
+        "limit": 10
+      },
+      "url": "https://www.ebi.ac.uk/chembl/api/data/document.json?doi__iexact=10.3390%2Fijms251910287&limit=10",
+      "record_path": "documents",
+      "max_items": 10,
+      "observed_http_status": 200,
+      "records_available": 0,
+      "records_returned": 0,
+      "truncated": false,
+      "response": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/paper-doi-iexact-raw.json",
+        "bytes": 138,
+        "sha256": "1ba163fa47980157b782f99e704d8799e644bd701c5e33dec636fc816fd7300c"
+      },
+      "original_saved_path": "/tmp/engine-v2-5ht6-chembl-record-lookup-20260930/paper-doi-iexact-raw.json"
+    }
+  ],
+  "archive_manifest": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-chembl-record-lookup-20260930-fb62c4694/archive-manifest.json",
+    "bytes": 1238,
+    "sha256": "5097c0a56068d1bff2985a4630c073857d5785935158a94f04419bff46d90367"
+  },
+  "archive_payload_files": 7,
+  "archive_payload_bytes": 6423,
+  "conclusion": "No records matched these six exact/prefix queries at retrieval. No valid ChEMBL record/assay/document origin was obtained.",
+  "limitations": [
+    "Chosen computational microstate InChIKeys are not verified assayed states.",
+    "No match does not prove the chemical family or all tautomer/salt/alias variants absent from ChEMBL.",
+    "DOI query coverage is bounded to the recorded exact and case-insensitive exact filters.",
+    "No activity endpoint or rights/source-family clearance was obtained."
+  ],
+  "native_chembl_ids_created": 0,
+  "source_roles_assigned": false,
+  "new_fit_rows": 0,
+  "new_training_or_evaluation_admissions": 0,
+  "independent_measurement_denominator": null,
+  "scientifically_qualified": false,
+  "protected_context_opened": false
+}

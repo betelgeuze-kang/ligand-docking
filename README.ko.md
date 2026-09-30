@@ -22,6 +22,8 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 v2_ao_native_cpu_scorer_contract_rc5
 ```
 
+별도로 선택해 사용하는 [설치형 논문 기반 개발 실행 경로](docs/engine_v2_installed_paper_development.md)는 명시한 준비 구조를 Cartesian CPU 비교·체크포인트 재개·결과 검증에 연결합니다. 계산 관측의 출처 역할은 미지정이며 독립 실험자료 분모는 미확정으로 유지합니다.
+
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
 
 - 정규 all-atom 상태, 검증 단계, SHA-256 identity

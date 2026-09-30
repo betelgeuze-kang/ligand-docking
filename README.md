@@ -30,6 +30,8 @@ development data; the disjoint fresh 128 cases are an internal provisional
 blind holdout and have not been executed. The active refiner is V7. Product
 promotion and public claims remain disabled.
 
+A separate opt-in [installed retained-paper development workflow](docs/engine_v2_installed_paper_development.md) connects declared prepared structures to Cartesian CPU baseline/refinement, checkpoint continuation and result verification. Its observations retain unassigned source roles and an unknown experimental denominator.
+
 Implemented and GitHub-hosted CPU tested:
 
 - canonical all-atom state, validation stages, and SHA-256 identities;
