@@ -1,0 +1,242 @@
+{
+  "actual_execution": true,
+  "boundary": {
+    "fresh_128_opened": false,
+    "frozen_absolute_gate": 1e-08,
+    "frozen_campaign_modified_or_resumed": false,
+    "frozen_recovery_denominator": 4,
+    "frozen_recovery_passed": 0,
+    "intrareceptor_energy_evaluated": false,
+    "native_force_calls": 0,
+    "native_optimizer_calls": 0,
+    "native_score_calls": 0,
+    "native_term_force_vectors_available": false,
+    "root_cause_established": false,
+    "scientifically_qualified": false,
+    "source_or_dataset_admission_issued": false,
+    "source_xml_equivalence_claimed": false
+  },
+  "changed_fields": [
+    {
+      "atom_index": 16,
+      "field": "sigma",
+      "new_hex": "0x1.c3f6c72bfd38dp-4",
+      "old_hex": "0x1.c3f6c72bfd38cp-4",
+      "scope": "ligand",
+      "ulp_distance": 1
+    },
+    {
+      "atom_index": 17,
+      "field": "sigma",
+      "new_hex": "0x1.f680b1ca8f016p-3",
+      "old_hex": "0x1.f680b1ca8f017p-3",
+      "scope": "ligand",
+      "ulp_distance": 1
+    },
+    {
+      "atom_index": 23,
+      "field": "sigma",
+      "new_hex": "0x1.c3f6c72bfd38dp-4",
+      "old_hex": "0x1.c3f6c72bfd38cp-4",
+      "scope": "ligand",
+      "ulp_distance": 1
+    },
+    {
+      "atom_index": 24,
+      "field": "sigma",
+      "new_hex": "0x1.c3f6c72bfd38dp-4",
+      "old_hex": "0x1.c3f6c72bfd38cp-4",
+      "scope": "ligand",
+      "ulp_distance": 1
+    },
+    {
+      "atom_index": 25,
+      "field": "sigma",
+      "new_hex": "0x1.c3f6c72bfd38dp-4",
+      "old_hex": "0x1.c3f6c72bfd38cp-4",
+      "scope": "ligand",
+      "ulp_distance": 1
+    },
+    {
+      "atom_index": 2232,
+      "field": "sigma",
+      "new_hex": "0x1.efea626aa344ep-3",
+      "old_hex": "0x1.efea626aa344fp-3",
+      "scope": "receptor",
+      "ulp_distance": 1
+    },
+    {
+      "atom_index": 2290,
+      "field": "sigma",
+      "new_hex": "0x1.efea626aa344ep-3",
+      "old_hex": "0x1.efea626aa344fp-3",
+      "scope": "receptor",
+      "ulp_distance": 1
+    }
+  ],
+  "ci_command_qa_ref": {
+    "bytes": 5687,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-roundtrip-ci-command-qa-20261001-kf0j2543/receipt.json",
+    "sha256": "704687b8858361800578c369c84fd50d02e038469cb0e2d90a213a98c09eae4e"
+  },
+  "costs": {
+    "complete_execute_cli_wall_seconds": 2.7403726399988955,
+    "entry_enclosing_process_cpu_seconds": 2.3433774269999996,
+    "entry_enclosing_wall_seconds": 2.442677103999813,
+    "nested_costs_must_not_be_added": true,
+    "numerical_execution_enclosing_process_cpu_seconds": 1.4385018250000001,
+    "numerical_execution_enclosing_wall_seconds": 1.490429829000277,
+    "performance_comparison_claimed": false,
+    "separate_prepare_cli_wall_seconds": 0.04979538100087666
+  },
+  "counts": {
+    "context_create": {
+      "completed": 4,
+      "error": 0,
+      "not_dispatched": 0,
+      "reserved_total": 4,
+      "unknown": 0
+    },
+    "get_state": {
+      "completed": 16,
+      "error": 0,
+      "not_dispatched": 0,
+      "reserved_total": 16,
+      "unknown": 0
+    },
+    "set_positions": {
+      "completed": 8,
+      "error": 0,
+      "not_dispatched": 0,
+      "reserved_total": 8,
+      "unknown": 0
+    }
+  },
+  "environment_equalities": {
+    "executable": true,
+    "isolated": true,
+    "loaded_dependency_manifest_sha256": true,
+    "numpy": true,
+    "numpy_module_sha256": true,
+    "openmm": true,
+    "openmm_module_sha256": true,
+    "platform": true,
+    "python": true
+  },
+  "independent_read_only_arithmetic_review_ref": {
+    "bytes": 6168,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-read-only-review-20261001-_w3li0vz/read-only-review.json",
+    "sha256": "5dec54f7d8a356f109c313948bb2b4921b0f13d4b0fd01479ff49ade93283180"
+  },
+  "independent_review_scope": {
+    "durable_events_reconciled": 84,
+    "native_minus_arm_force_components_recomputed": 312,
+    "new_native_force_score_optimizer_calls": 0,
+    "new_openmm_calls": 0,
+    "particle_binary64_fields_recomputed": 13206,
+    "protocol_calls_reconciled": 28,
+    "system_hashes_checked_as_reported_not_rebuilt": true,
+    "vector_summaries_recomputed": 36
+  },
+  "interpretation": "The tested particle q/sigma/epsilon roundtrip did not change the total-force residual; coordinate conversion, arithmetic order and other mechanisms remain untested.",
+  "next_question": "First observe native cross/LJ/Coulomb forces for case02 initial only in a separate opt-in diagnostic, preserving the original combined gradient and requiring full binary64 equality against a new unchanged baseline. Native internal separation and coordinate-unit/arithmetic-order interventions remain later questions.",
+  "original_arm_scalar_errors_exactly_reproduce_prior_record": true,
+  "particle_counts": {
+    "ligand": 26,
+    "receptor": 4376
+  },
+  "plan_ref": {
+    "bytes": 6275,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-20261001-ri1tdoph/prepared/plan.json",
+    "sha256": "69663a95abd723345e650c47519aab72a42f8bd8c3f7ba6846ff39d30682d0c0"
+  },
+  "prior_oracle_full_force_vectors_available": false,
+  "receipt_ref": {
+    "bytes": 8783916,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-20261001-ri1tdoph/numerical/receipt.json",
+    "sha256": "4d392e37f9c6a933b980fd39cd48fbd0dc12df7f8c4bf01c025dbb3b76ba8dfc"
+  },
+  "root_execution_observation_ref": {
+    "bytes": 4368,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-20261001-ri1tdoph/root-execution-observation.json",
+    "sha256": "37a9aa1e4dcb1e18e1296ed1f51cfe52480f7f04f13d12e7c2d4529bcaec38ce"
+  },
+  "root_review_ref": {
+    "bytes": 4525,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-20261001-ri1tdoph/root-preexecution-review.json",
+    "sha256": "edab8fbc0f812f98de227d63995b8b02417979257fa945105d98b08996b70bad"
+  },
+  "schema_id": "sro_particle_roundtrip_observation_summary/1",
+  "scope": "one new particle-only OpenMM intervention at two stored case02 development states",
+  "source_parent_commit": "b02d5267fb8853521fb67e4739baa995e888633f",
+  "source_to_native_fields_all_binary64_equal": true,
+  "states": [
+    {
+      "argmax_atom_index": 19,
+      "argmax_axis": "z",
+      "arm": "original_xml_particles",
+      "energy_kcal_per_mol": 96276.64869499273,
+      "force_component_absolute_error_kcal_per_mol_angstrom": 4.761386662721634e-08,
+      "label": "initial",
+      "unchanged_gate_passed": false
+    },
+    {
+      "argmax_atom_index": 19,
+      "argmax_axis": "z",
+      "arm": "native_unit_roundtrip_particles",
+      "energy_kcal_per_mol": 96276.64869499273,
+      "force_component_absolute_error_kcal_per_mol_angstrom": 4.761386662721634e-08,
+      "label": "initial",
+      "unchanged_gate_passed": false
+    },
+    {
+      "argmax_atom_index": 6,
+      "argmax_axis": "z",
+      "arm": "original_xml_particles",
+      "energy_kcal_per_mol": -31.596063552782255,
+      "force_component_absolute_error_kcal_per_mol_angstrom": 2.035172030900867e-11,
+      "label": "last_accepted",
+      "unchanged_gate_passed": true
+    },
+    {
+      "argmax_atom_index": 6,
+      "argmax_axis": "z",
+      "arm": "native_unit_roundtrip_particles",
+      "energy_kcal_per_mol": -31.596063552782255,
+      "force_component_absolute_error_kcal_per_mol_angstrom": 2.035172030900867e-11,
+      "label": "last_accepted",
+      "unchanged_gate_passed": true
+    }
+  ],
+  "system_invariants": {
+    "cross": {
+      "all_nonintervened_system_fields_identical": true,
+      "original": {
+        "all_except_custom_particle_q_sigma_epsilon_sha256": "5e9edb5802629e4b5e1d6c727cb45bfed4f65890b89d55971d54979bcab55e0a",
+        "full_system_xml_sha256": "09a503f7faf58a98e7409c0f057489bc85a0f96c2e30b5b3c2aaf44386cbf214"
+      },
+      "roundtrip": {
+        "all_except_custom_particle_q_sigma_epsilon_sha256": "5e9edb5802629e4b5e1d6c727cb45bfed4f65890b89d55971d54979bcab55e0a",
+        "full_system_xml_sha256": "334b5eccacaa2cab126ad8271b46789e51166c63838505f750c40b4be45ea708"
+      }
+    },
+    "internal": {
+      "all_nonintervened_system_fields_identical": true,
+      "original": {
+        "all_except_custom_particle_q_sigma_epsilon_sha256": "2afe038ff48c64db26a99b060906affc31a9c86d3e288d85ff61ad71aa9d58e1",
+        "full_system_xml_sha256": "11d51f2cd3dcd1989b9d61ac6b5055d8438187325bee1337ebb7f2ea7343525b"
+      },
+      "roundtrip": {
+        "all_except_custom_particle_q_sigma_epsilon_sha256": "2afe038ff48c64db26a99b060906affc31a9c86d3e288d85ff61ad71aa9d58e1",
+        "full_system_xml_sha256": "bdfc391afe6f4b3e1cb841c4f815e7df9d18fee4867c2f2b3051ff6a5d291138"
+      }
+    }
+  },
+  "total_energy_and_full_ligand_force_bit_identical_across_arms": true,
+  "validation_history_boundary": {
+    "checks_or_thresholds_weakened": false,
+    "initial_E731_original_raw_file_available": false,
+    "initial_isolated_import_failure_raw_log_retained": true,
+    "initial_three_E731_findings_tool_output_observation_only": true
+  }
+}

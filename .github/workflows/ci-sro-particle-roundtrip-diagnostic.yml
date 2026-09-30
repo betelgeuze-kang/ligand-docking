@@ -1,0 +1,43 @@
+name: ci-sro-particle-roundtrip-diagnostic
+on:
+  pull_request:
+    paths:
+      - 'tools/research/sro_particle_roundtrip_diagnostic_v1.py'
+      - 'tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py'
+      - 'docs/research/sro_particle_roundtrip_diagnostic_plan_20260930.md'
+      - 'benchmarks/oracles/sro_recovery_endpoint_numerics_v1.py'
+      - '.github/workflows/ci-sro-particle-roundtrip-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-sro-particle-roundtrip-diagnostic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint-and-mock-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.11'
+      - name: Install pinned lint and mock-test dependencies
+        run: python -m pip install pytest==8.3.5 ruff==0.11.13
+      - name: Lint the diagnostic tool and mock tests
+        run: |
+          python -m ruff check --isolated --no-cache \
+            tools/research/sro_particle_roundtrip_diagnostic_v1.py \
+            tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py
+      - name: Verify mock-only diagnostic contracts
+        run: |
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest \
+            -p no:cacheprovider -W error -q \
+            tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py
