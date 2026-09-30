@@ -2,7 +2,7 @@ name: ci-sro-particle-roundtrip-diagnostic
 on:
   pull_request:
     paths:
-      - 'tools/research/sro_particle_roundtrip_diagnostic_v1.py'
+      - 'benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py'
       - 'tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py'
       - 'docs/research/sro_particle_roundtrip_diagnostic_plan_20260930.md'
       - 'benchmarks/oracles/sro_recovery_endpoint_numerics_v1.py'
@@ -34,7 +34,7 @@ jobs:
       - name: Lint the diagnostic tool and mock tests
         run: |
           python -m ruff check --isolated --no-cache \
-            tools/research/sro_particle_roundtrip_diagnostic_v1.py \
+            benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py \
             tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py
       - name: Verify mock-only diagnostic contracts
         run: |

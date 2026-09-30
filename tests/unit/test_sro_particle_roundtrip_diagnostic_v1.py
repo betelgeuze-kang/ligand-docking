@@ -1,17 +1,21 @@
 """Synthetic and mocked QA only: no OpenMM import and no real molecular body."""
 from copy import deepcopy
+import hashlib
 import importlib.util
 from pathlib import Path
+import shlex
 import types
 
 import pytest
+
+from tools import check_external_oracle_architecture as architecture
 
 
 HERE = Path(__file__).resolve().parent
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = HERE / "sro_particle_roundtrip_diagnostic_v1.py"
 if not SOURCE.exists():
-    SOURCE = REPO / "tools/research/sro_particle_roundtrip_diagnostic_v1.py"
+    SOURCE = REPO / "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py"
 spec = importlib.util.spec_from_file_location("particle_diagnostic_test", SOURCE)
 diag = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diag)
@@ -19,6 +23,91 @@ ORACLE = HERE / "sro_recovery_endpoint_numerics_v1.py"
 if not ORACLE.exists():
     ORACLE = REPO / "benchmarks/oracles/sro_recovery_endpoint_numerics_v1.py"
 oracle = diag.load_oracle(diag.pin(ORACLE, allowed_paths=[ORACLE]))
+
+
+def _architecture_fixture(root):
+    for relative in (".dockerignore", "Dockerfile.product", "pyproject.toml", "packaging/engine-v2/pyproject.toml"):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((REPO / relative).read_bytes())
+    target = root / "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(SOURCE.read_bytes())
+    return target
+
+
+def test_actual_diagnostic_is_benchmark_only_and_product_import_fails_closed(tmp_path):
+    benchmark_root = tmp_path / "benchmark"
+    relocated = _architecture_fixture(benchmark_root)
+    assert hashlib.sha256(relocated.read_bytes()).hexdigest() == "f9d860e150542596457e546802ef8594365c112c424f8a1abf8e82a1734e9c3a"
+    assert architecture.inspect_python_boundary(benchmark_root) == []
+    assert architecture.inspect_product_import_boundary(benchmark_root) == []
+    old_root = tmp_path / "former-product-location"
+    old_source = old_root / "tools/research/sro_particle_roundtrip_diagnostic_v1.py"
+    old_source.parent.mkdir(parents=True)
+    old_source.write_bytes(relocated.read_bytes())
+    assert "product_dynamic_code_execution_unresolved" in {
+        item.code for item in architecture.inspect_product_import_boundary(old_root)}
+    import_root = tmp_path / "attempted-product-import"
+    _architecture_fixture(import_root)
+    product_source = import_root / "api/start.py"
+    product_source.parent.mkdir()
+    product_source.write_text("import benchmarks.oracles.sro_particle_roundtrip_diagnostic_v1\n")
+    violations = architecture.inspect_product_import_boundary(import_root)
+    assert any(item.code == "product_imports_external_oracle"
+               and "api.start -> benchmarks.oracles.sro_particle_roundtrip_diagnostic_v1" in item.detail
+               for item in violations)
+
+
+@pytest.mark.parametrize("mutation,code", [
+    ("docker-reinclude", "oracle_docker_reincluded"),
+    ("docker-copy", "oracle_copied_into_product_image"),
+    ("wheel-include", "oracle_wheel_exclusion_missing"),
+])
+def test_actual_packaging_excludes_diagnostic_and_detects_distribution_leaks(tmp_path, mutation, code):
+    _architecture_fixture(tmp_path)
+    rules = architecture._dockerignore_rules(tmp_path / ".dockerignore")
+    assert architecture._dockerignore_excludes(rules, "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py")
+    assert not architecture._dockerignore_excludes(rules, "tools/research/sro_particle_roundtrip_diagnostic_v1.py")
+    assert architecture.inspect_packaging_boundary(tmp_path) == []
+    if mutation == "docker-reinclude":
+        path = tmp_path / ".dockerignore"
+        path.write_text(path.read_text() + "!benchmarks/**\n")
+    elif mutation == "docker-copy":
+        path = tmp_path / "Dockerfile.product"
+        path.write_text(path.read_text() + "COPY benchmarks /app/benchmarks\n")
+    else:
+        path = tmp_path / "pyproject.toml"
+        path.write_text(path.read_text().replace('exclude = ["benchmarks*"]', 'exclude = []'))
+    assert code in {item.code for item in architecture.inspect_packaging_boundary(tmp_path)}
+
+
+def test_diagnostic_workflow_registers_only_relocated_lint_and_mock_tests():
+    text = (REPO / ".github/workflows/ci-sro-particle-roundtrip-diagnostic.yml").read_text()
+    lines = text.splitlines()
+    uses = [line.split("uses:", 1)[1].strip() for line in lines if line.lstrip().startswith("- uses:")]
+    assert uses == ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+                    "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"]
+    commands = []
+    for index, line in enumerate(lines):
+        if not line.startswith("        run: "):
+            continue
+        command = line.removeprefix("        run: ")
+        if command == "|":
+            parts = []
+            for following in lines[index + 1:]:
+                if not following.startswith("          "):
+                    break
+                parts.append(following[10:])
+            command = "\n".join(parts)
+        commands.append(shlex.split(command.replace("\\\n", " ")))
+    assert commands == [
+        ["python", "-m", "pip", "install", "pytest==8.3.5", "ruff==0.11.13"],
+        ["python", "-m", "ruff", "check", "--isolated", "--no-cache",
+         "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py", "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py"],
+        ["python", "-m", "pytest", "--rootdir=$PWD", "-c", "/dev/null", "--noconftest", "-p", "no:cacheprovider",
+         "-W", "error", "-q", "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py"],
+    ]
 
 
 class FakeBoundary:
