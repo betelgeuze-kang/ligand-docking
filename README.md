@@ -30,7 +30,7 @@ development data; the disjoint fresh 128 cases are an internal provisional
 blind holdout and have not been executed. The active refiner is V7. Product
 promotion and public claims remain disabled.
 
-A separate opt-in [installed retained-paper development workflow](docs/engine_v2_installed_paper_development.md) connects declared prepared structures to Cartesian CPU baseline/refinement, checkpoint continuation and result verification. Its observations retain unassigned source roles and an unknown experimental denominator.
+A separate opt-in [installed retained-paper development workflow](docs/engine_v2_installed_paper_development.md) connects declared prepared structures to Cartesian CPU baseline/refinement, checkpoint continuation and result verification. Its observations retain unassigned source roles and an unknown experimental denominator. The [installed PR49/PR59 campaign](docs/research/installed_pr49_pr59_real_cartesian_campaign_20260930.md) completed both declared models with independently checked endpoint arithmetic; both refinements were rejected and their baselines retained.
 
 Implemented and GitHub-hosted CPU tested:
 

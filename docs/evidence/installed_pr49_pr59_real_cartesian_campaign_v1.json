@@ -1,0 +1,178 @@
+{
+  "HIP_qualification": false,
+  "archive_files": 1121,
+  "archive_manifest": {
+    "bytes": 580055,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/archive-manifest-final.json",
+    "sha256": "c80d5ece5a703f5060bdc92e4f47e75a6a2bc6a46fb6f9ff262b6a6cd276a9f1"
+  },
+  "archive_payload_bytes": 75494772,
+  "auxiliary_verification_recovery": {
+    "bytes": 564,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/verification-only-recovery.json",
+    "sha256": "4bc87ce9b54b6fd9bf5caf4a44cb6a8a6aad5d29032fce4a0e331494b0bef97c"
+  },
+  "boundary": {
+    "assayed_microstate_verified": false,
+    "assigned_role": null,
+    "calibration_admitted": false,
+    "independent_evaluation_admitted": false,
+    "independent_measurement_denominator": null,
+    "product_ranking_enabled": false,
+    "same_prepared_assay_state_verified": false,
+    "scientifically_validated": false,
+    "source_authenticated": false,
+    "training_admitted": false
+  },
+  "cleanup_byte_scope_note": "Deleted environment logical file bytes are distinct from the observed shared-filesystem available-byte change; retained raw campaigns, source inputs and preparation environments were preserved.",
+  "committed_wheel_adoption": {
+    "bytes": 87720,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/committed-wheel-adoption.json",
+    "sha256": "9ff9327111258718d4d46ce9e0e37b271f2e98986ec9466d40524239f9f87280"
+  },
+  "denominator": {
+    "computed": 2,
+    "final_baseline_selected": 2,
+    "force_converged": 2,
+    "refinement_admitted": 0,
+    "requested": 2
+  },
+  "exact_verify_and_reuse_new_force_or_score_calls": 0,
+  "execution_calls": {
+    "bytes": 2582,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/observed-call-summary.json",
+    "sha256": "a25def26573b0ed51b3eba47c1d6e4fb3f8560c35ab7fc6dbbce1c4a6da6c30a"
+  },
+  "experimental_affinity_validated": false,
+  "final_independent_numerical_archive_manifest": {
+    "bytes": 12659,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/archive-file-manifest.json",
+    "sha256": "231d9919c31901258564baebb4cdd6735e61be8ffa29281832adac3bbae387de"
+  },
+  "final_independent_numerical_audit": {
+    "bytes": 16836,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/installed_pr49_pr59_final_independent_numerics_v1.json",
+    "sha256": "f1c75d3bb2ce3fb9ead3ada9ef2e3c72f7d38917edce61990a2c7e52996b07aa"
+  },
+  "fixed_force_tolerance": 0.001,
+  "fixed_internal_increase_limit_kcal_per_mol": 5.0,
+  "fixed_objective_attempt_budget_per_candidate": 417,
+  "fixed_restart_budget_per_candidate": 2,
+  "fresh128_accessed": false,
+  "fresh_installation": {
+    "bytes": 3971,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/installation/receipt.json",
+    "sha256": "126e8861a96a77dc6012b2a8eefa8817f505ee91e9d1e69b1e7cbbafe624cd18"
+  },
+  "fresh_installed_synthetic_probe": {
+    "bytes": 1653,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/fresh-installed-synthetic-probe/installed-probe.json",
+    "sha256": "dc7d3331b9ac27d2a9e80e2a38c6be5a38d319c59602efef5557974c000ed11c"
+  },
+  "full_all_cost_scope_measured": false,
+  "guarded_exact_reuse": {
+    "bytes": 157399,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/exact-reuse.json",
+    "sha256": "1f11cb59c7caa692a710d2ce8098e2b067be1ca2f8b8803ed903975796854c5b"
+  },
+  "guarded_verify": {
+    "bytes": 705,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/verify.json",
+    "sha256": "0afa0e4d2e596b85744700643c29a6e037bc72858cabe8264beac5c85f397eab"
+  },
+  "installed_child_verification": {
+    "PR49": {
+      "bytes": 1361,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/PR49-installed-verification.json",
+      "sha256": "06b4fd59b44977ae41b931c0edb2694faf21590e4d4300e613113e443a136f00"
+    },
+    "PR59": {
+      "bytes": 1361,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/PR59-installed-verification.json",
+      "sha256": "fb4ee5b84498dd331b59162078c3392b5ade02da1852d56828eafe4fde42a830"
+    }
+  },
+  "known_pose_recovery_validated": false,
+  "measured_calls": {
+    "force": 735,
+    "score": 4,
+    "unknown_force_calls": 0
+  },
+  "model_fit_performed": false,
+  "new_experimental_labels_admitted": 0,
+  "original_auxiliary_driver_log": {
+    "bytes": 1464,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/real-campaign.stdout",
+    "sha256": "dd74dad449afc325e7f08800980c9e062827acb2399a6ac23e641a4b94817fb4"
+  },
+  "owned_disposable_environment_cleanup": {
+    "bytes": 872,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-environment-cleanup-20260930-v663fl1v/cleanup.json",
+    "sha256": "890a807ede97b00cccf071515bb71ba537e3ab162c35a8976c80aff847249eff"
+  },
+  "product_scientific_qualification": false,
+  "protocol": {
+    "bytes": 2141,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/metadata/protocol.json",
+    "sha256": "94b4589c6755119ead7c4e8d91fad533fa4e70c4d4a91773e6ee80561c55b254"
+  },
+  "retained_refinement_admission_diagnostic": {
+    "bytes": 40868,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/pr49_pr59_retained_refinement_admission_v1.json",
+    "sha256": "cfe3522fd93f430921ce2c027df3034f02463e08ea9f80b04da49e5e65accd56"
+  },
+  "rows": [
+    {
+      "candidate_id": "paper:10.3390/ijms251910287:table4:PR49",
+      "converged": true,
+      "force_calls": 386,
+      "internal_energy_increase_kcal_per_mol": 20.525871055084167,
+      "paired_decision": {
+        "candidate_id": "pose-00000-e38c1475c467",
+        "reason": "ligand_internal_strain_limit_exceeded",
+        "variant": "baseline"
+      },
+      "pose_validity_blockers": [],
+      "raw_maximum_atom_force": 0.0008883592153140763,
+      "refinement_state": "rejected",
+      "score_calls": 2
+    },
+    {
+      "candidate_id": "paper:10.3390/ijms251910287:table4:PR59",
+      "converged": true,
+      "force_calls": 349,
+      "internal_energy_increase_kcal_per_mol": 28.855716128645724,
+      "paired_decision": {
+        "candidate_id": "pose-00000-6c2bb10f929f",
+        "reason": "refined_pose_invalid_or_incomplete",
+        "variant": "baseline"
+      },
+      "pose_validity_blockers": [
+        "element_vdw_receptor_severe_overlap_detected"
+      ],
+      "raw_maximum_atom_force": 0.0006848388496510577,
+      "refinement_state": "rejected",
+      "score_calls": 2
+    }
+  ],
+  "schema_version": "installed_pr49_pr59_real_cartesian_campaign_v1",
+  "setup_hotspot_analysis": {
+    "bytes": 25943,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/installed_paper_development_setup_hotspots_v1.json",
+    "sha256": "aa0772f0cd421829a3df25aff1039080294bca72d7eb0ea933f87487d4d10c67"
+  },
+  "source_CI_equivalent_validation": {
+    "bytes": 4503,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/source-validation-retry-01/receipt.json",
+    "sha256": "611c7b2fe41995643dc187e5935ce9ee156464fa39fb515b71f3cbb1dd4d95fd"
+  },
+  "source_local_cases_passed": 408,
+  "source_roles_assigned": 0,
+  "time_scope_note": "Timed primary stages include nested work; do not add child timings. Untimed startup/snapshot and separate recovery are not included, so this is not full cold product cost.",
+  "timed_nonoverlapping_primary_stage_series_seconds": 1771.6060680180017,
+  "wheel": {
+    "bytes": 2500503,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/wheel/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+    "sha256": "e30ca2394df3b0df01e844a76af793e4176e3e6321b2232af64b86109abf55aa"
+  }
+}

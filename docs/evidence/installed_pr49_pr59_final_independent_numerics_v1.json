@@ -1,0 +1,357 @@
+{
+  "audit_archive": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef",
+  "combined_source_complex_XML_exists": false,
+  "energy_absolute_tolerance_kcal_per_mol": 1e-08,
+  "final_results": {
+    "bytes": 3263,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/endpoint/results.json",
+    "sha256": "96d788a62250b0eea2ea599d6d8fd9aa0e378f985b8c5d966a9137a51262da79"
+  },
+  "force_component_absolute_tolerance_kcal_per_mol_angstrom": 1e-08,
+  "frozen_tool_receipt": {
+    "bytes": 2120,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/development/independent-audit-tool-freeze-20260930-v2.json",
+    "sha256": "6534e764eef910074af951903625bd65f010a5b3cfc37e0d9e89a3b7da5c2156"
+  },
+  "full_trace_domain_denominator": {
+    "passed": 2,
+    "requested": 2
+  },
+  "full_trace_native_force_call_denominator": {
+    "actual_force_calls": 735,
+    "models_with_closed_actual_calls": 2,
+    "optimizer_objective_attempts": 733,
+    "rejected_armijo_trials": 15,
+    "requested_models": 2,
+    "restart_force_calls": 2,
+    "unknown_invocations": 0,
+    "unknown_pending_attempts": 0
+  },
+  "installed_archive": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj",
+  "manifest_relative_path": "archive-file-manifest.json",
+  "models": {
+    "PR49": {
+      "coulomb_constants": {
+        "OpenMM_builtin_measured": 332.06371329919205,
+        "native_and_same_math": 332.063713299,
+        "native_minus_builtin": -1.9201706891180947e-10
+      },
+      "direct_source_internal_plus_declared_cross_total": {
+        "absolute_energy_error_kcal_per_mol": 1.9966250874858815e-10,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 2.766542550602935e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 7.4488289307389e-12
+      },
+      "endpoint_report": {
+        "bytes": 22032,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/endpoint/PR49-final-openmm.json",
+        "sha256": "a55b493ff4ed816751ae639d5bfd6f3dfc5b30d1d2a4cc2c3814e20d799d91be"
+      },
+      "event_count": 772,
+      "full_retained_trace_source_domain_claim_passed": true,
+      "installed_verification": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/PR49-installed-verification.json",
+        "sha256": "06b4fd59b44977ae41b931c0edb2694faf21590e4d4300e613113e443a136f00"
+      },
+      "maximum_retained_pair_distance_angstrom": 12.869273742983866,
+      "objective_decisions": {
+        "accepted": 376,
+        "initial": 1,
+        "rejected_armijo": 8
+      },
+      "original_constrained_source_not_supported": {
+        "code": "constrained_bond_terms_missing",
+        "reason": "constrained_bond_terms_missing",
+        "status": "rejected"
+      },
+      "original_source_projection_and_derivation_audit": {
+        "bytes": 4749,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR49-source-support.json",
+        "sha256": "e77115dc130bb1794b2b9eb9d9fca6e6e26499e9b1429ac041af80364e19012c"
+      },
+      "same_math_component_energy_errors": {
+        "cross_lennard_jones": 4.916955731459893e-12,
+        "cross_screened_coulomb": 2.504663143554353e-13,
+        "ligand_internal": 1.1937117960769683e-12,
+        "total": 3.439026841078885e-12
+      },
+      "same_math_total": {
+        "absolute_energy_error_kcal_per_mol": 3.439026841078885e-12,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 2.0600410266524705e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 6.237994276607195e-12
+      },
+      "source_force_class_deltas": {
+        "harmonic_angle": {
+          "same_math_energy_kcal_per_mol": 15.54099080282532,
+          "source_energy_kcal_per_mol": 15.54099080282532,
+          "source_minus_same_math_energy_kcal_per_mol": 0.0,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 0.0,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 0.0,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 0.0
+          }
+        },
+        "harmonic_bond": {
+          "same_math_energy_kcal_per_mol": 24.446128321146265,
+          "source_energy_kcal_per_mol": 24.446128321146265,
+          "source_minus_same_math_energy_kcal_per_mol": 0.0,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 0.0,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 0.0,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 0.0
+          }
+        },
+        "nonbonded": {
+          "same_math_energy_kcal_per_mol": -323.9216939789865,
+          "source_energy_kcal_per_mol": -323.9216939791828,
+          "source_minus_same_math_energy_kcal_per_mol": -1.9628032532637008e-10,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 1.9628032532637008e-10,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 1.9955592733822414e-11,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 4.154258764953169e-12
+          }
+        },
+        "periodic_torsion_with_improper": {
+          "same_math_energy_kcal_per_mol": 21.320795703949223,
+          "source_energy_kcal_per_mol": 21.320795703949223,
+          "source_minus_same_math_energy_kcal_per_mol": 0.0,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 0.0,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 0.0,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 0.0
+          }
+        }
+      },
+      "trace_report": {
+        "bytes": 260181,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/trace/PR49-retained-domain.json",
+        "sha256": "f582302896467ede18a9de18af98f33d9ab247fc6a41eb5f442826d4508b78b6"
+      },
+      "unconstrained_derivation": {
+        "constrained_dynamics_equivalence_claimed": false,
+        "derived_constraint_count": 0,
+        "derived_harmonic_bond_count": 42,
+        "derived_harmonic_pairs_equal_canonical_graph": true,
+        "original_constraint_count": 14,
+        "original_harmonic_bond_count": 28,
+        "particle_records_unchanged": true,
+        "passed": true,
+        "restored_equilibrium_lengths_equal_original_constraint_lengths": true,
+        "restored_harmonic_pair_count": 14,
+        "restored_pairs_equal_original_constraint_pairs": true,
+        "scope": "independent_serialized_term_and_graph_correspondence_not_parameter_assignment_reinference",
+        "source_harmonic_bond_rows_preserved": true,
+        "unchanged_other_force_classes": {
+          "CMMotionRemover": true,
+          "HarmonicAngleForce": true,
+          "NonbondedForce": true,
+          "PeriodicTorsionForce": true
+        }
+      },
+      "work": {
+        "actual_force_calls": 386,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 386,
+        "optimizer_force_calls": 385,
+        "optimizer_graph_calls": 385,
+        "optimizer_objective_attempts": 385,
+        "restart_force_calls": 1,
+        "restart_graph_calls": 1,
+        "restart_verification_attempts": 1,
+        "unknown_pending_attempts": 0
+      }
+    },
+    "PR59": {
+      "coulomb_constants": {
+        "OpenMM_builtin_measured": 332.06371329919205,
+        "native_and_same_math": 332.063713299,
+        "native_minus_builtin": -1.9201706891180947e-10
+      },
+      "direct_source_internal_plus_declared_cross_total": {
+        "absolute_energy_error_kcal_per_mol": 2.07108996619354e-10,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 2.4243718144134618e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 7.158314026742458e-12
+      },
+      "endpoint_report": {
+        "bytes": 23603,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/endpoint/PR59-final-openmm.json",
+        "sha256": "39b0c0b14683eca5ea30a8dc88dfabcbaf1c262ac9162fcfb834553c03618279"
+      },
+      "event_count": 698,
+      "full_retained_trace_source_domain_claim_passed": true,
+      "installed_verification": {
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-paper-development-20260930-fjjj19uj/execution/PR59-installed-verification.json",
+        "sha256": "fb4ee5b84498dd331b59162078c3392b5ade02da1852d56828eafe4fde42a830"
+      },
+      "maximum_retained_pair_distance_angstrom": 13.503827445382791,
+      "objective_decisions": {
+        "accepted": 340,
+        "initial": 1,
+        "rejected_armijo": 7
+      },
+      "original_constrained_source_not_supported": {
+        "code": "constrained_bond_terms_missing",
+        "reason": "constrained_bond_terms_missing",
+        "status": "rejected"
+      },
+      "original_source_projection_and_derivation_audit": {
+        "bytes": 4749,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR59-source-support.json",
+        "sha256": "433b37d15727b99749b7df2c16f2bd42c1c43bb5da22d31547bbf73c208ec899"
+      },
+      "same_math_component_energy_errors": {
+        "cross_lennard_jones": 6.501466032204917e-13,
+        "cross_screened_coulomb": 2.842170943040401e-14,
+        "ligand_internal": 2.2737367544323206e-13,
+        "total": 4.831690603168681e-13
+      },
+      "same_math_total": {
+        "absolute_energy_error_kcal_per_mol": 4.831690603168681e-13,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 2.488675931999751e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 6.062480883941031e-12
+      },
+      "source_force_class_deltas": {
+        "harmonic_angle": {
+          "same_math_energy_kcal_per_mol": 15.852391229453614,
+          "source_energy_kcal_per_mol": 15.852391229453614,
+          "source_minus_same_math_energy_kcal_per_mol": 0.0,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 0.0,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 0.0,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 0.0
+          }
+        },
+        "harmonic_bond": {
+          "same_math_energy_kcal_per_mol": 16.22698710116971,
+          "source_energy_kcal_per_mol": 16.22698710116971,
+          "source_minus_same_math_energy_kcal_per_mol": 0.0,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 0.0,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 0.0,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 0.0
+          }
+        },
+        "nonbonded": {
+          "same_math_energy_kcal_per_mol": -329.40601213038934,
+          "source_energy_kcal_per_mol": -329.4060121305961,
+          "source_minus_same_math_energy_kcal_per_mol": -2.0673951439675875e-10,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 2.0673951439675875e-10,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 1.6342482922482304e-11,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 3.878261282787203e-12
+          }
+        },
+        "periodic_torsion_with_improper": {
+          "same_math_energy_kcal_per_mol": 38.2307920567267,
+          "source_energy_kcal_per_mol": 38.2307920567267,
+          "source_minus_same_math_energy_kcal_per_mol": 0.0,
+          "source_vs_same_math": {
+            "absolute_energy_error_kcal_per_mol": 0.0,
+            "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 0.0,
+            "passed": true,
+            "rms_force_component_error_kcal_per_mol_angstrom": 0.0
+          }
+        }
+      },
+      "trace_report": {
+        "bytes": 236452,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/trace/PR59-retained-domain.json",
+        "sha256": "012ebb481a97dc5f1b8a495662c01fea6e9bbaeca5c895370d8054f5db9ca850"
+      },
+      "unconstrained_derivation": {
+        "constrained_dynamics_equivalence_claimed": false,
+        "derived_constraint_count": 0,
+        "derived_harmonic_bond_count": 46,
+        "derived_harmonic_pairs_equal_canonical_graph": true,
+        "original_constraint_count": 17,
+        "original_harmonic_bond_count": 29,
+        "particle_records_unchanged": true,
+        "passed": true,
+        "restored_equilibrium_lengths_equal_original_constraint_lengths": true,
+        "restored_harmonic_pair_count": 17,
+        "restored_pairs_equal_original_constraint_pairs": true,
+        "scope": "independent_serialized_term_and_graph_correspondence_not_parameter_assignment_reinference",
+        "source_harmonic_bond_rows_preserved": true,
+        "unchanged_other_force_classes": {
+          "CMMotionRemover": true,
+          "HarmonicAngleForce": true,
+          "NonbondedForce": true,
+          "PeriodicTorsionForce": true
+        }
+      },
+      "work": {
+        "actual_force_calls": 349,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 349,
+        "optimizer_force_calls": 348,
+        "optimizer_graph_calls": 348,
+        "optimizer_objective_attempts": 348,
+        "restart_force_calls": 1,
+        "restart_graph_calls": 1,
+        "restart_verification_attempts": 1,
+        "unknown_pending_attempts": 0
+      }
+    }
+  },
+  "new_native_force_score_graph_optimizer_calls": 0,
+  "original_driver_auxiliary_verification_failure_erased": false,
+  "point_denominator": {
+    "blocked": 0,
+    "direct_source_passed": 2,
+    "evaluated": 2,
+    "requested": 2,
+    "same_math_passed": 2
+  },
+  "protocol": {
+    "bytes": 5021,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/protocol-final.json",
+    "sha256": "e16f9e4ecf3d1dbb4aaee65ac92bb99ef50ed86a665218290fefb35ff7dd05d1"
+  },
+  "reference_elapsed_seconds": 5.375713219997124,
+  "reference_work": {
+    "attempted_getState_energy_force_observations": 28,
+    "completed_getState_energy_force_observations": 28,
+    "failed_getState_energy_force_observations": 0,
+    "interrupted_getState_completion_unknown": 0
+  },
+  "same_math_at_every_trial_verified": false,
+  "schema_id": "installed_pr49_pr59_final_independent_numerics/1",
+  "scientific_qualification": false,
+  "source_XML_exact_mathematical_or_dynamics_equivalence_claimed": false,
+  "source_head": "10af3426bf98c8164d702f5e5764fece70c25b97",
+  "source_pins": {
+    "oracle_source": {
+      "bytes": 24082,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tools/analysis/openmm_d3_numerical_audit.py",
+      "sha256": "483b73f2a5ff2593092d9f003f7062a0bd7b388c2e0bd6460e1c9f25a08a0e71"
+    },
+    "trace_source": {
+      "bytes": 25827,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tools/analysis/retained_cartesian_nocutoff_domain.py",
+      "sha256": "5b3c8c89c633f8bf79a310285049195beb7f9d058fa71467204f1444acb1c761"
+    },
+    "wrapper_source": {
+      "bytes": 20380,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/scripts/installed_pair_endpoint_openmm_20260930.py",
+      "sha256": "ab10054960d1d1a49e1eac89bb2279df6b5cd454db216c0659f15837a320fb03"
+    }
+  },
+  "status": "passed",
+  "stored_result_verification": {
+    "bytes": 96381,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-pair-independent-final-20260930-ab100549-810b63ef/independent-stored-result-verification.json",
+    "sha256": "c3ef60befe8563ff0bf3ecb07ef6b77c718fe29736ddef41beff068557ea8862"
+  }
+}
