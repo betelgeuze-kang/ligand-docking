@@ -28,7 +28,7 @@ HISTORICAL_MANIFEST_SHA256 = (
     "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7"
 )
 CURRENT_MANIFEST_SHA256 = (
-    "4977c5bc7c3e0a424203aeccd7fb2a370fbd4cfab1e1ff2f9e7b2a74ae80dc19"
+    "81f82e4f3f4f0fd367e1139a5a8a92dae83059b104000f8bfaa9c6793612e4ef"
 )
 HISTORICAL_PROTOCOL_SHA256 = (
     "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3"
@@ -71,6 +71,17 @@ REVIEWED_CURRENT_SOURCE_SHA256 = {
     # it does not authorize the current source under the old frozen protocol.
     "betelgeuze_engine_v2/physics/reference_parameter_applicability.py": (
         "f8ce56bb37c4f8dd369adec91e8835f503acb2f0016df366ad2a41a917f88296"
+    ),
+    # CPU metadata binds its own historical H5 dependency; its frozen protocol
+    # and receipt seals do not move with the latest H5 review.
+    "betelgeuze_engine_v2/physics/reference_validation_protocol.py": (
+        "812e6dee0d3306cd73fd069b9b069e10347d5148174866be4084a283168db193"
+    ),
+    "betelgeuze_engine_v2/physics/reference_validation_receipts.py": (
+        "999d066d4522aefd32b7d0a891eb17544825fb23eaa30ce7b929a81dcea3e08e"
+    ),
+    "betelgeuze_engine_v2/physics/reference_validation_result_writer.py": (
+        "80f5eeeac5a85367e5139da1f2da696feb194efb8104177b6b078e1967b41756"
     ),
 }
 

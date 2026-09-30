@@ -1,0 +1,113 @@
+{
+  "schema": "engine_v2_cpu_historical_dependency_ci_repair_v1",
+  "created_at": "2026-09-30T14:28:53.312008+00:00",
+  "source_parent_commit": "712a664531f7449bc3900e8905d6b79c2931457d",
+  "hosted_failure": {
+    "head": "712a664531f7449bc3900e8905d6b79c2931457d",
+    "cpu_job_id": 109897956487,
+    "cpu_run_id": 36718692534,
+    "cpu_failed": 109,
+    "cpu_passed": 197,
+    "post_merge_job_ids": [
+      109897953074,
+      109897953009,
+      109897952813
+    ],
+    "post_merge_run_id": 36718691972,
+    "post_merge_failed_per_job": 1,
+    "post_merge_passed_per_job": 352,
+    "raw_download_receipt_ref": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cpu-dependency-durable-validation-20260930-p1d65w64/ci/download-receipt.json",
+      "bytes": 2932,
+      "sha256": "5fa641055a40a0fb86165d06939b6b3cab669f1f121c985e1071cae8fc76362b"
+    }
+  },
+  "historical_cpu_h5_dependency_sha256": "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8",
+  "current_h5_review_sha256": "725171ad350f22d471b0a2cfdcd8c94f56cfbb795af3f585d3d655c365e7da0b",
+  "frozen_cpu_protocol_sha256": "1ee318ca1550953022783afa8b88eb66e3698489708c0a96969b855ca2995298",
+  "historical_global_protocol_sha256": "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3",
+  "current_187_file_manifest_sha256": "81f82e4f3f4f0fd367e1139a5a8a92dae83059b104000f8bfaa9c6793612e4ef",
+  "changed_source_refs": {
+    "betelgeuze_engine_v2/physics/reference_validation_protocol.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/betelgeuze_engine_v2/physics/reference_validation_protocol.py",
+      "bytes": 60064,
+      "sha256": "812e6dee0d3306cd73fd069b9b069e10347d5148174866be4084a283168db193"
+    },
+    "betelgeuze_engine_v2/physics/reference_validation_receipts.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/betelgeuze_engine_v2/physics/reference_validation_receipts.py",
+      "bytes": 23694,
+      "sha256": "999d066d4522aefd32b7d0a891eb17544825fb23eaa30ce7b929a81dcea3e08e"
+    },
+    "betelgeuze_engine_v2/physics/reference_validation_result_writer.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/betelgeuze_engine_v2/physics/reference_validation_result_writer.py",
+      "bytes": 42998,
+      "sha256": "80f5eeeac5a85367e5139da1f2da696feb194efb8104177b6b078e1967b41756"
+    },
+    "tests/unit/frozen_engine_v2_historical_sources.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tests/unit/frozen_engine_v2_historical_sources.py",
+      "bytes": 8254,
+      "sha256": "9de83b31d09ecc9bf163c7a7ac5ae6bb6bd6e79db71c637e4759fc9d1e80dfaf"
+    },
+    "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tests/unit/test_engine_v2_cpu_reference_validation_protocol.py",
+      "bytes": 16728,
+      "sha256": "de34b820527e32d88304c2c5fa25c3f98dbee98dab035b4421afa7a364d5f165"
+    },
+    "tests/unit/test_engine_v2_global_orientation_development_protocol.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tests/unit/test_engine_v2_global_orientation_development_protocol.py",
+      "bytes": 20564,
+      "sha256": "d9bec3a42ff544c25a537fabbb48685fa06f4c38e06e1d73da5e49fa9cb307f0"
+    }
+  },
+  "durable_validation_ref": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cpu-dependency-durable-validation-20260930-p1d65w64/validation-receipt.json",
+    "bytes": 8721,
+    "sha256": "d155bd11980972c218674d90c64b0eafe2cb3936cc4352596c0a0c49c4a20cfe"
+  },
+  "durable_validation_summary": {
+    "junit_suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "354",
+        "time": "367.481",
+        "timestamp": "2026-09-30T23:19:54.955750+09:00",
+        "hostname": "betelgeuze-X570S-AORUS-ELITE"
+      }
+    ],
+    "all_commands_passed": true,
+    "source_pins_unchanged": true,
+    "workflow_test_module_count": 23,
+    "additional_scope": [
+      "tests/unit/test_engine_v2_global_orientation_development_protocol.py"
+    ],
+    "six_changed_file_ruff_passed": true,
+    "full_repository_lint_pass_claim": false
+  },
+  "prior_temporary_observation_ref": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cpu-dependency-durable-validation-20260930-p1d65w64/prior-temporary-validation-observation.json",
+    "bytes": 1033,
+    "sha256": "2a1260c039e942950aa71c27e5ef566760c09ea741ff3ede94ebe392a4c6a274"
+  },
+  "archive_manifest_ref": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cpu-dependency-durable-validation-20260930-p1d65w64/manifest.json",
+    "bytes": 13322,
+    "sha256": "9d6e795148079b9c9156fa062e6a0fa87dde9fb633cda8e2e1059158900b63bc"
+  },
+  "archive_payload_count": 37,
+  "archive_payload_bytes": 1601635,
+  "boundary": {
+    "historical_protocol_and_receipt_seals_changed": false,
+    "scientific_thresholds_changed": false,
+    "tests_deleted": false,
+    "nonce_authority_integrity_guards_weakened": false,
+    "latest_h5_authorized_under_historical_cpu_protocol": false,
+    "actual_target_computation_added": false,
+    "terminal_sro_campaign_retried_or_resumed": false,
+    "protected_evaluation_data_used": false,
+    "post_repair_hosted_ci_pass_claim": false,
+    "scientific_qualification": "NOT_QUALIFIED"
+  }
+}

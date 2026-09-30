@@ -13,9 +13,6 @@ import hashlib
 import json
 from typing import Any, Mapping, NoReturn
 
-from .reference_parameter_applicability import (
-    FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
-)
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -26,6 +23,7 @@ from .reference_validation_materializer import (
     reference_validation_materialization_manifest_document,
 )
 from .reference_validation_protocol import (
+    FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256,
     FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
     cpu_reference_validation_protocol_document,
 )
@@ -119,7 +117,7 @@ def _environment_contract_projection() -> dict[str, Any]:
         "dependencies": {
             "protocol_sha256": FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
             "h5_applicability_record_sha256": (
-                FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
+                FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
             ),
             "artifact_binding_sha256": (
                 FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
@@ -297,7 +295,7 @@ def _result_contract_projection() -> dict[str, Any]:
         "dependencies": {
             "protocol_sha256": FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
             "h5_applicability_record_sha256": (
-                FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
+                FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
             ),
             "artifact_binding_sha256": (
                 FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
