@@ -1,0 +1,58 @@
+{
+  "schema_id": "native_v4_cartesian_fresh_install_retention/1",
+  "recorded_at_utc": "2026-09-29T23:39:41+00:00",
+  "source_commit": "e70eb8e4d66f63c4a928b627a0f3fc0a41653133",
+  "wheel": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/wheel-final/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+    "bytes": 2493199,
+    "sha256": "043763fa8553a6747b8967064b03dcc2e427559e1d366d2e4e1fa7e58445883e"
+  },
+  "fresh_dependency_environment_observed": true,
+  "pip_check_passed": true,
+  "probe_status": "passed",
+  "probe_manifest": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/probe-manifest.json",
+    "bytes": 51475,
+    "sha256": "9c05b67c6972e671c352a83b73bbe9f4e5e02c4f617c7ed9b97c2032774f40db"
+  },
+  "probe_file_count": 260,
+  "probe_bytes": 2370005,
+  "retained_evidence": {
+    "fresh-install-execution.json": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/fresh-install-execution.json",
+      "bytes": 3359,
+      "sha256": "54c36c54c7b7b2eb4782a9a7fac7d04784a19187d150d147342f9378543839d7"
+    },
+    "probe-manifest.json": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/probe-manifest.json",
+      "bytes": 51475,
+      "sha256": "9c05b67c6972e671c352a83b73bbe9f4e5e02c4f617c7ed9b97c2032774f40db"
+    },
+    "pip-freeze.txt": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/pip-freeze.txt",
+      "bytes": 1061,
+      "sha256": "7baff81e767924b4f48a1611ccb89bdfbe8f4d6dc633a17f7135093e53c9a1d7"
+    },
+    "pip-check.txt": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/pip-check.txt",
+      "bytes": 30,
+      "sha256": "9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09"
+    },
+    "pip-list.json": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/pip-list.json",
+      "bytes": 2030,
+      "sha256": "63377a99f2cf3a53abfd95fb5b11172a408fd1f4151189a7ba508b8a10fdfb0a"
+    },
+    "pyvenv.cfg.recorded": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-fresh-install-20260930-e70eb8e4/pyvenv.cfg.recorded",
+      "bytes": 71,
+      "sha256": "db6c8a96f25493eda9f74f23f0b5f248a8b50a5b469b15c5ee7313875b416364"
+    }
+  },
+  "disposable_venv_removed_after_verification": true,
+  "executed_site_path_is_historical_not_present": true,
+  "original_absolute_probe_paths_preserved": true,
+  "relocation_does_not_claim_reexecution": true,
+  "scientifically_validated": false,
+  "real_case_compared": false
+}

@@ -1,0 +1,62 @@
+{
+  "five_original_inputs": {
+    "cross_parameters": {
+      "bytes": 634803,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/cross-parameters.json",
+      "sha256": "226cb9f4be87b40d312e4b3bdb0dbc785bd6d6e87daa68e2f6abec76dde22d52"
+    },
+    "extensions": {
+      "bytes": 10457,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/extensions.json",
+      "sha256": "871c1a252c87c0b4f134c8b572f009f99658fea88f1076c9ee3fe1461a0871f6"
+    },
+    "ligand": {
+      "bytes": 66662,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/ligand-canonical.json",
+      "sha256": "aee0cdee35491fc44998a14c69c5e888b2de5e6c0c85b35bfedfb0562832445c"
+    },
+    "parameters": {
+      "bytes": 43995,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/parameters.json",
+      "sha256": "16d3b25e6492ae8500771d60d6fe5b5db12089b8c7fa64d3f25a6f1230fad217"
+    },
+    "receptor": {
+      "bytes": 7511796,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-chemical-graph-20260929-final1/receptor-canonical.json",
+      "sha256": "2c0970bcaf9e994f382e0f0c0fdacbfd1359bef60a10b879f757b31628658c4c"
+    }
+  },
+  "historical_results_read": false,
+  "installed_identity_evidence": {
+    "bytes": 9491,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/installed_cartesian_sro_execution_v1.json",
+    "sha256": "fc26972806d25bf249cfbc6635098ab5b53af73315887d202af5c966aa422286"
+  },
+  "preparation_manifest": {
+    "bytes": 7136,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/manifest.v1.json",
+    "sha256": "77480f536cc5e920e4a577f838b8b9c444de7922ff6e85480e4a3cd84fa61ad7"
+  },
+  "preparation_sources": {
+    "atom-provenance.json": {
+      "bytes": 24124,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/atom-provenance.json",
+      "sha256": "723d9f42546bffed99f203bb0b7dc39aa4c560efb180c04b2d1c599dc0b1738d"
+    },
+    "protocol.json": {
+      "bytes": 3049,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/protocol.json",
+      "sha256": "3a6271334d97ff76bd451dbfc7f48d0eee2a981782568d94b4833da378b22dbc"
+    },
+    "source-graph.json": {
+      "bytes": 18352,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-preparation-20260929-v1/source-graph.json",
+      "sha256": "7d93efefd0b82fd94eed8ed23575e523b6f8515d5fd28b4b0f494ff746c089f2"
+    }
+  },
+  "retained_request": {
+    "bytes": 2933,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-cartesian-sro-20260930-25b0ef44/request.json",
+    "sha256": "5493d963f94ecee0375acd45545a918ac4f68081fde3191a97a3b1f792c85925"
+  }
+}

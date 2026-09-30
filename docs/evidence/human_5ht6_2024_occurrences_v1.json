@@ -1,0 +1,5888 @@
+{
+  "schema_version": "human_5ht6_2024_occurrences_v1",
+  "contract_sha256": "55fab87416d876a0ffd24313446590a5d2e1b0d775b3f7389d4b321c4b2292cc",
+  "boundary": {
+    "assigned_role": null,
+    "admitted": false,
+    "full_source_clearance": false,
+    "scientifically_qualified": false,
+    "independent_holdout": false,
+    "graph_nodes_emitted": 0,
+    "independent_measurement_denominator": null
+  },
+  "spans": [
+    {
+      "id": "table1",
+      "start_line": 526,
+      "end_line": 962,
+      "sha256": "9a839c14a36b7d36f5608adb194f74aa1dbef1b801677f7dcfddf0a57796402e",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table2",
+      "start_line": 969,
+      "end_line": 1043,
+      "sha256": "77f8b65bcd2e0b5f05608922fa137f43f86fd0e525a6c02393dd4ac03b3c1e13",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table3",
+      "start_line": 1050,
+      "end_line": 1107,
+      "sha256": "834e3dcb640f020a8dfa011b1a11c578ab605fcfc1897ae203cffcc17a15a1a7",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table4",
+      "start_line": 1169,
+      "end_line": 1303,
+      "sha256": "583ac94acd78ac38547331c4a9a24e8aca851bdbd95026fdc0e2b6d5a308dadf",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table5",
+      "start_line": 1307,
+      "end_line": 1370,
+      "sha256": "16599f90ec3072d705d343b11f96652f0ef06f9725159f3c1431789d58fbe5dc",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table6",
+      "start_line": 1371,
+      "end_line": 1387,
+      "sha256": "15a9716e8bd89414e6023f8db4f995fd40c166db02a19ab12eb4f5bc158cf62a",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table7",
+      "start_line": 1410,
+      "end_line": 1447,
+      "sha256": "04aa767fb328fd4909a768c0d01009b2cebf9023d8279aebc1b1f1e3c204fa6c",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table8",
+      "start_line": 1535,
+      "end_line": 1550,
+      "sha256": "f5a4454002b4f7733153f14afd634872bec01c16e78d7178f241af8741193e16",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "table9",
+      "start_line": 1553,
+      "end_line": 1563,
+      "sha256": "9ffaed753a9195eaedb250f90fbcd467c90fde6858e03e37681eb991ad8fff99",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "chromatography_standards",
+      "start_line": 3662,
+      "end_line": 3673,
+      "sha256": "262cd38ecfa66d9f702ce89a025027073145bc4784336d5207e65fffe27161a2",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "binding_methods",
+      "start_line": 3533,
+      "end_line": 3572,
+      "sha256": "5592de08add7bd768423b2b2ec2a3469092aa14f9267c43531ebc9c1d836b1f8",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "functional_methods",
+      "start_line": 3574,
+      "end_line": 3600,
+      "sha256": "7854853c62fc95ad26ab3f481c52a18a4916abb9a5459c1db67d38d91a8f2cc8",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "CYP_references",
+      "start_line": 1605,
+      "end_line": 1607,
+      "sha256": "2431e5f07572c78c90dfb16c1922ced3142f845983133ff24a1997f7eead4fc3",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "ADMET_methods",
+      "start_line": 3686,
+      "end_line": 3735,
+      "sha256": "33800afe560aecb84b2535451831867c62d6950f04418c0906a1ac88e8596e58",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "PR65_synthesis",
+      "start_line": 3303,
+      "end_line": 3318,
+      "sha256": "2823b5647a87b182aa4e1d271c0ec2692fa832474137e2daedf4013e31df411d",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "PR66_synthesis",
+      "start_line": 3319,
+      "end_line": 3336,
+      "sha256": "9c41279bed88743c2d9711d719172e85f836703a67cda54b1f204860af118bf2",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "PR49_synthesis",
+      "start_line": 3048,
+      "end_line": 3051,
+      "sha256": "a9afc99805a81adfc3c5454410920a2f2eeff2aeb6bd516b56978d11cc97ac99",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "PR59_synthesis",
+      "start_line": 3207,
+      "end_line": 3211,
+      "sha256": "e7ee7e59458ae32265ac2d53169602feeb62d1e24b2fa38010d7e145e9d120c5",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "pimozide_cited",
+      "start_line": 1520,
+      "end_line": 1522,
+      "sha256": "42f5639598db0195e99f11c581b91813bd79331428da9a5b8a8a866556fea563",
+      "review_scope": "bounded_occurrence_metadata_only"
+    },
+    {
+      "id": "doxorubicin_cited",
+      "start_line": 133,
+      "end_line": 137,
+      "sha256": "74c2cb2506cadb1a4fef1f5011be8b3ef22bd1b1037c964b4e53ede3842833b8",
+      "review_scope": "bounded_occurrence_metadata_only"
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "table1:PR1",
+      "group": "table1",
+      "entity": "PR1",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR1"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR2",
+      "group": "table1",
+      "entity": "PR2",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR2"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR3",
+      "group": "table1",
+      "entity": "PR3",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR3"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR4",
+      "group": "table1",
+      "entity": "PR4",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR4"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR5",
+      "group": "table1",
+      "entity": "PR5",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR5"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR6",
+      "group": "table1",
+      "entity": "PR6",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR6"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR7",
+      "group": "table1",
+      "entity": "PR7",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR7"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR8",
+      "group": "table1",
+      "entity": "PR8",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR8"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR9",
+      "group": "table1",
+      "entity": "PR9",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR9"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR10",
+      "group": "table1",
+      "entity": "PR10",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR10"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR11",
+      "group": "table1",
+      "entity": "PR11",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR11"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table1:PR12",
+      "group": "table1",
+      "entity": "PR12",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table1",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR12"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR13",
+      "group": "table2",
+      "entity": "PR13",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR13"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR14",
+      "group": "table2",
+      "entity": "PR14",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR14"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR15",
+      "group": "table2",
+      "entity": "PR15",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR15"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR16",
+      "group": "table2",
+      "entity": "PR16",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR16"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR17",
+      "group": "table2",
+      "entity": "PR17",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR17"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR18",
+      "group": "table2",
+      "entity": "PR18",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR18"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR19",
+      "group": "table2",
+      "entity": "PR19",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR19"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR20",
+      "group": "table2",
+      "entity": "PR20",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR20"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR21",
+      "group": "table2",
+      "entity": "PR21",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR21"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR22",
+      "group": "table2",
+      "entity": "PR22",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR22"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR23",
+      "group": "table2",
+      "entity": "PR23",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR23"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR24",
+      "group": "table2",
+      "entity": "PR24",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR24"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR25",
+      "group": "table2",
+      "entity": "PR25",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR25"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR26",
+      "group": "table2",
+      "entity": "PR26",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR26"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR27",
+      "group": "table2",
+      "entity": "PR27",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR27"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table2:PR28",
+      "group": "table2",
+      "entity": "PR28",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table2",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR28"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR29",
+      "group": "table3",
+      "entity": "PR29",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR29"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR30",
+      "group": "table3",
+      "entity": "PR30",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR30"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR31",
+      "group": "table3",
+      "entity": "PR31",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR31"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR32",
+      "group": "table3",
+      "entity": "PR32",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR32"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR33",
+      "group": "table3",
+      "entity": "PR33",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR33"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR34",
+      "group": "table3",
+      "entity": "PR34",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR34"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR35",
+      "group": "table3",
+      "entity": "PR35",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR35"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR36",
+      "group": "table3",
+      "entity": "PR36",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR36"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR37",
+      "group": "table3",
+      "entity": "PR37",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR37"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table3:PR38",
+      "group": "table3",
+      "entity": "PR38",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table3",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR38"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR39",
+      "group": "table4",
+      "entity": "PR39",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR39"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR40",
+      "group": "table4",
+      "entity": "PR40",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR40"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR41",
+      "group": "table4",
+      "entity": "PR41",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR41"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR42",
+      "group": "table4",
+      "entity": "PR42",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR42"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR43",
+      "group": "table4",
+      "entity": "PR43",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR43"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR44",
+      "group": "table4",
+      "entity": "PR44",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR44"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR45",
+      "group": "table4",
+      "entity": "PR45",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR45"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR46",
+      "group": "table4",
+      "entity": "PR46",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR46"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR47",
+      "group": "table4",
+      "entity": "PR47",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR47"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR48",
+      "group": "table4",
+      "entity": "PR48",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR48"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR49",
+      "group": "table4",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.077",
+        "unit": "uM",
+        "sd": "0.018"
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR50",
+      "group": "table4",
+      "entity": "PR50",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR50"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR51",
+      "group": "table4",
+      "entity": "PR51",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR51"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR52",
+      "group": "table4",
+      "entity": "PR52",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR52"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR53",
+      "group": "table4",
+      "entity": "PR53",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR53"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR54",
+      "group": "table4",
+      "entity": "PR54",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR54"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR55",
+      "group": "table4",
+      "entity": "PR55",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR55"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR56",
+      "group": "table4",
+      "entity": "PR56",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR56"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR57",
+      "group": "table4",
+      "entity": "PR57",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR57"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR58",
+      "group": "table4",
+      "entity": "PR58",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR58"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR59",
+      "group": "table4",
+      "entity": "PR59",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR59"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "1.964",
+        "unit": "uM",
+        "sd": "0.452"
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR60",
+      "group": "table4",
+      "entity": "PR60",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR60"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR61",
+      "group": "table4",
+      "entity": "PR61",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR61"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR62",
+      "group": "table4",
+      "entity": "PR62",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR62"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR63",
+      "group": "table4",
+      "entity": "PR63",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR63"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR64",
+      "group": "table4",
+      "entity": "PR64",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR64"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR65",
+      "group": "table4",
+      "entity": "PR65",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR65"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table4:PR66",
+      "group": "table4",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table4",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR67",
+      "group": "table5",
+      "entity": "PR67",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR67"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR68",
+      "group": "table5",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR69",
+      "group": "table5",
+      "entity": "PR69",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR69"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR70",
+      "group": "table5",
+      "entity": "PR70",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR70"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR71",
+      "group": "table5",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR72",
+      "group": "table5",
+      "entity": "PR72",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR72"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR73",
+      "group": "table5",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR74",
+      "group": "table5",
+      "entity": "PR74",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR74"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR75",
+      "group": "table5",
+      "entity": "PR75",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR75"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR76",
+      "group": "table5",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR77",
+      "group": "table5",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table5:PR78",
+      "group": "table5",
+      "entity": "PR78",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table5",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR78"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR49:PR49",
+      "group": "table6_Ki_PR49",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.077",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": "table4:PR49",
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR49:PR49",
+      "group": "table6_EC50_PR49",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR49:PR49",
+      "group": "table6_KB_PR49",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.081",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR49:PR49",
+      "group": "table6_IC50_PR49",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "38.8",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR66:PR66",
+      "group": "table6_Ki_PR66",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "not_determined",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "ND",
+        "token": "ND",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR66:PR66",
+      "group": "table6_EC50_PR66",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "not_determined",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "ND",
+        "token": "ND",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR66:PR66",
+      "group": "table6_KB_PR66",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "not_determined",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "ND",
+        "token": "ND",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR66:PR66",
+      "group": "table6_IC50_PR66",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR68:PR68",
+      "group": "table6_Ki_PR68",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.037",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": "table5:PR68",
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR68:PR68",
+      "group": "table6_EC50_PR68",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR68:PR68",
+      "group": "table6_KB_PR68",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.079",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR68:PR68",
+      "group": "table6_IC50_PR68",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "81.8",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR71:PR71",
+      "group": "table6_Ki_PR71",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.061",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": "table5:PR71",
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR71:PR71",
+      "group": "table6_EC50_PR71",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR71:PR71",
+      "group": "table6_KB_PR71",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.035",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR71:PR71",
+      "group": "table6_IC50_PR71",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR73:PR73",
+      "group": "table6_Ki_PR73",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.043",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": "table5:PR73",
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR73:PR73",
+      "group": "table6_EC50_PR73",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR73:PR73",
+      "group": "table6_KB_PR73",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.134",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR73:PR73",
+      "group": "table6_IC50_PR73",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR76:PR76",
+      "group": "table6_Ki_PR76",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.103",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": "table5:PR76",
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR76:PR76",
+      "group": "table6_EC50_PR76",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.199",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR76:PR76",
+      "group": "table6_KB_PR76",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR76:PR76",
+      "group": "table6_IC50_PR76",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_Ki_PR77:PR77",
+      "group": "table6_Ki_PR77",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.373",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": "table5:PR77",
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_EC50_PR77:PR77",
+      "group": "table6_EC50_PR77",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_KB_PR77:PR77",
+      "group": "table6_KB_PR77",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_IC50_PR77:PR77",
+      "group": "table6_IC50_PR77",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "span": "table6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_reference_ziprasidone:ziprasidone",
+      "group": "table6_reference_ziprasidone",
+      "entity": "ziprasidone",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "D2",
+      "span": "table6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "ziprasidone"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.0009",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_reference_buspirone:buspirone",
+      "group": "table6_reference_buspirone",
+      "entity": "buspirone",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT1A",
+      "span": "table6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "buspirone"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.032",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_reference_SB269970:SB269970",
+      "group": "table6_reference_SB269970",
+      "entity": "SB269970",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT5A",
+      "span": "table6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "SB269970"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.061",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_reference_olanzapine:olanzapine",
+      "group": "table6_reference_olanzapine",
+      "entity": "olanzapine",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "olanzapine"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.007",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_reference_SB258585:SB258585",
+      "group": "table6_reference_SB258585",
+      "entity": "SB258585",
+      "category": "functional_reference",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "span": "table6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "SB258585"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.0003",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table6_reference_clozapine:clozapine",
+      "group": "table6_reference_clozapine",
+      "entity": "clozapine",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT7",
+      "span": "table6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "clozapine"
+      ],
+      "value": {
+        "kind": "numeric",
+        "token": "0.062",
+        "unit": "uM",
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR9",
+      "group": "table7",
+      "entity": "PR9",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR9"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR11",
+      "group": "table7",
+      "entity": "PR11",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR11"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR17",
+      "group": "table7",
+      "entity": "PR17",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR17"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR19",
+      "group": "table7",
+      "entity": "PR19",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR19"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR30",
+      "group": "table7",
+      "entity": "PR30",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR30"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR36",
+      "group": "table7",
+      "entity": "PR36",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR36"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR41",
+      "group": "table7",
+      "entity": "PR41",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR41"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR42",
+      "group": "table7",
+      "entity": "PR42",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR42"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR43",
+      "group": "table7",
+      "entity": "PR43",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR43"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR44",
+      "group": "table7",
+      "entity": "PR44",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR44"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR46",
+      "group": "table7",
+      "entity": "PR46",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR46"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR47",
+      "group": "table7",
+      "entity": "PR47",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR47"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR49",
+      "group": "table7",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR51",
+      "group": "table7",
+      "entity": "PR51",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR51"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR53",
+      "group": "table7",
+      "entity": "PR53",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR53"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR54",
+      "group": "table7",
+      "entity": "PR54",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR54"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR58",
+      "group": "table7",
+      "entity": "PR58",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR58"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR61",
+      "group": "table7",
+      "entity": "PR61",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR61"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR64",
+      "group": "table7",
+      "entity": "PR64",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR64"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR66",
+      "group": "table7",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR67",
+      "group": "table7",
+      "entity": "PR67",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR67"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR68",
+      "group": "table7",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR71",
+      "group": "table7",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR73",
+      "group": "table7",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR74",
+      "group": "table7",
+      "entity": "PR74",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR74"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR75",
+      "group": "table7",
+      "entity": "PR75",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR75"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR76",
+      "group": "table7",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR77",
+      "group": "table7",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7:PR78",
+      "group": "table7",
+      "entity": "PR78",
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR78"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7_references:doxorubicin",
+      "group": "table7_references",
+      "entity": "doxorubicin",
+      "category": "functional_reference",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "doxorubicin"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7_references:gefitinib",
+      "group": "table7_references",
+      "entity": "gefitinib",
+      "category": "functional_reference",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "gefitinib"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table7_references:afatinib",
+      "group": "table7_references",
+      "entity": "afatinib",
+      "category": "functional_reference",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "span": "table7",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "afatinib"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR11",
+      "group": "table8",
+      "entity": "PR11",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR11"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR41",
+      "group": "table8",
+      "entity": "PR41",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR41"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR42",
+      "group": "table8",
+      "entity": "PR42",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR42"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR44",
+      "group": "table8",
+      "entity": "PR44",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR44"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR54",
+      "group": "table8",
+      "entity": "PR54",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR54"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR58",
+      "group": "table8",
+      "entity": "PR58",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR58"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR68",
+      "group": "table8",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR71",
+      "group": "table8",
+      "entity": "PR71",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR71"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR73",
+      "group": "table8",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR74",
+      "group": "table8",
+      "entity": "PR74",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR74"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table8:PR77",
+      "group": "table8",
+      "entity": "PR77",
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "span": "table8",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR77"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table9:PR68",
+      "group": "table9",
+      "entity": "PR68",
+      "category": "test_compound",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "span": "table9",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR68"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table9:PR73",
+      "group": "table9",
+      "entity": "PR73",
+      "category": "test_compound",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "span": "table9",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR73"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table9:PR76",
+      "group": "table9",
+      "entity": "PR76",
+      "category": "test_compound",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "span": "table9",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result",
+      "source_tokens": [
+        "PR76"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table9_references:caffeine",
+      "group": "table9_references",
+      "entity": "caffeine",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "span": "table9",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "caffeine"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table9_references:verapamil",
+      "group": "table9_references",
+      "entity": "verapamil",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "span": "table9",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "verapamil"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "table9_references:warfarin",
+      "group": "table9_references",
+      "entity": "warfarin",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "span": "table9",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused",
+      "source_tokens": [
+        "warfarin"
+      ],
+      "value": {
+        "kind": "not_transcribed",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:acetanilide",
+      "group": "chromatography_standards",
+      "entity": "acetanilide",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "acetanilide"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:butyrophenone",
+      "group": "chromatography_standards",
+      "entity": "butyrophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "butyrophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:diclofenac",
+      "group": "chromatography_standards",
+      "entity": "diclofenac",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "diclofenac"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:octanonophenone",
+      "group": "chromatography_standards",
+      "entity": "octanonophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "octanonophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:acetophenone",
+      "group": "chromatography_standards",
+      "entity": "acetophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "acetophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:benzimidazole",
+      "group": "chromatography_standards",
+      "entity": "benzimidazole",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "benzimidazole"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:colchicine",
+      "group": "chromatography_standards",
+      "entity": "colchicine",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "colchicine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:indole",
+      "group": "chromatography_standards",
+      "entity": "indole",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "indole"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:indometacin",
+      "group": "chromatography_standards",
+      "entity": "indometacin",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "indometacin"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:paracetamol",
+      "group": "chromatography_standards",
+      "entity": "paracetamol",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "paracetamol"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:theophylline",
+      "group": "chromatography_standards",
+      "entity": "theophylline",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "theophylline"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:nicardipine",
+      "group": "chromatography_standards",
+      "entity": "nicardipine",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "nicardipine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:nizatidine",
+      "group": "chromatography_standards",
+      "entity": "nizatidine",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "nizatidine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:carbamazepine",
+      "group": "chromatography_standards",
+      "entity": "carbamazepine",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "carbamazepine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:heptanophenone",
+      "group": "chromatography_standards",
+      "entity": "heptanophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "heptanophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:hexanophenone",
+      "group": "chromatography_standards",
+      "entity": "hexanophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "hexanophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:propiophenone",
+      "group": "chromatography_standards",
+      "entity": "propiophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "propiophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "chromatography_standards:valerophenone",
+      "group": "chromatography_standards",
+      "entity": "valerophenone",
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "span": "chromatography_standards",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "valerophenone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:[3H]-LSD",
+      "group": "binding_method_reagents",
+      "entity": "[3H]-LSD",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "[3H]-LSD"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:[3H]-8-OHDPAT",
+      "group": "binding_method_reagents",
+      "entity": "[3H]-8-OHDPAT",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "[3H]-8-OHDPAT"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:[3H]-5-CT",
+      "group": "binding_method_reagents",
+      "entity": "[3H]-5-CT",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "[3H]-5-CT"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:[3H]-raclopride",
+      "group": "binding_method_reagents",
+      "entity": "[3H]-raclopride",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "[3H]-raclopride"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:methiothepine",
+      "group": "binding_method_reagents",
+      "entity": "methiothepine",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "methiothepine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:SB-699551",
+      "group": "binding_method_reagents",
+      "entity": "SB-699551",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "SB-699551"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:chlorpromazine",
+      "group": "binding_method_reagents",
+      "entity": "chlorpromazine",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "chlorpromazine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_reagents:5-HT",
+      "group": "binding_method_reagents",
+      "entity": "5-HT",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "5-HT"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_olanzapine:olanzapine",
+      "group": "binding_method_olanzapine",
+      "entity": "olanzapine",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "olanzapine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_buspirone:buspirone",
+      "group": "binding_method_buspirone",
+      "entity": "buspirone",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT1A",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "buspirone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_clozapine:clozapine",
+      "group": "binding_method_clozapine",
+      "entity": "clozapine",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT7",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "clozapine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "binding_method_risperidone:risperidone",
+      "group": "binding_method_risperidone",
+      "entity": "risperidone",
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "D2",
+      "span": "binding_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "risperidone"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "functional_method_reagents:5-CT",
+      "group": "functional_method_reagents",
+      "entity": "5-CT",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "functional_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "5-CT"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "functional_method_reagents:dopamine",
+      "group": "functional_method_reagents",
+      "entity": "dopamine",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "functional_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "dopamine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "functional_method_reagents:forskolin",
+      "group": "functional_method_reagents",
+      "entity": "forskolin",
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "span": "functional_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "forskolin"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "CYP_references:ketoconazole",
+      "group": "CYP_references",
+      "entity": "ketoconazole",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "CYP3A4_CYP2D6",
+      "span": "CYP_references",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "ketoconazole"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "CYP_references:quinidine",
+      "group": "CYP_references",
+      "entity": "quinidine",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "CYP3A4_CYP2D6",
+      "span": "CYP_references",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "quinidine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "ADMET_method_references:caffeine",
+      "group": "ADMET_method_references",
+      "entity": "caffeine",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "PAMPA_hepatotoxicity_PPB",
+      "span": "ADMET_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "caffeine"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "ADMET_method_references:doxorubicin",
+      "group": "ADMET_method_references",
+      "entity": "doxorubicin",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "PAMPA_hepatotoxicity_PPB",
+      "span": "ADMET_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "doxorubicin"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "ADMET_method_references:warfarin",
+      "group": "ADMET_method_references",
+      "entity": "warfarin",
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "PAMPA_hepatotoxicity_PPB",
+      "span": "ADMET_methods",
+      "relation": "method_mention",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "warfarin"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "PR65_synthesis:PR65",
+      "group": "PR65_synthesis",
+      "entity": "PR65",
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "span": "PR65_synthesis",
+      "relation": "identity_only",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "PR65"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "PR66_synthesis:PR66",
+      "group": "PR66_synthesis",
+      "entity": "PR66",
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "span": "PR66_synthesis",
+      "relation": "identity_only",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "PR66"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "PR49_synthesis:PR49",
+      "group": "PR49_synthesis",
+      "entity": "PR49",
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "span": "PR49_synthesis",
+      "relation": "identity_only",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "PR49"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "PR59_synthesis:PR59",
+      "group": "PR59_synthesis",
+      "entity": "PR59",
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "span": "PR59_synthesis",
+      "relation": "identity_only",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "PR59"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "pimozide_cited:pimozide",
+      "group": "pimozide_cited",
+      "entity": "pimozide",
+      "category": "cited_only",
+      "endpoint": "cited_comparison",
+      "target": "no_measurement_endpoint_assigned",
+      "span": "pimozide_cited",
+      "relation": "cited_only",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "pimozide"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    },
+    {
+      "id": "doxorubicin_cited:doxorubicin",
+      "group": "doxorubicin_cited",
+      "entity": "doxorubicin",
+      "category": "cited_only",
+      "endpoint": "cited_comparison",
+      "target": "no_measurement_endpoint_assigned",
+      "span": "doxorubicin_cited",
+      "relation": "cited_only",
+      "origin": "not_a_measurement",
+      "source_tokens": [
+        "doxorubicin"
+      ],
+      "value": {
+        "kind": "not_applicable",
+        "token": null,
+        "unit": null,
+        "sd": null
+      },
+      "repeat_of": null,
+      "inventory_included": true,
+      "graph_inclusion": "unknown",
+      "assigned_role": null,
+      "admitted": false,
+      "independent_measurement_count": null,
+      "activity_label": null
+    }
+  ],
+  "unresolved_gaps": [
+    {
+      "id": "PR65_PR66_conflict",
+      "status": "unresolved",
+      "detail": "Table 4 assigns PR65 4-CH3-pip and PR66 morfoline; synthesis names assign PR65 morpholin and PR66 methylpiperazin. Neither identity corrected or admitted.",
+      "spans": [
+        "table4",
+        "PR65_synthesis",
+        "PR66_synthesis"
+      ]
+    },
+    {
+      "id": "chemical_identity_microstate",
+      "status": "unresolved",
+      "detail": "Printed identifiers are not verified structures; salts, stereochemistry and assayed microstates unresolved.",
+      "spans": [
+        "table4",
+        "PR65_synthesis",
+        "PR66_synthesis"
+      ]
+    },
+    {
+      "id": "full_text_inventory",
+      "status": "unresolved",
+      "detail": "Bounded occurrence checks only; unchecked ranges and unenumerated chemicals/reagents within reviewed spans remain. Bibliography not traversed and no automatic chemical edges.",
+      "spans": []
+    },
+    {
+      "id": "graph_inclusion_policy",
+      "status": "unresolved",
+      "detail": "All five inventory categories retained; graph inclusion unknown for every occurrence pending separate prospective policy review. No post hoc omission of olanzapine or SB258585.",
+      "spans": [
+        "table6"
+      ]
+    },
+    {
+      "id": "independent_source_roles",
+      "status": "unresolved",
+      "detail": "All assigned roles remain null, no new admission. Seen outcomes cannot become an untouched blind holdout; existing reservations and weights unchanged.",
+      "spans": []
+    },
+    {
+      "id": "intended_use_rights",
+      "status": "unresolved",
+      "detail": "Article CC BY 4.0 notice is separate from unresolved intended training/product-use review.",
+      "spans": []
+    },
+    {
+      "id": "purity_PR49_PR59",
+      "status": "unresolved",
+      "detail": "PR49 reported purity 92%; PR59 96%. Effect of purity/impurities and assay correspondence unresolved.",
+      "spans": [
+        "PR49_synthesis",
+        "PR59_synthesis"
+      ]
+    },
+    {
+      "id": "receptor_construct",
+      "status": "unresolved",
+      "detail": "Human HEK293 expression reported; exact assayed construct correspondence remains unverified.",
+      "spans": [
+        "binding_methods"
+      ]
+    },
+    {
+      "id": "reference_value_origin",
+      "status": "unresolved",
+      "detail": "Reference values remain unknown new measurement versus reused literature. Method references 60 and 56 do not establish row-specific reference origin.",
+      "spans": [
+        "table6",
+        "binding_methods",
+        "functional_methods"
+      ]
+    },
+    {
+      "id": "supplementary_inventory",
+      "status": "unresolved",
+      "detail": "Supplement and Table S1 not reviewed; no complete chemical family closure.",
+      "spans": [
+        "chromatography_standards"
+      ]
+    },
+    {
+      "id": "table6_method_control_conflict",
+      "status": "unresolved",
+      "detail": "Table 6 D2 reference ziprasidone versus method risperidone unresolved; printed SB269970 reference and SB-699551 reagent kept separate.",
+      "spans": [
+        "table6",
+        "binding_methods"
+      ]
+    },
+    {
+      "id": "untranscribed_values",
+      "status": "unresolved",
+      "detail": "Most primary-table values and other-target Table 6 values are not transcribed; panel occurrences for Tables 7–9 do not enumerate all endpoint cells. Inventory counts are not independent-measurement denominators.",
+      "spans": [
+        "table1",
+        "table2",
+        "table3",
+        "table4",
+        "table5",
+        "table6",
+        "table7",
+        "table8",
+        "table9"
+      ]
+    },
+    {
+      "id": "wet_assay_pH",
+      "status": "unresolved",
+      "detail": "Wet receptor-assay pH not established; chromatographic/PAMPA pH must not substitute for receptor-assay pH.",
+      "spans": [
+        "binding_methods",
+        "functional_methods"
+      ]
+    }
+  ],
+  "unchecked_line_ranges": [
+    [
+      1,
+      132
+    ],
+    [
+      138,
+      525
+    ],
+    [
+      963,
+      968
+    ],
+    [
+      1044,
+      1049
+    ],
+    [
+      1108,
+      1168
+    ],
+    [
+      1304,
+      1306
+    ],
+    [
+      1388,
+      1409
+    ],
+    [
+      1448,
+      1519
+    ],
+    [
+      1523,
+      1534
+    ],
+    [
+      1551,
+      1552
+    ],
+    [
+      1564,
+      1604
+    ],
+    [
+      1608,
+      3047
+    ],
+    [
+      3052,
+      3206
+    ],
+    [
+      3212,
+      3302
+    ],
+    [
+      3337,
+      3532
+    ],
+    [
+      3573,
+      3573
+    ],
+    [
+      3601,
+      3661
+    ],
+    [
+      3674,
+      3685
+    ],
+    [
+      3736,
+      4109
+    ]
+  ],
+  "supplement_reviewed": false
+}

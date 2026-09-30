@@ -1,8 +1,8 @@
 """Fair docking-comparison contract (Betelgeuze vs Vina/GNINA), read-only.
 
-External benchmark comparisons are only meaningful if every tool runs on the
-**same dataset, same preparation policy, same metric definitions, and the same
-failure accounting**. This module enforces that contract and is fail-closed: if
+External benchmark comparisons are only meaningful with explicit scope and
+failure accounting. The v1 contract requires the same preparation policy. V2
+separates controlled-core from full-workflow comparisons. V1 is fail-closed: if
 the dataset manifest hash, preparation-policy hash, metric-definition version,
 pose-success threshold, or the complex universe differ across tools, the
 comparison is marked invalid and **no winner is declared**.
@@ -20,6 +20,9 @@ from __future__ import annotations
 from typing import Any
 
 DOCKING_COMPARISON_SCHEMA_VERSION = "docking_comparison_contract_v1"
+SCOPED_POSE_SCHEMA_VERSION = "docking_comparison_contract_v2"
+CONTROLLED_CORE = "controlled_core"
+FULL_WORKFLOW = "full_workflow"
 
 CLAIM_BOUNDARY = (
     "Fair docking-comparison contract. A comparison is valid only when every tool shares the same dataset "
@@ -27,6 +30,13 @@ CLAIM_BOUNDARY = (
     "universe with explicit missing/failed accounting. It ingests caller-provided aggregate result rows; it does "
     "not run docking, prepare inputs, download datasets, or promote product claims. An invalid comparison declares "
     "no winner."
+)
+
+SCOPED_CLAIM_BOUNDARY = (
+    "V2 checks only the internal consistency of caller-declared aggregate rows within one explicit scope. "
+    "Controlled core requires one canonical prepared input; full workflow permits documented tool-specific "
+    "preparation. This function neither authenticates input/result artifacts nor independently recalculates "
+    "pose metrics, runs docking, or authorizes a scientific, product, or customer claim."
 )
 
 TOOL_KIND_SUBJECT = "subject"
@@ -236,13 +246,189 @@ def _delta(subject_value: float | None, baseline_value: float | None) -> float |
     return round(float(subject_value) - float(baseline_value), 6)
 
 
+def _required_text(row: dict[str, Any], key: str) -> str:
+    value = row.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise DockingComparisonError(f"missing or empty {key}")
+    return value
+
+
+def _count(row: dict[str, Any], key: str) -> int:
+    value = row.get(key)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise DockingComparisonError(f"{key} must be a nonnegative integer")
+    return value
+
+
+def _wall_seconds(row: dict[str, Any], key: str) -> float:
+    if isinstance(row.get(key), bool):
+        raise DockingComparisonError(f"{key} must be finite and nonnegative")
+    value = _num(row.get(key))
+    if value is None or not 0 <= value < float("inf"):
+        raise DockingComparisonError(f"{key} must be finite and nonnegative")
+    return value
+
+
+def build_scoped_pose_success_comparison(rows: list[dict[str, Any]], *, scope: str) -> dict[str, Any]:
+    """Build a v2, failure-inclusive pose comparison for exactly one scope.
+
+    The caller supplies counts and provenance, never precomputed rates. This is
+    an aggregate receipt validator; it cannot authenticate input artifacts or
+    establish that the recorded tool runs actually happened.
+    """
+
+    if scope not in (CONTROLLED_CORE, FULL_WORKFLOW):
+        raise DockingComparisonError(f"unknown comparison scope: {scope}")
+    shared = (
+        "dataset_id", "dataset_manifest_sha256", "candidate_manifest_sha256",
+        "metric_def_version", "pose_success_rmsd_threshold_a",
+    )
+    if scope == CONTROLLED_CORE:
+        shared += (
+            "chemical_state_sha256", "receptor_state_sha256",
+            "pocket_definition_sha256", "shared_preparation_sha256",
+            "canonical_prepared_input_sha256",
+        )
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("schema_version") != SCOPED_POSE_SCHEMA_VERSION:
+            raise DockingComparisonError("invalid_scoped_comparison_schema_version")
+        if row.get("comparison_scope") != scope:
+            raise DockingComparisonError("mixed_or_missing_comparison_scope")
+        if "top1_pose_success_rate" in row or "top5_pose_success_rate" in row:
+            raise DockingComparisonError("caller_supplied_pose_success_rate")
+        _require(row, ("tool_id", "tool_kind"))
+        _required_text(row, "tool_id")
+        _required_text(row, "tool_version")
+        for key in shared:
+            if key == "pose_success_rmsd_threshold_a":
+                if isinstance(row.get(key), bool):
+                    raise DockingComparisonError("invalid pose_success_rmsd_threshold_a")
+                threshold = _num(row.get(key))
+                if threshold is None or not 0 < threshold < float("inf"):
+                    raise DockingComparisonError("invalid pose_success_rmsd_threshold_a")
+            else:
+                _required_text(row, key)
+        total = _count(row, "complex_count")
+        completed = _count(row, "completed_complex_count")
+        failed = _count(row, "failed_complex_count")
+        unprocessed = _count(row, "unprocessed_complex_count")
+        top1 = _count(row, "top1_success_count")
+        top5 = _count(row, "top5_success_count")
+        if total == 0 or completed + failed + unprocessed != total:
+            raise DockingComparisonError("complex_denominator_mismatch")
+        if top1 > top5 or top5 > completed:
+            raise DockingComparisonError("pose_success_count_exceeds_completed")
+        normalized_row = {
+            **{key: row[key] for key in shared},
+            "schema_version": SCOPED_POSE_SCHEMA_VERSION,
+            "tool_id": row["tool_id"], "tool_kind": row["tool_kind"],
+            "tool_version": row["tool_version"], "comparison_scope": scope,
+            "complex_count": total, "completed_complex_count": completed,
+            "failed_complex_count": failed, "unprocessed_complex_count": unprocessed,
+            "top1_success_count": top1, "top5_success_count": top5,
+            "top1_pose_success_rate": top1 / total,
+            "top5_pose_success_rate": top5 / total,
+            "result_artifact_sha256": _required_text(row, "result_artifact_sha256"),
+        }
+        if scope == CONTROLLED_CORE:
+            conversion = row.get("input_conversion")
+            if not isinstance(conversion, dict):
+                raise DockingComparisonError("missing input_conversion")
+            normalized_row["input_conversion"] = {
+                key: _required_text(conversion, key)
+                for key in ("method", "version", "source_sha256", "output_sha256")
+            }
+            if normalized_row["input_conversion"]["source_sha256"] != row["canonical_prepared_input_sha256"]:
+                raise DockingComparisonError("conversion_source_mismatch")
+        else:
+            normalized_row["preparation_policy_sha256"] = _required_text(row, "preparation_policy_sha256")
+            normalized_row["preparation_recommendation_ref"] = _required_text(row, "preparation_recommendation_ref")
+            prep_failed = _count(row, "preparation_failed_complex_count")
+            if prep_failed > failed:
+                raise DockingComparisonError("preparation_failures_exceed_failed_complexes")
+            normalized_row["preparation_failed_complex_count"] = prep_failed
+            normalized_row["peak_rss_kib"] = _count(row, "peak_rss_kib")
+            if normalized_row["peak_rss_kib"] == 0:
+                raise DockingComparisonError("peak_rss_kib_must_be_measured")
+            intervention_count = _count(row, "expert_intervention_count")
+            intervention_wall = _wall_seconds(row, "expert_intervention_wall_seconds")
+            if (intervention_count == 0) != (intervention_wall == 0):
+                raise DockingComparisonError("expert_intervention_count_time_mismatch")
+            normalized_row["expert_intervention_count"] = intervention_count
+            normalized_row["expert_intervention_wall_seconds"] = intervention_wall
+            normalized_row["expert_intervention_log_sha256"] = _required_text(
+                row, "expert_intervention_log_sha256"
+            )
+            normalized_row["cost_wall_seconds"] = {
+                phase: _wall_seconds(row, f"{phase}_wall_seconds")
+                for phase in ("preparation", "compute", "validation", "recovery")
+            }
+            normalized_row["elapsed_wall_seconds"] = _wall_seconds(row, "elapsed_wall_seconds")
+            accounted = sum(normalized_row["cost_wall_seconds"].values()) + intervention_wall
+            if accounted > normalized_row["elapsed_wall_seconds"] + 1e-9:
+                raise DockingComparisonError("phase_cost_exceeds_elapsed_wall_seconds")
+            normalized_row["other_wall_seconds"] = max(
+                0.0, normalized_row["elapsed_wall_seconds"] - accounted
+            )
+        normalized.append(normalized_row)
+
+    unfairness = _check_fairness([
+        {**r, "prep_policy_sha256": r.get("shared_preparation_sha256", "scope_specific")}
+        for r in rows
+    ])
+    # v1's fairness keys do not include the v2 candidate/state keys. Check
+    # those independently. The full-workflow policy is tool-specific, and the
+    # synthetic v1 prep key above is constant for that scope.
+    for key in shared:
+        if len({str(r[key]) for r in rows}) > 1:
+            reason = f"mismatched_{key}"
+            if reason not in unfairness:
+                unfairness.append(reason)
+    if len({r["complex_count"] for r in normalized}) > 1:
+        unfairness.append("mismatched_complex_count")
+
+    valid = not unfairness
+    subject = next((r for r in normalized if r["tool_kind"] == TOOL_KIND_SUBJECT), None)
+    deltas = []
+    if valid and subject is not None:
+        for baseline in (r for r in normalized if r["tool_kind"] == TOOL_KIND_BASELINE):
+            deltas.append({
+                "baseline_tool_id": baseline["tool_id"],
+                "top1_success_delta": _delta(subject["top1_pose_success_rate"], baseline["top1_pose_success_rate"]),
+                "top5_success_delta": _delta(subject["top5_pose_success_rate"], baseline["top5_pose_success_rate"]),
+            })
+    return {
+        "summary": {
+            "schema_version": SCOPED_POSE_SCHEMA_VERSION,
+            "comparison_kind": "pose_success",
+            "comparison_scope": scope,
+            "comparison_valid": valid,
+            "status": "declared_comparison_consistent_unverified" if valid else "blocked_unfair_comparison",
+            "unfairness_reasons": unfairness,
+            "tool_count": len(normalized),
+            "dataset_id": rows[0]["dataset_id"] if rows else "",
+            "subject_vs_baseline_deltas": deltas,
+            "claim_boundary": SCOPED_CLAIM_BOUNDARY,
+            "source_artifacts_verified": False,
+            "metrics_independently_recomputed": False,
+        },
+        "rows": normalized,
+    }
+
+
 __all__ = [
     "DOCKING_COMPARISON_SCHEMA_VERSION",
     "CLAIM_BOUNDARY",
+    "SCOPED_CLAIM_BOUNDARY",
     "TOOL_KIND_SUBJECT",
     "TOOL_KIND_BASELINE",
     "FAIRNESS_KEYS",
     "DockingComparisonError",
     "build_pose_success_comparison",
     "build_enrichment_comparison",
+    "SCOPED_POSE_SCHEMA_VERSION",
+    "CONTROLLED_CORE",
+    "FULL_WORKFLOW",
+    "build_scoped_pose_success_comparison",
 ]

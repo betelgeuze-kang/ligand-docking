@@ -58,9 +58,15 @@ class ExtendedEvaluator:
             or self.solvation.topology_sha256 != self.parameters.topology_sha256
         ):
             raise ResearchError("solvation charge/parameter identity mismatch")
+        from .openmm_periodic_extension import OpenMMPeriodicParameters
+        if isinstance(self.parameters, OpenMMPeriodicParameters) and self.solvation is not None:
+            raise ResearchError("OpenMM periodic translation does not admit implicit solvation")
 
     def identity(self) -> dict[str, object]:
-        return {"evaluator_id": EVALUATOR_ID,
+        from .openmm_periodic_extension import OpenMMPeriodicParameters, OPENMM_PERIODIC_EVALUATOR_ID
+        evaluator_id = (OPENMM_PERIODIC_EVALUATOR_ID
+                        if isinstance(self.parameters, OpenMMPeriodicParameters) else EVALUATOR_ID)
+        return {"evaluator_id": evaluator_id,
                 "parameter_fingerprint_sha256": self.parameters.fingerprint_sha256,
                 "solvation_fingerprint_sha256": (None if self.solvation is None
                                                   else self.solvation.fingerprint_sha256)}
@@ -70,6 +76,9 @@ class ExtendedEvaluator:
         return digest(self.identity())
 
     def evaluate(self, system: AllAtomSystem, neighbors: CompactNeighborList) -> ExtendedEvaluation:
+        from .openmm_periodic_extension import OpenMMPeriodicParameters, evaluate_extension
+        if isinstance(self.parameters, OpenMMPeriodicParameters):
+            return evaluate_extension(system, neighbors, self.parameters)
         if (system.model_count != 1 or not 1 <= system.atom_count <= 256
                 or system.cell is not None or system.coordinates.device.type != "cpu"
                 or system.coordinates.dtype != torch.float64):

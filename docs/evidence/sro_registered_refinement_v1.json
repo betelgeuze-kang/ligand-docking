@@ -1,0 +1,444 @@
+{
+  "schema_id": "sro_registered_refinement_execution_evidence/1.0.0",
+  "source_parent_commit": "26a53ddce6d9df4e4a28b77f66b22dea71141466",
+  "implementation_manifest_sha256": "d02bfc102851834e8c823ca0723ad23a34cc4e8ec2774fa29d51d24f96f1870d",
+  "backend": "python_cpu_reference",
+  "compiled_native_scorer_exercised": false,
+  "executed": true,
+  "artifacts": [
+    {
+      "bytes": 6645,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/README.md",
+      "sha256": "4f04be39bbd33e16e464a4aca35533c903ed14d0f6b213533436585169bc6f55"
+    },
+    {
+      "bytes": 11581,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/artifact-checksums.json",
+      "sha256": "52c8d5707fd2dc19e871d1a2d2f5c0437222119005942fbe13a3b6d571ae4a7c"
+    },
+    {
+      "bytes": 992,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/continuous-completion.json",
+      "sha256": "31449d752c03aee016c16e0ba9c2ce8d7bb57339d784bd8779567ac25d7639e2"
+    },
+    {
+      "bytes": 244,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/continuous-live-handle.json",
+      "sha256": "3a5a58125c4f52de4a8cbb2a712db119ec04e65ef40f3baa156bdb0b1161f499"
+    },
+    {
+      "bytes": 68212,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/continuous-ownership.json",
+      "sha256": "6c48219afe3e361b747b4f954641c063905709a0a5f1d38c0d039eb6856154cd"
+    },
+    {
+      "bytes": 466,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/continuous-start.json",
+      "sha256": "52f6ec2895963037e4fcb1162e29fbb845d5129a2a020e260dab75190696b6e7"
+    },
+    {
+      "bytes": 255,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/continuous.log",
+      "sha256": "796d0f89361d0981b9c54d71899ff3706a70577cf4fca9a94f7df7dbcfbb4f67"
+    },
+    {
+      "bytes": 5885,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/execution-result.json",
+      "sha256": "9ac88e5329741255bfe6dfeb8d368a9d83595c73f1bc58cabfb82432827ee815"
+    },
+    {
+      "bytes": 541,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/execution-start.json",
+      "sha256": "6df8759bf90330d7aeca0d61e84dbb86bf5e5851ca017e29da197759648932be"
+    },
+    {
+      "bytes": 991,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/export-completion.json",
+      "sha256": "ff85802688ddd829953eea49a613c68adb3350db19079e297da11603b251cea8"
+    },
+    {
+      "bytes": 240,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/export-live-handle.json",
+      "sha256": "820e8726e5792adde0ba52d3fcec1745b6232f31e83446717bb44356eb4be33f"
+    },
+    {
+      "bytes": 65822,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/export-ownership.json",
+      "sha256": "f4bf0e3f1edf35ff5042bcf22ec88eb14ce0e79656d9be11a890f5e2e41309ce"
+    },
+    {
+      "bytes": 458,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/export-start.json",
+      "sha256": "76e10a7ba659f7987f8fd67b47c6d2c8eb91f18d8826528fe95dd3608c92a98a"
+    },
+    {
+      "bytes": 0,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/export.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2312,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/final-coordinates.json",
+      "sha256": "1d384a6ca5867df3618292e0a5e5a31b5e27b4a46925652c217afc9acb0fb749"
+    },
+    {
+      "bytes": 1496,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/initial-coordinates.json",
+      "sha256": "77ca56fb43dc4e96bc45152ae53e439d0222f5f8c1691810f16260cb2a0f7b8e"
+    },
+    {
+      "bytes": 4067,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/integrity.py",
+      "sha256": "38ee08bfcef677b05bf686f45e5a8fdcc904ebf95a5b0fc8f26522542b3d978a"
+    },
+    {
+      "bytes": 1020,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-audit-completion.json",
+      "sha256": "6b57e54e6160ae0bcf84e5be3bfa0ffd3e37d99b7f80ae1e3f5e4d128e3114ce"
+    },
+    {
+      "bytes": 249,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-audit-live-handle.json",
+      "sha256": "f3e97b97af141ca07bb46e2d9ce965788486a92ba488160fe9c96acdfbf75a1a"
+    },
+    {
+      "bytes": 66284,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-audit-ownership.json",
+      "sha256": "9a5f951cf0c8d4fa7fc1bf8bb24e7a6bceda46ffc0d87c57d4d37ec69dc9cae2"
+    },
+    {
+      "bytes": 476,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-audit-start.json",
+      "sha256": "ada685c26dcd885f29dd0125af691d54a7c7aa9ed7b9aec9e89424ea386d5f70"
+    },
+    {
+      "bytes": 275,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-audit.log",
+      "sha256": "becb94192237ff960fe06249c34075d9ffb3051c53c2d25db0daea2b63326b29"
+    },
+    {
+      "bytes": 53610,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-initial-final.json",
+      "sha256": "80aac9d9c0c8aedd8fca1e975169faab91e8ad91649b6af447f6b09f0c27b19f"
+    },
+    {
+      "bytes": 30849,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/optimizer-checkpoint-0.json",
+      "sha256": "bcafa4d47a0c11827682b91e12bc700976670a7b960e4988a83e33e744e7720c"
+    },
+    {
+      "bytes": 10844,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside/worker.py",
+      "sha256": "3680cfedad8e1a6545507639321708597691d9d59ed766aa77594070fdfb7140"
+    },
+    {
+      "bytes": 2186,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/post-run-review.json",
+      "sha256": "f9f79763cf81bd93c57326aab038a461a731933e27533443a4461107eb6a3eac"
+    },
+    {
+      "bytes": 393,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/postflight.json",
+      "sha256": "72591a60bc50958283c922d38ffae17c6d352a78c4561c4c1163ded7794dcaf1"
+    },
+    {
+      "bytes": 393,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/preflight.json",
+      "sha256": "72591a60bc50958283c922d38ffae17c6d352a78c4561c4c1163ded7794dcaf1"
+    },
+    {
+      "bytes": 0,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/product/.minimization.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1088,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/product/complete.json",
+      "sha256": "d2c331ecad7e4de22e145cf29616c1072f4498275faccefc2755f7504a4a9f41"
+    },
+    {
+      "bytes": 528415,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/product/report.json",
+      "sha256": "8f0127dacd8c4e2096f0b71669cafd552948f88881ff09ca7dc4686ffdeebc27"
+    },
+    {
+      "bytes": 2954,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/product/request.json",
+      "sha256": "b80d99b2eaeaa5e868618209936dd4b7e5b548253166a5bea8e061c2ffe805cc"
+    },
+    {
+      "bytes": 175453,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/protocol.json",
+      "sha256": "488920b6697919e0dbf6105dee18894cb58fbc039abc1e38924daf35b1d642d5"
+    },
+    {
+      "bytes": 1151,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/reference-displacement.json",
+      "sha256": "e98f4e24ca277b96380e2cd20ac649ee66543281659833680e0dc08ca49e6418"
+    },
+    {
+      "bytes": 34216,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/result-summary.json",
+      "sha256": "e774f1022dc7d9ee2043373e849cd45b157b2d75d5d3e08e3c64c107983815d2"
+    },
+    {
+      "bytes": 551,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/review-file-only-preflight.json",
+      "sha256": "efd6d37ae406228bc253e9ee2c7dcaa690a128b28ef0c323bf63dbfbfcf2211a"
+    },
+    {
+      "bytes": 761,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/root-review-approval.json",
+      "sha256": "2c786011c1265cd56f5df04b32baa5318902aee898636e98603e502cc3dedd4f"
+    },
+    {
+      "bytes": 10080,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/run_experiment.py",
+      "sha256": "bada8c4b323fe388bb524aba65f20f9e0d7c4faa4e57dded2438b0d0907884a3"
+    },
+    {
+      "bytes": 299,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/storage-accounting.json",
+      "sha256": "24cde91a62073b3e4779b48047ed24bc643e4d8cdc4c3fa9f6da66b31e67da21"
+    },
+    {
+      "bytes": 992,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/verify-completion.json",
+      "sha256": "9cd2e1495c38d4579b43831ce99a2ab7c8e714dc6d5583dc9ea6acdada3690cb"
+    },
+    {
+      "bytes": 240,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/verify-live-handle.json",
+      "sha256": "3d3ce7c302ab26d9db435f73178758219fe7769e4c184ebfeae21a8513f8befc"
+    },
+    {
+      "bytes": 66523,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/verify-ownership.json",
+      "sha256": "5968d34aafe976a9d46b5c579c9ae33875d79414afe3c487e1f252f620634029"
+    },
+    {
+      "bytes": 458,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/verify-start.json",
+      "sha256": "2c4b393a0bb485ca931f7e5c80f81f639cb3c07fd291cdf470830742db0c9dde"
+    },
+    {
+      "bytes": 342,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/verify.log",
+      "sha256": "60d77d9af7616710468c8e199f2361927fa9862c6c07f965b1a5a710af4455ee"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/manifest.v1.json",
+      "bytes": 15382,
+      "sha256": "ac2fc8ad66ceb5896c1fcb68a3517c67e1575f5273cbca03c4dd9bc014b43238"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/sro-independent-postrun-review-20260930-694fwwu8/independent-review-occurrence-agent-v1.json",
+      "bytes": 9266,
+      "sha256": "62f799dd39e2d3a481a56fc8ffb6450c891385851c005a65772ff291effe3038"
+    }
+  ],
+  "results": {
+    "accepted_iterations": 32,
+    "optimizer_force_calls": 51,
+    "optimizer_failed_force_calls": 0,
+    "force_evaluation_bound": 417,
+    "score_calls": {
+      "baseline": 1,
+      "refined": 1
+    },
+    "initial_energy_kcal_mol": 14.798201989215883,
+    "final_energy_kcal_mol": -14.019111879836004,
+    "initial_raw_force_kcal_mol_angstrom": 128.4364735627077,
+    "final_raw_force_kcal_mol_angstrom": 8.428464476408946,
+    "internal_energy_delta_kcal_mol": -13.177581450909923,
+    "max_bond_delta_angstrom": 0.1072090879652654,
+    "baseline_geometry": {
+      "bond_lengths_preserved": true,
+      "declared_chirality_preserved": true,
+      "element_vdw_ligand_overlap_free": true,
+      "element_vdw_receptor_overlap_free": true,
+      "inside_declared_pocket": true,
+      "ligand_self_clash_free": true,
+      "proper_rotation": true,
+      "receptor_ligand_clash_free": true
+    },
+    "refined_geometry": {
+      "bond_lengths_preserved": true,
+      "declared_chirality_preserved": true,
+      "element_vdw_ligand_overlap_free": true,
+      "element_vdw_receptor_overlap_free": true,
+      "inside_declared_pocket": true,
+      "ligand_self_clash_free": true,
+      "proper_rotation": true,
+      "receptor_ligand_clash_free": true
+    },
+    "numerical_denominator": {
+      "evaluated": 2,
+      "passed": 2,
+      "rejected": 0,
+      "requested": 2
+    },
+    "selected_variant": "baseline",
+    "selection_reason": "refinement_not_converged",
+    "terminal_status": "max_iterations_reached",
+    "converged": false
+  },
+  "cost": {
+    "HIP_qualified": false,
+    "affinity_validated": false,
+    "all_children_system_cpu_seconds": 1.379081,
+    "all_children_user_cpu_seconds": 538.791954,
+    "excluded_costs": [
+      "historical preparation",
+      "historical build/install",
+      "harness authoring",
+      "root review",
+      "human work",
+      "completion publication"
+    ],
+    "failure": null,
+    "finished_utc": "2026-09-29T15:46:42.572882+00:00",
+    "fresh_dependency_install_verified": false,
+    "missing_trial_cost_or_outcomes": "unknown unless retained checkpoint/work receipts establish them",
+    "new_fit_rows": 0,
+    "numerical_audit_completed": true,
+    "numerical_states_planned": 2,
+    "phase_times_nested_do_not_sum_with_whole": true,
+    "physical_accuracy_validated": false,
+    "pose_recovery_validated": false,
+    "product_qualified": false,
+    "schema_id": "sro_registered_refinement_execution/1.0.0",
+    "service_qualified": false,
+    "shared_dependencies": true,
+    "source_roles": null,
+    "stage_denominator": {
+      "attempted": 4,
+      "completed": 4,
+      "failed": 0,
+      "interrupted_or_unknown": 0,
+      "planned": 4
+    },
+    "stages": [
+      {
+        "child_system_cpu_seconds": 0.44395799999999996,
+        "child_user_cpu_seconds": 524.771517,
+        "command": [
+          "/usr/bin/python3",
+          "-I",
+          "-B",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside/worker.py",
+          "continuous"
+        ],
+        "cwd": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside",
+        "log": {
+          "bytes": 255,
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/continuous.log",
+          "sha256": "796d0f89361d0981b9c54d71899ff3706a70577cf4fca9a94f7df7dbcfbb4f67"
+        },
+        "returncode": 0,
+        "stage": "continuous",
+        "started_utc": "2026-09-29T15:37:42.026085+00:00",
+        "status": "completed",
+        "timing_scope": "enclosing child process including import, pins, stage, observer and ownership; nested in wrapper",
+        "wall_seconds": 525.402932898
+      },
+      {
+        "child_system_cpu_seconds": 0.24369399999999997,
+        "child_user_cpu_seconds": 1.9905399999998963,
+        "command": [
+          "/usr/bin/python3",
+          "-I",
+          "-B",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside/worker.py",
+          "verify"
+        ],
+        "cwd": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside",
+        "log": {
+          "bytes": 342,
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/verify.log",
+          "sha256": "60d77d9af7616710468c8e199f2361927fa9862c6c07f965b1a5a710af4455ee"
+        },
+        "returncode": 0,
+        "stage": "verify",
+        "started_utc": "2026-09-29T15:46:27.430873+00:00",
+        "status": "completed",
+        "timing_scope": "enclosing child process including import, pins, stage, observer and ownership; nested in wrapper",
+        "wall_seconds": 2.243340451000222
+      },
+      {
+        "child_system_cpu_seconds": 0.24004800000000004,
+        "child_user_cpu_seconds": 1.9214220000000068,
+        "command": [
+          "/usr/bin/python3",
+          "-I",
+          "-B",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside/worker.py",
+          "export"
+        ],
+        "cwd": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside",
+        "log": {
+          "bytes": 0,
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/export.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "returncode": 0,
+        "stage": "export",
+        "started_utc": "2026-09-29T15:46:29.680590+00:00",
+        "status": "completed",
+        "timing_scope": "enclosing child process including import, pins, stage, observer and ownership; nested in wrapper",
+        "wall_seconds": 2.1775385619998815
+      },
+      {
+        "child_system_cpu_seconds": 0.45138100000000003,
+        "child_user_cpu_seconds": 10.107184000000075,
+        "command": [
+          "/usr/bin/python3",
+          "-I",
+          "-B",
+          "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside/worker.py",
+          "numerical-audit"
+        ],
+        "cwd": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/outside",
+        "log": {
+          "bytes": 275,
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-registered-refinement-20260930-v1/review-v1/numerical-audit.log",
+          "sha256": "becb94192237ff960fe06249c34075d9ffb3051c53c2d25db0daea2b63326b29"
+        },
+        "returncode": 0,
+        "stage": "numerical-audit",
+        "started_utc": "2026-09-29T15:46:31.864798+00:00",
+        "status": "completed",
+        "timing_scope": "enclosing child process including import, pins, stage, observer and ownership; nested in wrapper",
+        "wall_seconds": 10.600770943000043
+      }
+    ],
+    "status": "completed",
+    "storage_before_completion": {
+      "allocated_file_bytes": 1245184,
+      "files": 39,
+      "logical_bytes": 1133713
+    },
+    "timing_scope": "existing-input preflight, continuous product, CLI verify, export/displacement, independent numerical audit, summary and postflight",
+    "whole_elapsed_seconds_before_publication": 540.6638803999999,
+    "wrapper_own_process_cpu_seconds": 0.210772637
+  },
+  "capture_limits": {
+    "return_capture_complete": true,
+    "full_rejected_trial_coordinates": false,
+    "all_51_states_independently_audited": false,
+    "independently_audited_states": 2,
+    "profiler_overhead_included": true
+  },
+  "qualification": {
+    "affinity": false,
+    "physical_accuracy": false,
+    "pose_recovery": false,
+    "HIP_parity": false,
+    "product_refinement": false,
+    "service_ready": false,
+    "same_budget_speedup": false,
+    "training_or_role_admission": false
+  },
+  "source_roles": null,
+  "new_fit_rows": 0
+}

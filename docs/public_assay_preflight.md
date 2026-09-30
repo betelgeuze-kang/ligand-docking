@@ -48,3 +48,21 @@ grants fit, calibration, evaluation, or prepared status.
 The preflight command adds a metadata-only entry point. Existing dataset intake already builds the full identity graph before selection.
 
 The implementation is included in the main wheel under `betelgeuze_product`. The old `tools.product` imports remain compatible in source checkouts; installed execution does not require `tools`.
+
+To explain a preflight component using only these same frozen metadata nodes:
+
+```sh
+python -m betelgeuze_product.public_assay_graph_diagnostic \
+  --context context.jsonl.gz --context-sha256 SHA256 \
+  --candidates candidates.json --candidates-sha256 SHA256 \
+  --preflight preflight.json --preflight-sha256 SHA256 \
+  --output typed-witness.json
+```
+
+The preflight file is optional; when supplied, its exact bytes are hash checked
+and its statuses must equal the current authoritative preflight recomputation.
+The diagnostic reports direct overlaps by typed key, separately from shortest
+paths through other nodes to reserved or unknown policy declarations. A path
+search that reaches its resource limit says `incomplete_resource_cap`; it never
+claims no boundary. Input and implementation hashes are included. The graph
+is limited to supplied metadata, and the diagnostic cannot grant clearance.

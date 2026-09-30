@@ -106,3 +106,17 @@ tools/run_openmm_2bead_rebench.py
 tools/run_openmm_2bead_strict_release.py
 tools/run_strict_release_with_regression_gate.py
 tools/wetlab/build_tcruzi_pde_strict_external_manifest.py
+
+# Retained OpenMM research validation scripts are excluded from the product image.
+docs/research/human_5ht6_7xtb_openmm_projection/build_projection.py
+docs/research/human_5ht6_7xtb_openmm_projection/verify_projection.py
+docs/research/human_5ht6_d3_complex/chemical_typing_audit.py
+docs/research/human_5ht6_d3_complex/derive_receptor_chemistry.py
+docs/research/human_5ht6_d3_complex/prepare_complex.py
+docs/research/human_5ht6_pr49_pr59_openff_projection/build_projection.py
+docs/research/human_5ht6_pr49_pr59_openff_projection/verify_projection.py
+docs/research/human_5ht6_sro_numerical_preparation/prepare_sro.py
+tools/analysis/openmm_d3_numerical_audit.py
+docs/evidence/scripts/installed_pair_endpoint_openmm_20260930.py
+docs/evidence/scripts/prepared_pair_independent_numerics_20260930.py
+tools/analysis/prepare_pr59_common_frame_development.py

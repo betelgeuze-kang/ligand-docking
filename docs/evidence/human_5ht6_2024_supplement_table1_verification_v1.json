@@ -1,0 +1,170 @@
+{
+  "schema_id": "human_5ht6_2024_supplement_table1_local_receipt/1",
+  "recorded_date_local": "2026-09-30",
+  "source_checkout_head": "e70eb8e4d66f63c4a928b627a0f3fc0a41653133",
+  "execution": {
+    "command_argv": [
+      "python3",
+      "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tools/analysis/verify_human_5ht6_2024_supplement_table1_v1.py",
+      "--sidecar",
+      "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_supplement_table1_occurrences_v1.json",
+      "--expected-sidecar-sha256",
+      "5cdbced83cadd78ba2ce48317975d581c0b98bad466b3bd7c0c81a3fa12fb234",
+      "--archive",
+      "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-supplement-s001.zip",
+      "--literal-manifest",
+      "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/identity-manifest.json",
+      "--repo-root",
+      "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학"
+    ],
+    "exit_code": 0,
+    "source_verification": {
+      "schema_id": "human_5ht6_2024_supplement_table1_verification/1",
+      "verification_status": "PASS_bounded_source_bytes_and_typed_rows",
+      "source_pdf_present": true,
+      "archive_crc_valid": true,
+      "archive_sha256": "f27fbee99054e7b3d866e1e46164961758d4c5fd3c031e871aff9c454f3a8363",
+      "table1_member_sha256": "d4998be58c84f82a42291db53370620caa313c7431f5fabf7f0a4194e3e65f8d",
+      "layout_sha256": "b85979e353b171ad0961b80973600bca8c433f499da6dbdcc4e94c99dec3774a",
+      "extractor_observed_version": "pdftotext version 22.02.0",
+      "caller_pinned_sidecar_sha256": "5cdbced83cadd78ba2ce48317975d581c0b98bad466b3bd7c0c81a3fa12fb234",
+      "verifier_sha256": "c066011782c130636fce4f4f7005b1465c54e4ec676ddc87f763f85ab84d193c",
+      "receipt_inputs_sha256": {
+        "supplement_access": "c0727e764f69a6ae436bcaf78d732343f2d75135e34e9180e93c097ef419987e",
+        "supplement_review": "7cceca45b8d899d0a001b5a1e7ed71b68914fa75078713790ec1d551b05b30ad",
+        "supplement_review_document": "12046558f50371de2950e0b5877a687dc3c429d72c694c813f4b66382338d494",
+        "earlier_occurrence_contract": "55fab87416d876a0ffd24313446590a5d2e1b0d775b3f7389d4b321c4b2292cc",
+        "earlier_occurrences": "6261d248b41d68a4754ea800b1a577c2de1442846b54c17b16e0a2fc1740dd64",
+        "earlier_identity_receipt": "d7a82bacb00c18f27cbf82cae393422bc4e8be0f0c2ac2f33b0abf18a9a4067e"
+      },
+      "retained_literal_manifest_sha256": "14ea7c3d094b233e9e81b7404de31cc09099b04f3f8b65f4e27da8aa3101374f",
+      "counts": {
+        "physical_row_occurrences": 71,
+        "numbered_rows": 45,
+        "calibration_rows": 26,
+        "numbered_study_label_rows": 40,
+        "numbered_comparison_drug_rows": 5,
+        "prior_PR1_PR78_label_matches": 39,
+        "unresolved_PR109_rows": 1,
+        "calibration_rows_by_block": {
+          "C18": 8,
+          "IAM": 9,
+          "HSA": 9
+        },
+        "name_display_spans": 89,
+        "numbered_rows_with_HSA_numeric_content": 25,
+        "numbered_rows_with_HSA_blank_group": 20,
+        "new_numeric_human_5HT6_Ki_rows_transcribed": 0,
+        "new_independent_human_5HT6_Ki_observations_credited": 0,
+        "independent_measurement_denominator": null
+      },
+      "boundary": {
+        "additive_only": true,
+        "earlier_205_occurrence_contract_preserved": true,
+        "earlier_123_literal_manifest_preserved": true,
+        "numeric_retention_values_transcribed": false,
+        "numeric_chromatography_to_Ki_conversion": false,
+        "graph_nodes_emitted": 0,
+        "graph_inclusion": "unknown_pending_separate_policy_review",
+        "assigned_role": null,
+        "new_assay_rows_admitted": 0,
+        "new_training_admission": 0,
+        "new_calibration_admission": 0,
+        "new_independent_evaluation_admission": 0,
+        "independent_measurement_denominator": null,
+        "new_independent_source_component_established": false,
+        "protected_fresh128_touched": false,
+        "protected_context_opened": false,
+        "new_preflight_executed": false,
+        "fit_or_model_change": false,
+        "full_source_clearance": false,
+        "scientifically_qualified": false
+      },
+      "actual_paths": {
+        "sidecar": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_supplement_table1_occurrences_v1.json",
+        "repo_root": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "archive": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-supplement-s001.zip",
+        "literal_manifest": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/identity-manifest.json"
+      },
+      "validation_scope": "Local byte/row/header/presence binding only; visual review, rights and chemical/assay eligibility are not newly verified by this script.",
+      "hosted_CI_source_verification_claim": false
+    }
+  },
+  "document": {
+    "path": "docs/research/human_5ht6_2024_supplement_table1_occurrences_20260930.md",
+    "bytes": 8735,
+    "sha256": "72fe6bb7635a703c02e6b98417250b1cea18af97ecb741142e41317526da529e"
+  },
+  "negative_checks": [
+    {
+      "case": "dropped_row",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "typed_occurrences_do_not_match_source"
+    },
+    {
+      "case": "swapped_rows",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "typed_occurrences_do_not_match_source"
+    },
+    {
+      "case": "PR109_corrected_to_PR10",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "typed_occurrences_do_not_match_source"
+    },
+    {
+      "case": "promoted_row_role",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "typed_occurrences_do_not_match_source"
+    },
+    {
+      "case": "added_Ki_number",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "typed_occurrences_do_not_match_source"
+    },
+    {
+      "case": "wrong_endpoint",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "typed_occurrences_do_not_match_source"
+    },
+    {
+      "case": "promoted_boundary_role",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "count_or_boundary_promotion"
+    },
+    {
+      "case": "changed_archive_pin",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "archive_pin_declaration_mismatch"
+    },
+    {
+      "case": "original_source_absent",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "required_source_absent:/tmp/engine-v2-5ht6-table1-typing-wgwoji0q/absent-original-source.zip"
+    },
+    {
+      "case": "caller_sidecar_pin_mismatch",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "caller_sidecar_sha_mismatch"
+    },
+    {
+      "case": "duplicate_JSON_key",
+      "exit_code": 1,
+      "result": "rejected",
+      "error": "duplicate_json_key:schema_id"
+    }
+  ],
+  "negative_check_scope": "Local temporary mutations; each mutated sidecar was re-pinned at the caller SHA to test internal semantic/source rejection. Caller SHA mismatch and absent-source cases tested separately. Original PDFs and protected data were not changed.",
+  "earlier_inputs_unchanged": true,
+  "hosted_CI_source_verification_claim": false,
+  "scientific_qualification": false
+}

@@ -17,9 +17,6 @@ import json
 import os
 from typing import Any, Mapping, Sequence
 
-from .reference_parameter_applicability import (
-    FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
-)
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -35,6 +32,7 @@ from .reference_validation_nonce_reservation import (
     _validate_reservation_file_stat,
 )
 from .reference_validation_protocol import (
+    FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256,
     FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
 )
 from .reference_validation_receipts import (
@@ -347,7 +345,7 @@ def _result_projection(
         ),
         "protocol_sha256": FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
         "h5_applicability_record_sha256": (
-            FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
+            FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
         ),
         "artifact_binding_sha256": (
             FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
@@ -506,7 +504,7 @@ def _validate_result_receipt_payload(
         ),
         "protocol_sha256": FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
         "h5_applicability_record_sha256": (
-            FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
+            FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
         ),
         "artifact_binding_sha256": (
             FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256

@@ -1,0 +1,38 @@
+{
+  "all_copied_bytes_identical_to_original_execution": true,
+  "comparison_verifier_source": {
+    "bytes": 6220,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-sro-openmm-direct-20260930-47806ade/verify-source.py",
+    "sha256": "e6bf599ab92f981aa5559a03bcf30a007c5f515a149d166bb95b2c4c23b410d8"
+  },
+  "files": {
+    "direct-comparison.json": {
+      "bytes": 1837,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-sro-openmm-direct-20260930-47806ade/direct-comparison.json",
+      "sha256": "eb0b0bd6f0e084d205291f66fdc353fbf47a35b6fd0c17d9b937876b4631d8a6"
+    },
+    "final-coordinates.json": {
+      "bytes": 1489,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-sro-openmm-direct-20260930-47806ade/final-coordinates.json",
+      "sha256": "cfad1b651fac9e29b589b8ab32749b5ec062f04e5306617d3c547186b70f3cb9"
+    },
+    "openmm-audit.json": {
+      "bytes": 53748,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-sro-openmm-direct-20260930-47806ade/openmm-audit.json",
+      "sha256": "4c12664dbd519ad7222c84944dd0bc6190da7d77e13ea8dc20f77cd087f9d081"
+    },
+    "protocol.json": {
+      "bytes": 2615,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-sro-openmm-direct-20260930-47806ade/protocol.json",
+      "sha256": "5840cca25ec629cc6c5f4d053e6badd4e6d04de26e68a8614a3309d5e7b4c799"
+    }
+  },
+  "new_openmm_audit_succeeded": true,
+  "original_execution_directory": "/tmp/engine-v2-installed-sro-openmm-direct-k740svlg",
+  "protocol_contains_original_execution_absolute_paths": true,
+  "relocation_does_not_claim_reexecution": true,
+  "retained_directory": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-sro-openmm-direct-20260930-47806ade",
+  "schema_id": "installed_sro_openmm_direct_retention/1",
+  "scientific_qualification": false,
+  "source_head_context": "47806adeebf7d30185199f518c90fbefe3980805"
+}

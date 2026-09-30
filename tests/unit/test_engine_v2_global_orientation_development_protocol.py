@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -16,6 +17,10 @@ from tools.verify_engine_v2_global_orientation_contaminated_development import (
     load_protocol,
     verify_protocol,
 )
+from tests.unit.frozen_engine_v2_historical_sources import (
+    HistoricalSourceViewError,
+    historical_file_sha256,
+)
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +31,15 @@ _PROTOCOL_DOC_PATH = (
     _REPO_ROOT
     / "docs/engine_v2_global_orientation_contaminated_development_protocol.md"
 )
+
+
+@pytest.fixture(autouse=True)
+def historical_source_view(monkeypatch: pytest.MonkeyPatch):
+    live_file_sha256 = verifier._file_sha256
+    monkeypatch.setattr(
+        verifier, "_file_sha256", historical_file_sha256(live_file_sha256)
+    )
+    return live_file_sha256
 
 
 def _protocol() -> dict[str, object]:
@@ -47,11 +61,71 @@ def _reseal(payload: dict[str, object]) -> dict[str, object]:
     return changed
 
 
-def test_current_global_orientation_development_protocol_verifies() -> None:
+def test_historical_global_orientation_development_protocol_verifies() -> None:
     observed = verify_protocol(_protocol())
     assert observed == (
         "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3"
     )
+
+
+def test_current_source_fails_frozen_global_orientation_protocol(
+    monkeypatch: pytest.MonkeyPatch,
+    historical_source_view,
+) -> None:
+    monkeypatch.setattr(verifier, "_file_sha256", historical_source_view)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="^pre-import ScorerV1 source manifest drifted$",
+    ):
+        verify_protocol(_protocol())
+
+
+@pytest.mark.parametrize("relative_path", [
+    "betelgeuze_engine_v2/io/sdf.py",
+    "betelgeuze_engine_v2/molecular/serialization.py",
+    "betelgeuze_engine_v2/physics/reference_parameter_applicability.py",
+    "betelgeuze_engine_v2/physics/reference_validation_protocol.py",
+    "betelgeuze_engine_v2/physics/reference_validation_receipts.py",
+    "betelgeuze_engine_v2/physics/reference_validation_result_writer.py",
+])
+def test_historical_view_rejects_new_mutation_to_changed_source(
+    monkeypatch: pytest.MonkeyPatch, relative_path: str,
+) -> None:
+    target = _REPO_ROOT / relative_path
+    original_read_bytes = Path.read_bytes
+
+    def drifted_read_bytes(path: Path) -> bytes:
+        contents = original_read_bytes(path)
+        if path == target:
+            return contents + b"\n# new drift\n"
+        return contents
+
+    monkeypatch.setattr(Path, "read_bytes", drifted_read_bytes)
+    with pytest.raises(
+        HistoricalSourceViewError,
+        match=re.escape("unreviewed live Python source drift: " + relative_path),
+    ):
+        verify_protocol(_protocol())
+
+
+def test_historical_view_rejects_unlisted_source_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = _REPO_ROOT / "betelgeuze_engine_v2/stack_round1_hardening.py"
+    original_read_bytes = Path.read_bytes
+
+    def drifted_read_bytes(path: Path) -> bytes:
+        contents = original_read_bytes(path)
+        if path == target:
+            return contents + b"\n# new drift\n"
+        return contents
+
+    monkeypatch.setattr(Path, "read_bytes", drifted_read_bytes)
+    with pytest.raises(
+        GlobalOrientationDevelopmentProtocolError,
+        match="^pre-import ScorerV1 source manifest drifted$",
+    ):
+        verify_protocol(_protocol())
 
 
 def test_protocol_loader_rejects_duplicate_json_keys(tmp_path: Path) -> None:
@@ -347,7 +421,7 @@ def test_verifier_runs_outside_checkout_without_pythonpath(tmp_path: Path) -> No
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
 
-    completed = subprocess.run(
+    direct = subprocess.run(
         [
             sys.executable,
             str(
@@ -355,6 +429,21 @@ def test_verifier_runs_outside_checkout_without_pythonpath(tmp_path: Path) -> No
                 "contaminated_development.py"
             ),
         ],
+        cwd=tmp_path,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert direct.returncode != 0
+    exception_line = direct.stderr.strip().splitlines()[-1]
+    exception_type, separator, message = exception_line.partition(": ")
+    assert separator == ": "
+    assert exception_type.rsplit(".", 1)[-1] == "GlobalOrientationDevelopmentProtocolError"
+    assert message == "pre-import ScorerV1 source manifest drifted"
+
+    completed = subprocess.run(
+        [sys.executable, str(_REPO_ROOT / "tests/unit/frozen_engine_v2_historical_sources.py")],
         cwd=tmp_path,
         env=environment,
         check=True,

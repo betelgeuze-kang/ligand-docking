@@ -1,0 +1,24 @@
+{
+  "archive_root": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-development-bridge-retention-20260930-4sapril3",
+  "descriptor_paths_and_hashes_rewritten": false,
+  "existing_receipt_unchanged": true,
+  "note": "Archive maps each original file to a byte-identical retained copy. Original descriptors continue to pin original paths; these archive snapshots are not automatically executable at new paths. The separately repinned root campaign is a distinct protocol and does not replace this receipt.",
+  "original_implementation_receipt": {
+    "bytes": 6226,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/installed_paper_development_comparison_v1.json",
+    "sha256": "35a6e6aaafc19159bfa55b7b73ec87b6b40981b0d1db28159084259494204fca"
+  },
+  "originals_preserved": true,
+  "retention_manifest": {
+    "bytes": 236798,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-development-bridge-retention-20260930-4sapril3/retention-manifest.json",
+    "sha256": "8d79c4feae1901ff66f60927d45bcea777b0afc86c099cf6375d659046c15e6e"
+  },
+  "retention_verification": {
+    "bytes": 622,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-paper-development-bridge-retention-20260930-4sapril3/retention-verification.json",
+    "sha256": "2991a372ee189f27ca1439addfeda4a6ca3ed0faaeafc94df0999f4c213a65d9"
+  },
+  "schema_version": "installed_paper_development_evidence_retention_note_v1",
+  "venv_dependencies_copied": false
+}

@@ -1,0 +1,1395 @@
+{
+  "schema_version": "human_5ht6_2024_occurrence_contract_v1",
+  "source_doi": "10.3390/ijms251910287",
+  "categories": {
+    "test_compound": "printed study compound; identity may remain unresolved",
+    "binding_control": "reference or control for a binding endpoint",
+    "functional_reference": "reference for a functional or cytotoxicity endpoint",
+    "reagent": "assay reagent or chromatography/ADMET calibration reference",
+    "cited_only": "chemical mentioned in a cited comparison; no inferred measurement"
+  },
+  "endpoints": {
+    "Ki": [
+      "test_compound",
+      "binding_control"
+    ],
+    "KB": [
+      "test_compound",
+      "functional_reference"
+    ],
+    "EC50": [
+      "test_compound",
+      "functional_reference"
+    ],
+    "IC50": [
+      "test_compound",
+      "functional_reference"
+    ],
+    "chromatography_panel": [
+      "test_compound",
+      "reagent"
+    ],
+    "ADMET_panel": [
+      "test_compound",
+      "reagent"
+    ],
+    "assay_reagent": [
+      "reagent"
+    ],
+    "synthesis_identity": [
+      "test_compound"
+    ],
+    "cited_comparison": [
+      "cited_only"
+    ]
+  },
+  "policy": {
+    "inventory_inclusion": "all_declared_occurrences_in_bounded_review",
+    "graph_inclusion": "unknown_pending_separate_policy_review",
+    "independent_measurement_denominator": "unknown_not_inventory_count",
+    "repeats": "never_count_as_independent_remeasurement_without_evidence",
+    "bibliography": "no_automatic_chemical_or_document_edges",
+    "outcome_exposure": "seen_public_values_not_blind_holdout",
+    "posthoc_control_exclusion": "forbidden_on_observed_identity_or_outcome",
+    "scope": "incomplete_main_article_and_unreviewed_supplement"
+  },
+  "boundary": {
+    "assigned_role": null,
+    "admitted": false,
+    "full_source_clearance": false,
+    "scientifically_qualified": false,
+    "independent_holdout": false,
+    "graph_nodes_emitted": 0,
+    "independent_measurement_denominator": null
+  },
+  "line_convention": "LF_bytes_1_based_inclusive",
+  "source_pins": {
+    "layout": {
+      "sha256": "0d0a82e71aec1b94febbe739cacb2434ea783c3dd636d53a910747e362bba5b2",
+      "byte_count": 455125
+    },
+    "pdf": {
+      "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca",
+      "byte_count": 7957708
+    },
+    "original_2024_ledger": {
+      "sha256": "277f62f7cad26e85f4401aa4e53cfe5992da19dddec692500b7b552d21d33189",
+      "byte_count": 3005
+    },
+    "original_multi_ledger": {
+      "sha256": "e5b5af4caa0e4efa3e5e3a502236357276051044431f45bda77b8b5163ca0452",
+      "byte_count": 27675
+    },
+    "prior_lineage": {
+      "sha256": "cd989ee652ff22e212dcbe702e706ac8856ae3fd533f5ee6aba265070c2f0c18",
+      "byte_count": 31106
+    }
+  },
+  "required_gap_ids": [
+    "PR65_PR66_conflict",
+    "chemical_identity_microstate",
+    "full_text_inventory",
+    "graph_inclusion_policy",
+    "independent_source_roles",
+    "intended_use_rights",
+    "purity_PR49_PR59",
+    "receptor_construct",
+    "reference_value_origin",
+    "supplementary_inventory",
+    "table6_method_control_conflict",
+    "untranscribed_values",
+    "wet_assay_pH"
+  ],
+  "groups": [
+    {
+      "id": "table1",
+      "span": "table1",
+      "entities": [
+        "PR1",
+        "PR2",
+        "PR3",
+        "PR4",
+        "PR5",
+        "PR6",
+        "PR7",
+        "PR8",
+        "PR9",
+        "PR10",
+        "PR11",
+        "PR12"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table2",
+      "span": "table2",
+      "entities": [
+        "PR13",
+        "PR14",
+        "PR15",
+        "PR16",
+        "PR17",
+        "PR18",
+        "PR19",
+        "PR20",
+        "PR21",
+        "PR22",
+        "PR23",
+        "PR24",
+        "PR25",
+        "PR26",
+        "PR27",
+        "PR28"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table3",
+      "span": "table3",
+      "entities": [
+        "PR29",
+        "PR30",
+        "PR31",
+        "PR32",
+        "PR33",
+        "PR34",
+        "PR35",
+        "PR36",
+        "PR37",
+        "PR38"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table4",
+      "span": "table4",
+      "entities": [
+        "PR39",
+        "PR40",
+        "PR41",
+        "PR42",
+        "PR43",
+        "PR44",
+        "PR45",
+        "PR46",
+        "PR47",
+        "PR48",
+        "PR49",
+        "PR50",
+        "PR51",
+        "PR52",
+        "PR53",
+        "PR54",
+        "PR55",
+        "PR56",
+        "PR57",
+        "PR58",
+        "PR59",
+        "PR60",
+        "PR61",
+        "PR62",
+        "PR63",
+        "PR64",
+        "PR65",
+        "PR66"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table5",
+      "span": "table5",
+      "entities": [
+        "PR67",
+        "PR68",
+        "PR69",
+        "PR70",
+        "PR71",
+        "PR72",
+        "PR73",
+        "PR74",
+        "PR75",
+        "PR76",
+        "PR77",
+        "PR78"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "reported_primary",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR49",
+      "span": "table6",
+      "entities": [
+        "PR49"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent"
+    },
+    {
+      "id": "table6_EC50_PR49",
+      "span": "table6",
+      "entities": [
+        "PR49"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR49",
+      "span": "table6",
+      "entities": [
+        "PR49"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR49",
+      "span": "table6",
+      "entities": [
+        "PR49"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR66",
+      "span": "table6",
+      "entities": [
+        "PR66"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "not_determined",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_EC50_PR66",
+      "span": "table6",
+      "entities": [
+        "PR66"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "not_determined",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR66",
+      "span": "table6",
+      "entities": [
+        "PR66"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "not_determined",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR66",
+      "span": "table6",
+      "entities": [
+        "PR66"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR68",
+      "span": "table6",
+      "entities": [
+        "PR68"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent"
+    },
+    {
+      "id": "table6_EC50_PR68",
+      "span": "table6",
+      "entities": [
+        "PR68"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR68",
+      "span": "table6",
+      "entities": [
+        "PR68"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR68",
+      "span": "table6",
+      "entities": [
+        "PR68"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR71",
+      "span": "table6",
+      "entities": [
+        "PR71"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent"
+    },
+    {
+      "id": "table6_EC50_PR71",
+      "span": "table6",
+      "entities": [
+        "PR71"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR71",
+      "span": "table6",
+      "entities": [
+        "PR71"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR71",
+      "span": "table6",
+      "entities": [
+        "PR71"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR73",
+      "span": "table6",
+      "entities": [
+        "PR73"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent"
+    },
+    {
+      "id": "table6_EC50_PR73",
+      "span": "table6",
+      "entities": [
+        "PR73"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR73",
+      "span": "table6",
+      "entities": [
+        "PR73"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR73",
+      "span": "table6",
+      "entities": [
+        "PR73"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR76",
+      "span": "table6",
+      "entities": [
+        "PR76"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent"
+    },
+    {
+      "id": "table6_EC50_PR76",
+      "span": "table6",
+      "entities": [
+        "PR76"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR76",
+      "span": "table6",
+      "entities": [
+        "PR76"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR76",
+      "span": "table6",
+      "entities": [
+        "PR76"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_Ki_PR77",
+      "span": "table6",
+      "entities": [
+        "PR77"
+      ],
+      "category": "test_compound",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "repeated_report",
+      "origin": "repeat_not_independent"
+    },
+    {
+      "id": "table6_EC50_PR77",
+      "span": "table6",
+      "entities": [
+        "PR77"
+      ],
+      "category": "test_compound",
+      "endpoint": "EC50",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_KB_PR77",
+      "span": "table6",
+      "entities": [
+        "PR77"
+      ],
+      "category": "test_compound",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_IC50_PR77",
+      "span": "table6",
+      "entities": [
+        "PR77"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "HEK293",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table6_reference_ziprasidone",
+      "span": "table6",
+      "entities": [
+        "ziprasidone"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "D2",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table6_reference_buspirone",
+      "span": "table6",
+      "entities": [
+        "buspirone"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT1A",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table6_reference_SB269970",
+      "span": "table6",
+      "entities": [
+        "SB269970"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT5A",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table6_reference_olanzapine",
+      "span": "table6",
+      "entities": [
+        "olanzapine"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table6_reference_SB258585",
+      "span": "table6",
+      "entities": [
+        "SB258585"
+      ],
+      "category": "functional_reference",
+      "endpoint": "KB",
+      "target": "human_5HT6",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table6_reference_clozapine",
+      "span": "table6",
+      "entities": [
+        "clozapine"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT7",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table7",
+      "span": "table7",
+      "entities": [
+        "PR9",
+        "PR11",
+        "PR17",
+        "PR19",
+        "PR30",
+        "PR36",
+        "PR41",
+        "PR42",
+        "PR43",
+        "PR44",
+        "PR46",
+        "PR47",
+        "PR49",
+        "PR51",
+        "PR53",
+        "PR54",
+        "PR58",
+        "PR61",
+        "PR64",
+        "PR66",
+        "PR67",
+        "PR68",
+        "PR71",
+        "PR73",
+        "PR74",
+        "PR75",
+        "PR76",
+        "PR77",
+        "PR78"
+      ],
+      "category": "test_compound",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table7_references",
+      "span": "table7",
+      "entities": [
+        "doxorubicin",
+        "gefitinib",
+        "afatinib"
+      ],
+      "category": "functional_reference",
+      "endpoint": "IC50",
+      "target": "cell_line_panel",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "table8",
+      "span": "table8",
+      "entities": [
+        "PR11",
+        "PR41",
+        "PR42",
+        "PR44",
+        "PR54",
+        "PR58",
+        "PR68",
+        "PR71",
+        "PR73",
+        "PR74",
+        "PR77"
+      ],
+      "category": "test_compound",
+      "endpoint": "chromatography_panel",
+      "target": "phospholipid_HSA",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table9",
+      "span": "table9",
+      "entities": [
+        "PR68",
+        "PR73",
+        "PR76"
+      ],
+      "category": "test_compound",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "relation": "reported_endpoint",
+      "origin": "author_reported_test_result"
+    },
+    {
+      "id": "table9_references",
+      "span": "table9",
+      "entities": [
+        "caffeine",
+        "verapamil",
+        "warfarin"
+      ],
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "permeability_metabolism_PPB",
+      "relation": "reference_value",
+      "origin": "unknown_new_measurement_vs_reused"
+    },
+    {
+      "id": "chromatography_standards",
+      "span": "chromatography_standards",
+      "entities": [
+        "acetanilide",
+        "butyrophenone",
+        "diclofenac",
+        "octanonophenone",
+        "acetophenone",
+        "benzimidazole",
+        "colchicine",
+        "indole",
+        "indometacin",
+        "paracetamol",
+        "theophylline",
+        "nicardipine",
+        "nizatidine",
+        "carbamazepine",
+        "heptanophenone",
+        "hexanophenone",
+        "propiophenone",
+        "valerophenone"
+      ],
+      "category": "reagent",
+      "endpoint": "chromatography_panel",
+      "target": "HSA_C18_IAM",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "binding_method_reagents",
+      "span": "binding_methods",
+      "entities": [
+        "[3H]-LSD",
+        "[3H]-8-OHDPAT",
+        "[3H]-5-CT",
+        "[3H]-raclopride",
+        "methiothepine",
+        "SB-699551",
+        "chlorpromazine",
+        "5-HT"
+      ],
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "binding_method_olanzapine",
+      "span": "binding_methods",
+      "entities": [
+        "olanzapine"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "human_5HT6",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "binding_method_buspirone",
+      "span": "binding_methods",
+      "entities": [
+        "buspirone"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT1A",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "binding_method_clozapine",
+      "span": "binding_methods",
+      "entities": [
+        "clozapine"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "5-HT7",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "binding_method_risperidone",
+      "span": "binding_methods",
+      "entities": [
+        "risperidone"
+      ],
+      "category": "binding_control",
+      "endpoint": "Ki",
+      "target": "D2",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "functional_method_reagents",
+      "span": "functional_methods",
+      "entities": [
+        "5-CT",
+        "dopamine",
+        "forskolin"
+      ],
+      "category": "reagent",
+      "endpoint": "assay_reagent",
+      "target": "printed_receptor_panel",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "CYP_references",
+      "span": "CYP_references",
+      "entities": [
+        "ketoconazole",
+        "quinidine"
+      ],
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "CYP3A4_CYP2D6",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "ADMET_method_references",
+      "span": "ADMET_methods",
+      "entities": [
+        "caffeine",
+        "doxorubicin",
+        "warfarin"
+      ],
+      "category": "reagent",
+      "endpoint": "ADMET_panel",
+      "target": "PAMPA_hepatotoxicity_PPB",
+      "relation": "method_mention",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "PR65_synthesis",
+      "span": "PR65_synthesis",
+      "entities": [
+        "PR65"
+      ],
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "relation": "identity_only",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "PR66_synthesis",
+      "span": "PR66_synthesis",
+      "entities": [
+        "PR66"
+      ],
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "relation": "identity_only",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "PR49_synthesis",
+      "span": "PR49_synthesis",
+      "entities": [
+        "PR49"
+      ],
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "relation": "identity_only",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "PR59_synthesis",
+      "span": "PR59_synthesis",
+      "entities": [
+        "PR59"
+      ],
+      "category": "test_compound",
+      "endpoint": "synthesis_identity",
+      "target": "printed_synthesis_entry",
+      "relation": "identity_only",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "pimozide_cited",
+      "span": "pimozide_cited",
+      "entities": [
+        "pimozide"
+      ],
+      "category": "cited_only",
+      "endpoint": "cited_comparison",
+      "target": "no_measurement_endpoint_assigned",
+      "relation": "cited_only",
+      "origin": "not_a_measurement"
+    },
+    {
+      "id": "doxorubicin_cited",
+      "span": "doxorubicin_cited",
+      "entities": [
+        "doxorubicin"
+      ],
+      "category": "cited_only",
+      "endpoint": "cited_comparison",
+      "target": "no_measurement_endpoint_assigned",
+      "relation": "cited_only",
+      "origin": "not_a_measurement"
+    }
+  ],
+  "value_bindings": {
+    "table4:PR49": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.077",
+        "unit": "uM",
+        "sd": "0.018"
+      },
+      "line": 1235,
+      "token_indices": {
+        "token": 12,
+        "sd": 14
+      }
+    },
+    "table4:PR59": {
+      "value": {
+        "kind": "numeric",
+        "token": "1.964",
+        "unit": "uM",
+        "sd": "0.452"
+      },
+      "line": 1269,
+      "token_indices": {
+        "token": 12,
+        "sd": 14
+      }
+    },
+    "table6_Ki_PR49:PR49": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.077",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1378,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR49:PR49": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1378,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR49:PR49": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.081",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1378,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR49:PR49": {
+      "value": {
+        "kind": "numeric",
+        "token": "38.8",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1378,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_Ki_PR66:PR66": {
+      "value": {
+        "kind": "ND",
+        "token": "ND",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1379,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR66:PR66": {
+      "value": {
+        "kind": "ND",
+        "token": "ND",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1379,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR66:PR66": {
+      "value": {
+        "kind": "ND",
+        "token": "ND",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1379,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR66:PR66": {
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1379,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_Ki_PR68:PR68": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.037",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1380,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR68:PR68": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1380,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR68:PR68": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.079",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1380,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR68:PR68": {
+      "value": {
+        "kind": "numeric",
+        "token": "81.8",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1380,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_Ki_PR71:PR71": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.061",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1381,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR71:PR71": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1381,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR71:PR71": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.035",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1381,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR71:PR71": {
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1381,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_Ki_PR73:PR73": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.043",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1382,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR73:PR73": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1382,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR73:PR73": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.134",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1382,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR73:PR73": {
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1382,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_Ki_PR76:PR76": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.103",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1383,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR76:PR76": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.199",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1383,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR76:PR76": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1383,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR76:PR76": {
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1383,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_Ki_PR77:PR77": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.373",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1384,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_EC50_PR77:PR77": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1384,
+      "token_indices": {
+        "token": 6
+      }
+    },
+    "table6_KB_PR77:PR77": {
+      "value": {
+        "kind": "NA",
+        "token": "NA",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1384,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_IC50_PR77:PR77": {
+      "value": {
+        "kind": "NT",
+        "token": "NT",
+        "unit": null,
+        "sd": null
+      },
+      "line": 1384,
+      "token_indices": {
+        "token": 9
+      }
+    },
+    "table6_reference_ziprasidone:ziprasidone": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.0009",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1385,
+      "token_indices": {
+        "token": 1
+      }
+    },
+    "table6_reference_buspirone:buspirone": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.032",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1385,
+      "token_indices": {
+        "token": 3
+      }
+    },
+    "table6_reference_SB269970:SB269970": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.061",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1385,
+      "token_indices": {
+        "token": 5
+      }
+    },
+    "table6_reference_olanzapine:olanzapine": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.007",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1385,
+      "token_indices": {
+        "token": 7
+      }
+    },
+    "table6_reference_SB258585:SB258585": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.0003",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1385,
+      "token_indices": {
+        "token": 10
+      }
+    },
+    "table6_reference_clozapine:clozapine": {
+      "value": {
+        "kind": "numeric",
+        "token": "0.062",
+        "unit": "uM",
+        "sd": null
+      },
+      "line": 1385,
+      "token_indices": {
+        "token": 12
+      }
+    }
+  }
+}

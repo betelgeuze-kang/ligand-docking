@@ -19,11 +19,14 @@ import torch
 from betelgeuze_engine_v2.geometry import RadiusGraphConfig, build_compact_radius_graph
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem, Chain, Residue, StructureProvenance,
-    canonical_coordinates_sha256, canonical_system_document,
+    canonical_coordinates_sha256,
     canonical_topology_sha256,
 )
 from betelgeuze_engine.product.prepared_validation import require_valid_prepared_system
-from betelgeuze_engine_v2.molecular.serialization import canonical_json_value, sha256_canonical
+from betelgeuze_engine_v2.molecular.serialization import (
+    CANONICAL_SYSTEM_JSON_SCHEMA_ID, canonical_json_value,
+    canonical_system_payload, sha256_canonical,
+)
 from betelgeuze_engine_v2.geometry.neighbors import (
     _cell_key, _neighbor_cell_keys, _minimum_image_squared_distance,
 )
@@ -331,9 +334,17 @@ def evaluate_prepared_cross_interaction(
                  "minimum_pair_distance_angstrom":MINIMUM_PAIR_DISTANCE_ANGSTROM,
                  "minimum_distance_scope":"all source atoms; admission independent of tile order"},
         "sources":{"receptor":{"system_sha256":before[0],"coordinates_sha256":canonical_coordinates_sha256(receptor),
-                    "system":canonical_json_value(canonical_system_document(receptor)),"nonbonded_parameters":rp},
+                    "system":canonical_json_value({
+                        "schema_id": CANONICAL_SYSTEM_JSON_SCHEMA_ID,
+                        "system_sha256": before[0],
+                        "system": canonical_system_payload(receptor),
+                    }),"nonbonded_parameters":rp},
                    "ligand":{"system_sha256":before[1],"coordinates_sha256":canonical_coordinates_sha256(ligand),
-                    "system":canonical_json_value(canonical_system_document(ligand)),"nonbonded_parameters":lp}},
+                    "system":canonical_json_value({
+                        "schema_id": CANONICAL_SYSTEM_JSON_SCHEMA_ID,
+                        "system_sha256": before[1],
+                        "system": canonical_system_payload(ligand),
+                    }),"nonbonded_parameters":lp}},
         "pocket":{"center_angstrom":list(pocket_center_angstrom),"radius_angstrom":radius},
         "quantities":{"cross_lennard_jones_kcal_per_mol":energy["lennard_jones"],
                       "cross_screened_coulomb_kcal_per_mol":energy["screened_coulomb"],

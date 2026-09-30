@@ -12,12 +12,24 @@ dynamic = ["dependencies"]
 [project.optional-dependencies]
 research = ["torch==2.6.0", "rdkit==2026.3.6"]
 assay-development = ["rdkit==2026.3.6", "scipy==1.15.3", "scikit-learn==1.7.2"]
+native-v4-source-replay-v1 = ["rdkit-pypi==2022.9.5"]
+native-v4-fit-replay-v1 = [
+  "rdkit-pypi==2022.9.5",
+  "scipy==1.12.0",
+  "scikit-learn==1.7.2",
+  "torch==2.6.0",
+]
 
 [project.scripts]
 betelgeuze-product = "betelgeuze_product.cli:main"
 betelgeuze-cameo = "betelgeuze_cameo.cli:main"
 betelgeuze-cleanup = "betelgeuze_cleanup.cli:main"
 betelgeuze-dock = "betelgeuze_engine_v2.standalone_cli:main"
+betelgeuze-comparison-receipt = "betelgeuze_product.comparison_receipts:main"
+betelgeuze-comparison = "betelgeuze_product.installed_synthetic_comparison:main"
+betelgeuze-paper-development = "betelgeuze_product.installed_paper_development_comparison:main"
+betelgeuze-native-v4-source = "betelgeuze_product.installed_native_v4_replay_cli:source_main"
+betelgeuze-native-v4-comparison = "betelgeuze_product.installed_native_v4_replay_cli:comparison_main"
 
 [tool.setuptools.packages.find]
 include = [

@@ -1,0 +1,44 @@
+{
+  "schema": "cpu_refinement_v1_4_software_and_installed_audit_v1",
+  "created_at": "2026-09-30T15:09:14.706258+00:00",
+  "implementation_source_count": 238,
+  "software_qa_receipt_ref": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-cpu-refinement-v1-4-failure-diagnostics-software-qa-20260930-6347ca2e/qa-receipt.json",
+    "bytes": 54131,
+    "sha256": "c23783925483c10dce802b9c3daac22e9b30c5b3e4ba9403f678de24cd76f4e6"
+  },
+  "software_qa_artifact_count_verified": 254,
+  "software_tests_passed": 45,
+  "software_tests_are_mocked": true,
+  "ruff_passed_for_new_code_and_test": true,
+  "unchanged_legacy_source_count": 41,
+  "installed_audit_receipt_ref": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-v14-installed-audit-explicit-dependencies-20260930-m0w3eddj/receipt.json",
+    "bytes": 8387,
+    "sha256": "02f9fdd3466bae98de70f448eb9bd0fbfba7548b942e4511256539129c8b7520"
+  },
+  "installed_packaged_member_count": 531,
+  "installed_owned_loaded_module_count": 183,
+  "installed_v14_module_count": 6,
+  "installed_implementation_sha_matches_current_source": true,
+  "first_isolated_missing_torch_probe_preserved": true,
+  "shared_dependencies_explicit": true,
+  "clean_dependency_install_proven": false,
+  "installed_numerical_run_or_resume_verified": false,
+  "installed_probe_input_scope": "synthetic raw JSON markers; not canonical molecular inputs",
+  "graph_force_score_dispatches_in_installed_audit": 0,
+  "actual_molecular_target_execution": false,
+  "native_v4_wrapper_switched_to_v14": false,
+  "frozen_sro_amended_or_retried": false,
+  "current_historical_sro_recovery_numerator": 0,
+  "current_historical_sro_recovery_denominator": 4,
+  "source_role_admission_verified": false,
+  "scientifically_validated": false,
+  "claim_safe": false,
+  "independent_static_review_observation": {
+    "evidence_kind": "agent_readonly_review_message",
+    "scope": "new v1_4 code, prepared frame guard, CLI interruption envelope, document claims",
+    "material_findings_remaining": [],
+    "execution_performed": false
+  }
+}

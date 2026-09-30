@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import builtins
 import copy
+import gzip
 import hashlib
 import io
 import json
@@ -84,6 +85,40 @@ def test_explicit_compact_main_preserves_full_payload_and_exit(monkeypatch, tmp_
     assert report["consumer_source_sha256"] == hashlib.sha256(Path(consumer.__file__).read_bytes()).hexdigest()
     summary = json.loads(capsys.readouterr().out)
     assert summary["exit_code"] == code and summary["denominator"] == report["denominator"]
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_compact_gzip_preserves_exact_compact_json_and_is_reproducible(
+    monkeypatch, tmp_path, capsys, failed
+):
+    report = _serialization_report(failed=failed, unicode=True)
+    request, _, argv = _fixed_report_main(monkeypatch, tmp_path, report)
+    first = tmp_path / "first.json.gz"
+    second = tmp_path / "second.json.gz"
+    for output in (first, second):
+        assert consumer.main(argv[:-1] + [str(output), "--output-format", "compact-gzip"]) == (
+            2 if failed else 0
+        )
+    expected = (
+        json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+    ).encode("utf-8")
+    assert gzip.decompress(first.read_bytes()) == expected
+    assert first.read_bytes() == second.read_bytes()
+    assert first.read_bytes()[4:8] == b"\x00\x00\x00\x00"
+    assert request.exists()
+    assert [json.loads(line)["exit_code"] for line in capsys.readouterr().out.splitlines()] == [
+        2 if failed else 0, 2 if failed else 0
+    ]
+
+
+def test_compact_gzip_requires_explicit_suffix(monkeypatch, tmp_path):
+    _, output, argv = _fixed_report_main(
+        monkeypatch, tmp_path, _serialization_report()
+    )
+    with pytest.raises(SystemExit) as error:
+        consumer.main(argv + ["--output-format", "compact-gzip"])
+    assert error.value.code == 2
+    assert not output.exists()
 
 
 @pytest.mark.parametrize("inside_row", [False, True])

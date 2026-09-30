@@ -1,0 +1,335 @@
+{
+  "after_manifest_pin": {
+    "bytes": 5489,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/after-source-manifest.json",
+    "sha256": "4f3cb04347499a60ef1f87bc02e998e7554e6f3d8b3a31ed83460bda5717edf8"
+  },
+  "before_manifest_pin": {
+    "bytes": 4891,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/before-source-manifest.json",
+    "sha256": "a681d78ba27365ca3a9c86510357ebe471d842af263c5774d8f82cebf736174d"
+  },
+  "boundary": {
+    "actual_numerical_reruns": 0,
+    "campaign_resumed": false,
+    "checker_or_allowlists_relaxed": false,
+    "external_uploads_registered": 0,
+    "historical_executed_refs_repointed": false,
+    "model_or_inference_settings_inspected": false,
+    "protected_original_molecular_or_evaluation_bodies_read": false,
+    "repaired_commit_hosted_ci_pass_claimed": false,
+    "scientific_qualification": false,
+    "source_or_role_guards_modified": false,
+    "tolerance_changed": false
+  },
+  "consumer_updates": [
+    "Particle test oracle fallback",
+    "Workflow PR path and isolated Ruff source target"
+  ],
+  "created_utc": "2026-09-30T17:54:37.491872+00:00",
+  "current_source_pins": {
+    ".github/workflows/ci-sro-particle-roundtrip-diagnostic.yml": {
+      "bytes": 1757,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/.github/workflows/ci-sro-particle-roundtrip-diagnostic.yml",
+      "sha256": "328fe25133383c7ba0384db8dbfa4cac9fcd221fb1709cd7def866e24ff0133d"
+    },
+    "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py": {
+      "bytes": 40372,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py",
+      "sha256": "f9d860e150542596457e546802ef8594365c112c424f8a1abf8e82a1734e9c3a"
+    },
+    "docs/research/sro_particle_roundtrip_architecture_boundary_repair_20261001.md": {
+      "bytes": 3928,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/research/sro_particle_roundtrip_architecture_boundary_repair_20261001.md",
+      "sha256": "bdafd671bab6c87f89bb7d9a83c9127f3833986a9ca8f9fd9067f48be7e5ce94"
+    },
+    "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py": {
+      "bytes": 26455,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py",
+      "sha256": "960eaeab92a100a8de04b5ac0e1d0a01b4f569b9a7df560629ba2c4cb2ba3c2e"
+    }
+  },
+  "failed_job_id": 110008732064,
+  "failure_log_pin": {
+    "bytes": 39929,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-ci-22f52e90-20261001-v1/job-110008732064.log",
+    "sha256": "a5a747c0e97bdf62adec3586c828a02527c1632c2ac8b626433cd6036e7861f3"
+  },
+  "failure_receipt_pin": {
+    "bytes": 8296,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-ci-22f52e90-20261001-v1/verification-receipt.json",
+    "sha256": "94a7ae79d5f4251339a6ce48d83f3eff8909b24012bf653efab7303795f7417a"
+  },
+  "first_failure": "tools/research/sro_particle_roundtrip_diagnostic_v1.py:102: product_dynamic_code_execution_unresolved: exec/eval target is not statically provable",
+  "observed_failed_head": "22f52e90aba43e945d14be69332cada318a75680",
+  "qa": {
+    "architecture-guard": {
+      "run": {
+        "command": [
+          "python3",
+          "-B",
+          "tools/check_external_oracle_architecture.py",
+          "--root",
+          "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학"
+        ],
+        "cwd": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "returncode": 0,
+        "scope": "static_architecture_and_mock_qa_no_actual_numerical_rerun",
+        "timestamp_utc": "2026-09-30T17:47:00.877830+00:00",
+        "wall_seconds": 127.23845926600006
+      },
+      "run_pin": {
+        "bytes": 505,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/architecture-guard.run.json",
+        "sha256": "b0c2076ab26d3bcbface2a2f2b8e91ed3bebe3edce81de72cc9183ec5b0eb0d7"
+      },
+      "stderr_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/architecture-guard.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout_pin": {
+        "bytes": 141,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/architecture-guard.stdout.txt",
+        "sha256": "71dbac21066dcb06cfce5c52e94be277bbe6d6f531e9f84a034dd7acd8858382"
+      }
+    },
+    "architecture-regression": {
+      "run": {
+        "command": [
+          "python3",
+          "-B",
+          "-m",
+          "pytest",
+          "--rootdir",
+          "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+          "-c",
+          "/dev/null",
+          "--noconftest",
+          "-p",
+          "no:cacheprovider",
+          "-W",
+          "error",
+          "-q",
+          "tests/unit/test_external_oracle_architecture.py"
+        ],
+        "cwd": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "returncode": 0,
+        "scope": "static_architecture_and_mock_qa_no_actual_numerical_rerun",
+        "timestamp_utc": "2026-09-30T17:49:25.430925+00:00",
+        "wall_seconds": 144.5528099969997
+      },
+      "run_pin": {
+        "bytes": 649,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/architecture-regression.run.json",
+        "sha256": "50494b6637f15deac8684f8f5ed8be84a417bb92335dd35731ef8852a01db21a"
+      },
+      "stderr_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/architecture-regression.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout_pin": {
+        "bytes": 192,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/architecture-regression.stdout.txt",
+        "sha256": "2e0f8180c4e4e114b42e1c07724a968459be2ea3ff38ccbc0e0ac05a08216e1c"
+      }
+    },
+    "focused-particle-workflow": {
+      "run": {
+        "command": [
+          "python3",
+          "-B",
+          "-m",
+          "pytest",
+          "--rootdir",
+          "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+          "-c",
+          "/dev/null",
+          "--noconftest",
+          "-p",
+          "no:cacheprovider",
+          "-W",
+          "error",
+          "-q",
+          "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py",
+          "tests/unit/test_github_workflow_trust_boundaries.py"
+        ],
+        "cwd": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "returncode": 0,
+        "scope": "static_architecture_and_mock_qa_no_actual_numerical_rerun",
+        "timestamp_utc": "2026-09-30T17:44:53.639108+00:00",
+        "wall_seconds": 11.712728157001038
+      },
+      "run_pin": {
+        "bytes": 717,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/focused-particle-workflow.run.json",
+        "sha256": "9d8360509d5442436f063370a2b2f7c68b6f1c995741949dce3dc1462b252ea8"
+      },
+      "stderr_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/focused-particle-workflow.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout_pin": {
+        "bytes": 100,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/focused-particle-workflow.stdout.txt",
+        "sha256": "c10924987276ea48543603137db0d7f220c43042549c57e2852b5c2b7104c3ba"
+      }
+    },
+    "isolated-ruff": {
+      "run": {
+        "command": [
+          "python3",
+          "-B",
+          "-m",
+          "ruff",
+          "check",
+          "--isolated",
+          "--no-cache",
+          "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py",
+          "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py"
+        ],
+        "cwd": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "returncode": 0,
+        "scope": "static_architecture_and_mock_qa_no_actual_numerical_rerun",
+        "timestamp_utc": "2026-09-30T17:44:41.926122+00:00",
+        "wall_seconds": 0.026728029999503633
+      },
+      "run_pin": {
+        "bytes": 540,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/isolated-ruff.run.json",
+        "sha256": "59a7ae703832f730a5136ef42472d6da04675049d4062cb9473d95ce627355e8"
+      },
+      "stderr_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/isolated-ruff.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout_pin": {
+        "bytes": 19,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/isolated-ruff.stdout.txt",
+        "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+      }
+    },
+    "owned-diff": {
+      "run": {
+        "command": [
+          "git",
+          "diff",
+          "--",
+          "tools/research/sro_particle_roundtrip_diagnostic_v1.py",
+          "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py",
+          "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py",
+          ".github/workflows/ci-sro-particle-roundtrip-diagnostic.yml"
+        ],
+        "cwd": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "returncode": 0,
+        "scope": "static_architecture_and_mock_qa_no_actual_numerical_rerun",
+        "timestamp_utc": "2026-09-30T17:49:25.448690+00:00",
+        "wall_seconds": 0.008449851999102975
+      },
+      "run_pin": {
+        "bytes": 605,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/owned-diff.run.json",
+        "sha256": "ef89dd8730b24eab58163c5bf3da43d131edd3f9058509d99c9fb4268301af80"
+      },
+      "stderr_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/owned-diff.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout_pin": {
+        "bytes": 48500,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/owned-diff.stdout.txt",
+        "sha256": "3e3a66492a8ee1f0362a3d57ed49e572f8f460565e436d90d3cfb5aeec764de1"
+      }
+    },
+    "owned-diff-check": {
+      "run": {
+        "command": [
+          "git",
+          "diff",
+          "--check",
+          "--",
+          "tools/research/sro_particle_roundtrip_diagnostic_v1.py",
+          "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py",
+          "tests/unit/test_sro_particle_roundtrip_diagnostic_v1.py",
+          ".github/workflows/ci-sro-particle-roundtrip-diagnostic.yml"
+        ],
+        "cwd": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학",
+        "returncode": 0,
+        "scope": "static_architecture_and_mock_qa_no_actual_numerical_rerun",
+        "timestamp_utc": "2026-09-30T17:49:25.439948+00:00",
+        "wall_seconds": 0.008804901999610593
+      },
+      "run_pin": {
+        "bytes": 620,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/owned-diff-check.run.json",
+        "sha256": "8931561c7862221207bfbe30294f711dbbb28370a0e4dc9cd591b622d4bdd06d"
+      },
+      "stderr_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/owned-diff-check.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout_pin": {
+        "bytes": 0,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-particle-roundtrip-architecture-repair-20261001-v1/owned-diff-check.stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  "qa_counts": {
+    "architecture_regression_checks": 108,
+    "particle_and_workflow_checks": 41,
+    "total_distinct_checks": 149
+  },
+  "relocation": {
+    "byte_identical": true,
+    "bytes": 40372,
+    "new_path": "benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py",
+    "old_path": "tools/research/sro_particle_roundtrip_diagnostic_v1.py",
+    "old_path_absent": true,
+    "sha256": "f9d860e150542596457e546802ef8594365c112c424f8a1abf8e82a1734e9c3a"
+  },
+  "schema_id": "sro_particle_roundtrip_architecture_boundary_repair/1",
+  "status": "PASS_local_static_and_mock_boundary_repair",
+  "unchanged_frozen_and_boundary_controls": {
+    ".dockerignore": {
+      "bytes": 4157,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/.dockerignore",
+      "sha256": "a9c40f5219c8ebb544789360debe6201d09ebb4cd4c4577d7f3257271609c82a"
+    },
+    "Dockerfile.product": {
+      "bytes": 3598,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/Dockerfile.product",
+      "sha256": "67c9311abe86a5bf9c2295ef4608e09513470d9eae82441f2499fd5cb3e06187"
+    },
+    "benchmarks/oracles/sro_recovery_endpoint_numerics_v1.py": {
+      "bytes": 33633,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/benchmarks/oracles/sro_recovery_endpoint_numerics_v1.py",
+      "sha256": "9a1598e8f94e98ff691a435e8f6a43835a9408c58e9da07051fdd7a56e90f1e1"
+    },
+    "docs/research/sro_particle_roundtrip_diagnostic_plan_20260930.md": {
+      "bytes": 9033,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/research/sro_particle_roundtrip_diagnostic_plan_20260930.md",
+      "sha256": "d3cdfdc5d89ecec219d73f2737f0a4709134e028be2068ea57dc67bf356d38c6"
+    },
+    "packaging/engine-v2/pyproject.toml": {
+      "bytes": 1461,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/packaging/engine-v2/pyproject.toml",
+      "sha256": "a4a09fda8b2beaca8b221fd1109ec851f8e7f9d19b7d7d36c1a816db5a5f597c"
+    },
+    "pyproject.toml": {
+      "bytes": 1748,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/pyproject.toml",
+      "sha256": "eafd98b23a94c9f56f1b31bc92abf11bbadb8a50d4240c3eb00568918038f132"
+    },
+    "tools/check_external_oracle_architecture.py": {
+      "bytes": 68579,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tools/check_external_oracle_architecture.py",
+      "sha256": "f96bd7a2df035340c810918336224a5ac7041afcecb1fc693febb39bf8bf8e97"
+    }
+  }
+}

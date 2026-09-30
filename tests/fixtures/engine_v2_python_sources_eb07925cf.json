@@ -1,0 +1,754 @@
+{
+  "source_commit": "eb07925cfbf517603f967386faa18cacb64456f6",
+  "manifest_sha256": "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7",
+  "rows": [
+    {
+      "path": "betelgeuze_engine_v2/__init__.py",
+      "sha256": "ec5bcc71c2d6a5ee93443eee4dd4a8598039a0c899c447f0b26ece448add22a5"
+    },
+    {
+      "path": "betelgeuze_engine_v2/ai/__init__.py",
+      "sha256": "90d2eb5ffb378aab0b90a84b6a2fa7a9f2be7bae32478a10c839e189537ac9a6"
+    },
+    {
+      "path": "betelgeuze_engine_v2/ai/energy.py",
+      "sha256": "07d94755a9fb1e168b64d42199b155f062f9e2bd9b88a8fa76b6701247d83fc4"
+    },
+    {
+      "path": "betelgeuze_engine_v2/ai/physics_informed.py",
+      "sha256": "3deed5eb4cd885f1fd2f05a340205e1e8c3ffbe24165e9549348ef3a1e392027"
+    },
+    {
+      "path": "betelgeuze_engine_v2/ai/sparse_graph.py",
+      "sha256": "0f97001898f9e814d429dd70b6502b2fce82002f7a819de1a828f7f0cbf06b8c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/ai/temporal.py",
+      "sha256": "91e6ec31a9f1f7a88306535dc7134c1233ffc7604b04f863904f381fdfc7e38b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/ai/torsion.py",
+      "sha256": "f786a1991165506d5f6a46d4bd8aeef4d2956b58d15e62f9ead395adc5a5e151"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/__init__.py",
+      "sha256": "8ea0693af17e2d15db5d3d2c4ddfe28c9292a877ace102893bfa95e908937baf"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/blind_stage0.py",
+      "sha256": "04a24f5dbadd0692496e5eecd3d6c55358156a7345198670d558ccb16f09597a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/external_baseline.py",
+      "sha256": "18767f01c09299bc2b5322feb9c5a759b7e5c287c9c8bddb6b75178a8e68bc96"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/fresh_redocking_holdout.py",
+      "sha256": "384fb92af490266d2be021eee55b9234e6221c2b00dd7d168ab33b0307c7e08e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/global_orientation_development_contracts.py",
+      "sha256": "832a5b40257919a1dbe3114cf06a0c5d696bd1e9faf6ee2294a7474d99c8c4aa"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/global_orientation_development_decision.py",
+      "sha256": "ed704107274b3de6db2118ddeb690a6cb167b3395a69e94b0a8c1c90ad5a8c93"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/global_orientation_development_metrics.py",
+      "sha256": "c3612dbb90f82972f6787094af7effdbbfc78df08b296a5bf0f9a778a9f21aa5"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/manifest.py",
+      "sha256": "a105548267bc8167ff86f4da8542f9a27c3d8aa9912627eab7fd2a8188a9c9c2"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/oracle_selection_evidence.py",
+      "sha256": "6630af0f554a5a622213674d830318f4ca81de5a3696d854c43fb529dd9a50cc"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/oracle_selection_metrics.py",
+      "sha256": "80950b04811656dd907980b0dec67936d1d524bbb2f54691bba727ae5ffea953"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/public_evaluator.py",
+      "sha256": "9de104e2caf235d93db8b7f50a7f39b8a03af431e22e66bdf3750b99ae51d6cf"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/public_evaluator_authenticated.py",
+      "sha256": "d552a9405642a2f03334d18e886c2b1fcb186887820be2919ab9358eff107750"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/public_materializer.py",
+      "sha256": "94cde82b126c826458d689e89ff3dd958ec2ac2f3a12700ffd61a7de49eb77ed"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/public_protocol.py",
+      "sha256": "66ae897a6005f4ccd56eabc1786dcc6dfecdf5bb45eaa6e417a9037d24842481"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+      "sha256": "bd48b33974290de0f563a97f55fbc1e250ca516f0a76dc8d31631ef00d84446e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_activation.py",
+      "sha256": "e93774d3e2a93154268ba593bf51032e017dbccf80f5a67dcc432b384fbd8a7f"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_artifact_consistency.py",
+      "sha256": "b1cab257c9c350e532bda5e1151f051c3ef36226f443cbab2df2fc485b93980c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_external_reservation.py",
+      "sha256": "2aa066c630ed1866f19ce5dec3f42f3ae40e538a7c2d102753267e0089fffab0"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_ab.py",
+      "sha256": "7ea718c998d8776be5f5a2eb3c2a1e5c5767aaf6e9e2679ca0ab76aa4b566e47"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_binding.py",
+      "sha256": "fa7481ace3e11e439d78128a43837549beee6482a2ba57f7627becc8f4d5ec30"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_evidence.py",
+      "sha256": "4f7d61c5ba759cfbcb85cc80c719bb4f9117d5a55c3dc39bbea4e7f00948711c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_external_gate.py",
+      "sha256": "bb67badf7d7a51e65b658f8488f819feaff7a94322389a1315c61d831571f86e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_full_evidence.py",
+      "sha256": "d87b6ebf028cad25cc561393230a42d58c1865198207924c3804cf462476f1b8"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_legacy.py",
+      "sha256": "8065ab3d6e113b3e218ae95ee604a466ccafa0278515e62c1922acba10aa09c9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result.py",
+      "sha256": "1a828d34378afe5628fab0207f6b61dc2f9d380c376811baf3a75e7c977895be"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_binding.py",
+      "sha256": "fbc1c4c1008f90063615e905299813f5e1de6a4d06ce51f0bea717d54247b37e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_result_legacy.py",
+      "sha256": "3595f3aaf1d7c0234057545b2ef126951e71557ff45b0ffffc06cead3d49e4a0"
+    },
+    {
+      "path": "betelgeuze_engine_v2/benchmark/source_paired_clearance_one_shot_verdict_diagnostics.py",
+      "sha256": "d4b14a4a796ed4b2fdf93c653c3c55a693e976a21736498c227e21894b559268"
+    },
+    {
+      "path": "betelgeuze_engine_v2/capabilities.py",
+      "sha256": "b31d286dbade6b4f168851a1dc23a3326f7c012b7f63e60f68d8eebd4765ab29"
+    },
+    {
+      "path": "betelgeuze_engine_v2/cli.py",
+      "sha256": "c401d22a574e6c60479c251940f3ab3701b101479b89a4ec957390e9bb883d27"
+    },
+    {
+      "path": "betelgeuze_engine_v2/cli_dispatch.py",
+      "sha256": "9a61c9705720b5ef280c74d55c3b08da8a80f7444645603803d500a6db4271c7"
+    },
+    {
+      "path": "betelgeuze_engine_v2/contracts/__init__.py",
+      "sha256": "aac0804b93c4c4ca2c97babec84b484d1865776ef20cff4e235bd60d6a08c4ae"
+    },
+    {
+      "path": "betelgeuze_engine_v2/contracts/errors.py",
+      "sha256": "4aaf3c9f8b0127a3ab34b0049d4ada1de843752bcf1549dacc6e4f23891a93ed"
+    },
+    {
+      "path": "betelgeuze_engine_v2/contracts/schema.py",
+      "sha256": "5e7dc31c8dd2c6a826b3ce805d77670c746f707193377816eef9c30002b67d73"
+    },
+    {
+      "path": "betelgeuze_engine_v2/contracts/status.py",
+      "sha256": "6df776a2654df918380b312569a617ce3bda3b831693e58712cf41b22788b75d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/__init__.py",
+      "sha256": "0344b098498334b2f7bf44e9c5bb15b7f8b0856ae3d2916fce978fecc8b47049"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/authority.py",
+      "sha256": "cb9587eb30f9aa9e479f6462f200e1312c5578cdde2a5478b6137760b97f7e5d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/authority_rotor_compat.py",
+      "sha256": "91352145be9d9a492658ec8b5bb0689130dbd97f6812b00cbdc81de1d7fa895d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/conformers.py",
+      "sha256": "7144a090d1b76eb0e331adbb4800a29298150dc21cc2e9b5dcfe3009da7582bc"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/consumers.py",
+      "sha256": "43d7dad540c053015aa5c38273d29bc941cf55fed656633743ad296f6e82aa0e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/contact_validity.py",
+      "sha256": "a79cdb87f013ad5b2fd7fc48abff0136c0e10b47f7d14ceaad601d6366c3e1ca"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/energy_refinement.py",
+      "sha256": "969edde9f28dd2c59a327c49526d983739102828cd58725753473c9c8628ad97"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1.py",
+      "sha256": "c27657f104248973f11f6da498fc08da460cb6d4823719139762ce76b0cd18d7"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/full_pipeline_cpu_performance_v1_activation.py",
+      "sha256": "b53633b1219bd1f6ca283219e2879ae9b14ee8f0450a14251e689b5433c2cee0"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/geometric_admission_v2.py",
+      "sha256": "0807413aa35c86fedbaf0b216543a5ee55a2248d315cf466c19d1cf863817688"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/geometric_admission_v3.py",
+      "sha256": "4f82ecfc9aa3ebf2dc6dd8a3be7ba711c61218406085aaef2f1c09067ce355d8"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/global_orientation.py",
+      "sha256": "9983774745872a6d3e2abf3c8a14dc80c915ad4703dfe3675b58f39aedcd6b61"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/global_orientation_evidence.py",
+      "sha256": "0964001a1ab664073ab4b8ca480df8c049780ff2f09c9ed5da7f005d3454f23a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/guided_placement.py",
+      "sha256": "4fd6fb21488e38cb2e197c5ac042e8833a4c851904675b4180cedfc17f1aac37"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/identity.py",
+      "sha256": "1a70466c728671c1f8c2faaccdc1a6969573a071d4d1bb6b94837ca0692c9135"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/interaction_refinement.py",
+      "sha256": "d2d4d7c8e8ad1d26b580381a20e820338341a0e3097b12cc86f0321da19346e9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/interpretable_result.py",
+      "sha256": "74e3d4d931edb73f5a89e4a740f09b422a6abe0e2e08b0f2146f975a0bd7c7f3"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/interpretable_scorer.py",
+      "sha256": "82a3b52d2eb4b3109c6cd4d5c937fdd953beda4df91f2d6ecab8b2f8018e983d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/metrics.py",
+      "sha256": "e47915e80fdec830243f28105bee4f43b7f7b9d92a4ece73826dc29282305df9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/mixed64_allocation.py",
+      "sha256": "e883ea6d261c61899cc46a60f9273df043e08970a2df211fab13d57a9757e734"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/mixed64_operational_proposal_policy_v3.py",
+      "sha256": "4b5e8b8a37856e7ed0621012e25a4bc27d13447ee1e744687ace885940152fb5"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/mixed64_operational_proposal_v3.py",
+      "sha256": "908045105b90fdc46ef2060283a28f3ab18b8f83ccfdde56e11e8b5959e21b25"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/mixed64_proposal_geometry_v3.py",
+      "sha256": "400a700613fd9a64fa4703185cfdb8fa7cbb146a1c2a871e2b40bb662d119b7b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/mixed64_proposal_producer_v3.py",
+      "sha256": "a3f5c1d8b5ab9982accc0b0a64e1783f2575ce70a4b8b2fbbdf6b9fec18daa0a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/native_cpu_parity.py",
+      "sha256": "66f7029ffe78132e914a17f9fcb0b9fdeb6dac7ecdbda9139e3b296153093579"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/native_fixed64_consumers.py",
+      "sha256": "ea4fb7953d2bb2c1e4e16380dd3ad362d4fa8265bf0c11d26d69dfed3cc8df25"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/performance_host_preflight_v3.py",
+      "sha256": "236496cb7342040191db51f6c801948ab1c6b859d09a85b35e3c8a9c00a38adf"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/performance_qualification_v3.py",
+      "sha256": "8a872404172fc7d5bbd38b0e56f0897b9c586d0b3a6fabfb79953d4228afd860"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/performance_sidecar.py",
+      "sha256": "04253e3897bb5746e1c1082dbf8e27922835ffb075aeb3268c18a0895662173f"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/pipeline.py",
+      "sha256": "91f0cc3f2207f36521e6bc858709ed48ae4bab49cd3227056d7eefb10d27e117"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/pipeline_candidate_evidence_v2.py",
+      "sha256": "147d90a4aa4d1ca0d0b42a48e9d9be74608873c4e8f7316b43dd6a23f4d32372"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/placement.py",
+      "sha256": "b0a30c449042383bf5b0a4a13bbf16d91cdf90a106420097ac27d75ded54c164"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/proposals.py",
+      "sha256": "e1cf7b212a04533eab526e48c5084d431d25ed4897284bd9f4822a04f4034730"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/scorer_v1.py",
+      "sha256": "138484e4e3f5473c582485316ed8482fc770d0df2aa9f8397e4c91be22d81b75"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/scoring.py",
+      "sha256": "32b9d7ae5e4fbc1d916c202066203934cbc0811ace91baae16beeb06eb108419"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/search.py",
+      "sha256": "9b9191861e1772893dc385c48dda407a31cb6e2c2262c4aa189d9700a731729b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/search_fingerprint_material.py",
+      "sha256": "8189c6ce8e858274d87ffaf6ad0bd0b855c6fea4086511ceed2cfc324b261943"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/search_v2.py",
+      "sha256": "e2a38475bee880e528e07eb076fd3dae2e4d303c34f0ec503274ef0f012f87aa"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/source_paired_clearance_activation.py",
+      "sha256": "69e3a6d06d99fa8536f0056a860af9eaa97585f9e037773b06f01b35e8dfaa5b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/source_paired_clearance_selection.py",
+      "sha256": "140deae718d7ae4258bbc286eeeba36a642114c2b0cfc7fd0904160565c44c6a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/sparse_base_validity.py",
+      "sha256": "b45b86fc774ae760c30a305b2bc5236f814282ee0347336466e7fa54f39c97b9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/torsion_contact_refinement.py",
+      "sha256": "58cc81e31446d648a7c8e8fcf7f5220cfec2ade1d08bc0d50545e3e5f333f04c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/docking/validity.py",
+      "sha256": "5b1263ddf83deee0c46142be9e8d973bc9af6710d197f20451ab4d5ee996a619"
+    },
+    {
+      "path": "betelgeuze_engine_v2/engine.py",
+      "sha256": "3fa21095d9e4b52a64cfb0abebd19817da57e8a130d4e3c443472dded93bedeb"
+    },
+    {
+      "path": "betelgeuze_engine_v2/evidence_contracts.py",
+      "sha256": "e0eed20e011a3acfa0a6ece686ae15de3f82ec1e595488124a067b08c34ca7b9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/evidence_contracts_v3.py",
+      "sha256": "253183bbcedd763efc7fcfd2bfec9390f55db58452c42b3afdf99e9224ffad13"
+    },
+    {
+      "path": "betelgeuze_engine_v2/execution_parameter_attestation.py",
+      "sha256": "62465515d710cf59f691a3d9a2589a15a811ff16646931a7af4edf392140c06a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/features.py",
+      "sha256": "8d598d3012af8fd2159fa1a48162dba2f15090031e6ba2569933647769b0ef12"
+    },
+    {
+      "path": "betelgeuze_engine_v2/geometry/__init__.py",
+      "sha256": "a8a7aa1ff859054eead010571b2195c9685d50a8e585c538d7dfb737cdc841ed"
+    },
+    {
+      "path": "betelgeuze_engine_v2/geometry/neighbors.py",
+      "sha256": "8026d68f86b5a93adc1e44aa56594d9f5461f180e8c383a346d85963944c7f25"
+    },
+    {
+      "path": "betelgeuze_engine_v2/input_bound_verifier.py",
+      "sha256": "5e0fcfd8d8947e898da09fd93e7c5720cf09f0cd4b2eb4ce4bc883a88fe4c0b3"
+    },
+    {
+      "path": "betelgeuze_engine_v2/io/__init__.py",
+      "sha256": "9c7fdad3a555e61e65b5617e11db762d5edae3296ab0e59c9f3ec38f91d2c777"
+    },
+    {
+      "path": "betelgeuze_engine_v2/io/pdb.py",
+      "sha256": "dfc0e6eff0126941cf4f0481959e57de2d5b7c467f2e298e76bac518da83e98d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/io/pdb_connectivity.py",
+      "sha256": "cb25eeef7d7ecfa6f2b63f898356bf364b8f820ac9dedc0bd841225573388287"
+    },
+    {
+      "path": "betelgeuze_engine_v2/io/sdf.py",
+      "sha256": "180fc15721dbde0d79ec5bfc8d3099ce519499027a5c2ca77c5138fe36a00db2"
+    },
+    {
+      "path": "betelgeuze_engine_v2/io/sdf_policy.py",
+      "sha256": "1ae53f58847f0f5b5f84a65338e6f6cb1d792d2daabd07ab3d9d3af8f281365d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/io/writers.py",
+      "sha256": "60ac8da8d8e8e550d3bd84955e3a134cf9a77f61ec30120705042db9cc442739"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/__init__.py",
+      "sha256": "1743b4a65327df75e17d66d3289b79a666a3e7adb1c9fe768b3d1d19f3b67353"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_altloc_declarations.py",
+      "sha256": "c6f68f2b0db08dd8d2f27466b2593122879d2a47396e9c417d758db0a2e27d81"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py",
+      "sha256": "e7a2156655332e687786fd6bf7ef234b0fa698a942c98b12fc9e626449885600"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py",
+      "sha256": "a20ea887f677a7fa472d45e8a5a76008c4152935ff9c068ba95e92d50d2ddc52"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_missing_atom_residue_policy.py",
+      "sha256": "1978385f14c311495a9d1f7a69c913335cc0d8f099d9831634ec4cba153dc1b6"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_modified_residue_declarations.py",
+      "sha256": "73769cefec417948e73edf422db6e29503f8b9f8c7902681e8c931135fa9c626"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_round_trip.py",
+      "sha256": "b64568b2b3181f8f46a749f7b1a9b631457bfb821e6658740cad087eb2cf9d5a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py",
+      "sha256": "4b36b6fb77b577471a481dffb2694b90adf149ef2835cd2b4b84a41a289cfd1c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_observations.py",
+      "sha256": "23b217d6799cb3259bb7189a3ba5f106d72e7bf09e340e3f5ce5d313ba3c7971"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_scalar_values.py",
+      "sha256": "214c7f0c15a4f89c02e755cf1005a6b47b1f08a55a8b9305d0fc8e065c31fc74"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_canonical_topology.py",
+      "sha256": "115d8e329ff21921ba3f7e089daeeb9405d63607592392a40014529c0209829e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_declarations.py",
+      "sha256": "b5ab27fea9e50c635676cd3adf2025ca1e1e8d8325985bade0d4d359808b25b7"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_roles.py",
+      "sha256": "8004901f3e804c9b03ca72a7443bfa90d2d7fb000a1ee265ed6ea9c026ebbc1b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_coordinate_values.py",
+      "sha256": "70105863b05af6f4dabede2d0493f737803d031bfeb5fda96f688a84d70c34de"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py",
+      "sha256": "11a6603b19db9284a055be5661bcc71858c887f6e324f91ecd3ef57579a0193c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py",
+      "sha256": "5d114b72aed021aec997024374da2e456345941e1a99422287c93d6086d61ea3"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py",
+      "sha256": "5129440605a0194758c0544ba7ba37a8c3c653082f1bb85157eca8e6869558cd"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py",
+      "sha256": "56365dd91fcd040d891ad2cd984d3210a29c2b5c80afa088e6b33ec9f4aa3549"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_ph_protonation.py",
+      "sha256": "89458b23cdaa7d95c1552928073e8fbe91569de2b7a3edf1da7bd490126adc5c"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_ph_protonation_corpus.py",
+      "sha256": "a5fad71d21af50eba7399261eeeaab92e63e4ae9c1a4cb9b36ca139a967fe2c9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py",
+      "sha256": "30e22b2f1accb629912a85e771fb199179d062489d26589545f9c76d26f32ca2"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py",
+      "sha256": "72e2ebd96f622b90625b137ca4f14a4aee8b16ed64b327ec369899f865e5d096"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_tautomer_selection.py",
+      "sha256": "9355ac5b4eea3b7e8f7f8244f050b0eb54382e5b6bb72e72210cab6627bcbb36"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_nonpoly_tautomer_selection_corpus.py",
+      "sha256": "0257eedcf1d781783e4186931829b6222f65c83a919e8f94791f6d3e3ec83fd0"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_semantics.py",
+      "sha256": "543a87ce34306acd6f589e7f57d5cfb0cfa9e380ccc9f4074f85dd19325da812"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_struct_conn_declarations.py",
+      "sha256": "e6d08e40136d0743ac3f209894412b73138bb7b4925a2ee0b74a2d99e7b417a3"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_syntax.py",
+      "sha256": "86fb3cde63a0b5b2023227c86c178d072eceb56b4203b397e32a67b3194ea152"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py",
+      "sha256": "5c749d6ecb927b7929e92dcd3c6a24054157e77024cc623ac885fe2f894d630b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/models.py",
+      "sha256": "6e048062e5e8988855785841c8b044e805ddccd3b541b6f1ac109902a9e14448"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/serialization.py",
+      "sha256": "971d15d5630410ad6d262e256195baad2380f6826bec516484b8ed7f551c8441"
+    },
+    {
+      "path": "betelgeuze_engine_v2/molecular/validation.py",
+      "sha256": "dfc5dbae1900095a74019db939efb4d4066dc1f50a0712bbcd5db125be9f6aba"
+    },
+    {
+      "path": "betelgeuze_engine_v2/parameter_source_provenance.py",
+      "sha256": "712526cf93540ca5247b551f2c9c3544e02c9cf3c7cd9c6807a29ba25a2c9d21"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/__init__.py",
+      "sha256": "93110d6581e5b132c30b56f313670d94149de7167565a21c6f00fa365ae37687"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/composition.py",
+      "sha256": "fb6da1b06ea2307b2fddf645ddde7c87b856c2c49e78204b1ae02071b95a0a03"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/projection.py",
+      "sha256": "a4966596b67a0d0d3a1b622746a17ba4bb6e2ca513bdb81ec5199c74ad7b7b49"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_constrained_minimization.py",
+      "sha256": "add468927b88d68e32b03385250b31e08f7502f1793436fc94f689af8db6f15e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_diagnostics.py",
+      "sha256": "b09f63039dfea35866229a1bf5ddafb916ac0908c8429a8e39c330200232dcb8"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_forcefield.py",
+      "sha256": "af8422789c5c9a473bce05d93b7e502d00cd0a955601ff39dbb3fd3b831648db"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_forcefield_v2.py",
+      "sha256": "fde0638edc34273bcf47476e7d18cb4e7c2c199fd0b5cf13b265616d43f99f57"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization.py",
+      "sha256": "47ba36061b9d37b808b83bf276a3d9ba35f9b429ed32d3fc6dd93887e60a078b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py",
+      "sha256": "950a8e8200e2b8160b172f2c854f826bb558e2b2598bd38b790bf6e6fa9236d9"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_artifact_binding.py",
+      "sha256": "388f0d502d9acff4e2b2f82a3a18d67ab78dcb73297be1067084fff86df09b26"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_authorization.py",
+      "sha256": "33123f8ccfe605ce608aaee5886b59a8ebe9568e9fac56a9536f98f78ca1a368"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py",
+      "sha256": "995a339adc6547945334aa2934f2e562948fe8fb77e646b0023fa1274ed32fa5"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py",
+      "sha256": "d54cefe54f00afb88d1b4556ebee406838871b503ac7c7598efb6fcba05bdf50"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_ed25519.py",
+      "sha256": "6786e26d0ef1316eaf0ccb6b998a6e686ed023ebf1b2f4b75e8c0ab1d7b5adf5"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py",
+      "sha256": "b27bf9858811ff967bb54726616a66149edf44544b2cb1bdf9f57ba410345b26"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_nonce_reservation.py",
+      "sha256": "5d6579b88d36049b72feebf64642e0a23fc8337572c9deab037703546916b73d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_protocol.py",
+      "sha256": "a61051dea8e6676cf349939cbca06c0cdb756344fa9c45a21ba23efdc23de5c8"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_receipts.py",
+      "sha256": "a9bedee60dc7795fcdc25f4f65f6a284fc9b82b09f31b66f6632eeb62f11cf18"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_result_writer.py",
+      "sha256": "41df53e9160513077fff7e393425b14957abad966501a7fdb538d93e716186d3"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_review.py",
+      "sha256": "dc33ce648833e27407b9d4875f296e487f363529c13775f4899868faa4194060"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_run_start.py",
+      "sha256": "145a0b6fb93917e20ffc77e195e39cedc906bb675b08ca263fb5e54f416db96b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
+      "sha256": "6e4cc7eb36740e0f03b401c693c7bc91ab1d53b461d4c98400301fca4bd9e2b6"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_parameter_applicability.py",
+      "sha256": "53b10281f42efcf46c1a261bb618cd501140e48be52d0d41076fd4c94977560e"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_parameters.py",
+      "sha256": "cb72413a6ef6c33e65f3641ebfc836d1011ba4deb077ecdd5ab669317bb5e0de"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_solvation.py",
+      "sha256": "c9dc85795af9bc6e4469da0f4c2a53361c8bc2b6a44d34dc315625c9c8acd993"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_artifact_binding.py",
+      "sha256": "868461c5e5fc1b7287b21099cbb734d3e03fcfe7f6f0c8f81cccaf514da600fc"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_authorization.py",
+      "sha256": "6c02f525d1ac6d7463ccd3e19837ec95175635a772b6689a8885a6e4a8ac8556"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_bootstrap.py",
+      "sha256": "1b2fc1e454f14a4867238309718039ccf9cd191c9068e842083bbfc6a568804f"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_materializer.py",
+      "sha256": "2d4eda974f2a551f3963ead1f12c5f474414e6760aa461e735d7aa45829bf19a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_nonce_reservation.py",
+      "sha256": "eea287371fe73c5ee8419f24bd8b38b2851704a0247da24254c504b426ff3895"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_oracle.py",
+      "sha256": "71627d266a6b1c64b2e6db0f8126bd91e8381c017ea4c6ae2bb76ec84d7b257b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_protocol.py",
+      "sha256": "d961c2092aa773c2f3234cba34c10a6a2164aa814cf9ccc7742784c274cd4493"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_receipts.py",
+      "sha256": "345cf5d996034de0e5ee0b3c067939c6f1a8e8aac3aa666a36d0f2bf4eb0f39b"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_result_writer.py",
+      "sha256": "858fb2d834d80b688d690c30037468239f5a6930b08a406bd47b40fa1869b7bd"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_review.py",
+      "sha256": "09c71406805fe5ea8e87d3020111960588aac875e0ed983a3d78e4bdbf725492"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_run_start.py",
+      "sha256": "86bbef347a6393004d5d0797408610099c7abaf6f03ee0f50205c65cf24b4a75"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/reference_validation_runner.py",
+      "sha256": "9eb11e22d85b0cc31fcadccddb3b9c95c5298135ed8c6ad7078cd5519a3c2260"
+    },
+    {
+      "path": "betelgeuze_engine_v2/physics/registry.py",
+      "sha256": "eee92a36637c2e6282bf7a0ee7f97c2247218e0d8f61df5bf6e53cfa756a3106"
+    },
+    {
+      "path": "betelgeuze_engine_v2/reference_pocket.py",
+      "sha256": "3b5b9603e4270f3c1f603d70dfa70aefcd65c584f461009fdf3f6413e57fe784"
+    },
+    {
+      "path": "betelgeuze_engine_v2/result_verifier.py",
+      "sha256": "e349d67da396cfea2d4db709378a5d25f488c34052fc06e80312222558f48424"
+    },
+    {
+      "path": "betelgeuze_engine_v2/result_verifier_strict.py",
+      "sha256": "e5aba3ca22d9ee9b00eedfd9391fbb51a1bdf89cede19632c9583a7a676a18fe"
+    },
+    {
+      "path": "betelgeuze_engine_v2/runtime/__init__.py",
+      "sha256": "3dd532eb6f4be0ed52470db8d2f8e5c9540d0f0a07059ad580e9430d60e46cc1"
+    },
+    {
+      "path": "betelgeuze_engine_v2/runtime/conditioning.py",
+      "sha256": "2e9abb7feb8fff3fb41e0e288c7bea2683c3dd930be3d22f92ccf2cfe8e19697"
+    },
+    {
+      "path": "betelgeuze_engine_v2/runtime/fingerprints.py",
+      "sha256": "b5cc4984915491945a7f2db3d8101138b2fa6429c6c18660b6a69744030b4c42"
+    },
+    {
+      "path": "betelgeuze_engine_v2/runtime/vocabulary.py",
+      "sha256": "dea172a12455780ed505a327bc7c4455b7c195222617b0c6f55d9568eb6330fd"
+    },
+    {
+      "path": "betelgeuze_engine_v2/runtime_snapshot_hardening.py",
+      "sha256": "1272d43ba76b0895d3fd2eeb479bb836e3df5d7a38736f359950be873fb80f15"
+    },
+    {
+      "path": "betelgeuze_engine_v2/scorer_source_observation.py",
+      "sha256": "c4c776828329b2e4793c232cfbda15f28f2ffe633eb291cedc98a0a1aaae3fdc"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round1_hardening.py",
+      "sha256": "067575476b0a369162521f51f87fffd8e42fc87003b6fec34255aaabb2ce95b1"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round1_minimization_compat.py",
+      "sha256": "a00a7be1b82e4067095d32fa6fa3507c592b0643fe6d1868c5df9e0338106191"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round2_evaluator.py",
+      "sha256": "652fab563ba4964d20883bf06205c850574dd19a73f7868c07c3348079d6d225"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round3_integrity_compat.py",
+      "sha256": "b30116a48031bf765139624c846e38ac014d9f2630b9a8464f6de38e5650698f"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round3_list_compat.py",
+      "sha256": "9cf8d76795953f906dc7ebe810019bca82681e69888d7783e03ecd8e5075837a"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round3_molecular.py",
+      "sha256": "4ffab289d35f4ba2c9fc634fb232aaca4fa5a0b0d85bffc26e35fca525f70d1d"
+    },
+    {
+      "path": "betelgeuze_engine_v2/stack_round3_reader_compat.py",
+      "sha256": "f37591abde2e1f496cf45f991ea2894c496bb541dd4473f22a4000f698908ea7"
+    },
+    {
+      "path": "betelgeuze_engine_v2/standalone_cli.py",
+      "sha256": "fe98043add325c27c8809f8d6717ee3398c8fc68d0a6fdbdba803360cd9b7907"
+    },
+    {
+      "path": "betelgeuze_engine_v2/truthfulness.py",
+      "sha256": "0bfdc85454407776b2133b3191fb84b659c33178cbaa8f97d607862f72f49605"
+    }
+  ]
+}

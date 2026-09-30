@@ -30,6 +30,10 @@ development data; the disjoint fresh 128 cases are an internal provisional
 blind holdout and have not been executed. The active refiner is V7. Product
 promotion and public claims remain disabled.
 
+A separate opt-in [installed retained-paper development workflow](docs/engine_v2_installed_paper_development.md) connects declared prepared structures to Cartesian CPU baseline/refinement, checkpoint continuation and result verification. Its observations retain unassigned source roles and an unknown experimental denominator. The [installed PR49/PR59 campaign](docs/research/installed_pr49_pr59_real_cartesian_campaign_20260930.md) completed both declared models with independently checked endpoint arithmetic; both refinements were rejected and their baselines retained.
+
+The [current evidence update](docs/research/priority_goals_20260929.md#2026-09-30-integrated-evidence-update) links the complete primary endpoint transcription, bounded CPU setup profile, retained strain diagnosis and prospective SRO pose-recovery packet. Source roles remain unassigned; the prospective packet has no recovery execution outcomes.
+
 Implemented and GitHub-hosted CPU tested:
 
 - canonical all-atom state, validation stages, and SHA-256 identities;
@@ -295,3 +299,23 @@ Not acceptable without additional evidence:
 Implementation, scientific validation, public benchmark evidence, and product
 qualification are separate stages. A green source-level test does not collapse
 those stages.
+
+The [integrated setup and actual SRO input milestone](docs/research/integrated_setup_and_sro_inputs_20260930.md)
+records the installed synthetic probe, local boundary tests, unchanged-gate
+negative results and four correctly rebound SRO inputs. The later
+[SRO execution and guard-repair report](docs/research/sro_stopped_campaign_and_guard_repair_20260930.md)
+retains the stopped campaign: one failed case, three unstarted cases and no
+authenticated numerical endpoints. Future guard regressions pass, but another
+target run requires a new audited snapshot and reviewed prospective plan.
+The separate [operational guard-repair experiment](docs/research/sro_operational_guard_repair_20260930.md)
+records that fresh audit, unchanged four-input protocol and reviewed execution
+sources. That document is a historical first-completion snapshot. The
+[terminal report](docs/research/sro_operational_guard_repair_terminal_20260930.md)
+preserves two completed cases, one force applicability failure and one unstarted
+case, with zero admitted recoveries in the four requested development starts.
+Saved export and post-terminal coordinate evaluation preserve the full failure
+denominator and unchanged scientific gates. The
+[public transcription reconciliation](docs/research/human_5ht6_2024_cross_artifact_reconciliation_20260930.md)
+links existing report occurrences while leaving chemical identity, independent
+measurement counts and training/calibration/evaluation admissions unresolved.
+Scientific, learning, HIP and service qualification remain open.

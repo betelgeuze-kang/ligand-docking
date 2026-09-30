@@ -170,6 +170,27 @@ def test_declared_stereo_without_geometry_evidence_blocks_scientific_claim() -> 
     assert "atom_stereo_geometry_unverified" in {issue.code for issue in report.warnings}
 
 
+def test_directed_bond_stereo_blocks_qualified_claim_even_with_verified_provenance() -> None:
+    system = _system(verified=True)
+    wedge = replace(
+        system,
+        bonds=(replace(system.bonds[0], stereo="up",
+                       metadata={"sdf_v2000_stereo_first_atom_index": 0}),),
+    )
+    report = validate_all_atom_system(wedge)
+    assert report.valid
+    assert report.chemistry_validated is True
+    assert report.stereochemistry_declared is True
+    assert report.stereochemistry_geometry_verified is False
+    assert report.scientific_claim_ready is False
+    assert report.claim_stage is ClaimStage.CHEMISTRY_VALIDATED
+    assert "bond_stereo_geometry_unverified" in {issue.code for issue in report.warnings}
+    invalid = replace(wedge, bonds=(replace(wedge.bonds[0], order=2.0),))
+    invalid_report = validate_all_atom_system(invalid)
+    assert invalid_report.topology_consistent is False
+    assert "incompatible_directed_bond_stereo" in {issue.code for issue in invalid_report.errors}
+
+
 def test_invalid_topology_and_noncanonical_metadata_fail_closed() -> None:
     invalid = replace(
         _system(),

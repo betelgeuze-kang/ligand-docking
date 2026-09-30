@@ -1,0 +1,86 @@
+{
+  "schema": "engine_v2_historical_source_view_ci_repair_v1",
+  "created_at": "2026-09-30T12:59:56.637679+00:00",
+  "failed_head_commit": "3e5c18f5182782c165e4ba828e6d091b33f68183",
+  "failed_workflow_run": 36716453238,
+  "failed_check_ids": [
+    109890463636,
+    109890463390,
+    109890463711
+  ],
+  "failed_python_versions": [
+    "3.10",
+    "3.11",
+    "3.12"
+  ],
+  "first_failure": "unreviewed live Python source drift: betelgeuze_engine_v2/physics/reference_parameter_applicability.py",
+  "secondary_failure": "engine-v2-main.log missing because the canonical suite was not reached",
+  "source_delta_origin_commit": "47806adee",
+  "source_delta": {
+    "path": "betelgeuze_engine_v2/physics/reference_parameter_applicability.py",
+    "historical_sha256": "53b10281f42efcf46c1a261bb618cd501140e48be52d0d41076fd4c94977560e",
+    "current_sha256": "f8ce56bb37c4f8dd369adec91e8835f503acb2f0016df366ad2a41a917f88296",
+    "only_two_sha_string_replacements": true,
+    "reverting_these_two_strings_matches_complete_historical_bytes": true,
+    "current_to_historical_strings": [
+      {
+        "current": "725171ad350f22d471b0a2cfdcd8c94f56cfbb795af3f585d3d655c365e7da0b",
+        "historical": "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
+      },
+      {
+        "current": "5a697e413368137308076632437452a7fcb39a1e949f56ace14c749d271195b6",
+        "historical": "971d15d5630410ad6d262e256195baad2380f6826bec516484b8ed7f551c8441"
+      }
+    ]
+  },
+  "historical_source_commit": "eb07925cfbf517603f967386faa18cacb64456f6",
+  "historical_manifest_sha256": "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7",
+  "historical_protocol_sha256": "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3",
+  "current_manifest_sha256": "4977c5bc7c3e0a424203aeccd7fb2a370fbd4cfab1e1ff2f9e7b2a74ae80dc19",
+  "source_path_count": 187,
+  "changed_source_count_relative_to_historical": 7,
+  "test_only_projection": true,
+  "historical_fixture_and_protocol_unchanged": true,
+  "runtime_sources_unchanged_from_failed_head": true,
+  "current_source_still_rejected_by_original_frozen_protocol": true,
+  "new_source_mutation_still_rejected": true,
+  "source_path_set_and_regular_file_checks_retained": true,
+  "validation_ref": {
+    "path": "/tmp/engine-v2-ci-source-view-validation-20260930-4bqx3ret/validation-receipt.json",
+    "bytes": 132388,
+    "sha256": "2811b260c47e5b4ac772e80c68a5534d8c7718b179a4c8835fd8b7fd8c90d05e"
+  },
+  "validation_source_and_test_refs": {
+    "tests/unit/frozen_engine_v2_historical_sources.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tests/unit/frozen_engine_v2_historical_sources.py",
+      "bytes": 7648,
+      "sha256": "42f53a29ac03910b6c1574a9962f982de614fe513ef9a4f46d17d66e532e2eab"
+    },
+    "tests/unit/test_engine_v2_global_orientation_development_protocol.py": {
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/tests/unit/test_engine_v2_global_orientation_development_protocol.py",
+      "bytes": 20352,
+      "sha256": "f5b41c2b41736f07bba3cfb55df46cc04cbbb506bd6b410390846f5c8c4a01de"
+    }
+  },
+  "local_protocol_test_count": 43,
+  "local_failures": 0,
+  "local_errors": 0,
+  "local_skips": 0,
+  "changed_test_ruff_and_diff_passed": true,
+  "archive_manifest_ref": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-ci-historical-source-view-repair-20260930-tdlkskq7/payload-manifest.json",
+    "bytes": 6923,
+    "sha256": "53137a180b273967abfdf28083b06047a03fac108bf544eccd00a6be73d7aea8"
+  },
+  "archive_payload_count": 16,
+  "archive_payload_bytes": 949562,
+  "independent_review_scope": "Readonly Git diff and raw hashing reproduced the two-string equivalence and 187-path manifest; no execution by reviewer.",
+  "new_head_hosted_ci_success_established": false,
+  "actual_target_campaign_rerun": false,
+  "scientific_thresholds_changed": false,
+  "existing_terminal_recovery_success": {
+    "successful": 0,
+    "denominator": 4
+  },
+  "scientific_qualification": "NOT_QUALIFIED"
+}

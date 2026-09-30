@@ -1,0 +1,215 @@
+{
+  "AI_arm_included": false,
+  "accounting": "report_AI_inference_force_score_restart_oracle_and_enclosing_cost_scopes_separately; never_sum_nested_timings",
+  "admission": {
+    "all_checks_complete_and_true": true,
+    "last_accepted_state_only": true,
+    "maximum_bond_change_angstrom": 0.15,
+    "maximum_internal_energy_increase_kcal_per_mol": 5.0,
+    "maximum_raw_atom_force_kcal_per_mol_angstrom": 0.001,
+    "required_geometry_checks": [
+      "bond_lengths_preserved",
+      "declared_chirality_preserved",
+      "element_vdw_ligand_overlap_free",
+      "element_vdw_receptor_overlap_free",
+      "inside_declared_pocket",
+      "ligand_self_clash_free",
+      "proper_rotation",
+      "receptor_ligand_clash_free"
+    ],
+    "same_math_energy_tolerance_kcal_per_mol": 1e-08,
+    "same_math_force_component_tolerance_kcal_per_mol_angstrom": 1e-08,
+    "strict_dimensionless_score_improvement": true
+  },
+  "arm": "native_cartesian_lbfgs",
+  "authority": {
+    "HIP_qualified": false,
+    "calibration_admitted": false,
+    "existing_source_role_unchanged": true,
+    "experimental_labels_used": false,
+    "independent_evaluation_admitted": false,
+    "independent_recovery_claim_allowed": false,
+    "known_reserved_source_development_only": true,
+    "new_source_rights_admitted": false,
+    "product_qualified": false,
+    "protected_evaluation_used": false,
+    "scientifically_validated": false,
+    "training_admitted": false
+  },
+  "budget": {
+    "accepted_steps_per_case": 416,
+    "candidate_count": 4,
+    "control_count_separate": 1,
+    "endpoint_oracle_states_per_case_separate": 2,
+    "objective_attempts_per_case": 417,
+    "one_start_per_case": true,
+    "restart_verification_force_calls_per_case_separate": 2,
+    "retry_or_replacement_or_best_trajectory_selection": false,
+    "score_calls_per_case": 2,
+    "unstarted_failed_rejected_cases_remain_in_denominator": true,
+    "wall_timeout_per_case_seconds": 7200
+  },
+  "computational_microstate": {
+    "assay_chemical_state": null,
+    "atom_count": 26,
+    "experimentally_measured_bound_protonation": null,
+    "formal_charge_e": 1,
+    "formal_charge_site": "NZ",
+    "formula": "C10H13N2O+",
+    "heavy_atom_count": 13,
+    "hydrogen_count": 13,
+    "indole_NH_retained": true,
+    "phenol_OH_retained": true,
+    "selection": "single_predeclared_computational_assumption",
+    "terminal_amine_hydrogen_count": 3
+  },
+  "control": {
+    "case_id": "observed_start_control",
+    "recovery_denominator_member": false,
+    "retained_same_input_control_replay_allowed": true,
+    "role": "stability_control_only",
+    "seed": 2026093000,
+    "zero_perturbation": true
+  },
+  "coordinate_frame_id": "7XTB_original_cartesian_angstrom_development",
+  "coordinate_free_chemistry_sha256": "1d960edf1ee7c450af7594b0fad6c6f605439e045da8292bfa48a74d4f95a3dc",
+  "execution_order": [
+    "perturbed_01",
+    "perturbed_02",
+    "perturbed_03",
+    "perturbed_04",
+    "observed_start_control"
+  ],
+  "failure_policy": "fatal_or_watchdog_stops_campaign_no_retry; retain_every_case_missing_work_unknown",
+  "future_runtime": {
+    "reference_free_runtime_adapter_status": "NOT_IMPLEMENTED_NOT_AUTHORIZED_TO_EXECUTE",
+    "wheel_sha256": "00814229724d90cca5b81d00c2a78a4ae6dfe983e95930552ca693d2c13484b8"
+  },
+  "generator_evaluator_source_sha256": "cd2b926ec63fcd2af17ecca2e316d48b5b224fbf62c6ab75b3bf8dcb4a7c19b7",
+  "molecular_calls_performed_by_this_tool": 0,
+  "original_five_prepared_input_hashes": {
+    "cross_parameters": "226cb9f4be87b40d312e4b3bdb0dbc785bd6d6e87daa68e2f6abec76dde22d52",
+    "extensions": "871c1a252c87c0b4f134c8b572f009f99658fea88f1076c9ee3fe1461a0871f6",
+    "ligand": "aee0cdee35491fc44998a14c69c5e888b2de5e6c0c85b35bfedfb0562832445c",
+    "parameters": "16d3b25e6492ae8500771d60d6fe5b5db12089b8c7fa64d3f25a6f1230fad217",
+    "receptor": "2c0970bcaf9e994f382e0f0c0fdacbfd1359bef60a10b879f757b31628658c4c"
+  },
+  "perturbation_count": 4,
+  "perturbations": [
+    {
+      "case_id": "perturbed_01",
+      "rotation_axis": [
+        0,
+        0,
+        1
+      ],
+      "rotation_degrees": 0.0,
+      "seed": 2026093001,
+      "translation_angstrom": 2.5,
+      "translation_direction": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "case_id": "perturbed_02",
+      "rotation_axis": [
+        1,
+        0,
+        0
+      ],
+      "rotation_degrees": 0.0,
+      "seed": 2026093002,
+      "translation_angstrom": 2.5,
+      "translation_direction": [
+        0,
+        -1,
+        0
+      ]
+    },
+    {
+      "case_id": "perturbed_03",
+      "rotation_axis": [
+        0,
+        0,
+        1
+      ],
+      "rotation_degrees": 25.0,
+      "seed": 2026093003,
+      "translation_angstrom": 2.5,
+      "translation_direction": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "case_id": "perturbed_04",
+      "rotation_axis": [
+        1,
+        1,
+        1
+      ],
+      "rotation_degrees": -25.0,
+      "seed": 2026093004,
+      "translation_angstrom": 2.5,
+      "translation_direction": [
+        -1,
+        -1,
+        0
+      ]
+    }
+  ],
+  "pivot_policy": "prepared_13_heavy_atom_centroid; generation_only; absent_from_calculation_inputs",
+  "pocket": {
+    "center_angstrom": [
+      84.56507692307693,
+      110.49638461538461,
+      82.02238461538461
+    ],
+    "coordinate_frame_id": "7XTB_original_cartesian_angstrom_development",
+    "method_id": "public_SRO_heavy_centroid_same_math_development",
+    "method_version": "1",
+    "radius_angstrom": 10.0,
+    "source_artifact_sha256": "e81b271ee863340c0e1e65101be7695849bdd56f408c887b03b89929cc4e9cb7"
+  },
+  "recovery": {
+    "known_start_counts_as_recovery": false,
+    "maximum_final_rmsd_angstrom": 2.0,
+    "metric": "minimum_over_declared_heavy_graph_automorphisms_receptor_frame_no_fit",
+    "minimum_initial_rmsd_angstrom": 2.25,
+    "minimum_rmsd_improvement_angstrom": 0.5,
+    "success_requires_refined_admission": true,
+    "threshold_role": "predeclared_development_error_target_not_experimental_accuracy"
+  },
+  "reference_access": {
+    "observed_control_allowed_in_generated_candidate_pool": false,
+    "original_ligand_and_provenance_paths_allowed_for_runtime": false,
+    "reference_allowed_for_force_score_optimizer_or_AI_selection": false,
+    "reference_allowed_for_generation": true,
+    "reference_file_role": "evaluation_only"
+  },
+  "schema_id": "sro_pose_recovery_predeclaration/1",
+  "seed_policy": "case_identifiers_and_solver_seeds; no_rng_draws_or_rejection_resampling",
+  "solver": {
+    "algorithm": "lbfgs",
+    "algorithm_id": "cpu_cartesian_lbfgs/1.3.0",
+    "armijo_constant": 0.0001,
+    "backtrack_factor": 0.5,
+    "curvature_relative_threshold": 1e-12,
+    "force_tolerance": 0.001,
+    "history_size": 10,
+    "initial_step_size": 0.001,
+    "max_accepted_steps": 416,
+    "max_atoms_per_cell": 256,
+    "max_backtracks": 12,
+    "max_neighbors": 256,
+    "max_objective_attempts": 417,
+    "max_restart_verifications": 2,
+    "maximum_atom_displacement": 0.05,
+    "schema_id": "cpu_cartesian_solver_config/1.3.0"
+  },
+  "status": "PROSPECTIVE_PENDING_ROOT_FREEZE_REVIEW",
+  "transform_policy": "proper_rigid_body_all_26_atoms; no_internal_or_state_change"
+}

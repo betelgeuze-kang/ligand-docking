@@ -17,6 +17,11 @@ from .provenance import ResearchError, digest, source_manifest
 from .refinement import ExtendedRefiner
 from .selection import SelectionConfig, candidate_from_row, select_final_candidates, refinement_admissible
 from .work import WorkMeter
+from .scoring_profile import (LEGACY_MODEL, EXPLICIT_MODEL, EXPLICIT_REPORT_SCHEMA,
+    REGISTERED_REPORT_SCHEMA, DEFAULT_PROPOSAL_POLICY, REGISTERED_PROPOSAL_POLICY,
+    scorer_class, require_model, validate_proposal_settings)
+from .registered_pose import generate_registered_pose
+from .candidate_search import _evaluate_candidate_rows
 
 
 class MeasuredScorer(ChemistryPoseScorerV1):
@@ -29,6 +34,16 @@ class MeasuredScorer(ChemistryPoseScorerV1):
     def _score_terms_python(self, proposal):
         with self._work_meter.measure("score.evaluate"):
             return super()._score_terms_python(proposal)
+
+
+def measured_scorer(scoring_model, *args, work_meter, **kwargs):
+    if scoring_model == LEGACY_MODEL:
+        return MeasuredScorer(*args, work_meter=work_meter, **kwargs)
+    class MeasuredExplicit(scorer_class(scoring_model)):
+        def _score_terms_python(self, proposal):
+            with work_meter.measure("score.evaluate"):
+                return super()._score_terms_python(proposal)
+    return MeasuredExplicit(*args, **kwargs)
 
 
 def choose_variant(before: dict, after: dict, attempt: dict, require_convergence: bool) -> tuple[str, str]:
@@ -51,9 +66,17 @@ def choose_variant(before: dict, after: dict, attempt: dict, require_convergence
 
 
 def run_comparison(authority, budget, *, receptor_system, ligand_system, parameters,
-                   solver: SolverConfig, solvation=None, comparison=None, selection=None, fixed_environment=None) -> dict:
+                   solver: SolverConfig, solvation=None, comparison=None, selection=None, fixed_environment=None, scoring_model=LEGACY_MODEL,
+                   proposal_policy=DEFAULT_PROPOSAL_POLICY) -> dict:
+    require_model(scoring_model)
+    if scoring_model == EXPLICIT_MODEL and fixed_environment is None:
+        raise ResearchError("explicit chemical features require fixed-receptor comparison")
     comparison = RefinementComparisonConfig() if comparison is None else comparison
     selection = SelectionConfig(budget.top_k) if selection is None else selection
+    validate_proposal_settings(proposal_policy, budget, comparison)
+    registered = proposal_policy == REGISTERED_PROPOSAL_POLICY
+    if registered and (scoring_model != EXPLICIT_MODEL or fixed_environment is None):
+        raise ResearchError("registered pose requires explicit chemical features and fixed receptor")
     if type(solver) is not SolverConfig:
         raise ResearchError("explicit corrected solver required")
     if type(selection) is not SelectionConfig or selection.top_k != budget.top_k:
@@ -77,42 +100,75 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
         **({} if fixed_environment is None else {"fixed_environment": fixed_environment}))
     refiner.assert_ready()
     arms, searches, descriptors = {}, {}, {}
+    scorer_binding = None
+    registered_receipt = None
     for name, arm_budget, arm_refiner in (("baseline", before_budget, None), ("refined", after_budget, refiner)):
         start = time.perf_counter()
         meter = WorkMeter()
         with meter.measure("scorer.construct"):
-            scorer = MeasuredScorer(authority, receptor_system, ligand_system,
+            scorer = measured_scorer(scoring_model, authority, receptor_system, ligand_system,
                                    work_meter=meter, implementation_source_sha256=implementation)
-        with meter.measure("context.construct"):
-            context = build_guided_placement_context(authority, receptor_system, ligand_system)
-        with meter.measure("search.execute"):
-            result = run_authenticated_scorer_v1_guided_search(authority, arm_budget, scorer, context,
-                receptor_system=receptor_system, ligand_system=ligand_system, refiner=arm_refiner,
-                diversity_rmsd_angstrom=selection.diversity_rmsd_angstrom)
-        elapsed = time.perf_counter() - start
-        result.receipt_sha256
-        search = _search(result)
-        if len(search.rows) != arm_budget.candidate_count:
+        if scoring_model == EXPLICIT_MODEL:
+            observed_binding = {"feature_model_id": EXPLICIT_MODEL,
+                "context": scorer.context.fingerprint_sha256,
+                "config": scorer.config.fingerprint_sha256,
+                "backend": scorer.backend_receipt_sha256}
+            if scorer_binding is not None and scorer_binding != observed_binding:
+                raise ResearchError("comparison arms have different scorer identity")
+            scorer_binding = observed_binding
+        if registered:
+            with meter.measure("context.construct"):
+                proposals, receipt = generate_registered_pose(authority, arm_budget, ligand_system)
+                observed_receipt = receipt.to_dict()
+                if registered_receipt is not None and registered_receipt != observed_receipt:
+                    raise ResearchError("registered comparison arms have different initial pose receipts")
+                registered_receipt = observed_receipt
+            # Use the same authenticated candidate executor as resumable runs.
+            # A registered pose is never presented as a guided placement receipt.
+            with meter.measure("search.execute"):
+                search_rows = _evaluate_candidate_rows(proposals, search_space=authority.search_space,
+                    budget=arm_budget, scorer=scorer, refiner=arm_refiner,
+                    problem_fingerprint=authority.problem.fingerprint_sha256,
+                    context=authority.validity_context,
+                    validity_fingerprint=authority.validity_context.fingerprint_sha256,
+                    unbound_validity_compatibility=False)
+            elapsed = time.perf_counter() - start
+            rows = [_pose(row, row.score_evidence) for row in search_rows]
+            score_descriptor = scorer.score_descriptor
+        else:
+            with meter.measure("context.construct"):
+                context = build_guided_placement_context(authority, receptor_system, ligand_system)
+            with meter.measure("search.execute"):
+                result = run_authenticated_scorer_v1_guided_search(authority, arm_budget, scorer, context,
+                    receptor_system=receptor_system, ligand_system=ligand_system, refiner=arm_refiner,
+                    diversity_rmsd_angstrom=selection.diversity_rmsd_angstrom)
+            elapsed = time.perf_counter() - start
+            result.receipt_sha256
+            search = _search(result)
+            search_rows, score_descriptor = search.rows, search.score_descriptor
+            rows = [_pose(row, scored.terms) for row, scored in zip(search_rows, result.rows, strict=True)]
+        if len(search_rows) != arm_budget.candidate_count:
             raise ResearchError("comparison candidate denominator mismatch")
-        rows = [_pose(row, scored.terms) for row, scored in zip(search.rows, result.rows, strict=True)]
+        success_count = sum(row.succeeded for row in search_rows)
+        valid_pose_count = sum(row.succeeded and row.pose_valid for row in search_rows)
         reserve_force = 0 if name == "baseline" else len(rows) * force_bound
         reserved = len(rows) * comparison.score_evaluation_weight + reserve_force * comparison.force_evaluation_weight
         if comparison.work_units_per_arm is not None and reserved > comparison.work_units_per_arm:
             raise ResearchError("arm exceeded reserved work")
-        arms[name] = {"candidate_count": len(rows), "success_count": search.success_count,
-            "failure_count": search.failure_count, "valid_pose_count": search.valid_pose_count,
-            "valid_pose_fraction_all_candidates": search.valid_pose_count / len(rows),
+        arms[name] = {"candidate_count": len(rows), "success_count": success_count,
+            "failure_count": len(search_rows) - success_count, "valid_pose_count": valid_pose_count,
+            "valid_pose_fraction_all_candidates": valid_pose_count / len(rows),
             "work_units_reserved": reserved, "force_evaluations_reserved": reserve_force,
             "elapsed_seconds": elapsed, "execution_work": meter.snapshot(),
             "score_evaluation_calls": meter.counts("score.evaluate")["calls"],
             "failed_score_evaluation_calls": meter.counts("score.evaluate")["failed"], "rows": rows}
-        searches[name], descriptors[name] = search, search.score_descriptor
+        searches[name], descriptors[name] = search_rows, score_descriptor
     refiner.assert_ready()
     if descriptors["baseline"] != descriptors["refined"]:
         raise ResearchError("comparison score descriptor mismatch")
-    attempts = [refiner.attempt_for(row.proposal_fingerprint_sha256).to_dict() for row in searches["refined"].rows]
+    attempts = [refiner.attempt_for(row.proposal_fingerprint_sha256).to_dict() for row in searches["refined"]]
     refinement_work = [refiner.attempt_for(row.proposal_fingerprint_sha256).work()
-                       for row in searches["refined"].rows]
+                       for row in searches["refined"]]
     if any(row["force_evaluation_calls"] > force_bound for row in refinement_work):
         raise ResearchError("actual force calls exceeded reserved work")
     arms["baseline"]["actual_force_evaluation_calls"] = 0
@@ -167,8 +223,13 @@ def run_comparison(authority, budget, *, receptor_system, ligand_system, paramet
               "customer_execution_allowed": False, "claim_safe": False}
     if fixed_environment is not None:
         fixed_environment.assert_intact()
-        report.update(schema_id=FIXED_REPORT_SCHEMA, selection_policy_id=FIXED_POLICY_ID,
+        report.update(schema_id=EXPLICIT_REPORT_SCHEMA if scoring_model == EXPLICIT_MODEL else FIXED_REPORT_SCHEMA, selection_policy_id=FIXED_POLICY_ID,
                       cross_parameters=fixed_environment.cross.to_dict(),
                       receptor_ligand_interaction_energy_minimized=True)
+    if scoring_model == EXPLICIT_MODEL:
+        report["scorer"] = scorer_binding
+    if registered:
+        report["schema_id"] = REGISTERED_REPORT_SCHEMA
+        report["proposal_policy"] = registered_receipt
     report["report_sha256"] = digest(report)
     return report

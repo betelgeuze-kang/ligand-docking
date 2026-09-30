@@ -1,0 +1,111 @@
+{
+  "authority": {
+    "assay_state_equivalence_verified": false,
+    "physical_evaluations": 0,
+    "prepared_gromacs_input": false,
+    "prepared_receptor": false,
+    "protected_inputs_read": false,
+    "roles_assigned": false,
+    "scientifically_validated": false
+  },
+  "derivation": {
+    "atoms_or_residues_generated": false,
+    "coordinates_copied_from_atom_site": true,
+    "gap_227_263_split_by_TER_and_distinct_output_chain_ids": true,
+    "hydrogens_added": false,
+    "ligand_included": false,
+    "parameters_or_charges_assigned": false,
+    "source_atom_order_preserved": true,
+    "termini_capped": false
+  },
+  "observed": {
+    "atom_site_rows": 2124,
+    "auth_residue_segments": [
+      [
+        26,
+        227
+      ],
+      [
+        263,
+        338
+      ]
+    ],
+    "declared_disulfide": {
+      "atoms": [
+        "SG",
+        "SG"
+      ],
+      "auth_residues": [
+        99,
+        180
+      ],
+      "printed_distance_angstrom": "2.028"
+    },
+    "output_chain_segments": [
+      {
+        "auth_residue_range": [
+          26,
+          227
+        ],
+        "chain_id": "A",
+        "source_label_asym_id": "E"
+      },
+      {
+        "auth_residue_range": [
+          263,
+          338
+        ],
+        "chain_id": "B",
+        "source_label_asym_id": "E"
+      }
+    ],
+    "residues": 278,
+    "unobserved_atom": {
+      "atom": "OG",
+      "auth_seq_id": "26",
+      "residue": "SER"
+    },
+    "unobserved_auth_residue_segments": [
+      [
+        -143,
+        25
+      ],
+      [
+        228,
+        262
+      ],
+      [
+        339,
+        440
+      ]
+    ]
+  },
+  "output": {
+    "pdb": {
+      "bytes": 172210,
+      "name": "receptor-E-observed.pdb",
+      "sha256": "8b5d0a754fd7d511331c63da4880b0464620a27ca2147602d0431a5f41e15d46"
+    },
+    "source_atom_map": {
+      "bytes": 211885,
+      "name": "source-atom-map.csv",
+      "sha256": "9c6a697cd43439e8e4f5434c1e05d8bafdef4d20882a0c9fc7f86fe2c99526b5"
+    }
+  },
+  "schema_version": "human_5ht6_7xtb_receptor_source_extraction_v1",
+  "selection": {
+    "altloc": ".",
+    "auth_asym_id": "R",
+    "group_pdb": "ATOM",
+    "label_asym_id": "E",
+    "label_entity_id": "5",
+    "pdb_model_num": "1"
+  },
+  "source": {
+    "bytes": 900097,
+    "entry_id": "7XTB",
+    "sha256": "e81b271ee863340c0e1e65101be7695849bdd56f408c887b03b89929cc4e9cb7",
+    "url": "https://files.rcsb.org/download/7XTB.cif"
+  },
+  "status": "SOURCE_ONLY_UNPREPARED_BLOCKED"
+}

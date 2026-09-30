@@ -1,0 +1,493 @@
+{
+  "ccd_and_3mxf": {
+    "ccd_dictionary_state_is_experimentally_observed_microstate": false,
+    "ccd_explicit_hydrogen_bonds": {
+      "CAA": 3,
+      "CAB": 3,
+      "CAC": 3,
+      "CAD": 3,
+      "CAE": 3,
+      "CAF": 3,
+      "CAI": 1,
+      "CAJ": 1,
+      "CAK": 1,
+      "CAL": 1,
+      "CAM": 2,
+      "CBC": 1,
+      "NAP": 1
+    },
+    "ccd_formal_charge": 1,
+    "ccd_formula": "C23 H26 Cl N4 O2 S",
+    "ccd_heavy_atom_count": 31,
+    "ccd_heavy_bond_count": 34,
+    "ccd_inchi": "InChI=1S/C23H25ClN4O2S/c1-12-13(2)31-22-19(12)20(15-7-9-16(24)10-8-15)25-17(11-18(29)30-23(4,5)6)21-27-26-14(3)28(21)22/h7-10,17H,11H2,1-6H3/p+1/t17-/m0/s1",
+    "ccd_inchikey": "DNVXATUJJDPFDM-KRWDZBQOSA-O",
+    "ccd_nonzero_atom_charges": {
+      "NBD": 1
+    },
+    "ccd_stereocenters": {
+      "CBC": "S"
+    },
+    "deposited_heavy_atom_count": 31,
+    "deposited_hydrogen_count": 0,
+    "deposited_unknown_atom_site_formal_charge_count": 31
+  },
+  "ccd_sources": {
+    "ccd_jq1": {
+      "relative_path": "official_sources/chemcomp-jq1.cif",
+      "sha256": "9652a88ed9dd1f78e4dbfd2fcd127e40a9643fc5b111d84d8e615adc399213e5",
+      "size_bytes": 10889
+    },
+    "coordinates": {
+      "relative_path": "official_sources/coordinates-3mxf.cif",
+      "sha256": "fb123201edb59709d14b64c5cb4296a90b6d35c45505baba48600d04e4cdd401",
+      "size_bytes": 287430
+    }
+  },
+  "comparisons": [
+    {
+      "assay_microstate_equivalence_inferred": false,
+      "ccd_vs_pubchem_atom_charge_changes": [
+        [
+          "NBD",
+          1,
+          0
+        ]
+      ],
+      "ccd_vs_pubchem_explicit_hydrogen_count_changes": [
+        [
+          "NAP",
+          1,
+          0
+        ]
+      ],
+      "cid": 46907787,
+      "element_graph_isomorphism_count": 12,
+      "heavy_atom_count": 31,
+      "heavy_bond_count": 34,
+      "invariant_ccd_to_pubchem_aids": {
+        "CAA": 22,
+        "CAB": 23,
+        "CAC": 21,
+        "CAM": 13,
+        "CAS": 20,
+        "CAT": 14,
+        "CAU": 31,
+        "CAV": 16,
+        "CAW": 19,
+        "CAX": 17,
+        "CAY": 15,
+        "CAZ": 10,
+        "CBA": 11,
+        "CBB": 12,
+        "CBC": 9,
+        "CBE": 18,
+        "CLAH": 1,
+        "NAN": 6,
+        "NAO": 8,
+        "NAP": 7,
+        "NBD": 5,
+        "OAG": 4,
+        "OAQ": 3,
+        "SAR": 2
+      },
+      "literal_bond_order_preserving_mapping_count": 0,
+      "nonunique_ccd_to_pubchem_aids": {
+        "CAD": [
+          24,
+          25,
+          26
+        ],
+        "CAE": [
+          24,
+          25,
+          26
+        ],
+        "CAF": [
+          24,
+          25,
+          26
+        ],
+        "CAI": [
+          29,
+          30
+        ],
+        "CAJ": [
+          29,
+          30
+        ],
+        "CAK": [
+          27,
+          28
+        ],
+        "CAL": [
+          27,
+          28
+        ]
+      },
+      "pubchem_charge": 0,
+      "pubchem_formula": "C23H25ClN4O2S",
+      "pubchem_inchi": "InChI=1S/C23H25ClN4O2S/c1-12-13(2)31-22-19(12)20(15-7-9-16(24)10-8-15)25-17(11-18(29)30-23(4,5)6)21-27-26-14(3)28(21)22/h7-10,17H,11H2,1-6H3/t17-/m0/s1",
+      "pubchem_inchikey": "DNVXATUJJDPFDM-KRWDZBQOSA-N",
+      "pubchem_systematic_stereo": "S",
+      "pubchem_tetrahedral_center_aid": 9,
+      "pubchem_tetrahedral_source_record": {
+        "above": 6,
+        "below": 32,
+        "bottom": 10,
+        "center": 9,
+        "parity": 2,
+        "top": 13,
+        "type": 1
+      },
+      "same_inchi_as_ccd": false,
+      "same_inchikey_as_ccd": false,
+      "source_response_sha256": "627bc3f5ac34fee92a67044647f318ad502b2d621679470cb815863b8eed8e8b",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/46907787/record/JSON?record_type=2d",
+      "unique_full_heavy_atom_name_mapping": false
+    },
+    {
+      "assay_microstate_equivalence_inferred": false,
+      "ccd_vs_pubchem_atom_charge_changes": [
+        [
+          "NBD",
+          1,
+          0
+        ]
+      ],
+      "ccd_vs_pubchem_explicit_hydrogen_count_changes": [
+        [
+          "NAP",
+          1,
+          0
+        ]
+      ],
+      "cid": 49871818,
+      "element_graph_isomorphism_count": 12,
+      "heavy_atom_count": 31,
+      "heavy_bond_count": 34,
+      "invariant_ccd_to_pubchem_aids": {
+        "CAA": 22,
+        "CAB": 23,
+        "CAC": 21,
+        "CAM": 13,
+        "CAS": 20,
+        "CAT": 14,
+        "CAU": 31,
+        "CAV": 16,
+        "CAW": 19,
+        "CAX": 17,
+        "CAY": 15,
+        "CAZ": 10,
+        "CBA": 11,
+        "CBB": 12,
+        "CBC": 9,
+        "CBE": 18,
+        "CLAH": 1,
+        "NAN": 6,
+        "NAO": 8,
+        "NAP": 7,
+        "NBD": 5,
+        "OAG": 4,
+        "OAQ": 3,
+        "SAR": 2
+      },
+      "literal_bond_order_preserving_mapping_count": 0,
+      "nonunique_ccd_to_pubchem_aids": {
+        "CAD": [
+          24,
+          25,
+          26
+        ],
+        "CAE": [
+          24,
+          25,
+          26
+        ],
+        "CAF": [
+          24,
+          25,
+          26
+        ],
+        "CAI": [
+          29,
+          30
+        ],
+        "CAJ": [
+          29,
+          30
+        ],
+        "CAK": [
+          27,
+          28
+        ],
+        "CAL": [
+          27,
+          28
+        ]
+      },
+      "pubchem_charge": 0,
+      "pubchem_formula": "C23H25ClN4O2S",
+      "pubchem_inchi": "InChI=1S/C23H25ClN4O2S/c1-12-13(2)31-22-19(12)20(15-7-9-16(24)10-8-15)25-17(11-18(29)30-23(4,5)6)21-27-26-14(3)28(21)22/h7-10,17H,11H2,1-6H3/t17-/m1/s1",
+      "pubchem_inchikey": "DNVXATUJJDPFDM-QGZVFWFLSA-N",
+      "pubchem_systematic_stereo": "R",
+      "pubchem_tetrahedral_center_aid": 9,
+      "pubchem_tetrahedral_source_record": {
+        "above": 6,
+        "below": 32,
+        "bottom": 13,
+        "center": 9,
+        "parity": 1,
+        "top": 10,
+        "type": 1
+      },
+      "same_inchi_as_ccd": false,
+      "same_inchikey_as_ccd": false,
+      "source_response_sha256": "00748719e511e2aab2d631e804c5f49fa010d79d4085e88fda8769b5184ffce3",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/49871818/record/JSON?record_type=2d",
+      "unique_full_heavy_atom_name_mapping": false
+    },
+    {
+      "assay_microstate_equivalence_inferred": false,
+      "ccd_vs_pubchem_atom_charge_changes": [],
+      "ccd_vs_pubchem_explicit_hydrogen_count_changes": [
+        [
+          "NAO",
+          0,
+          1
+        ],
+        [
+          "NAP",
+          1,
+          0
+        ]
+      ],
+      "cid": 49867179,
+      "element_graph_isomorphism_count": 12,
+      "heavy_atom_count": 31,
+      "heavy_bond_count": 34,
+      "invariant_ccd_to_pubchem_aids": {
+        "CAA": 22,
+        "CAB": 23,
+        "CAC": 21,
+        "CAM": 13,
+        "CAS": 20,
+        "CAT": 14,
+        "CAU": 31,
+        "CAV": 16,
+        "CAW": 19,
+        "CAX": 17,
+        "CAY": 15,
+        "CAZ": 10,
+        "CBA": 12,
+        "CBB": 11,
+        "CBC": 9,
+        "CBE": 18,
+        "CLAH": 1,
+        "NAN": 6,
+        "NAO": 8,
+        "NAP": 7,
+        "NBD": 5,
+        "OAG": 4,
+        "OAQ": 3,
+        "SAR": 2
+      },
+      "literal_bond_order_preserving_mapping_count": 0,
+      "nonunique_ccd_to_pubchem_aids": {
+        "CAD": [
+          24,
+          25,
+          26
+        ],
+        "CAE": [
+          24,
+          25,
+          26
+        ],
+        "CAF": [
+          24,
+          25,
+          26
+        ],
+        "CAI": [
+          29,
+          30
+        ],
+        "CAJ": [
+          29,
+          30
+        ],
+        "CAK": [
+          27,
+          28
+        ],
+        "CAL": [
+          27,
+          28
+        ]
+      },
+      "pubchem_charge": 1,
+      "pubchem_formula": "C23H26ClN4O2S+",
+      "pubchem_inchi": "InChI=1S/C23H25ClN4O2S/c1-12-13(2)31-22-19(12)20(15-7-9-16(24)10-8-15)25-17(11-18(29)30-23(4,5)6)21-27-26-14(3)28(21)22/h7-10,17H,11H2,1-6H3/p+1/t17-/m0/s1",
+      "pubchem_inchikey": "DNVXATUJJDPFDM-KRWDZBQOSA-O",
+      "pubchem_systematic_stereo": "S",
+      "pubchem_tetrahedral_center_aid": 9,
+      "pubchem_tetrahedral_source_record": {
+        "above": 6,
+        "below": 32,
+        "bottom": 10,
+        "center": 9,
+        "parity": 2,
+        "top": 13,
+        "type": 1
+      },
+      "same_inchi_as_ccd": true,
+      "same_inchikey_as_ccd": true,
+      "source_response_sha256": "4d2545e048f7d9cff9cb4e867ee51b139a19c18ec47105ea7b4c0a0d88a8ec40",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/49867179/record/JSON?record_type=2d",
+      "unique_full_heavy_atom_name_mapping": false
+    },
+    {
+      "assay_microstate_equivalence_inferred": false,
+      "ccd_vs_pubchem_atom_charge_changes": [
+        [
+          "NBD",
+          1,
+          0
+        ],
+        [
+          "OAG",
+          0,
+          1
+        ]
+      ],
+      "ccd_vs_pubchem_explicit_hydrogen_count_changes": [
+        [
+          "NAP",
+          1,
+          0
+        ],
+        [
+          "OAG",
+          0,
+          1
+        ]
+      ],
+      "cid": 144913635,
+      "element_graph_isomorphism_count": 12,
+      "heavy_atom_count": 31,
+      "heavy_bond_count": 34,
+      "invariant_ccd_to_pubchem_aids": {
+        "CAA": 22,
+        "CAB": 23,
+        "CAC": 21,
+        "CAM": 13,
+        "CAS": 19,
+        "CAT": 14,
+        "CAU": 31,
+        "CAV": 16,
+        "CAW": 20,
+        "CAX": 17,
+        "CAY": 15,
+        "CAZ": 10,
+        "CBA": 11,
+        "CBB": 12,
+        "CBC": 9,
+        "CBE": 18,
+        "CLAH": 1,
+        "NAN": 6,
+        "NAO": 8,
+        "NAP": 7,
+        "NBD": 5,
+        "OAG": 4,
+        "OAQ": 3,
+        "SAR": 2
+      },
+      "literal_bond_order_preserving_mapping_count": 0,
+      "nonunique_ccd_to_pubchem_aids": {
+        "CAD": [
+          24,
+          25,
+          26
+        ],
+        "CAE": [
+          24,
+          25,
+          26
+        ],
+        "CAF": [
+          24,
+          25,
+          26
+        ],
+        "CAI": [
+          29,
+          30
+        ],
+        "CAJ": [
+          29,
+          30
+        ],
+        "CAK": [
+          27,
+          28
+        ],
+        "CAL": [
+          27,
+          28
+        ]
+      },
+      "pubchem_charge": 1,
+      "pubchem_formula": "C23H26ClN4O2S+",
+      "pubchem_inchi": "InChI=1S/C23H25ClN4O2S/c1-12-13(2)31-22-19(12)20(15-7-9-16(24)10-8-15)25-17(11-18(29)30-23(4,5)6)21-27-26-14(3)28(21)22/h7-10,17H,11H2,1-6H3/p+1/t17-/m0/s1",
+      "pubchem_inchikey": "DNVXATUJJDPFDM-KRWDZBQOSA-O",
+      "pubchem_systematic_stereo": "S",
+      "pubchem_tetrahedral_center_aid": 9,
+      "pubchem_tetrahedral_source_record": {
+        "above": 6,
+        "below": 32,
+        "bottom": 10,
+        "center": 9,
+        "parity": 2,
+        "top": 13,
+        "type": 1
+      },
+      "same_inchi_as_ccd": true,
+      "same_inchikey_as_ccd": true,
+      "source_response_sha256": "c820525bad5ff859d50073232d10a80f58421251202cc0cb8cf494b64002ef7d",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/144913635/record/JSON?record_type=2d",
+      "unique_full_heavy_atom_name_mapping": false
+    }
+  ],
+  "eligibility": {
+    "assay_microstate_selected": false,
+    "charges_or_parameters_assigned": false,
+    "independent_evaluation_admitted": false,
+    "physical_evaluations": 0,
+    "r_ligand_prepared": false,
+    "receptor_prepared": false,
+    "s_ligand_prepared": false,
+    "scientifically_validated": false,
+    "source_roles_assigned": false,
+    "training_admitted": false
+  },
+  "evidence_class": "ccd_dictionary_and_pubchem_standardized_identity_contrast_not_experimental_microstate",
+  "interpretation_boundaries": {
+    "ccd_dictionary_charge_or_hydrogen_observed_in_xray": false,
+    "complete_unique_ccd_to_pubchem_atom_map": false,
+    "inchi_or_inchikey_match_proves_explicit_hydrogen_location": false,
+    "ion_or_water_treatment_selected": false,
+    "literal_bond_order_match_or_mismatch_establishes_chemical_equivalence": false,
+    "pubchem_identity_proves_tanaka_assay_material_microstate": false,
+    "r_enantiomer_bound_pose_in_3mxf": false
+  },
+  "pubchem_projection": {
+    "product_source_rights_reviewed": false,
+    "raw_pug_records_redistributed": false,
+    "relative_path": "pubchem_jq1_structure_projection.v1.json",
+    "sha256": "de411616d5ac55c32e9e2788ab13bafb9c68d43d560ca1c728489b8e9fb81957"
+  },
+  "qualification": "NOT_QUALIFIED",
+  "schema_version": "brd4_jq1_chemical_lineage_observation_v1",
+  "status": "SOURCE_CHEMICAL_LINEAGE_OBSERVED_PREPARATION_AND_ADMISSION_BLOCKED"
+}

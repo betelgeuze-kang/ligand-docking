@@ -1,0 +1,523 @@
+{
+  "atoms": [
+    {
+      "aromatic": false,
+      "atomic_number": 8,
+      "element": "O",
+      "formal_charge": 0,
+      "index": 0,
+      "isotope_mass_number": null,
+      "mass_da": 15.99943,
+      "name": "OH",
+      "partial_charge_e": -0.49738913717178196,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 1,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CZ3",
+      "partial_charge_e": 0.14936178979965356,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 2,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CH2",
+      "partial_charge_e": -0.18408881070522162,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 3,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CZ2",
+      "partial_charge_e": -0.08040147217420432,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 4,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CE2",
+      "partial_charge_e": 0.04500047919841913,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 7,
+      "element": "N",
+      "formal_charge": 0,
+      "index": 5,
+      "isotope_mass_number": null,
+      "mass_da": 14.00672,
+      "name": "NE1",
+      "partial_charge_e": -0.5365344876280198,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 6,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CD1",
+      "partial_charge_e": 0.03293804136606363,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 7,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CG",
+      "partial_charge_e": -0.2208318108549485,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 8,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CD2",
+      "partial_charge_e": -0.052868194304979764,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": true,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 9,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CE3",
+      "partial_charge_e": -0.14284464659599158,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 10,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CB",
+      "partial_charge_e": -0.005469396137274229,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 6,
+      "element": "C",
+      "formal_charge": 0,
+      "index": 11,
+      "isotope_mass_number": null,
+      "mass_da": 12.01078,
+      "name": "CA",
+      "partial_charge_e": 0.0902956506380668,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 7,
+      "element": "N",
+      "formal_charge": 1,
+      "index": 12,
+      "isotope_mass_number": null,
+      "mass_da": 14.00672,
+      "name": "NZ",
+      "partial_charge_e": -0.8389443749418626,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 13,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HOH",
+      "partial_charge_e": 0.42023876366706997,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 14,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HH2",
+      "partial_charge_e": 0.1440547859439483,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 15,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HZ2",
+      "partial_charge_e": 0.1407773202428451,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 16,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HNE1",
+      "partial_charge_e": 0.46671465096565395,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 17,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HD1",
+      "partial_charge_e": 0.15895095524879602,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 18,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HE3",
+      "partial_charge_e": 0.16124445257278588,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 19,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HB1",
+      "partial_charge_e": 0.07316102144809869,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 20,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HB2",
+      "partial_charge_e": 0.07316102144809869,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 21,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HA1",
+      "partial_charge_e": 0.11380028781982568,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 22,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HA2",
+      "partial_charge_e": 0.11380028781982568,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 23,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HNZ1",
+      "partial_charge_e": 0.4586242741117111,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 24,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HNZ2",
+      "partial_charge_e": 0.4586242741117111,
+      "stereo": "unspecified"
+    },
+    {
+      "aromatic": false,
+      "atomic_number": 1,
+      "element": "H",
+      "formal_charge": 0,
+      "index": 25,
+      "isotope_mass_number": null,
+      "mass_da": 1.007947,
+      "name": "HNZ3",
+      "partial_charge_e": 0.4586242741117111,
+      "stereo": "unspecified"
+    }
+  ],
+  "bonds": [
+    {
+      "aromatic": false,
+      "atom_i": 0,
+      "atom_j": 1,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 0,
+      "atom_j": 13,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 1,
+      "atom_j": 2,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 1,
+      "atom_j": 9,
+      "order": 2.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 2,
+      "atom_j": 3,
+      "order": 2.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 2,
+      "atom_j": 14,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 3,
+      "atom_j": 4,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 3,
+      "atom_j": 15,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 4,
+      "atom_j": 5,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 4,
+      "atom_j": 8,
+      "order": 2.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 5,
+      "atom_j": 6,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 5,
+      "atom_j": 16,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 6,
+      "atom_j": 7,
+      "order": 2.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 6,
+      "atom_j": 17,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 7,
+      "atom_j": 8,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 7,
+      "atom_j": 10,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": true,
+      "atom_i": 8,
+      "atom_j": 9,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 9,
+      "atom_j": 18,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 10,
+      "atom_j": 11,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 10,
+      "atom_j": 19,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 10,
+      "atom_j": 20,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 11,
+      "atom_j": 12,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 11,
+      "atom_j": 21,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 11,
+      "atom_j": 22,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 12,
+      "atom_j": 23,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 12,
+      "atom_j": 24,
+      "order": 1.0,
+      "stereo": "none"
+    },
+    {
+      "aromatic": false,
+      "atom_i": 12,
+      "atom_j": 25,
+      "order": 1.0,
+      "stereo": "none"
+    }
+  ],
+  "computational_microstate": {
+    "assay_chemical_state": null,
+    "atom_count": 26,
+    "experimentally_measured_bound_protonation": null,
+    "formal_charge_e": 1,
+    "formal_charge_site": "NZ",
+    "formula": "C10H13N2O+",
+    "heavy_atom_count": 13,
+    "hydrogen_count": 13,
+    "indole_NH_retained": true,
+    "phenol_OH_retained": true,
+    "selection": "single_predeclared_computational_assumption",
+    "terminal_amine_hydrogen_count": 3
+  },
+  "coordinate_frame_id": "7XTB_original_cartesian_angstrom_development",
+  "schema_id": "sro_coordinate_free_chemistry/1"
+}

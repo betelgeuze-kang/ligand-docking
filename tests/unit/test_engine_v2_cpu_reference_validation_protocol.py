@@ -26,6 +26,11 @@ from betelgeuze_engine_v2.physics import (
 )
 
 
+from betelgeuze_engine_v2.physics.reference_validation_protocol import (
+    FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256,
+)
+
+
 def _canonical_sha256(value: object) -> str:
     return hashlib.sha256(
         json.dumps(
@@ -52,6 +57,15 @@ def test_frozen_protocol_binds_h5_dependency_cases_thresholds_and_digest() -> No
     assert protocol.protocol_sha256 == document["protocol_sha256"]
     dependencies = document["dependencies"]
     assert dependencies["h5_applicability_record_sha256"] == (
+        FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
+    )
+    assert FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256 == (
+        "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
+    )
+    assert FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256 == (
+        "725171ad350f22d471b0a2cfdcd8c94f56cfbb795af3f585d3d655c365e7da0b"
+    )
+    assert dependencies["h5_applicability_record_sha256"] != (
         FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
     )
     assert dependencies["exact_h5_document_required_at_execution"] is True
@@ -323,3 +337,37 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
     assert "reference_validation_run_start_contract_decision" in main_workflow
     assert "reference_validation_runner_contract_decision" in main_workflow
     assert "reference_validation_result_writer_contract_decision" in main_workflow
+
+
+def test_latest_h5_review_does_not_rebind_frozen_cpu_records(monkeypatch) -> None:
+    from betelgeuze_engine_v2.physics import reference_parameter_applicability as h5
+    from betelgeuze_engine_v2.physics import reference_validation_protocol as protocol
+    from betelgeuze_engine_v2.physics import reference_validation_receipts as receipts
+    from betelgeuze_engine_v2.physics import reference_validation_result_writer as writer
+
+    before = (
+        protocol.cpu_reference_validation_protocol_document(),
+        receipts.reference_validation_execution_environment_contract_document(),
+        receipts.reference_validation_result_receipt_contract_document(),
+    )
+    monkeypatch.setattr(h5, "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256", "0" * 64)
+    after = (
+        protocol.cpu_reference_validation_protocol_document(),
+        receipts.reference_validation_execution_environment_contract_document(),
+        receipts.reference_validation_result_receipt_contract_document(),
+    )
+    assert before == after
+    assert writer.FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256 == (
+        FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
+    )
+    assert all(document["dependencies"]["h5_applicability_record_sha256"] == (
+        FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
+    ) for document in after)
+
+
+def test_historical_cpu_h5_dependency_mutation_is_rejected(monkeypatch) -> None:
+    from betelgeuze_engine_v2.physics import reference_validation_protocol as protocol
+
+    monkeypatch.setattr(protocol, "FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256", "0" * 64)
+    with pytest.raises(CPUReferenceValidationProtocolError, match="^frozen CPU reference validation protocol SHA-256 drifted$"):
+        protocol.frozen_cpu_reference_validation_protocol()

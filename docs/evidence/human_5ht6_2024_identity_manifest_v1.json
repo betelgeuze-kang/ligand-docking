@@ -1,0 +1,186 @@
+{
+  "artifacts": {
+    "PR29-synthesis-crop.png": {
+      "byte_count": 18142,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/PR29-synthesis-crop.png",
+      "sha256": "4b5b9e4b747dd73a9589dacdea0c0ed92f4f94f450adcd57be1ef02f9d8228e5"
+    },
+    "PR39-synthesis-crop.png": {
+      "byte_count": 18870,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/PR39-synthesis-crop.png",
+      "sha256": "03618d42c1287af75679e224a308b8c08a9571ef826c136ef8e48c51bf9b6a99"
+    },
+    "build_identity_manifest.py": {
+      "byte_count": 15288,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/build_identity_manifest.py",
+      "sha256": "33fd370b5c5723d911be6033c2850bc145fe91cc64ea70600cd8c3b02cfeefc1"
+    },
+    "identity-manifest.json": {
+      "byte_count": 84617,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/identity-manifest.json",
+      "sha256": "14ea7c3d094b233e9e81b7404de31cc09099b04f3f8b65f4e27da8aa3101374f"
+    },
+    "references-page47.png": {
+      "byte_count": 583910,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/references-page47.png",
+      "sha256": "2be7d65d94056699dce06cfd8b66fc0a8218e8797d39e124fad7453efe49bc7c"
+    },
+    "report.ko.md": {
+      "byte_count": 8000,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/report.ko.md",
+      "sha256": "34a89835fcc9762f628b950088efe0c551057cffe3c930d7e70edc5812327c56"
+    },
+    "test_identity_manifest.py": {
+      "byte_count": 4390,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/test_identity_manifest.py",
+      "sha256": "3718100c914cdc270cfc551ca444989a0be0dd4229ec5b8166206a5b41813fce"
+    },
+    "verification.json": {
+      "byte_count": 2630,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-identity-manifest-mq_dyte7/verification.json",
+      "sha256": "5e29dbb290a25d68086cd2ad40ee0626ac14e94ed294f1cbad0626f502f89eb3"
+    }
+  },
+  "baseline_head": "cd5ecb034b36bf5affc9e3389df67b43b246f13d",
+  "boundary": {
+    "admitted": false,
+    "assayed_microstate_verified": false,
+    "assigned_role": null,
+    "full_source_clearance": false,
+    "graph_nodes_emitted": 0,
+    "independent_measurement_denominator": null,
+    "new_preflight_executed": false,
+    "protected_context_opened": false,
+    "scientifically_qualified": false
+  },
+  "confirmed_relations": [
+    "205 occurrences assigned to 123 literal entities without chemical equivalence inference",
+    "78 synthesis headings and 77 distinct printed names",
+    "22 explicit per-entry prior-description citations: reference 30 has 8, reference 31 has 14",
+    "PR29 and PR39 share a printed synthesis name, with methods B2 and C1 respectively"
+  ],
+  "coverage": {
+    "category_counts": {
+      "binding_control": 9,
+      "cited_only": 2,
+      "functional_reference": 4,
+      "reagent": 37,
+      "test_compound": 153
+    },
+    "distinct_printed_synthesis_names": 77,
+    "explicit_prior_description_links": 22,
+    "literal_entities": 123,
+    "occurrences": 205,
+    "other_literal_entities": 45,
+    "retained_other_public_identity_leads": 1,
+    "retained_study_neutral_graphs": 3,
+    "study_labels": 78,
+    "supplement_identity_complete": false,
+    "synthesis_headings": 78,
+    "whole_article_complete": false
+  },
+  "follow_up": {
+    "artifacts": {
+      "access-metadata.json": {
+        "byte_count": 3369,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/access-metadata.json",
+        "sha256": "6ab194de05728c71aaa23940f929059e58c16b19b12fa542f7c5aedfbc6c60d4"
+      },
+      "report.ko.md": {
+        "byte_count": 3876,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/report.ko.md",
+        "sha256": "59264b593b486e0101de150933345847de4306ee168c154cc13a22944cc2684b"
+      },
+      "table-identity-receipt.json": {
+        "byte_count": 4381,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/table-identity-receipt.json",
+        "sha256": "8d4ebefd652fb64979946c3f7fa2b798cc8da4b1dc6e5201b616b2091fc45d7e"
+      },
+      "table3-PR29-identity.png": {
+        "byte_count": 20264,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/table3-PR29-identity.png",
+        "sha256": "16f43d66e40f64a51d9648b358dacbad54bdc72aadf8487f4d2f9cc79463a26d"
+      },
+      "table4-PR39-identity.png": {
+        "byte_count": 28529,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/table4-PR39-identity.png",
+        "sha256": "82c40d50c5b0f70b5dd91346657b325120f1aa8e3e0a6b8c71acfd89d5980a40"
+      },
+      "test_table_identity.py": {
+        "byte_count": 1466,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/test_table_identity.py",
+        "sha256": "7cc491fae08b3d87145e119f389976eb1a768c2b11034815dc8764789795d501"
+      },
+      "verification.json": {
+        "byte_count": 1655,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/verification.json",
+        "sha256": "b436c44f9f6d941fc3bb6fa866edce84dc7c16dfa0fedbed5317c500212e05b6"
+      },
+      "verify_table_identity.py": {
+        "byte_count": 5383,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr39-identity-y6el6ldt/verify_table_identity.py",
+        "sha256": "4e0454db2851bdcaf19cc74baf545b7b708cc8319c98f86b917f845a04f88c1c"
+      }
+    },
+    "finding": "PR39 Table4 sulfonyl aromatic-ring atom Y=N conflicts with its naphthalene synthesis name; no corrected graph assigned",
+    "new_mutation_tests_passed": 6,
+    "new_original_or_supplement_downloads": 0,
+    "original_manifest_preserved": true,
+    "schema_version": "human_5ht6_PR39_identity_followup_reference_v1",
+    "source_roles_and_graph_inclusion_unchanged": true,
+    "source_scope": "retained 2024 PDF pages9/10 and26/28; identity columns only"
+  },
+  "review_status": "blocked_review",
+  "schema_version": "human_5ht6_2024_identity_manifest_receipt_v1",
+  "scope": "Non-outcome source heading and literal-entity correspondence; not complete family identity or component clearance.",
+  "source_doi": "10.3390/ijms251910287",
+  "source_pins": {
+    "contract": {
+      "byte_count": 31266,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/human_5ht6_2024_occurrence_contract_v1.json",
+      "sha256": "55fab87416d876a0ffd24313446590a5d2e1b0d775b3f7389d4b321c4b2292cc"
+    },
+    "inventory": {
+      "byte_count": 154330,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/human_5ht6_2024_occurrences_v1.json",
+      "sha256": "6261d248b41d68a4754ea800b1a577c2de1442846b54c17b16e0a2fc1740dd64"
+    },
+    "layout": {
+      "byte_count": 455125,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-layout.txt",
+      "sha256": "0d0a82e71aec1b94febbe739cacb2434ea783c3dd636d53a910747e362bba5b2"
+    },
+    "ledger": {
+      "byte_count": 3005,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/human_5ht6_ki_2024_source_ledger_v1.json",
+      "sha256": "277f62f7cad26e85f4401aa4e53cfe5992da19dddec692500b7b552d21d33189"
+    },
+    "pdf": {
+      "byte_count": 7957708,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+      "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+    },
+    "sb_identity": {
+      "byte_count": 262,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-service-validation-20260929/sb258585-pubchem-properties.json",
+      "sha256": "376c75688a3087730348870ad6fd63f8f4c73b5c15a5e955db81cb7a2c0e3a5f"
+    }
+  },
+  "unresolved_relations": [
+    "PR29/PR39 actual identity or editorial correction",
+    "PR65/PR66 table-versus-synthesis conflict",
+    "Compound versus method origin in cited originals; assay-value reuse not established",
+    "Supplement and complete main-article identity coverage",
+    "Prospective typed graph inclusion policy, independent source roles and assayed states"
+  ],
+  "verification": {
+    "source_pins_verified": 6,
+    "tests": {
+      "count": 11,
+      "errors": 0,
+      "failures": 0,
+      "returncode": 0
+    },
+    "two_rebuilds_byte_identical": true
+  }
+}

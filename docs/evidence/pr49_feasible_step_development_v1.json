@@ -1,0 +1,354 @@
+{
+  "armijo_upper_bound_kcal_mol": 399.90352995049227,
+  "artifacts": {
+    "completed_files": {
+      "bytes": 6314,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/completed-file-manifest.json",
+      "sha256": "1f54645e3480bb605590554fc57fab3e66227930e33d6472b1ec0ca2583f5c3d"
+    },
+    "completion": {
+      "bytes": 131,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/process-completion.json",
+      "sha256": "ab6882f6fcf289ea2c133f09f5cf9e77eb4ff5b13b4cf60e50d3d6502c2f387d"
+    },
+    "independent_audit": {
+      "bytes": 8388,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/pr49-feasible-step-independent-review-20260929-qf2bgqvq/audit-01.json",
+      "sha256": "952f3900c59f5ccd3b7ec3822158f3a84da5a7050045e64b1ee7253d6b56edc4"
+    },
+    "independent_bundle": {
+      "bytes": 2484,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/pr49-feasible-step-independent-review-20260929-qf2bgqvq/audit-bundle-manifest-01.json",
+      "sha256": "79ebaf2a1b123a7b46c5d5acc50a292a973bd6debf9fc114e767021467239d84"
+    },
+    "independent_plan": {
+      "bytes": 4072,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/pr49-feasible-step-independent-review-20260929-qf2bgqvq/audit-plan.json",
+      "sha256": "2d8f7b5e23436bfe8524054848cd71ba45e881bc42ff732647986c988991503e"
+    },
+    "independent_script": {
+      "bytes": 40936,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/pr49-feasible-step-independent-review-20260929-qf2bgqvq/audit_feasible_step_packet.py",
+      "sha256": "f06a87f350e09a0448f661b00bf345c822c30993e6e99157fbd8df51a715f147"
+    },
+    "independent_self_test": {
+      "bytes": 838,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/pr49-feasible-step-independent-review-20260929-qf2bgqvq/self-test-01.json",
+      "sha256": "76d8de56150cd0a1dc3c51c0b57dd14d72b019f09c39272b4c1dda54e61b9b98"
+    },
+    "launch": {
+      "bytes": 1603,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/launch.json",
+      "sha256": "4e8ed86b87e8e0ab8456efd4a7cdc3ba433cc69992c338734815c7015f7ebdd2"
+    },
+    "native_call_order": {
+      "bytes": 143,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/native-observation-order.json",
+      "sha256": "194243cf6f8f5f460eff343210557c4a2e52496b0ce979824f00b69c8ec38294"
+    },
+    "numerical_audit": {
+      "bytes": 93648,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/numerical-original-last-native.json",
+      "sha256": "77cb7d7fec94204b31545da88c21f61f25e4dc62420f2548c009ce0f69cde450"
+    },
+    "numerical_cost": {
+      "bytes": 396,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/numerical-original-last-native-cost.json",
+      "sha256": "ec9ad933baab7a4b1b4286f8696d101c2e0beb4eb536cb2af09100ab3c743a1a"
+    },
+    "objective_observations": {
+      "bytes": 22574,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/objective-observations.json",
+      "sha256": "cb0efd7fe21af457fd812d464e20ce2e6adf79ece80d38fe386e0f970be75c6b"
+    },
+    "plan": {
+      "bytes": 45134,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/plan.json",
+      "sha256": "b64f2c58229e3bf7c49376195855eef40b095f2d5390c8a43ab0add1edd5420a"
+    },
+    "report": {
+      "bytes": 142866,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/report.json",
+      "sha256": "2206a50a818a5af1be7e9a73c0d108532739f7af2a1672758eef2836bb5b6c95"
+    },
+    "retained_canonical": {
+      "bytes": 68117,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/final-canonical.json",
+      "sha256": "eb3e4207cbfe2b867d86ca05fbc177d2103796ec0c767e46a4702b26655bf82d"
+    },
+    "retained_coordinates": {
+      "bytes": 3446,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/final-coordinates.json",
+      "sha256": "ea7be4b351ba7ba5e84e64ed4fae274faa9f7308e87b986731eab7eaf48032d6"
+    },
+    "setup_without_physics": {
+      "bytes": 143,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/prephysics-setup-check.json",
+      "sha256": "93ee99441f0321f708c03839f5026692bbb6e780dcaa64774b8bb7eae203586c"
+    },
+    "source_snapshot_manifest": {
+      "bytes": 181321,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/pr49-feasible-step-independent-review-20260929-qf2bgqvq/frozen-sources/manifest.json",
+      "sha256": "ad57b54fa0c6b094fddc1376a0d66bdca82e84d38cec49f66de770b7800034ac"
+    },
+    "step": {
+      "bytes": 117081,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/step.json",
+      "sha256": "343ab8a9f92d1414483047cc96ccdc88e7da95284add906fd6fd497659b2e1f9"
+    },
+    "trials": {
+      "bytes": 35488,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/run/trials.jsonl",
+      "sha256": "40fa542a1d380501aee3e9cd27f928acc764027ccf13a70e9b7ee81f4b92994a"
+    },
+    "validation": {
+      "bytes": 2075,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-feasible-step-20260929-7q7vgm1e/validation-index.json",
+      "sha256": "01df9905dfa4305e898fcd5afc00a521f16714d4d1c781982abe6863162e510d"
+    }
+  },
+  "cost": {
+    "core_counters": {
+      "backtracking_trials_attempted": 1,
+      "completed_objective_calls": 2,
+      "failed_integrity_checks": 0,
+      "failed_objective_calls": 0,
+      "failed_record_calls": 0,
+      "failed_validity_calls": 0,
+      "integrity_checks": 18,
+      "integrity_wall_seconds": 11.228980242973194,
+      "invalid_objective_results": 0,
+      "objective_calls": 2,
+      "objective_point_attempts": 2,
+      "objective_wall_seconds": 4.376067515986506,
+      "record_calls": 3,
+      "record_wall_seconds": 0.0007964859541971236,
+      "validity_calls": 2,
+      "validity_wall_seconds": 0.2633520730014425
+    },
+    "cpu_contention_controlled": false,
+    "matched_workload_performance_comparison": false,
+    "native_and_geometry": {
+      "additional_internal_force": {
+        "calls": 2,
+        "failed_calls": 0,
+        "wall_seconds": 0.24250888399546966
+      },
+      "combined_force": {
+        "calls": 2,
+        "failed_calls": 0,
+        "wall_seconds": 4.10397998400731
+      },
+      "geometry": {
+        "calls": 3,
+        "failed_calls": 0,
+        "wall_seconds": 0.39030366801307537
+      },
+      "graph": {
+        "calls": 2,
+        "failed_calls": 0,
+        "wall_seconds": 0.01581457196152769
+      }
+    },
+    "oracle": [
+      {
+        "native_combined_snapshots": {
+          "calls": 2,
+          "failed_calls": 0,
+          "wall_seconds": 2.6864306239876896
+        },
+        "openmm_energy_force_observations": {
+          "calls": 19,
+          "failed_calls": 0,
+          "wall_seconds": 0.18765309295849875
+        },
+        "phase": "numerical-original-last-native",
+        "timings_are_inclusive_do_not_sum_nested_scopes": true,
+        "whole_audit_wall_seconds": 9.258241200994235
+      }
+    ],
+    "phase_wall_seconds": {
+      "bounded_single_feasible_step": 15.87302033402375,
+      "numerical-original-last-native": 9.258241200994235
+    },
+    "timings_are_inclusive_do_not_sum_nested_scopes": true,
+    "upstream_preparation_and_human_work_included": false,
+    "whole_main_process_wall_seconds": 35.82694806699874
+  },
+  "denominators": {
+    "accepted_steps": 1,
+    "backtracking_trials": 1,
+    "exact_full_feasible_points": 2,
+    "failed_native_points": 0,
+    "geometry_invalid_points": 0,
+    "native_point_attempts": 2,
+    "product_gates_per_point": 8,
+    "rejected_trials": 0,
+    "research_gates_per_point": 6
+  },
+  "independent_audit": {
+    "first_attempt_passed": true,
+    "molecular_force_calls": 0,
+    "optimizer_calls": 0,
+    "passed": true,
+    "whole_wall_seconds": 0.3837450650171377
+  },
+  "initial": {
+    "internal_energy_kcal_mol": -283.1396502061511,
+    "raw_maximum_atom_force_kcal_mol_angstrom": 745.9826324728447,
+    "total_energy_kcal_mol": 399.91318138974935
+  },
+  "native_source_file_count": 224,
+  "native_source_sha256": "7e9ac15910499ea5d92ba29debd66acd179e3e270010fc78578720963bde06c0",
+  "next_priority": "Freeze a bounded repeated-step protocol retaining original strain/bond references and separate raw-force convergence.",
+  "numerical": {
+    "absolute_energy_force_tolerance": 1e-08,
+    "all_actual_native_states_covered": true,
+    "denominators": [
+      {
+        "evaluated": 2,
+        "passed": 2,
+        "rejected": 0,
+        "requested": 2
+      }
+    ],
+    "direct_optimizer_bindings": [
+      {
+        "absolute_errors": {
+          "internal_energy": 0.0,
+          "internal_gradient": 0.0,
+          "reference_internal_energy": 3.410605131648481e-13,
+          "reference_internal_gradient": 1.6683543435647152e-11,
+          "reference_total_energy": 8.86757334228605e-12,
+          "reference_total_gradient": 5.212541509536095e-11,
+          "total_energy": 0.0,
+          "total_gradient": 1.7763568394002505e-15
+        },
+        "coordinates_sha256": "825d48621f94f8fb630f5e593dda9eafef00c90d81b95f174059c3ab390584cf",
+        "passed": true
+      },
+      {
+        "absolute_errors": {
+          "internal_energy": 0.0,
+          "internal_gradient": 0.0,
+          "reference_internal_energy": 5.115907697472721e-13,
+          "reference_internal_gradient": 2.298117252053089e-11,
+          "reference_total_energy": 1.1823431123048067e-11,
+          "reference_total_gradient": 2.3788970793248154e-11,
+          "total_energy": 1.1368683772161603e-13,
+          "total_gradient": 2.842170943040401e-14
+        },
+        "coordinates_sha256": "026f4e646edf4ef846c0956df68e98a1e08d342e89ea95fef85d883c9540b57d",
+        "passed": true
+      }
+    ],
+    "independent_recomputed_maximum_direct_error": 5.206857167650014e-11,
+    "unique_states": 2
+  },
+  "original_gradient_dot_direction": -1930.2878514205381,
+  "product_geometry_checks": {
+    "bond_lengths_preserved": true,
+    "declared_chirality_preserved": true,
+    "element_vdw_ligand_overlap_free": true,
+    "element_vdw_receptor_overlap_free": true,
+    "inside_declared_pocket": true,
+    "ligand_self_clash_free": true,
+    "proper_rotation": true,
+    "receptor_ligand_clash_free": true
+  },
+  "protocol": {
+    "algorithm": "research_single_feasible_armijo_step_v1",
+    "armijo_c1": 0.0001,
+    "backtracking_factor": 0.5,
+    "direction": "negative_original_total_gradient_maximum_atom_norm_one",
+    "failure_policy": "stop_and_retain_original_no_substitute_energy",
+    "full_validity_scope": "every_normally_returned_objective_unless_source_integrity_failed",
+    "initial_alpha_angstrom": 0.05,
+    "internal_increase_limit_kcal_mol": 5.0,
+    "max_backtracking_trials": 16,
+    "max_objective_point_attempts": 17,
+    "original_bond_length_change_limit_angstrom": 0.15,
+    "raw_maximum_atom_force_tolerance_kcal_mol_angstrom": 0.001,
+    "selection": "first_exact_feasible_strict_energy_decrease_and_armijo_trial"
+  },
+  "qualification": {
+    "Fresh128_used": false,
+    "HIP_parity_verified": false,
+    "affinity_validated": false,
+    "continuous_path_feasibility_verified": false,
+    "convergence_claimed": false,
+    "molecular_backtracking_exercised": false,
+    "new_training_rows_admitted": 0,
+    "observed_PR49_pose": false,
+    "performance_qualified": false,
+    "product_admission": "NOT_ADMITTED_BY_RESEARCH_EXPERIMENT",
+    "product_qualified": false,
+    "product_solver_changed": false,
+    "repeated_step_convergence_verified": false,
+    "research_only": true,
+    "scientifically_validated": false,
+    "synthetic_backtracking_coverage": true
+  },
+  "research_placement_checks": {
+    "all_distance": true,
+    "all_ratio": true,
+    "centroid_offset": true,
+    "heavy_distance": true,
+    "heavy_ratio": true,
+    "pocket": true
+  },
+  "retained": {
+    "accepted_alpha_angstrom": 0.05,
+    "accepted_trial_index": 0,
+    "energy_decrease_kcal_mol": 83.85985075669475,
+    "internal_increase_kcal_mol": 0.325376507829958,
+    "max_bond_change_angstrom": 0.032742467316107415,
+    "raw_force_converged": false,
+    "raw_max_atom_force": 484.6506685932101,
+    "step_accepted": true,
+    "termination": "first_feasible_armijo_step",
+    "total_energy_kcal_mol": 316.0533306330546
+  },
+  "runtime": {
+    "deterministic_algorithms": false,
+    "native_device": "cpu",
+    "native_dtype": "float64",
+    "numpy_distribution": "1.26.4",
+    "openmm_distribution": "8.4.0.post2",
+    "oracle_platform": "Reference",
+    "platform": "Linux-6.5.0-26-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "python_executable": "/usr/bin/python3.10",
+    "scipy_distribution": "1.12.0",
+    "torch": "2.6.0+rocm6.1",
+    "torch_interop_threads": 12,
+    "torch_threads": 1
+  },
+  "schema_id": "pr49_single_feasible_step_development_evidence/1.0.0",
+  "single_feasible_step_milestone_complete": true,
+  "source_parent_commit": "d02f87aaacbb3436c89f37911661733b9c8ddeb1",
+  "step_checks": {
+    "armijo_sufficient_decrease": true,
+    "complete_full_validity": true,
+    "distinct_original_coordinates": true,
+    "original_bonds_within_exact_limit": true,
+    "strain_within_exact_limit": true,
+    "strict_total_energy_decrease": true
+  },
+  "useful_converged_refinement_complete": false,
+  "validation": {
+    "core": 49,
+    "core_receipt_is_recorded_tool_output_not_raw_redirected_log": true,
+    "derivative": 10,
+    "full_repository_suite": false,
+    "geometry": 18,
+    "independent_synthetic_checks_separate": 9,
+    "new_tests": 61,
+    "previous_cpu806_rerun": false,
+    "pytest_tests_passed": 89,
+    "reused_tests": 28,
+    "ruff_passed": true,
+    "selector": 12
+  },
+  "verified_source_and_input_copies": 240
+}

@@ -1,0 +1,50 @@
+name: ci-sro-cross-force-decomposition-diagnostic
+on:
+  pull_request:
+    paths:
+      - 'benchmarks/oracles/sro_cross_force_decomposition_diagnostic_v1.py'
+      - 'benchmarks/oracles/sro_particle_roundtrip_diagnostic_v1.py'
+      - 'betelgeuze_product/cpu_refinement_v1_2/fixed_receptor.py'
+      - 'tests/unit/test_sro_cross_force_decomposition_diagnostic_v1.py'
+      - 'tests/unit/test_sro_cross_force_decomposition_ci_registration_v1.py'
+      - 'docs/research/sro_cross_force_decomposition_diagnostic_plan_20261001.md'
+      - 'tools/product/github_workflow_trust_boundaries.py'
+      - 'tests/unit/test_github_workflow_trust_boundaries.py'
+      - '.github/workflows/ci-sro-cross-force-decomposition-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-sro-cross-force-decomposition-diagnostic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint-and-mock-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          clean: true
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.11'
+      - name: Install pinned lint and mock-test dependencies
+        run: python -m pip install pytest==8.3.5 ruff==0.11.13 PyYAML==6.0.3
+      - name: Lint the benchmark diagnostic and mock contracts
+        run: |
+          python -m ruff check --isolated --no-cache \
+            benchmarks/oracles/sro_cross_force_decomposition_diagnostic_v1.py \
+            tests/unit/test_sro_cross_force_decomposition_diagnostic_v1.py \
+            tests/unit/test_sro_cross_force_decomposition_ci_registration_v1.py
+      - name: Verify mock-only diagnostic and workflow contracts
+        run: |
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest \
+            -p no:cacheprovider -W error -q \
+            tests/unit/test_sro_cross_force_decomposition_diagnostic_v1.py \
+            tests/unit/test_sro_cross_force_decomposition_ci_registration_v1.py

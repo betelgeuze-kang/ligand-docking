@@ -9,7 +9,7 @@ python3 -I -S -B tools/product/verify_prepared_cross_numerics.py \
 
 The output must be a new file. Exit 0 means all requested rows passed the arithmetic comparison; exit 2 means at least one row failed or was not compared. Malformed top-level inputs raise an error. Input and checker SHA-256 digests identify the comparison. The input is read without modification.
 
-Supported inputs are saved prepared cross report v1/v2 and prepared rigid pose report v1. The checker independently enumerates every receptor–ligand pair from the embedded float64 coordinates and explicit charge, sigma and epsilon parameters. It recomputes the declared nonperiodic switched Lennard-Jones and screened Coulomb model, energies, forces and pair membership. It does not use the reported pair list to select the calculation.
+Supported inputs are saved prepared cross report v1/v2 and prepared rigid pose report v1. The checker independently enumerates every receptor–ligand pair from the embedded float64 coordinates and explicit charge, sigma and epsilon parameters. It recomputes the declared nonperiodic switched Lennard-Jones and screened Coulomb model, energies, forces, pair membership and canonical pair-list SHA-256. It does not use the reported pair list or digest to select the calculation.
 
 Absolute tolerances are fixed at 1e-8 kcal/mol for energy and 1e-8 kcal/mol/angstrom for force. They retain the original PFK40 audit criterion. No relative tolerance or command-line relaxation is available. Failed and skipped calculation rows remain in the denominator. Unsupported models, malformed parameters and capacity limits cannot receive a passing result. Limits are 256 MiB per input, 32 report rows, 16384 atoms per component and two million cross pairs per row.
 

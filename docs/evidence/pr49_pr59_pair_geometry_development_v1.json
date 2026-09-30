@@ -1,0 +1,269 @@
+{
+  "actual_source_boundary_checks": {
+    "bytes": 1260,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/source-boundary-checks-final.json",
+    "sha256": "ab36f86e58e926054173de86902af75b8a7405a1ad099daf01e86bf09e55c951"
+  },
+  "actual_source_boundary_checks_passed": 7,
+  "actual_source_boundary_runner": {
+    "bytes": 6013,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/source-mutation-checks-final.py",
+    "sha256": "b7034ee8c6d4ec515c62492e99baa604f4b0d03569aafc73f2274e8e79a8c05a"
+  },
+  "anchor_center_angstrom": [
+    84.56507692307693,
+    110.49638461538461,
+    82.02238461538461
+  ],
+  "anchor_source_atom_site_ids": [
+    "8089",
+    "8090",
+    "8091",
+    "8092",
+    "8093",
+    "8094",
+    "8095",
+    "8096",
+    "8097",
+    "8098",
+    "8099",
+    "8100",
+    "8101"
+  ],
+  "archive_manifest": {
+    "bytes": 6462,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/archive-manifest-final.json",
+    "sha256": "57dd357a8acb52e4e101dffd177de41fa901d2b6e4b5227c6b63c0d264376b6e"
+  },
+  "archive_payload_bytes": 1087272,
+  "archive_payload_file_count": 21,
+  "archive_root": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa",
+  "assayed_microstate_equivalence_verified": false,
+  "candidates": [
+    {
+      "assay_microstate_verified": false,
+      "candidate_id": "PR49",
+      "coordinate_origin": "computational_registered",
+      "declared_frame_matches": true,
+      "geometry_blockers": [],
+      "geometry_ready_only": true,
+      "input": {
+        "file": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-d3-complex-20260929-final2/ligand-canonical.json",
+          "sha256": "bc71d19603c3db4940af455939ddbcb4ebf5d8d88cd98c32c266f84d37fb3185"
+        },
+        "kind": "canonical_all_atom_system"
+      },
+      "metrics": {
+        "atom_count": 39,
+        "checks": {
+          "all_atom_radius_sum_screen": true,
+          "all_atom_severe_overlap_screen": true,
+          "all_heavy_atoms_inside_anchor_radius": true,
+          "heavy_atom_radius_sum_screen": true,
+          "heavy_atom_severe_overlap_screen": true
+        },
+        "geometry_screen_passed": true,
+        "heavy_atom_count": 25,
+        "maximum_heavy_atom_anchor_radius_angstrom": 6.873190715454207,
+        "minimum_all_atom_radius_sum_ratio": 0.6065209897919953,
+        "minimum_all_atom_receptor_distance_angstrom": 1.5290457612511121,
+        "minimum_heavy_atom_radius_sum_ratio": 0.7439316176437868,
+        "minimum_heavy_atom_receptor_distance_angstrom": 2.529367499988875
+      },
+      "observed_candidate_reference_pose": false,
+      "source_role": null
+    },
+    {
+      "assay_microstate_verified": false,
+      "candidate_id": "PR59",
+      "coordinate_origin": "isolated_ligand_no_receptor_pose",
+      "declared_frame_matches": false,
+      "geometry_blockers": [
+        "declared_coordinate_frame_mismatch",
+        "initial_pose_geometry_not_registered_in_receptor_pocket",
+        "coordinate_origin_has_no_receptor_registration"
+      ],
+      "geometry_ready_only": false,
+      "input": {
+        "file": {
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-pr49-pr59-openff-projection-20260929/PR59/ligand.sdf",
+          "sha256": "3deded57ec76f170c5fd00dd488ecae8ce06c466a87db3bf5b9eb4d851d6e7a5"
+        },
+        "kind": "sdf_v2000"
+      },
+      "metrics": {
+        "atom_count": 43,
+        "checks": {
+          "all_atom_radius_sum_screen": true,
+          "all_atom_severe_overlap_screen": true,
+          "all_heavy_atoms_inside_anchor_radius": false,
+          "heavy_atom_radius_sum_screen": true,
+          "heavy_atom_severe_overlap_screen": true
+        },
+        "geometry_screen_passed": false,
+        "heavy_atom_count": 26,
+        "maximum_heavy_atom_anchor_radius_angstrom": 164.88115835608644,
+        "minimum_all_atom_radius_sum_ratio": 40.21691643416136,
+        "minimum_all_atom_receptor_distance_angstrom": 134.91525107003284,
+        "minimum_heavy_atom_radius_sum_ratio": 40.21691643416136,
+        "minimum_heavy_atom_receptor_distance_angstrom": 136.73751587614862
+      },
+      "observed_candidate_reference_pose": false,
+      "source_role": null
+    }
+  ],
+  "commit_or_push_performed": false,
+  "created_utc": "2026-09-30T00:10:43.949150+00:00",
+  "diff_check_passed": true,
+  "execution_context": {
+    "bytes": 1571,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/context-final.json",
+    "sha256": "89220f212347367a6a348d6b3303d881d9a40472912a7f9575ad124336fe7b4d"
+  },
+  "execution_mode": "source_checkout_geometry_audit",
+  "existing_v4_regression_cases": 17,
+  "focused_tests_passed": 34,
+  "force_evaluations": 0,
+  "fresh_dependency_environment": false,
+  "geometry_arithmetic_wall_seconds": 2.6780780059998506,
+  "geometry_boundary_cases": 17,
+  "geometry_ready_candidate_count": 1,
+  "geometry_result": {
+    "bytes": 6533,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/geometry-final.json",
+    "sha256": "168ce1077a7cecf9a5de16a7f75e1434a0ac2af25aabf842c5a45f2586908fd6"
+  },
+  "geometry_timing_scope": "input parsing/mapping and geometry arithmetic before final bound-input reopening; excludes process startup, tests, preparation, fitting and original retained numerical run",
+  "implementation": {
+    "bytes": 22681,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/implementation-final.py",
+    "sha256": "2b656e263c567f0da3a633a1d714058bef55b7c8a6c7afb4283e056e5344ec9b"
+  },
+  "native_source_admission_authenticated": false,
+  "native_v4_wheel_or_installed_runtime_modified": false,
+  "original_inputs_overwritten": false,
+  "pair_readiness": false,
+  "physical_accuracy_or_pose_performance_verified": false,
+  "placements_or_coordinate_repairs": 0,
+  "positive_geometry_controls": [
+    {
+      "alignment_or_pose_generation_performed": false,
+      "assayed_microstate_equivalence_verified": false,
+      "candidate_pair_membership": false,
+      "control_id": "SRO_initial_source_heavy_geometry",
+      "independent_pose_recovery_admitted": false,
+      "initial_direct_source_heavy_rmsd_angstrom": 0.0,
+      "initial_geometry": {
+        "atom_count": 26,
+        "checks": {
+          "all_atom_radius_sum_screen": true,
+          "all_atom_severe_overlap_screen": true,
+          "all_heavy_atoms_inside_anchor_radius": true,
+          "heavy_atom_radius_sum_screen": true,
+          "heavy_atom_severe_overlap_screen": true
+        },
+        "geometry_screen_passed": true,
+        "heavy_atom_count": 13,
+        "maximum_heavy_atom_anchor_radius_angstrom": 4.503930752670602,
+        "minimum_all_atom_radius_sum_ratio": 0.6455623060342224,
+        "minimum_all_atom_receptor_distance_angstrom": 1.5493495344821338,
+        "minimum_heavy_atom_radius_sum_ratio": 0.9492612294118646,
+        "minimum_heavy_atom_receptor_distance_angstrom": 2.9142319742944247
+      },
+      "initial_observed_heavy_coordinate_matches": 13,
+      "physical_accuracy_or_pose_performance_verified": false,
+      "retained_final_direct_source_heavy_rmsd_angstrom": 0.4767487007932512,
+      "retained_final_maximum_source_heavy_displacement_angstrom": 0.845998755950475,
+      "retained_snapshot_checked_not_numerical_trace_replayed": true,
+      "source_role_assigned": null
+    }
+  ],
+  "product_ranking_enabled": false,
+  "protocol": {
+    "bytes": 3626,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/protocol-final.json",
+    "sha256": "d54e6a13cfd62d39a5cafce138853292feb6faa813b7a65f61c42b6b5537da9a"
+  },
+  "protocol_canonical_sha256": "ef78a907c6c951675754689aa6e36d82d6dc5412c592fe0f8440efecdd347325",
+  "read_only_context_blockers": {
+    "assay_protonation_tautomer_batch_and_receptor_state_equivalence_unresolved": true,
+    "current_native_method_contract_requires_chembl_record_assay_document_target_origin": true,
+    "native_fit_rows_added": 0,
+    "pr49_component_chemistry_checks_do_not_grant_full_source_admission": true,
+    "pr59_coordinate_frame": "isolated_ligand_relative_centered_no_receptor_pose",
+    "pr59_openmm_constraints": 17,
+    "pr59_registered_pose_request_and_xml_charge_origin_descriptor_available": false,
+    "required_fit_point_rows": 5,
+    "required_fit_source_components": 2,
+    "source_roles_and_prepared_state_origin_unassigned": true
+  },
+  "receptor_mapping": {
+    "all_observed_receptor_coordinates_exactly_preserved": true,
+    "all_selected_source_heavy_atoms_mapped_once": true,
+    "explicitly_modelled_heavy_atoms": 3,
+    "generated_hydrogens": 2249,
+    "modelled_coordinates_physical_accuracy_verified": false,
+    "observed_heavy_coordinate_matches": 2124,
+    "prepared_atoms": 4376,
+    "selected_source_heavy_atom_count": 2124
+  },
+  "requested_candidate_count": 2,
+  "ruff_passed": true,
+  "runtime_scope": {
+    "baseline_hash_snapshot": {
+      "path": "/tmp/native-v4-cartesian-preserved-source-hashes.json",
+      "sha256": "95b3efaa7c37e4038213f5c625b1060c319aa5ad37a3b9d42733a6aadef2ea0c"
+    },
+    "cpu_source_bytes_unchanged": true,
+    "cpu_v1_2_v1_3_source_files": 36,
+    "native_v4_wheel": {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-native-v4-cartesian-final-20260930-47806ade-e54a83d4/wheel-final/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+      "sha256": "043763fa8553a6747b8967064b03dcc2e427559e1d366d2e4e1fa7e58445883e"
+    },
+    "schema_version": "registered_pair_geometry_unchanged_runtime_scope_v1",
+    "wheel_python_member_bytes_unchanged": true,
+    "wheel_python_members_equal_current_source": 523
+  },
+  "schema_version": "pr49_pr59_source_geometry_development_evidence_v1",
+  "scientifically_validated": false,
+  "score_evaluations": 0,
+  "screen_policy": {
+    "maximum_ligand_heavy_anchor_radius_angstrom": 10.0,
+    "minimum_all_atom_distance_angstrom": 1.0,
+    "minimum_all_atom_radius_sum_ratio": 0.6,
+    "minimum_heavy_atom_distance_angstrom": 2.0,
+    "minimum_heavy_atom_radius_sum_ratio": 0.72,
+    "radius_table_angstrom": {
+      "C": 1.7,
+      "Cl": 1.75,
+      "H": 1.2,
+      "N": 1.55,
+      "O": 1.52,
+      "S": 1.8
+    },
+    "schema_version": "registered_pair_severe_geometry_screen_v1"
+  },
+  "source_head_context": "e70eb8e4d66f63c4a928b627a0f3fc0a41653133",
+  "source_head_is_commit_of_tool_change": false,
+  "source_input_pins": {
+    "bytes": 3582,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/source-inputs-final.json",
+    "sha256": "ffb454dc4e05033b87f0a7e8d47a0daac0c515ff5f16b297c2262feaa19ad942"
+  },
+  "source_labels_admitted": 0,
+  "source_roles_assigned": 0,
+  "status": "development_geometry_checked_pair_not_ready",
+  "tests": {
+    "bytes": 12500,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/tests-final.py",
+    "sha256": "dc8f285ecc2739b2dd9750ecaf333e58a910fe63b91d91e95af40206981d57e9"
+  },
+  "two_candidate_geometry_passed": false,
+  "v4_real_two_candidate_comparison_executed": false,
+  "validation": {
+    "bytes": 1146,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-source-geometry-20260930-e70eb8e4-bbd597fa/validation-final.json",
+    "sha256": "efa3926aabaa4c4b3691ddd311d492b7098ea4221e7de5c87a7e5529d40e5228"
+  }
+}

@@ -338,7 +338,6 @@ def component_index(nodes):
         ids.add(nid)
         if type(node.get("protected")) is not bool:
             raise ValueError("invalid_identity_context_protection")
-        reservation_status(node["policy_declarations"])
         for key in node["keys"]:
             if not isinstance(key, (list, tuple)) or len(key) != 2 or not all(isinstance(v, str) and v for v in key):
                 raise ValueError("invalid_identity_context_key")
@@ -353,10 +352,15 @@ def component_index(nodes):
     result = {}
     for members in groups.values():
         ids = sorted(node["node_id"] for node in members)
-        reserved = sorted(node["node_id"] for node in members
-                          if node["protected"] or node_reservation_status(node)[0])
-        unknown = sorted(node["node_id"] for node in members
-                         if node_reservation_status(node)[1])
+        reserved_ids, unknown_ids = [], []
+        for node in members:
+            reserved, unknown = node_reservation_status(node)
+            if node["protected"] or reserved:
+                reserved_ids.append(node["node_id"])
+            if unknown:
+                unknown_ids.append(node["node_id"])
+        reserved = sorted(reserved_ids)
+        unknown = sorted(unknown_ids)
         value = {"component_id": digest(canonical(ids)), "node_count": len(ids),
                  "reserved_nodes": reserved, "unknown_policy_nodes": unknown,
                  "blocked": bool(reserved or unknown)}

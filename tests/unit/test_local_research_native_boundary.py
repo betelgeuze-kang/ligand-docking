@@ -284,7 +284,9 @@ def test_native_subprocess_timeout_kills_descendants(tmp_path, monkeypatch):
     for _ in range(100):
         try:
             state = Path(f'/proc/{pid}/stat').read_text().split(')', 1)[1].split()[0]
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
+            # /proc can disappear between opening and reading stat after the
+            # descendant exits; both errors prove it is no longer running.
             break
         if state == 'Z':
             break

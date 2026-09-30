@@ -1,0 +1,426 @@
+{
+  "schema_version": "mettl3_9g4s_prepared_state_decision_manifest_v1",
+  "record_id": "mettl3_9g4s_a1iii_development_preparation_decisions",
+  "recorded_date": "2026-09-28",
+  "baseline_source_commit": "3ad331560c29a3e158aa28de95f3d871e11be119",
+  "status": "DECISIONS_UNRESOLVED_EXECUTION_BLOCKED",
+  "scope": "Versioned decision specification only; no chemical preparation, prepared bundle, roles, experimental values, physical evaluation or benchmark execution.",
+  "source_bundle_locations": {
+    "identity_screen": {
+      "local_root_hint": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-goal1-mettl3-source-screen-20260928",
+      "portable_by_explicit_root_override": true
+    },
+    "structure_preflight": {
+      "local_root_hint": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-mettl3-9g4s-preflight-20260928-01opzL",
+      "portable_by_explicit_root_override": true
+    }
+  },
+  "evidence_refs": {
+    "identity_manifest": {
+      "bundle": "identity_screen",
+      "relative_path": "manifest.json",
+      "sha256": "4de817f3b3353ee81b3c7a1ba61d2c4f0b59e512f468c2e141aa49eac68847ab"
+    },
+    "identity_plan": {
+      "bundle": "identity_screen",
+      "relative_path": "plan.json",
+      "sha256": "6b470b32f3eb1bb6008d7b0ecb928e8fe612894fd39f5e05b6c5ec03e37f16af"
+    },
+    "identity_report": {
+      "bundle": "identity_screen",
+      "relative_path": "report.ko.md",
+      "sha256": "8f25b853005e991288b2962cdfda41a3ff6395c7f16589813229e9208325c6d3"
+    },
+    "joint_identity_screen": {
+      "bundle": "identity_screen",
+      "relative_path": "joint_si_graph_screen.json",
+      "sha256": "db66f19f5b6cf0c7bc52fe3014b0cb572345fe8346971646b5b855678fdb339e"
+    },
+    "structure_spa_identity_bridge": {
+      "bundle": "identity_screen",
+      "relative_path": "structure_spa_identity_bridge.json",
+      "sha256": "5de885f7b1ab24f5ef5321547e57126c722487578eb46712997a5de2c441cff8"
+    },
+    "supporting_information_pdf": {
+      "bundle": "identity_screen",
+      "relative_path": "official_si/jm4c02225_si_001.pdf",
+      "sha256": "7c6c555cc234b165a6566e34907b2ee7fe03073e0be6a3136326feeaa0725389"
+    },
+    "supporting_information_csv": {
+      "bundle": "identity_screen",
+      "relative_path": "official_si/jm4c02225_si_002.csv",
+      "sha256": "4807d4ba2fb1485b147a993ee4db93137d72a9a6a9a917ff867fa635867fc6fa"
+    },
+    "preflight_manifest": {
+      "bundle": "structure_preflight",
+      "relative_path": "manifest.json",
+      "sha256": "7ab5894b3c71b1d588ce2d577e3ba9151dadcd8b408061dccd6c485bcddb4e79"
+    },
+    "preflight_plan": {
+      "bundle": "structure_preflight",
+      "relative_path": "preflight_plan.json",
+      "sha256": "88bbb87964c0ee011a7bc9fd0de7d06c125ba735d079e22526201d31a439cf65"
+    },
+    "preflight_report": {
+      "bundle": "structure_preflight",
+      "relative_path": "report.ko.md",
+      "sha256": "de4530f9cf01d08faab4c7e24c3802acce5669a69bc047186f91ca30ebf64921"
+    },
+    "preflight_result": {
+      "bundle": "structure_preflight",
+      "relative_path": "preflight.json",
+      "sha256": "cef5fb5b507c102792cb3cc4c3d1ba162e8fb66a9214256fb1905eab4caae149"
+    },
+    "observer_request": {
+      "bundle": "structure_preflight",
+      "relative_path": "engine_observation_request.json",
+      "sha256": "3361f39be70374a5e615cea86f2eff917dae3acd99739766996925794fff1274"
+    },
+    "observer_report": {
+      "bundle": "structure_preflight",
+      "relative_path": "engine_observation_report.json",
+      "sha256": "0296eaf67f37501e97159703e966892599907f43f25d1350bc435b5f018ea60c"
+    },
+    "coordinates_9g4s": {
+      "bundle": "structure_preflight",
+      "relative_path": "official_sources/coordinates-9g4s.cif",
+      "sha256": "1ec76640addeb6fd1dbb8daa1e863d05fbee07744957484d5e9cb11f8f794f03"
+    },
+    "ccd_a1iii": {
+      "bundle": "structure_preflight",
+      "relative_path": "official_sources/chemcomp-a1iii.json",
+      "sha256": "1dd8e05636f0c478b8a4510a7c6b1ba9d405e4853f78c938e33f07d7e383ab8f"
+    },
+    "entry_9g4s": {
+      "bundle": "structure_preflight",
+      "relative_path": "official_sources/entry-9g4s.json",
+      "sha256": "816d3a00827302bd8d3a0452e313e5967fc9c4458f6073abd3cb6e002ed677b3"
+    },
+    "assembly_9g4s_1": {
+      "bundle": "structure_preflight",
+      "relative_path": "official_sources/assembly-9g4s-1.json",
+      "sha256": "bf45be85e89fafb464c8831ce9bcd11b41a2bdd53bcfa747d6e2d237bbbd7010"
+    },
+    "polymer_9g4s_1": {
+      "bundle": "structure_preflight",
+      "relative_path": "official_sources/polymer-9g4s-1.json",
+      "sha256": "08ff168cee0bf81b7f39801f5d0c7df32909972fee8040a5c81a7002b8f108ce"
+    },
+    "polymer_9g4s_2": {
+      "bundle": "structure_preflight",
+      "relative_path": "official_sources/polymer-9g4s-2.json",
+      "sha256": "cd662104a59c91cc576ba8fe718d96c0af9486894394bd7d7989a8a4dc7524bf"
+    }
+  },
+  "selected_source_instance": {
+    "auth_seq_id": "601",
+    "component_id": "A1III",
+    "entry_id": "9G4S",
+    "label_asym_id": "C",
+    "model_number": "1"
+  },
+  "identity_observation": {
+    "article_doi": "10.1021/acs.jmedchem.4c02225",
+    "ccd_stereo_inchikey": "SIMGHJKPZKGPGZ-WIYYLYMNSA-N",
+    "molecule_chembl_id": "CHEMBL6161072",
+    "spa_assay_chembl_id": "CHEMBL6126670",
+    "spa_activity_id": 29226587,
+    "join_scope": "stereo_identity_only_not_assay_state_or_measurement",
+    "experimental_value": null,
+    "assay_construct_equivalence_verified": false,
+    "printed_compound_number_resolved": false
+  },
+  "source_observation": {
+    "status": "SOURCE_GEOMETRY_OBSERVED_PREPARATION_BLOCKED",
+    "observed_ligand_heavy_atoms": 34,
+    "missing_ligand_hydrogens": 34,
+    "observed_protein_hydrogens": 0,
+    "physical_evaluations": 0,
+    "all_atom_prepared": false,
+    "receptor_prepared": false,
+    "prepared_input_faithfully_instantiated": false
+  },
+  "protection_and_roles": {
+    "identity_policy": "all_supplied_metadata_components_before_target_endpoint_selection_v1",
+    "identity_context_sha256": "70bec06b6f607556d364a9db04d1cfe065930829b6d8b661717d5bdab3499d66",
+    "identity_context_access_required_by_verifier": false,
+    "protected_outcomes_accessed": false,
+    "source_component_role": null,
+    "assigned_role_counts": {
+      "fit": 0,
+      "calibration": 0,
+      "evaluation": 0
+    },
+    "source_component_may_be_split_across_roles": false,
+    "identity_screen_grants_admission": false
+  },
+  "recorded_source_permissions": [
+    {
+      "source": "PDB archive/API",
+      "reported_permission": "CC0",
+      "evidence_ref": "identity_report",
+      "use_specific_review_status": "unresolved"
+    },
+    {
+      "source": "ChEMBL",
+      "reported_permission": "CC-BY-SA-3.0",
+      "evidence_ref": "identity_report",
+      "use_specific_review_status": "unresolved"
+    },
+    {
+      "source": "ACS Figshare supporting PDF and CSV",
+      "reported_permission": "CC-BY-NC-4.0",
+      "evidence_ref": "identity_report",
+      "use_specific_review_status": "unresolved"
+    },
+    {
+      "source": "ACS main article",
+      "reported_permission": "purchase_access_reported_not_inherited_from_SI",
+      "evidence_ref": "identity_report",
+      "use_specific_review_status": "unresolved"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "assay_Active_Motif_protein_construct_vs_Sf21_crystal_construct_unknown",
+      "status": "unresolved",
+      "blocks": "experimental_comparison",
+      "source_preflight_unresolved_id": "assay_Active_Motif_protein_construct_vs_Sf21_crystal_construct_unknown",
+      "evidence_refs": [
+        "preflight_result",
+        "identity_report"
+      ],
+      "observed_basis": "The Active Motif SPA construct is unknown; the crystallographic construct is reported as Sf21-expressed METTL3 354-580 and METTL14 107-395.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "Source-backed construct, sequence, modification and assay-condition correspondence; an identity match alone is insufficient."
+    },
+    {
+      "id": "METTL14_B273_LEU_vs_UniProt_LYS_source_conflict_requires_state_decision",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "METTL14_B273_LEU_vs_UniProt_LYS_source_conflict_requires_state_decision",
+      "evidence_refs": [
+        "preflight_result",
+        "coordinates_9g4s"
+      ],
+      "observed_basis": "The source annotation records METTL14 B273 LEU versus UniProt Q9HCE5 LYS.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "An explicit source-state decision and evidence; do not silently repair to wild type or infer a mutation."
+    },
+    {
+      "id": "26_unmodeled_METTL14_residues_and_undeclared_construct_termini_require_explicit_policy",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "26_unmodeled_METTL14_residues_and_undeclared_construct_termini_require_explicit_policy",
+      "evidence_refs": [
+        "preflight_result",
+        "polymer_9g4s_1",
+        "polymer_9g4s_2"
+      ],
+      "observed_basis": "Deposited ranges are A365-578 and B116-395; B138-148, B202-207 and B297-305 lack coordinates. A578 has no observed OXT.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "Explicit construct, missing-segment and chemical-terminus policies, including the distinction between absent sequence and unobserved coordinates."
+    },
+    {
+      "id": "all_protein_and_34_ligand_hydrogens_absent_from_deposition",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "all_protein_and_34_ligand_hydrogens_absent_from_deposition",
+      "evidence_refs": [
+        "preflight_result",
+        "coordinates_9g4s"
+      ],
+      "observed_basis": "No protein hydrogens and no coordinates for the 34 ligand hydrogens are deposited.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "A documented preparation method, atom mapping and provenance distinguishing generated hydrogens from experimental coordinates."
+    },
+    {
+      "id": "ligand_protonation_tautomer_partial_charge_and_forcefield_not_prepared",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "ligand_protonation_tautomer_partial_charge_and_forcefield_not_prepared",
+      "evidence_refs": [
+        "preflight_result",
+        "ccd_a1iii"
+      ],
+      "observed_basis": "The CCD neutral graph does not establish the solution or SPA microstate; partial charges and force-field parameters are not supplied.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "Explicit ligand/protein microstate and parameter decisions with their sources, versions and independent preparation checks."
+    },
+    {
+      "id": "23_crystal_water_oxygen_sites_within_6_A_require_retention_or_exclusion_policy",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "23_crystal_water_oxygen_sites_within_6_A_require_retention_or_exclusion_policy",
+      "evidence_refs": [
+        "preflight_result",
+        "coordinates_9g4s"
+      ],
+      "observed_basis": "There are 23 deposited water oxygen sites within 6 angstrom of the ligand.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "An explicit, source-preserving water retention or exclusion policy with reasons and a complete inventory."
+    },
+    {
+      "id": "five_Ca_and_TRS_plus_protein_altlocs_require_full_system_treatment_if_retained",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "five_Ca_and_TRS_plus_protein_altlocs_require_full_system_treatment_if_retained",
+      "evidence_refs": [
+        "preflight_result",
+        "coordinates_9g4s"
+      ],
+      "observed_basis": "The source contains five Ca sites, TRS and 150 alternate-location atom sites in 10 protein residues; metal connections are recorded.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "Explicit component and alternate-location treatment. Retained unsupported metal chemistry remains blocked rather than being removed to satisfy the reader."
+    },
+    {
+      "id": "SI_crystallography_compound_numbers_conflict_with_CCD_stereo_CSV_titles",
+      "status": "unresolved",
+      "blocks": "experimental_comparison",
+      "source_preflight_unresolved_id": "SI_crystallography_compound_numbers_conflict_with_CCD_stereo_CSV_titles",
+      "evidence_refs": [
+        "preflight_result",
+        "structure_spa_identity_bridge",
+        "identity_report"
+      ],
+      "observed_basis": "For 9G4S the PDF S293 number is 66, while the RCSB title and exact-stereo CSV structure number is 56.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "Resolve primary compound correspondence before a number-based assay join. Preserve the existing CCD stereo identity link without selecting a corrected printed number."
+    },
+    {
+      "id": "prepared_PDB_SDF_GRO_ITP_parameter_sources_not_supplied",
+      "status": "unresolved",
+      "blocks": "prepared_input",
+      "source_preflight_unresolved_id": "prepared_PDB_SDF_GRO_ITP_parameter_sources_not_supplied",
+      "evidence_refs": [
+        "preflight_result"
+      ],
+      "observed_basis": "No prepared PDB, ligand SDF/GRO/ITP, ordered chain topology or atomtype/defaults parameter bundle is supplied.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "An independently prepared, provenance-bound file set satisfying the existing prepared_gromacs_components_v3 reader; this manifest cannot substitute for that bundle."
+    },
+    {
+      "id": "source_and_use_specific_rights_unresolved",
+      "status": "unresolved",
+      "blocks": "experimental_or_product_use",
+      "source_preflight_unresolved_id": null,
+      "evidence_refs": [
+        "identity_report"
+      ],
+      "observed_basis": "The recorded PDB, ChEMBL and supporting-information permissions differ; main-article access is not granted by the SI permission.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "A source- and use-specific rights determination; no product permission is inferred from public availability or this document."
+    },
+    {
+      "id": "independent_source_component_roles_unassigned",
+      "status": "unresolved",
+      "blocks": "experimental_comparison",
+      "source_preflight_unresolved_id": null,
+      "evidence_refs": [
+        "identity_report",
+        "joint_identity_screen"
+      ],
+      "observed_basis": "The EP652 component is one DOI/source component, with zero assigned fit/calibration/evaluation roles.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "A predeclared admissible source-component role plan. Keep connected source material in one role and preserve the protected context."
+    },
+    {
+      "id": "spa_endpoint_and_activity_definition_unresolved",
+      "status": "unresolved",
+      "blocks": "experimental_comparison",
+      "source_preflight_unresolved_id": null,
+      "evidence_refs": [
+        "identity_report"
+      ],
+      "observed_basis": "The selected identity points to a SPA enzyme-inhibition assay, not receptor radioligand Ki; no activity values are included.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "Source-backed SPA endpoint, censoring/detection-limit and active/inactive definitions. Keep HTRF and cellular IC50 separate."
+    },
+    {
+      "id": "numeric_comparison_protocol_not_frozen",
+      "status": "unresolved",
+      "blocks": "numeric_comparison",
+      "source_preflight_unresolved_id": null,
+      "evidence_refs": [
+        "preflight_result"
+      ],
+      "observed_basis": "No prepared-state numeric comparison is specified or executed.",
+      "selected_action": null,
+      "resolution_evidence": [],
+      "required_before_resolution": "After preparation is resolved, freeze explicit model/pocket parameters, original denominators and scalar-check scope. A single state does not provide between-ligand ranking contrasts."
+    }
+  ],
+  "eligibility": {
+    "prepared_input_executable": false,
+    "numeric_comparison_executable": false,
+    "experimental_comparison_eligible": false,
+    "assay_state_equivalence_verified": false,
+    "training_admitted": false,
+    "scientifically_validated": false,
+    "product_ranking_enabled": false,
+    "customer_execution": false
+  },
+  "performed_actions": {
+    "chemical_preparation": false,
+    "source_atoms_deleted": false,
+    "source_coordinates_changed": false,
+    "prepared_bundle_generated": false,
+    "experimental_values_decoded_or_used": false,
+    "role_assignment": false,
+    "engine_evaluations": 0,
+    "benchmark_runs": 0,
+    "protected_evaluation_access": false
+  },
+  "future_consumer_contract": {
+    "prepared_bundle": null,
+    "prepared_input_schema": "prepared_gromacs_components_v3",
+    "loader": "betelgeuze_engine.product.prepared_gromacs_input.load_prepared_gromacs_components",
+    "prepared_file_slots": {
+      "protein_pdb": null,
+      "protein_chains_ordered_molecule_itps": null,
+      "protein_atomtypes": null,
+      "protein_defaults": null,
+      "ligand_sdf": null,
+      "ligand_gro": null,
+      "ligand_itp": null,
+      "ligand_atomtypes": null,
+      "ligand_defaults": null
+    },
+    "source_declaration_slots": {
+      "coordinate_frame_id": null,
+      "prepared_state_id": null,
+      "parameter_source_id": null,
+      "charge_source_id": null
+    },
+    "evaluation_slots": {
+      "pocket_center_angstrom": null,
+      "pocket_radius_angstrom": null,
+      "cutoff_angstrom": null,
+      "switch_start_angstrom": null,
+      "dielectric": null,
+      "screening_kappa_per_angstrom": null
+    },
+    "consumer_module": "tools.product.score_prepared_cross_interactions",
+    "numeric_reference_module": "tools.product.verify_prepared_cross_numerics",
+    "numeric_success_scope": "Agreement for the declared prepared coordinates and model only; not force-field accuracy, affinity, ranking quality or assay-state eligibility.",
+    "installed_native_v4_receptor_Ki_applicable": false,
+    "future_assay_contract": {
+      "endpoint": "IC50",
+      "endpoint_subtype": "enzyme_inhibition_IC50",
+      "status": "unresolved_not_admitted"
+    }
+  },
+  "revision_policy": "This v1 snapshot records unresolved decisions. Resolve them only in a distinct reviewed revision with source evidence; do not flip eligibility flags or rewrite the pinned source receipts."
+}

@@ -49,7 +49,7 @@ REFERENCE_PARAMETER_APPLICABILITY_REVIEWER_IDENTITY_SHA256 = (
     "ffaaea9cebb5975ed140fa0633ea4cb44e1f241f6bc73c916164c0ea5123b584"
 )
 FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256 = (
-    "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
+    "725171ad350f22d471b0a2cfdcd8c94f56cfbb795af3f585d3d655c365e7da0b"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -153,7 +153,7 @@ _RUNTIME_SOURCE_IDENTITIES = (
     ReferencePhysicsSourceIdentity(
         role="canonical_system_and_topology_identity",
         relative_path="betelgeuze_engine_v2/molecular/serialization.py",
-        sha256="971d15d5630410ad6d262e256195baad2380f6826bec516484b8ed7f551c8441",
+        sha256="5a697e413368137308076632437452a7fcb39a1e949f56ace14c749d271195b6",
     ),
     ReferencePhysicsSourceIdentity(
         role="reviewed_candidate_source_provenance_contract",

@@ -1,0 +1,111 @@
+{
+  "archive_manifest": {
+    "bytes": 9040,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/archive-file-manifest.json",
+    "sha256": "9456cf3b26482680b85e1020441c3ee9b0c3c4a1ea447d60615aec1ea36ee38c"
+  },
+  "direct_source_xml": {
+    "PR49": {
+      "bytes": 38402,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR49-direct-source.json",
+      "sha256": "353b45713d8d43d76a2c98ce088c8825fa8c4783704cf412c81b531f88aafb26"
+    },
+    "PR59": {
+      "bytes": 41929,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR59-direct-source.json",
+      "sha256": "665f49365a68dc9eb2b6ebcf699684a8a57a13d1df4f4799f280a814c6471ad0"
+    }
+  },
+  "native_source_xml_exact_mathematical_equivalence_claimed": false,
+  "observations": {
+    "PR49": {
+      "direct_source_internal": {
+        "absolute_energy_error_kcal_per_mol": 1.8326318240724504e-10,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 2.2023272094884305e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 7.660435919481518e-12
+      },
+      "same_math_total": {
+        "absolute_energy_error_kcal_per_mol": 8.86757334228605e-12,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 5.206857167650014e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 9.408341580903227e-12
+      },
+      "source_nonbonded_minus_same_math_energy_kcal_per_mol": -1.837179297581315e-10
+    },
+    "PR59": {
+      "direct_source_internal": {
+        "absolute_energy_error_kcal_per_mol": 1.8917489796876907e-10,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 2.4698465495021082e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 6.969013938420418e-12
+      },
+      "same_math_total": {
+        "absolute_energy_error_kcal_per_mol": 1.0174971976084635e-11,
+        "maximum_absolute_force_component_error_kcal_per_mol_angstrom": 5.6843418860808015e-11,
+        "passed": true,
+        "rms_force_component_error_kcal_per_mol_angstrom": 8.754807460039998e-12
+      },
+      "source_nonbonded_minus_same_math_energy_kcal_per_mol": -1.893454282253515e-10
+    }
+  },
+  "original_constrained_xmls_rejected": true,
+  "pair_contract_comparison": {
+    "bytes": 927,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/pair-contract-comparison.json",
+    "sha256": "3b97770c857764f20f61bfda93358c759c6ede4123eb4b2f11eb41835f3bb154"
+  },
+  "protocol": {
+    "bytes": 4525,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/protocol-v3.json",
+    "sha256": "9f04dbd58009d8d875b58d9115035b2051369170bb705f8f6c05f8159c8bde33"
+  },
+  "qualified_affinity_pose_recovery_HIP_training_or_service": false,
+  "report": {
+    "bytes": 6510,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/README.md",
+    "sha256": "9a3e8654cc79c54e6d7dfd55d5186e37ee5369f7e662bd719f4bd2d5da148c06"
+  },
+  "results": {
+    "bytes": 4528,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/results.json",
+    "sha256": "3db4d1ca69fea6f45b27616f6abd27e2e9dd1515449039d8a74ebc8baa9c58af"
+  },
+  "same_math": {
+    "PR49": {
+      "bytes": 62428,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR49-same-math.json",
+      "sha256": "c4e1f92c19406822bc4bc5bae3d9620d1dc2920882af9b1305112299c38862fc"
+    },
+    "PR59": {
+      "bytes": 65171,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR59-same-math.json",
+      "sha256": "b3dedc20be750a25275bc9452e1a7ffa079dec1e49c0896e66ac57109cb289d3"
+    }
+  },
+  "schema_id": "prepared_pair_independent_single_point_evidence/1",
+  "source_head_context": "fb62c46944ba59b468cca701a127f70c5741e91d",
+  "source_support": {
+    "PR49": {
+      "bytes": 4749,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR49-source-support.json",
+      "sha256": "e77115dc130bb1794b2b9eb9d9fca6e6e26499e9b1429ac041af80364e19012c"
+    },
+    "PR59": {
+      "bytes": 4749,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/PR59-source-support.json",
+      "sha256": "433b37d15727b99749b7df2c16f2bd42c1c43bb5da22d31547bbf73c208ec899"
+    }
+  },
+  "stored_result_verification": {
+    "bytes": 2340,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final/independent-stored-result-verification.json",
+    "sha256": "87d9435b74a82c92e877893b83c02da26c682f37b3caee451b57b6bdd5492ee8"
+  },
+  "tests_lint": {
+    "bytes": 1121,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-pr59-independent-numerics-20260930-fb62c4694-73595825/final-test-and-lint-receipt.json",
+    "sha256": "1fa2d055dbfef10be45a2d94e58f77e562ed5e720ac38e66984c6437ad034f63"
+  },
+  "unchanged_absolute_tolerances": 1e-08
+}

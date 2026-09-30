@@ -61,6 +61,8 @@ on:
       - "config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json"
       - "config/engine_v2_global_orientation_synthetic_contract.json"
       - "tests/fixtures/engine_v2_global_orientation_adversarial_v1.json"
+      - "tests/fixtures/engine_v2_python_sources_eb07925cf.json"
+      - "tests/fixtures/public_evaluator_authenticated_eb07925cf.source"
       - "config/engine_v2_global_orientation_contaminated_development.json"
       - "config/engine_v2_mixed64_geometric_candidate_evidence_v2.json"
       - "config/engine_v2_cpu_performance_profile.json"
@@ -143,6 +145,7 @@ on:
       - "tools/verify_engine_v2_native_fixed64_cpu_profile_v4.py"
       - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/frozen_engine_v2_historical_sources.py"
       - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
       - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
       - "tests/unit/test_audit_engine_v2_ci_authority.py"
@@ -281,6 +284,10 @@ jobs:
             config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json
             config/engine_v2_global_orientation_synthetic_contract.json
             tests/fixtures/engine_v2_global_orientation_adversarial_v1.json
+            tests/fixtures/engine_v2_python_sources_eb07925cf.json
+            tests/fixtures/public_evaluator_authenticated_eb07925cf.source
+            tests/__init__.py
+            tests/unit/__init__.py
             config/engine_v2_global_orientation_contaminated_development.json
             config/engine_v2_mixed64_geometric_candidate_evidence_v2.json
             config/engine_v2_mixed64_proposal_geometry_v3.json
@@ -398,6 +405,7 @@ jobs:
             tests/unit/test_engine_v2_global_orientation_development_metrics.py
             tests/unit/test_engine_v2_global_orientation_development_decision.py
             tests/unit/test_engine_v2_global_orientation_development_protocol.py
+            tests/unit/frozen_engine_v2_historical_sources.py
             tests/unit/test_engine_v2_fixed_mixed64_allocation.py
             tests/unit/test_engine_v2_mixed64_proposal_geometry_v3.py
             tests/unit/test_verify_engine_v2_mixed64_proposal_geometry_v3.py
@@ -688,7 +696,7 @@ jobs:
           grep -q 'historical_execution_operational_authority_false' \
             /tmp/engine-v2-external-reservation-operations-decision.json
           python tools/verify_engine_v2_global_orientation_synthetic_contract.py
-          python tools/verify_engine_v2_global_orientation_contaminated_development.py
+          python tests/unit/frozen_engine_v2_historical_sources.py
           python tools/verify_engine_v2_mixed64_geometric_candidate_evidence_v2.py
           python tools/verify_engine_v2_cpu_performance_profile.py \
             > /tmp/engine-v2-cpu-performance-profile.json

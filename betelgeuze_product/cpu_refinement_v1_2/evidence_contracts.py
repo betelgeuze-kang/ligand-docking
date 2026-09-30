@@ -13,11 +13,15 @@ from betelgeuze_product.cpu_refinement.refinement_comparison import (
     RefinementComparisonConfig, plan_refinement_comparison,
 )
 from .minimization import SolverConfig
-from .fixed_receptor import (FIXED_REPORT_SCHEMA, FIXED_REQUEST_SCHEMA, FIXED_EVALUATOR_ID,
+from .fixed_receptor import (FIXED_REQUEST_SCHEMA, FIXED_EVALUATOR_ID,
                              FIXED_ATTEMPT_SCHEMA, ENERGY_BASIS, CrossParameters, validate_components)
 from .provenance import ResearchError, canonical, exact_fields, finite, integer, require_digest
 from .selection import SelectionConfig
 from .work import STAGES
+from .scoring_profile import (FIXED_REQUEST_SCHEMAS, FIXED_REPORT_SCHEMAS, EXPLICIT_REQUEST_SCHEMA,
+    EXPLICIT_REPORT_SCHEMA, EXPLICIT_REPORT_SCHEMAS, EXPLICIT_MODEL,
+    REGISTERED_REQUEST_SCHEMA, REGISTERED_REPORT_SCHEMA,
+    request_policy, report_policy, validate_proposal_settings)
 
 REPORT_SCHEMA = "cpu_extended_comparison/1.2.1"
 LEGACY_REPORT_SCHEMA = "cpu_extended_comparison/1.2.0"
@@ -69,16 +73,17 @@ def request_binding(request: dict) -> dict:
     names = {"schema_id", "backend", "receptor", "ligand", "parameters", "extensions",
              "solvation", "pocket", "receptor_margin_angstrom", "budget", "solver",
              "comparison", "selection"}
-    fixed_mode = request.get("schema_id") == FIXED_REQUEST_SCHEMA
+    fixed_mode = request.get("schema_id") in FIXED_REQUEST_SCHEMAS
     if fixed_mode:
         names.add("cross_parameters")
         if request["solvation"] is not None:
             raise ResearchError("fixed-receptor model requires explicit null solvation")
     exact_fields(request, names)
-    if (request["schema_id"] not in {"cpu_extended_comparison_request/1.2.0", FIXED_REQUEST_SCHEMA}
+    if (request["schema_id"] not in ({"cpu_extended_comparison_request/1.2.0"} | FIXED_REQUEST_SCHEMAS)
             or request["backend"] != "python_cpu_reference"):
         raise ResearchError("unsupported prepared request")
-    budget, *_ = execution_plan(request["budget"], request["solver"], request["comparison"])
+    budget, _, comparison, *_ = execution_plan(request["budget"], request["solver"], request["comparison"])
+    validate_proposal_settings(request_policy(request), budget, comparison)
     if budget.candidate_count > 64:
         raise ResearchError("CLI candidate capacity exceeded")
     selection_config(request["selection"], budget.top_k)
@@ -111,10 +116,10 @@ def verify_request_settings(request: dict, result: dict) -> None:
     binding = request_binding(request)
     for name in ("budget", "solver", "comparison"):
         same(request[name], result[name], f"request/result {name}")
-    selected = (result["selection_config"] if result["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}
+    selected = (result["selection_config"] if result["schema_id"] in ({REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS)
                 else result["per_arm_selection"]["baseline"]["config"])
     same(request["selection"], selected, "request/result selection")
-    if result["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}:
+    if result["schema_id"] in ({REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS):
         same(result["request_binding"], binding, "admitted input binding")
 
 
@@ -254,18 +259,27 @@ def verify_execution_evidence(report: dict) -> None:
         "implementation_source_sha256", "mode", "paired_decisions", "per_arm_selection",
         "receptor_ligand_interaction_energy_minimized", "refinement_work", "report_sha256", "schema_id",
         "scientifically_validated", "solver", "timing_excludes", "timing_scope"}
-    fixed_mode = report["schema_id"] == FIXED_REPORT_SCHEMA
+    fixed_mode = report["schema_id"] in FIXED_REPORT_SCHEMAS
     if fixed_mode:
         names.add("cross_parameters")
         cross = CrossParameters.from_dict(report["cross_parameters"])
-    if report["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}:
+    if report["schema_id"] == REGISTERED_REPORT_SCHEMA:
+        names.add("proposal_policy")
+    if report["schema_id"] in EXPLICIT_REPORT_SCHEMAS:
+        names.add("scorer")
+        exact_fields(report["scorer"], {"feature_model_id", "context", "config", "backend"})
+        same(report["scorer"]["feature_model_id"], EXPLICIT_MODEL, "scorer identity model")
+        for name in ("context", "config", "backend"):
+            require_digest(report["scorer"][name])
+    if report["schema_id"] in ({REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS):
         names |= {"selection_config", "selection_policy_id", "raw_per_arm_selection", "request_binding"}
         if report["request_binding"] is not None:
             combined = {**report["request_binding"], **{name: report[name] for name in ("budget", "solver", "comparison")},
                         "selection": report["selection_config"]}
             same(report["request_binding"], request_binding(combined), "request binding metadata")
-            same(combined["schema_id"], FIXED_REQUEST_SCHEMA if fixed_mode
-                 else "cpu_extended_comparison_request/1.2.0", "request objective")
+            same(combined["schema_id"], REGISTERED_REQUEST_SCHEMA if report["schema_id"] == REGISTERED_REPORT_SCHEMA
+                 else EXPLICIT_REQUEST_SCHEMA if report["schema_id"] == EXPLICIT_REPORT_SCHEMA
+                 else FIXED_REQUEST_SCHEMA if fixed_mode else "cpu_extended_comparison_request/1.2.0", "request objective")
             if fixed_mode:
                 same(combined["pocket"]["coordinate_frame_id"], cross.coordinate_frame_id,
                      "fixed interaction coordinate frame")
@@ -275,6 +289,7 @@ def verify_execution_evidence(report: dict) -> None:
     exact_fields(report["per_arm_selection"], {"baseline", "refined"})
     budget, solver, comparison, before, after, bound, effective = execution_plan(
         report["budget"], report["solver"], report["comparison"])
+    validate_proposal_settings(report_policy(report), budget, comparison)
     same(report["mode"], comparison.mode, "comparison mode")
     same(report["force_evaluation_bound_per_candidate"], bound, "force bound")
     count(report["force_evaluation_bound_per_candidate"])
@@ -284,7 +299,15 @@ def verify_execution_evidence(report: dict) -> None:
     if fixed_mode:
         evaluator_fields |= {"receptor_system_sha256", "cross_parameters_sha256"}
     exact_fields(report["evaluator"], evaluator_fields)
-    same(report["evaluator"]["evaluator_id"], FIXED_EVALUATOR_ID if fixed_mode else "cpu_corrected_extended_reference/1.2.0", "evaluator")
+    if fixed_mode:
+        same(report["evaluator"]["evaluator_id"], FIXED_EVALUATOR_ID, "evaluator")
+    else:
+        from .openmm_periodic_extension import OPENMM_PERIODIC_EVALUATOR_ID
+        if report["evaluator"]["evaluator_id"] not in {
+                "cpu_corrected_extended_reference/1.2.0", OPENMM_PERIODIC_EVALUATOR_ID}:
+            raise ResearchError("unsupported evaluator identity")
+        if report["evaluator"]["evaluator_id"] == OPENMM_PERIODIC_EVALUATOR_ID:
+            same(report["evaluator"]["solvation_fingerprint_sha256"], None, "unsupported solvent composition")
     if fixed_mode:
         same(report["evaluator"]["receptor_system_sha256"], cross.receptor_system_sha256, "fixed receptor identity")
         same(report["evaluator"]["cross_parameters_sha256"], cross.fingerprint_sha256, "cross parameter identity")
@@ -346,7 +369,7 @@ def verify_execution_evidence(report: dict) -> None:
     for attempt, work in zip(attempts, works, strict=True):
         verify_attempt_execution(attempt, work, solver=effective, steps=budget.max_refinement_steps,
                                  bound=bound, cross=cross if fixed_mode else None,
-                                 current=report["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA})
+                                 current=report["schema_id"] in ({REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS))
     refined = report["arms"]["refined"]
     count(refined["failed_force_evaluation_calls"])
     same(refined["actual_force_evaluation_calls"], sum(w["force_evaluation_calls"] for w in works), "force call total")

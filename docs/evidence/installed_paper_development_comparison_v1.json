@@ -1,0 +1,159 @@
+{
+  "artifact_lifetime_note": "External refs presently live in /tmp; root must retain/archive this packet before cleanup. No protected source data accessed.",
+  "boundary": {
+    "assayed_microstate_verified": false,
+    "assigned_role": null,
+    "calibration_admitted": false,
+    "independent_evaluation_admitted": false,
+    "independent_measurement_denominator": null,
+    "product_ranking_enabled": false,
+    "same_prepared_assay_state_verified": false,
+    "scientifically_validated": false,
+    "source_authenticated": false,
+    "training_admitted": false
+  },
+  "cpu_v1_2_v1_3_solver_files_edited": false,
+  "independent_measurement_denominator": null,
+  "installed_real_pair_preflight": {
+    "bytes": 2174,
+    "path": "/tmp/paper-development-bridge/real-pair/installed-preflight.json",
+    "sha256": "37c669574244ed47f0763698aecb26bfcd19351b03640c1ed4e11d433966bdf8"
+  },
+  "installed_synthetic_probe": {
+    "bytes": 1657,
+    "path": "/tmp/paper-development-bridge/installed-fixture/installed-probe.json",
+    "sha256": "9f03c14685657d0f3148624c0c0672a6b51aadf7ba1e0adc64111dade71e9266"
+  },
+  "installed_synthetic_probe_summary": {
+    "boundary": {
+      "assayed_microstate_verified": false,
+      "assigned_role": null,
+      "calibration_admitted": false,
+      "independent_evaluation_admitted": false,
+      "independent_measurement_denominator": null,
+      "product_ranking_enabled": false,
+      "same_prepared_assay_state_verified": false,
+      "scientifically_validated": false,
+      "source_authenticated": false,
+      "training_admitted": false
+    },
+    "exact_reuse_new_force_or_score_calls": 0,
+    "fresh_dependency_environment": false,
+    "independent_measurement_denominator": null,
+    "observed_molecular_calls": {
+      "force": 13,
+      "score": 10
+    },
+    "package_path": "/tmp/paper-development-bridge/installed-env/lib/python3.10/site-packages/betelgeuze_product/__init__.py",
+    "schema_version": "installed_paper_development_wheel_probe_v1",
+    "stages": [
+      {
+        "exit_code": 0,
+        "name": "preflight",
+        "status": "ready"
+      },
+      {
+        "exit_code": 0,
+        "name": "complete-run",
+        "status": "complete"
+      },
+      {
+        "exit_code": 0,
+        "name": "partial-preparation",
+        "status": "complete"
+      },
+      {
+        "exit_code": 2,
+        "name": "checkpoint",
+        "status": "partial"
+      },
+      {
+        "exit_code": 0,
+        "name": "checkpoint-resume",
+        "status": "complete"
+      },
+      {
+        "exit_code": 0,
+        "name": "verify",
+        "status": "verified"
+      },
+      {
+        "exit_code": 0,
+        "name": "reuse",
+        "status": "complete"
+      },
+      {
+        "exit_code": 2,
+        "name": "unknown-resume",
+        "status": "partial"
+      }
+    ],
+    "status": "passed",
+    "synthetic_inputs_only": true,
+    "unknown_resume_new_force_or_score_calls": 0
+  },
+  "native_FIT_intake_admission_files_edited": false,
+  "original_source_parameter_equivalence_verified": false,
+  "owned_files": {
+    "betelgeuze_product/installed_paper_development_comparison.py": {
+      "bytes": 24408,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/installed_paper_development_comparison.py",
+      "sha256": "dfe8fd99a79608ae6edfcd387b100d03a4f2e5004fd2f8038be7855d98f75891"
+    },
+    "docs/engine_v2_installed_paper_development.md": {
+      "bytes": 6898,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/engine_v2_installed_paper_development.md",
+      "sha256": "f645e99e96fed7247966558dbd7d35a64e00783e2e8f4c202de5616637bb4be5"
+    },
+    "pyproject.toml": {
+      "bytes": 1748,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/pyproject.toml",
+      "sha256": "eafd98b23a94c9f56f1b31bc92abf11bbadb8a50d4240c3eb00568918038f132"
+    },
+    "tests/ci/paper_development_wheel_probe.py": {
+      "bytes": 8059,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tests/ci/paper_development_wheel_probe.py",
+      "sha256": "e891638cfb51b1a52dd5abf6fc9b2ecf88118a42e4cb11b53dd9ffcd2243fec3"
+    },
+    "tests/unit/test_installed_paper_development_comparison.py": {
+      "bytes": 14556,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tests/unit/test_installed_paper_development_comparison.py",
+      "sha256": "03f84ef760fe02463bcc5becb7344a56995053f784cdc77f2f582d832cf303ae"
+    }
+  },
+  "real_pair_optimization_executed_by_this_agent": false,
+  "real_pair_protocol": {
+    "bytes": 1801,
+    "path": "/tmp/paper-development-bridge/real-pair/protocol-default.json",
+    "sha256": "96313d9712a308e093150202ac2b4f014d51eb08e41b4f79ecd551d8263854d7"
+  },
+  "real_source_labels_admitted": 0,
+  "real_source_roles_assigned": 0,
+  "schema_version": "installed_paper_development_implementation_evidence_v1",
+  "source_checkout_head": "fb62c46944ba59b468cca701a127f70c5741e91d",
+  "source_only_real_pair_metadata_preflight": {
+    "bytes": 1594,
+    "path": "/tmp/paper-development-bridge/real-pair/metadata-preflight.json",
+    "sha256": "98c57e23da8cdf898e10851dc684b2b799c3b531bfeac2e9ca22e3b619e68426"
+  },
+  "source_xml_use": "charge_origin_tokens_and_atom_map_only",
+  "validation": {
+    "diff_check_passed": true,
+    "focused_synthetic_cases_passed": 20,
+    "hosted_CI_executed_here": false,
+    "independent_read_only_metadata_cases_passed": 13,
+    "independent_review_blocking_findings_remaining": 0,
+    "independent_review_solver_cases_deselected": 7,
+    "pytest_wall_seconds": 47.35,
+    "ruff_passed": true,
+    "total_cases_passed": 121,
+    "unchanged_native_binding_cartesian_regression_cases_passed": 101
+  },
+  "wheel": {
+    "bytes": 2500503,
+    "path": "/tmp/paper-development-bridge/wheel/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+    "sha256": "e30ca2394df3b0df01e844a76af793e4176e3e6321b2232af64b86109abf55aa"
+  },
+  "wheel_bridge_bytes_equal_current_source": true,
+  "wheel_console_entry_present": true
+}

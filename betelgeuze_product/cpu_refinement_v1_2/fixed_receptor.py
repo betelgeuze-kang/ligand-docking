@@ -247,14 +247,17 @@ class FixedReceptorEvaluator:
         force = base.term.forces + forces
         if not bool(torch.isfinite(energy).all()) or not bool(torch.isfinite(force).all()):
             raise FloatingPointError("nonfinite total fixed-receptor objective")
+        # Revalidate once after the cross evaluation, then use that same identity
+        # for both receipt fields. Public identity/cross boundary checks remain.
+        identity = self.identity()
         term = replace(base.term, name=FIXED_EVALUATOR_ID, energy=energy, forces=force,
                        energy_descriptor=replace(base.term.energy_descriptor, name="fixed_receptor_energy", semantics=ENERGY_BASIS),
                        force_descriptor=replace(base.term.force_descriptor, name="fixed_receptor_ligand_force",
                                                 semantics="negative_ligand_coordinate_gradient_of_fixed_receptor_total"),
-                       provenance_sha256=digest({"evaluator": self.identity(), "internal": base.term.provenance_sha256,
+                       provenance_sha256=digest({"evaluator": identity, "internal": base.term.provenance_sha256,
                                                  "ligand": canonical_system_sha256(system)}))
         return ExtendedEvaluation(term, MappingProxyType(components), base.constraint_observations,
-                                  self.fingerprint_sha256, (*base.scientific_blockers, "fixed_receptor_model_not_scientifically_validated"))
+                                  digest(identity), (*base.scientific_blockers, "fixed_receptor_model_not_scientifically_validated"))
 
 
 def components_document(evaluation: ExtendedEvaluation) -> dict:

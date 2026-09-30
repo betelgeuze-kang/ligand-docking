@@ -19,6 +19,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
 )
 from betelgeuze_engine_v2.io import (  # noqa: E402
     PDBParseError,
+    SDF_PARSER_VERSION,
+    SDFParseError,
     parse_pdb,
     parse_sdf_v2000,
     pdb_string,
@@ -26,11 +28,13 @@ from betelgeuze_engine_v2.io import (  # noqa: E402
 )
 from betelgeuze_engine_v2.molecular import (  # noqa: E402
     CanonicalSerializationError,
+    MolecularValidationError,
     all_atom_system_from_canonical_json,
     canonical_coordinates_sha256,
     canonical_system_json_bytes,
     canonical_system_sha256,
     canonical_topology_sha256,
+    validate_all_atom_system,
     write_canonical_system_json,
 )
 
@@ -123,6 +127,69 @@ def test_strict_pdb_and_sdf_writers_round_trip_supported_fields() -> None:
         atol=5.0e-5,
         rtol=0.0,
     )
+
+
+def test_sdf_wedge_anchor_survives_canonical_endpoints_and_writer() -> None:
+    atoms = [
+        ("C", (0.0, 0.0, 0.0)),
+        ("F", (1.0, 1.0, 1.0)),
+        ("Cl", (-1.0, -1.0, 1.0)),
+        ("Br", (-1.0, 1.0, -1.0)),
+        ("H", (1.0, -1.0, -1.0)),
+    ]
+
+    def source(first: int, second: int) -> str:
+        lines = ["tetrahedral-wedge", "EngineV2", "orientation fixture",
+                 f"{5:3d}{4:3d}  0  0  0  0            999 V2000"]
+        for element, (x, y, z) in atoms:
+            lines.append(
+                f"{x:10.4f}{y:10.4f}{z:10.4f} {element:<3}{0:2d}{0:3d}"
+                "  0  0  0  0  0  0  0  0  0  0  0  0"
+            )
+        lines.append(f"{first:3d}{second:3d}{1:3d}{1:3d}  0  0  0")
+        lines.extend(f"{1:3d}{index:3d}{1:3d}{0:3d}  0  0  0"
+                     for index in (3, 4, 5))
+        return "\n".join([*lines, "M  END", "$$$$", ""])
+
+    forward = parse_sdf_v2000(source(1, 2))
+    reverse = parse_sdf_v2000(source(2, 1))
+    assert [(bond.atom_i, bond.atom_j, bond.stereo) for bond in forward.bonds] == [
+        (0, 1, "up"), (0, 2, "none"), (0, 3, "none"), (0, 4, "none")]
+    assert [(bond.atom_i, bond.atom_j, bond.stereo) for bond in reverse.bonds] == [
+        (0, 1, "up"), (0, 2, "none"), (0, 3, "none"), (0, 4, "none")]
+    assert forward.bonds[0].metadata["sdf_v2000_stereo_first_atom_index"] == 0
+    assert reverse.bonds[0].metadata["sdf_v2000_stereo_first_atom_index"] == 1
+    assert forward.provenance.parser_version == reverse.provenance.parser_version == SDF_PARSER_VERSION
+    assert canonical_topology_sha256(forward) != canonical_topology_sha256(reverse)
+    for system, expected_anchor in ((forward, 0), (reverse, 1)):
+        report = validate_all_atom_system(system)
+        assert report.stereochemistry_declared is True
+        assert report.stereochemistry_geometry_verified is False
+        assert any(issue.code == "bond_stereo_geometry_unverified"
+                   for issue in report.issues)
+        written, _ = sdf_v2000_string(system)
+        restored = parse_sdf_v2000(written)
+        assert restored.bonds[0].metadata["sdf_v2000_stereo_first_atom_index"] == expected_anchor
+        canonical = all_atom_system_from_canonical_json(canonical_system_json_bytes(system))
+        assert canonical.bonds[0].metadata["sdf_v2000_stereo_first_atom_index"] == expected_anchor
+    for metadata in (
+        {},
+        {"sdf_v2000_stereo_first_atom_index": True},
+        {"sdf_v2000_stereo_first_atom_index": 4},
+    ):
+        invalid_bond = replace(reverse.bonds[0], metadata=metadata)
+        invalid_system = replace(reverse, bonds=(invalid_bond, *reverse.bonds[1:]))
+        invalid_report = validate_all_atom_system(invalid_system)
+        assert invalid_report.topology_consistent is False
+        assert any(issue.code == "bond_stereo_anchor_invalid" for issue in invalid_report.issues)
+        with pytest.raises(MolecularValidationError, match="bond_stereo_anchor_invalid"):
+            sdf_v2000_string(invalid_system)
+    invalid_order = source(1, 2).replace(
+        f"{1:3d}{2:3d}{1:3d}{1:3d}  0  0  0",
+        f"{1:3d}{2:3d}{2:3d}{1:3d}  0  0  0",
+    )
+    with pytest.raises(SDFParseError, match="directed stereo requires a single bond"):
+        parse_sdf_v2000(invalid_order)
 
 
 def test_pdb_connectivity_records_are_rejected_or_explicitly_recorded() -> None:

@@ -5,13 +5,9 @@ coherently rewriting every retained observation is outside this verification.
 """
 
 from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
-from betelgeuze_engine_v2.docking.scorer_v1 import (
-    ScorerV1Terms,
-    SCORER_V1_SCORE_ID,
-    SCORER_V1_APPLICABILITY_DOMAIN_ID,
-)
-from betelgeuze_engine_v2.docking.scoring import DockingScoreDescriptor, ScoreDirection
 from .score_replay import _IDENTITIES, _VALUES, _COUNTS
+from .scoring_profile import (plan_model, descriptor as expected_score_descriptor, terms_class,
+    REGISTERED_PLAN_SCHEMA, plan_policy, validate_proposal_settings)
 from .provenance import (
     ResearchError,
     digest,
@@ -114,21 +110,31 @@ def _verify(doc):
             "selection",
             "force_bound",
             "arms",
-        },
+        } | ({'proposal_policy'} if plan['schema_id'] == REGISTERED_PLAN_SCHEMA else set()),
     )
-    same(plan["schema_id"], "cpu_candidate_comparison_plan/1.0.0", "plan schema")
+    scoring_model = plan_model(plan)
     same(digest(plan), doc["plan_sha256"], "plan digest")
     if plan["external_request_sha256"] is not None:
         require_digest(plan["external_request_sha256"])
     for name in ("source", "authority", "problem", "search_space", "validity_context"):
         require_digest(plan[name])
-    exact_fields(plan["scorer"], {"context", "config", "backend"})
-    for value in plan["scorer"].values():
-        require_digest(value)
+    for name in ("context", "config", "backend"):
+        require_digest(plan["scorer"][name])
     n = integer(plan["atom_count"], 1, 256)
     budget, solver, comparison, before, after, bound, effective = execution_plan(
         plan["budget"], plan["solver"], plan["comparison"]
     )
+    validate_proposal_settings(plan_policy(plan), budget, comparison)
+    if plan['schema_id'] == REGISTERED_PLAN_SCHEMA:
+        from .registered_evidence import verify_registered_evidence
+        receipt = verify_registered_evidence(plan['proposal_policy'], atom_count=n,
+            authority=plan['authority'], seed=budget.seed, coordinate_frame=plan['coordinate_frame'],
+            receptor_system_sha256=plan['evaluator']['receptor_system_sha256'],
+            problem=plan['problem'], search_space=plan['search_space'],
+            rows=doc['rows'], attempts=doc['attempts'])
+        for arm in plan['arms'].values():
+            same(arm['guidance'], receipt['receipt_sha256'], 'registered proposal policy receipt')
+            same(arm['proposals'], [receipt['proposal_fingerprint_sha256']], 'registered proposal identities')
     same(doc["mode"], comparison.mode, "comparison mode")
     same(plan["force_bound"], bound, "force reservation")
     selection = selection_config(plan["selection"], budget.top_k)
@@ -137,11 +143,14 @@ def _verify(doc):
         if plan["cross_parameters"] is None
         else CrossParameters.from_dict(plan["cross_parameters"])
     )
-    same(
-        plan["evaluator"]["evaluator_id"],
-        EVALUATOR_ID if cross is None else FIXED_EVALUATOR_ID,
-        "objective identity",
-    )
+    if cross is not None:
+        same(plan["evaluator"]["evaluator_id"], FIXED_EVALUATOR_ID, "objective identity")
+    else:
+        from .openmm_periodic_extension import OPENMM_PERIODIC_EVALUATOR_ID
+        if plan["evaluator"]["evaluator_id"] not in {EVALUATOR_ID, OPENMM_PERIODIC_EVALUATOR_ID}:
+            raise ResearchError("unsupported objective identity")
+        if plan["evaluator"]["evaluator_id"] == OPENMM_PERIODIC_EVALUATOR_ID:
+            same(plan["evaluator"]["solvation_fingerprint_sha256"], None, "unsupported solvent composition")
     if cross is not None:
         same(
             plan["coordinate_frame"],
@@ -158,14 +167,7 @@ def _verify(doc):
             cross.receptor_system_sha256,
             "fixed receptor binding",
         )
-    descriptor = DockingScoreDescriptor(
-        SCORER_V1_SCORE_ID,
-        ScoreDirection.MINIMIZE,
-        None,
-        "uncalibrated_dimensionless_chemistry_pose_ordering_score",
-        False,
-        applicability_domain_id=SCORER_V1_APPLICABILITY_DOMAIN_ID,
-    )
+    descriptor = expected_score_descriptor(scoring_model)
     same(doc["score_descriptor"], descriptor.to_dict(), "score descriptor")
     for field in ("arms",):
         exact_fields(plan[field], {"baseline", "refined"})
@@ -328,7 +330,7 @@ def _verify(doc):
                     raise ResearchError("failed refinement produced success")
                 same(stages["score.evaluate"]["completed"], 1, "score completed")
                 terms = row["terms"]
-                restored = ScorerV1Terms(
+                restored = terms_class(scoring_model)(
                     **{k: terms[k] for k in _IDENTITIES + _COUNTS},
                     **{k: float.fromhex(terms[k + "_binary64_hex"]) for k in _VALUES},
                 )

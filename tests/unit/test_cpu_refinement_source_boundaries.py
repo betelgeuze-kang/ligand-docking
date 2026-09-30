@@ -11,6 +11,10 @@ import pytest
 
 from betelgeuze_product import refinement_comparison_workflow as workflow
 from tests.unit.test_refinement_comparison_workflow import request_fixture
+from tests.unit.frozen_engine_v2_historical_sources import (
+    historical_python_source_rows,
+    verify_known_live_source_delta,
+)
 from tools import verify_engine_v2_global_orientation_contaminated_development as verifier
 
 RESEARCH_FILES = (
@@ -22,10 +26,10 @@ RESEARCH_FILES = (
 )
 
 
-def test_frozen_engine_source_manifest_is_unchanged():
-    scope = verifier.SCORER_PYTHON_SOURCE_SCOPE
-    rows = verifier._source_manifest(roots=tuple(scope["roots"]), files=tuple(scope["files"]))
-    # Existing frozen identity, not a new seal for the research implementation.
+def test_frozen_engine_source_manifest_retains_historical_identity():
+    rows = historical_python_source_rows()
+    verify_known_live_source_delta()
+    # The original seal is checked against pinned pre-3ad331560 source rows.
     assert verifier._sha256(rows) == (
         "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7"
     )

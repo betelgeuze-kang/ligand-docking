@@ -1,0 +1,29 @@
+{
+  "activity_threshold_ki_nm": 1000,
+  "assigned_roles_changed": false,
+  "checkpoint_sha256": "818f2b324f5b1e1c5e17aaf68de791edf9dfb3476dbffce1177cb3cb08ba1dea",
+  "comparators": [
+    "unchanged registered Ridge",
+    "original frozen fit mean"
+  ],
+  "created_at_utc": "2026-09-29T05:43:37.227292+00:00",
+  "fresh128_opened": false,
+  "independent_evaluation": false,
+  "input_state": "unchanged proposed neutral SMILES in exact ledger; no state search",
+  "metrics_by_paper": [
+    "exact pKi MAE",
+    "exact pKi RMSE",
+    "observed and predicted range",
+    "observed and predicted activity at fixed pKi >= 6"
+  ],
+  "new_training_runs": 0,
+  "promotion_status": "NOT_PROMOTED",
+  "protected_outcomes_read": false,
+  "reference_policy": "SB-258585 cited value is metadata for full Table 1 screen only; never a new experimental row",
+  "schema_version": "human_5ht6_primary_diagnostic_plan_v1",
+  "scope": "Retrospective published-source diagnostic; all source values were already reviewed. Not a blind or independent evaluation.",
+  "source_ledger_sha256": "e5b5af4caa0e4efa3e5e3a502236357276051044431f45bda77b8b5163ca0452",
+  "source_paper_count": 5,
+  "source_row_count": 30,
+  "uncertainty_policy": "retain original SD/SEM, do not treat them as raw replicates or confidence intervals"
+}

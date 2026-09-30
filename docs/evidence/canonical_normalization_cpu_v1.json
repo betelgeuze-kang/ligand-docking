@@ -1,0 +1,444 @@
+{
+  "artifacts": [
+    {
+      "bytes": 34213,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/protocol.json",
+      "sha256": "7fc45a07946f8e48d849c76d136008fdbebf8a1609f9f46fad958079986a4048"
+    },
+    {
+      "bytes": 16966,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/result.json",
+      "sha256": "863071862957ce34b3530ba78f31afa8b64090fdaf078d3ad66c1ecb2227d206"
+    },
+    {
+      "bytes": 257,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/objective-process.json",
+      "sha256": "4af8db3e2136d2b182cc88462c8211979f48544b2eea656f4b5260bdaaa760f9"
+    },
+    {
+      "bytes": 66,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/objective-completion.json",
+      "sha256": "709dffad3ca0074fafd89e49fa7544b9b5cae5603ed1f01cac57a1802b9bfbda"
+    },
+    {
+      "bytes": 18706,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/independent-final-review.json",
+      "sha256": "f4c50a4fc0641944f7b0a245e252c59b6d899392ac444b5f51292294c0f7ca89"
+    },
+    {
+      "bytes": 5013,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/independent-final-review.md",
+      "sha256": "83682836272ae8630ca524088137b0f97865d7109af4ffb3040a8da0e3a0c7ac"
+    },
+    {
+      "bytes": 96,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/focused-tests-completion.json",
+      "sha256": "45be2be214b5b8b838e7529c3410031d70662fab9f4daade00e350bac1341515"
+    },
+    {
+      "bytes": 123159,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/focused-tests.log",
+      "sha256": "8ac35574505471ed0779775c0b15298fd155718d007472fb163fa2d0be9295b2"
+    },
+    {
+      "bytes": 1059,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/historical-tests-completion.json",
+      "sha256": "c2dd5ec5a07fa5b839200d9f332eb6a2c280884d81c4631f9230d8cfbbb01ed9"
+    },
+    {
+      "bytes": 5603,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final_tests.py",
+      "sha256": "86e3761cfc4a0929796d621a579b32da8e8c4cded6700f10183ba8bac5c91ca8"
+    },
+    {
+      "bytes": 60494,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final-tests-protocol.json",
+      "sha256": "aeaac43059b4585745b36626c0eda06fe70b68184690e2995f00d812618471a1"
+    },
+    {
+      "bytes": 969,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final-tests-native.json",
+      "sha256": "f87f28bb79c97f5bb618a895bfa356a48e2fd572c692237afeb78edbb6846727"
+    },
+    {
+      "bytes": 2961,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final-tests-process.json",
+      "sha256": "4e0b2a5da33bf92a693959675ae23d3f3cd56d69c2cbd57f37bf8961ef10ff5f"
+    },
+    {
+      "bytes": 121903,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final-tests-result.json",
+      "sha256": "5aacb15b058bf0eb15191a5da4f6a32c0d38485e9da24f0cf371b971fb9c60d0"
+    },
+    {
+      "bytes": 85542,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final-tests.xml",
+      "sha256": "d1abd7d3a2cbcdce7c3e5090d0ab8caf67faecdd9d83c631273477ab106c3f9d"
+    },
+    {
+      "bytes": 671,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/final-tests.log",
+      "sha256": "7d019265ca0e829541110711042aeb31e77d9da04d441ba1cc9882f378689656"
+    },
+    {
+      "bytes": 2876,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/README.md",
+      "sha256": "abdc55b186c82e0d64e677d7a336603aa6f93ffdda5080294475f8ef54adc018"
+    },
+    {
+      "bytes": 4706,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-canonical-cpu-comparison-20260929-dypdzoup/completed-file-manifest.json",
+      "sha256": "b24993ac3dee50bb35fc0e12a32ee92c2f284f6cc86ac6119048541dc9abd31a"
+    },
+    {
+      "bytes": 22050,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-canonical-profile-20260929-pu21jq79/final/measurement.json",
+      "sha256": "cf0e15bd31b50253a0c468fc049c06d10b6c4ebb201669c096ae6372b52f2076"
+    },
+    {
+      "bytes": 2128,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-canonical-profile-20260929-pu21jq79/final/protocol.json",
+      "sha256": "c00b9ab48a71145445a6cd885c52a2b48276677925dbf116818db8aedaf29798"
+    },
+    {
+      "bytes": 3466,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-canonical-profile-20260929-pu21jq79/README.md",
+      "sha256": "1e97a339d1c579cec23cceeefbe77711d81627df698747d866497686ade648ed"
+    },
+    {
+      "bytes": 1033,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-canonical-profile-20260929-pu21jq79/validation.json",
+      "sha256": "783f8323327028899d7dc37ce4ad3be64986f2e357a01a3e84e2c9c7d4794914"
+    },
+    {
+      "bytes": 2075,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr49-canonical-profile-20260929-pu21jq79/checksums.json",
+      "sha256": "f57d00eee891346885c34b331501e9a800925174bae671450f0f525ecc96bd2d"
+    },
+    {
+      "bytes": 3566,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/predeclaration.json",
+      "sha256": "0b8d8f5940922c1e989d4b4b027a8a463ee17932927651227b546686ee635607"
+    },
+    {
+      "bytes": 1446,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/build-command.sh",
+      "sha256": "461a7669307d311d55984c6ce48c4c32965639776cdc4dfc8171f22e391886b6"
+    },
+    {
+      "bytes": 2329,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/build-result.json",
+      "sha256": "38c44e6d9f2f7f25268eab9299cf9d94992826f28e9302eb64ce0f5efd556570"
+    },
+    {
+      "bytes": 5334,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/native-import-verification.json",
+      "sha256": "4a5f8d22bb11212ee8c2abf3eeb6d819dd64bd1af75d0f7d90e7841ecabfef61"
+    },
+    {
+      "bytes": 208,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/input-postcheck.json",
+      "sha256": "2230d63bbebc7edd590bef5d5f385c3150ad3be9da33c94f64c481ee0351a6a5"
+    },
+    {
+      "bytes": 743,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/final-state.json",
+      "sha256": "ad31d22a6e44461e7b893fcf2982cbc0a54571589e3235d9f519245d05ecf5a6"
+    },
+    {
+      "bytes": 2985,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/README.md",
+      "sha256": "29e8ac5963418eba2fb28bc957c6ecd9a46d432e5e082cf261468a4f53d01c86"
+    },
+    {
+      "bytes": 7050,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/manifest.v1.json",
+      "sha256": "8b2f0fe66ffd40a36bd4a4e2795a52e4b6298941be605966fd2a606a99eecadb"
+    },
+    {
+      "bytes": 3473,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/README.md",
+      "sha256": "dbc979204c0858ddf0754e920defd1fca8149a2f66a766637035674a108a51f9"
+    },
+    {
+      "bytes": 116067,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/staging-receipt.json",
+      "sha256": "928662be3bef5b38517a59410187024df5d1d9b308e68afa182fc70ccfb08f72"
+    },
+    {
+      "bytes": 110001,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/wheel-members.json",
+      "sha256": "7b1d0a8cdab23c973458010a71502d1911b5c252ad2b21a04cbc1e30e7a72972"
+    },
+    {
+      "bytes": 104681,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/installed-smoke.json",
+      "sha256": "9022ceb73a314507a239c209977f15fc3b4f9a040bb8396b24ffb2dc27800c97"
+    },
+    {
+      "bytes": 2776,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/validation-result.json",
+      "sha256": "004b319cf5dc14e2939fd6ddc310fc473cc9cf078a673f1d75c9dca366342c4c"
+    },
+    {
+      "bytes": 302304,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/artifact-checksums.json",
+      "sha256": "57cbf32f68a341bed3b48c9016a5ab25f218f88d9ee536040058ab38c92f5474"
+    },
+    {
+      "bytes": 393,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/canonical-serialization-wheel-20260929-ttpevsfb/storage-accounting.json",
+      "sha256": "b2c0d0a2a5a0d9c3c182bd0d936a5541c7162aeea9baa9f32c32b4d10040be67"
+    },
+    {
+      "bytes": 159153,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/protocol.json",
+      "sha256": "542ac13404704ca832510260f2cd20f24302e1c79aaee421b2780bbf2489a632"
+    },
+    {
+      "bytes": 10271,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/execution-result.json",
+      "sha256": "08cd34fca5a9c5a9aae24c36490eaa85e162641108f8920068accaa560955ad0"
+    },
+    {
+      "bytes": 7600,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/comparison.json",
+      "sha256": "6f52ac1fe785d00325016789fe6b610d14fb016f9529401cea06fe39128fcf78"
+    },
+    {
+      "bytes": 19539,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/cost-and-failure-accounting.json",
+      "sha256": "cfc0ec02e458645da141f200cf9be0e5b9909c898860f45de590fd9e2c337d85"
+    },
+    {
+      "bytes": 10737,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/independent-output-audit.py",
+      "sha256": "84d4bed53566f755cde15a4b367553c6b261778dd16b1841c29a71d9fbb4788d"
+    },
+    {
+      "bytes": 374755,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/independent-output-audit.json",
+      "sha256": "0726f9e5d99f85464512d12c07c0ea4fb38a5c5463c635a23211462fdd8c4855"
+    },
+    {
+      "bytes": 4369,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/prior-interrupted-attempt-audit.json",
+      "sha256": "9f7e9c55ce0b898e25eea656fc14711d713f06d7ae13e9efbd5075ca87d61bac"
+    },
+    {
+      "bytes": 5102,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/README.md",
+      "sha256": "0fd85f7288ede02984cb43ee2964de5ae6c1e345bd301f86007248021d69d784"
+    },
+    {
+      "bytes": 175651,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-closeout-20260930-_1v5pesv/packet-manifest.json",
+      "sha256": "00fa075445d04a7d900c36b6ff3e68490365ae6089567f6290bf061f45566258"
+    },
+    {
+      "bytes": 3381,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-pr566-trajectory-delivery-20260929-kmmpckzm/installed-current-root-audit-20260930.json",
+      "sha256": "08b52ead13879bee29196a52b0d9618c568ef2db2e035a513a00354b5cc736eb"
+    }
+  ],
+  "candidate_serializer_sha256": "5a697e413368137308076632437452a7fcb39a1e949f56ace14c749d271195b6",
+  "evaluator_comparison": {
+    "denominator": {
+      "attempted": 18,
+      "completed": 18,
+      "failed": 0,
+      "planned": 18
+    },
+    "full_output_bytes_identical": true,
+    "limits": [
+      "one host/process, small balanced warm measurement",
+      "same surrounding candidate source with a one-function control, not two installed releases",
+      "fixed-state evaluation only; no search, minimization or end-to-end cost measurement"
+    ],
+    "measured_evaluations_per_arm": 8,
+    "measurement_stats": {
+      "baseline": {
+        "cpu_seconds": {
+          "mean": 1.8267730627499996,
+          "median": 1.819483502499999,
+          "sum": 14.614184501999997
+        },
+        "wall_seconds": {
+          "mean": 1.8269104003775283,
+          "median": 1.8195973289984977,
+          "sum": 14.615283203020226
+        }
+      },
+      "candidate": {
+        "cpu_seconds": {
+          "mean": 1.7139332578750002,
+          "median": 1.7092374980000011,
+          "sum": 13.711466063000001
+        },
+        "wall_seconds": {
+          "mean": 1.714064168252662,
+          "median": 1.7093319000123302,
+          "sum": 13.712513346021296
+        }
+      }
+    },
+    "setup_wall_seconds": 4.95721799400053,
+    "source_and_input_hashes_unchanged": true,
+    "states": 4,
+    "wrapper_wall_seconds_before_publication": 36.79809877299704
+  },
+  "guard_measurement": {
+    "component_scopes": "separate replayed calls after enclosing guard; not instrumented subspans; do not sum",
+    "direct_canonical_bytes_equal": true,
+    "guard_pairs_faster": 6,
+    "mean_seconds_baseline": 0.586296198755,
+    "mean_seconds_candidate": 0.570947945631,
+    "measured_pairs": 8,
+    "normalization_replay_mean_seconds_baseline": 0.214525937241,
+    "normalization_replay_mean_seconds_candidate": 0.166466608505,
+    "source_coverage": "serializer and receptor/cross input pins, not full 224-file manifest"
+  },
+  "native_source_manifest_file_count": 224,
+  "native_source_manifest_sha256": "d02bfc102851834e8c823ca0723ad23a34cc4e8ec2774fa29d51d24f96f1870d",
+  "preserved": [
+    "fresh raw structural digest",
+    "fresh canonical traversal and digest",
+    "force equations and parameters",
+    "scorer and acceptance limits",
+    "source reservations and null roles",
+    "initial failed regression and interrupted native build"
+  ],
+  "product_source_changes": [
+    "betelgeuze_engine_v2/molecular/serialization.py"
+  ],
+  "qualification": {
+    "HIP_parity": false,
+    "affinity": false,
+    "end_to_end_speedup": false,
+    "new_role_assignments": 0,
+    "pose_recovery": false,
+    "service_ready": false,
+    "training_calibration_evaluation_admission": false
+  },
+  "schema_id": "canonical_normalization_cpu_evidence/1.0.0",
+  "source_parent_commit": "031894211edb613a7659bd08aaab48d44f643f20",
+  "validation": {
+    "current_installed_registered_pose_replay": {
+      "baseline_coordinates_preserved": true,
+      "baseline_resume_costs": {
+        "historical_force_calls": 0,
+        "historical_score_calls": 1,
+        "intent_counts": [
+          1
+        ],
+        "interrupted_attempts_unknown_cost": 0,
+        "new_candidates": 0,
+        "new_force_calls": 0,
+        "new_score_calls": 0,
+        "reused_candidates": 1
+      },
+      "comparison_scope": "Exact current-source arm rows, attempts/checkpoint digests, selections and scientific settings. Timings, journaling costs and outer report files differ by execution mode. No previous-source output hash equality claim.",
+      "exact_canonical_scope_comparisons_in_root_audit": 13,
+      "fresh_dependency_install_verified": false,
+      "full_checkpoint_state_published": false,
+      "nested_timings_do_not_sum": true,
+      "no_mid_minimizer_resume_proved": true,
+      "package_rebuild_or_copy": false,
+      "paired_decisions": [
+        {
+          "candidate_id": "pose-00000-3b53f1682d27",
+          "reason": "refined_pose_invalid_or_incomplete",
+          "variant": "baseline"
+        }
+      ],
+      "prior_interrupted_attempt": {
+        "consumed_cpu_seconds": null,
+        "consumed_wall_seconds": null,
+        "exact_termination_time": null,
+        "missing_work_unknown": true,
+        "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-20260929-ea_ovsx2",
+        "preserved": true,
+        "protocol": {
+          "bytes": 154481,
+          "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-installed-current-replay-20260929-ea_ovsx2/protocol.json",
+          "sha256": "bd396962786e9946dd6e527fbb97ada950973d2fc9e49380cf90102da8cb07ea"
+        },
+        "status": "interrupted_without_completion"
+      },
+      "raw_force_converged": false,
+      "refined_resume_costs": {
+        "historical_force_calls": 0,
+        "historical_score_calls": 0,
+        "intent_counts": [
+          1
+        ],
+        "interrupted_attempts_unknown_cost": 0,
+        "new_candidates": 1,
+        "new_force_calls": 38,
+        "new_score_calls": 1,
+        "reused_candidates": 0
+      },
+      "refined_valid": false,
+      "refinement_attempt": {
+        "accepted_iterations": 32,
+        "converged": false,
+        "evaluation_count": 38,
+        "final_energy": -96.76290541772049,
+        "initial_energy": 399.91318138974935,
+        "max_constraint_residual": 0.0,
+        "max_tangent_force": 37.95144208186961,
+        "minimization_status": "max_iterations_reached",
+        "status": "success"
+      },
+      "resume_boundary": "After one baseline candidate is journaled, before refined candidate starts; no mid-minimizer resume claim.",
+      "runtime_backend": "Python CPU reference; imported native dependency separately verified",
+      "shared_dependencies": true,
+      "source_and_input_postcheck_completed": true,
+      "stage_denominator": {
+        "attempted": 6,
+        "completed": 6,
+        "failed": 0,
+        "planned": 6,
+        "unfinished": 0
+      },
+      "status": "passed",
+      "whole_elapsed_seconds": 215.790733262,
+      "whole_scope": "Existing installed packages only: preflight, continuous and verify, pause/resume and verify, equality audit, source/input postflight; excludes earlier build/install and this completion publication."
+    },
+    "current_product_wheel": {
+      "dependencies_shared": true,
+      "fresh_dependency_installation": false,
+      "implementation_manifest_files": 224,
+      "owned_files_match": 513,
+      "owned_imported_modules": 176,
+      "smoke_checks_passed": 376
+    },
+    "final_same_29_file_selection": {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "skipped": 0,
+        "tests": 529
+      },
+      "full_repository_suite": false,
+      "native_import": {
+        "argument_count": 27,
+        "extension": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/install-target/betelgeuze_engine_v2_native/betelgeuze_engine_v2_native.cpython-310-x86_64-linux-gnu.so",
+        "module": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-native-abi-resume-20260929-ng1lf5z7/install-target/betelgeuze_engine_v2_native/__init__.py",
+        "signature": "(authority_input_receipt_sha256, receptor_system_sha256, ligand_system_sha256, backend_receipt_sha256, receptor_coordinates, ligand_reference_coordinates, receptor_charges, ligand_charges, receptor_radii, ligand_radii, receptor_epsilons, ligand_epsilons, receptor_hydrophobic, ligand_hydrophobic, receptor_acceptors, ligand_acceptors, receptor_donors, ligand_donors, ligand_exclusions, rotor_quads, pocket_center, pocket_radius, config_values, weights, max_receptor_pairs, max_ligand_pairs, thread_count)"
+      },
+      "pytest_wall_seconds": 61.36,
+      "required_native_cases_executed_and_passed": true,
+      "source_hashes_unchanged": true,
+      "wrapper_wall_seconds": 62.37182524200762
+    },
+    "first_broad_run": {
+      "errors": 41,
+      "failed": 4,
+      "passed": 483,
+      "preserved": true
+    },
+    "focused_differential_tests_passed": 87,
+    "hosted_CI": "separate exact-head state; local tests do not imply hosted success"
+  }
+}

@@ -201,6 +201,8 @@ def parse_sdf_v2000(
             raise SDFParseError(f"unsupported V2000 bond type {bond_type}")
         if stereo_code not in _BOND_STEREO:
             raise SDFParseError(f"unsupported V2000 bond stereo code {stereo_code}")
+        if stereo_code and bond_type != 1:
+            raise SDFParseError("V2000 directed stereo requires a single bond")
         bonds.append(
             Bond(
                 index=len(bonds),
@@ -210,6 +212,10 @@ def parse_sdf_v2000(
                 aromatic=bond_type == 4,
                 stereo=_BOND_STEREO[stereo_code],
                 source="sdf_v2000_bond_table",
+                # The CTfile wedge points at its first atom. Canonical Bond
+                # endpoints are sorted, so retain that source orientation.
+                metadata=({"sdf_v2000_stereo_first_atom_index": first}
+                          if stereo_code else {}),
             )
         )
 

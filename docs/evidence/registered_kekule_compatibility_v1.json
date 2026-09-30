@@ -1,0 +1,58 @@
+{
+  "artifact_manifest": {
+    "bytes": 64858,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-registered-kekule-20260930-uaald7k5/artifact-manifest.json",
+    "sha256": "b24bf7088eb29ba152993306be8ef233cc9be2d3458ea5ce2ae3fc9b624b31e1"
+  },
+  "base_head": "cd5ecb034b36bf5affc9e3389df67b43b246f13d",
+  "final_code_review": {
+    "bytes": 6428,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/registered-kekule-binding-final-review-20260930-ckynwa6h/review.json",
+    "sha256": "da78aefb98a2bb4fc60f6f4dfc7bb6af7027d59ffc3850f5f2d09b360dcd596f"
+  },
+  "fresh_dependency_install": false,
+  "implementation_patch": {
+    "bytes": 10641,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-registered-kekule-20260930-uaald7k5/implementation.patch",
+    "sha256": "1a90e0f1c2cb747b9e987b19b7c7c581435c7e7437e7511b461a8b5ad5bcef00"
+  },
+  "independent_design_review": {
+    "bytes": 13103,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/registered-kekule-independent-review-20260930-48rnbz75/review.json",
+    "sha256": "d0774c1a52f2f937fa44cd6a91349b9cf1f10e981e4d213166b84454122e5126"
+  },
+  "installed_owned_files_compared": 516,
+  "new_assay_rows_admitted": 0,
+  "regression_junit": {
+    "bytes": 15496,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-registered-kekule-20260930-uaald7k5/regression.xml",
+    "sha256": "0fbf54140370b5d3017c4b97a3d04c2da2577f3573f9ba265f760ae787bbbace"
+  },
+  "regression_tests": 89,
+  "resume_new_score_or_force_calls": 0,
+  "schema_version": "registered_kekule_compatibility_evidence_v1",
+  "scientifically_validated": false,
+  "scope": "Prepared graph representation and installed software connection; no real assay admission or refinement benefit",
+  "service_qualified": false,
+  "source_files_compared": 514,
+  "source_roles_changed": false,
+  "sro_input_audit": {
+    "bytes": 34935,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-registered-kekule-20260930-uaald7k5/sro-input-audit/result.json",
+    "sha256": "9e03cb665af659c070ca4b79795f75240cb50c152e2470dd0f58b2116cfbc2ec"
+  },
+  "sro_input_checks_passed": 4,
+  "sro_new_force_calls": 0,
+  "sro_new_score_terms_calls": 0,
+  "sro_scorer_setup_reference_arithmetic_included": true,
+  "status": "passed",
+  "synthetic_force_calls": 6,
+  "synthetic_installed_probe": {
+    "bytes": 1613,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-registered-kekule-20260930-uaald7k5/installed-probe/installed-probe.json",
+    "sha256": "26d663ac35bfcd05a5734b8bce263a7f8fd71eac7de4823fde82686c6190b0a8"
+  },
+  "synthetic_refinement_steps": 0,
+  "synthetic_score_calls": 12,
+  "wheel_sha256": "e6595bb114633afd3551da0d4e3cf77c3d306e457a0ee8446fd5b4fb9e06543e"
+}

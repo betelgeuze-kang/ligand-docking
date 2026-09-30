@@ -1,0 +1,23 @@
+{
+  "schema_version": "registered_native_v3_integration_evidence_v1",
+  "base_head": "47a06633b04471f0658cb1ed35ee65e73b9da122",
+  "implementation_sources": 514,
+  "owned_package_files": 516,
+  "focused_tests_passed": 255,
+  "wheel_sha256": "4429c86e5e71014a720bfce4a611940f53b26e847a862cfb355a66fe0741afbd",
+  "artifact_manifest": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-registered-native-v3-20260930-s46fb4ep/artifact-manifest.json",
+    "sha256": "3d3f840a29b99dce547416cd247be077cc917048f789d5050d3cb3dd0c158a9d",
+    "bytes": 58154
+  },
+  "installed_force_calls": 6,
+  "installed_failed_force_calls": 0,
+  "installed_score_calls": 12,
+  "refinement_steps": 0,
+  "completed_resume_new_score_or_force_calls": 0,
+  "source_roles_changed": false,
+  "real_rows_admitted": 0,
+  "fresh_dependency_install": false,
+  "scientifically_validated": false,
+  "service_qualified": false
+}

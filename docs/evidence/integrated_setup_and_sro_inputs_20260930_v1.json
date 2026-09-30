@@ -1,0 +1,214 @@
+{
+  "contains_uncommitted_changes_when_measured": true,
+  "installed_synthetic_probe": {
+    "absolute_paths_remain_original": true,
+    "all_python_members_exact": 524,
+    "force_calls": 13,
+    "fresh_dependencies": false,
+    "new_real_molecular_cases": 0,
+    "relocated_replay_verified": false,
+    "score_calls": 10,
+    "stages": 8,
+    "tensor_device": "cpu",
+    "tensor_dtype": "torch.float64",
+    "torch_distribution": "2.6.0+rocm6.1",
+    "verify_reuse_unknown_resume_new_calls": 0,
+    "wheel": {
+      "bytes": 2500949,
+      "path": "/tmp/engine-v2-current-installed-20260930-98nw1bjy/wheels/betelgeuze_md_product-0.1.0-py3-none-any.whl",
+      "sha256": "3b9ceb4e6b6f702025e64141afcb0b4e6c1b88d04b73df864886636059cab214"
+    }
+  },
+  "local_test_scope": {
+    "architecture_tests": 108,
+    "boundary_tests_before_equivalent_style_changes": 501,
+    "counts_are_not_added_across_versions": true,
+    "exact_final_full_boundary_suite_repeated": false,
+    "formatted_adapter_targeted_tests": 48,
+    "fresh_dependencies": false,
+    "hosted_CI_completion_verified": false,
+    "subtests": 31,
+    "unit_test_internal_molecular_calls_measured": false
+  },
+  "next_required_work": [
+    "Implement and review a frozen old-wheel four-case execution driver with attempt/restart/score/oracle accounting, timestamps, watchdog, fatal stop and exact last-accepted-state export.",
+    "Run the predeclared four-case development recovery experiment without gate relaxation or reference-guided proposal, then independently verify endpoint numbers and semantic receipts.",
+    "Maintain primary experimental identity/state/endpoint/role gaps; do not promote transcribed Ki rows or synthetic CPU timing to validation/learning claims."
+  ],
+  "recorded_at": "2026-09-30T04:55:18.613333+00:00",
+  "schema_id": "integrated_setup_and_sro_input_milestone/1",
+  "scientific_boundary": {
+    "Fresh_128_accessed": false,
+    "HIP_parity_or_acceleration_proven": false,
+    "affinity_accuracy_proven": false,
+    "independent_evaluation_admission": false,
+    "new_experimental_measurements": 0,
+    "physical_pose_recovery_validated": false,
+    "service_qualification": false,
+    "source_roles_changed": false,
+    "training_or_calibration_admission": false
+  },
+  "source_head_when_measured": "24c3c3475174695ecd6a6d4b47b17440e7164553",
+  "sro_actual_input_audit": {
+    "actual_execution_authorized": false,
+    "adapter_snapshot": {
+      "bytes": 28581,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/runtime_adapter_snapshot.py",
+      "sha256": "15ed96cb105cadfbbc08e5d1373f047e56291c11e464b008e00dfc867595ee69"
+    },
+    "audit": {
+      "bytes": 1067184,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/root-audit.json",
+      "sha256": "ec0d4b2e9bc77250d5f694bec2520bf3a8b9d308d4f2610ff0845ecddb0096bb"
+    },
+    "complete_OS_read_audit": false,
+    "declared_molecular_calls": 0,
+    "enclosing_wall_seconds": 267.2883056840001,
+    "failed": 0,
+    "fresh_dependencies": false,
+    "guarded_scope": "reviewed single-thread preparation and installed input-binding route; constructor reference arithmetic allowed",
+    "implementation_members_per_binding": 232,
+    "independent_raw_call_counter_retained": false,
+    "independent_readonly_review": {
+      "bytes": 1933,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/independent-readonly-review.json",
+      "sha256": "6ead9d9e9a4a4d96b39e82258aec61cb6d98e665a1bd1108ef673630f3a23ae3"
+    },
+    "loaded_origins_per_binding": 181,
+    "observed_recovery_outcomes": 0,
+    "old_runtime_identity": {
+      "bytes": 72568,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/old-runtime-runtime-identity.json",
+      "sha256": "2ac231f068a4e393b261cf89c4aa163644b4bfc665d805e3d084d176a17e5d61"
+    },
+    "old_wheel_sha256": "00814229724d90cca5b81d00c2a78a4ae6dfe983e95930552ca693d2c13484b8",
+    "original_ligand_body_reads_recorded": 0,
+    "original_primitive_parameter_and_candidate_fields_exact": true,
+    "packet_review": {
+      "bytes": 472,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/packet-review.json",
+      "sha256": "d6f8b2f716e66de80951595f73a87b2c55d3a707ac481d37aa765c3b877c72af"
+    },
+    "prepared": 4,
+    "reference_body_reads_recorded": 0,
+    "requested": 4,
+    "torch_distribution": "2.6.0+cpu"
+  },
+  "sro_input_archive": {
+    "bytes": 6575,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/manifest.json",
+    "payload_bytes": 7611813,
+    "payload_count": 39,
+    "sha256": "c1ba37cd6493ca9234c8d1ac162442a3b57d216d8a600854fedd6e5d05422b59"
+  },
+  "style_adjustment": {
+    "actual_input_audit_runs_original_adapter_sha256": "15ed96cb105cadfbbc08e5d1373f047e56291c11e464b008e00dfc867595ee69",
+    "changes": "Ruff formatting; explicit same-name workflow/minimization import aliases retain dispatch preloading; remove unused json/sys imports only from test",
+    "frozen_generator_or_packet_changed": false,
+    "initial_lint_errors": 78,
+    "initial_lint_exit_code": 1,
+    "new_molecular_calls": 0,
+    "schema_id": "sro_style_adjustment/1",
+    "source_files": {
+      "docs/research/human_5ht6_sro_pose_recovery/runtime_adapter.py": {
+        "after_sha256": "5f066ea98da4eeca72fb5e53dc40facfaf4556bde349fbb2edc5ca1d23cdd2b3",
+        "before_sha256": "15ed96cb105cadfbbc08e5d1373f047e56291c11e464b008e00dfc867595ee69",
+        "normalized_ast_equal": true
+      },
+      "tests/unit/test_sro_recovery_runtime_adapter.py": {
+        "after_sha256": "8a54f8d2ba4fc8716207fb5ba575f809f20d34e387703c8f550e89b0ee4f09aa",
+        "before_sha256": "0543b1ae94829f41e76d2ab829a9ecd70b4da6984fe959be1134b8608365341b",
+        "normalized_ast_equal": true
+      }
+    }
+  },
+  "validation_archive": {
+    "bytes": 67924,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/manifest.json",
+    "payload_bytes": 5505895,
+    "payload_count": 353,
+    "sha256": "171c9f5fc9732812b9f52319659d825f6b8b2475e773987e02ef2c92cfd33da0"
+  },
+  "validation_receipts": {
+    "architecture_108": {
+      "bytes": 504,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/research-boundary-test-ledger.json",
+      "sha256": "eb304612a7a9a92dad70c0f1aaaaed900bf3e6c9f9bf69d71d45ef311d082f5d"
+    },
+    "architecture_108_junit": {
+      "bytes": 22952,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/research-boundary-junit.xml",
+      "sha256": "63bc2b62df0fd5bee761b56d976b49a1a3bf3f5c61d53f8a70aaa0e2164f2347"
+    },
+    "boundary_501": {
+      "bytes": 3644,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/final-boundary-test-ledger.json",
+      "sha256": "5f9ea43f2b6f5a47059f479761ff1a23c2616398c0eb8a506157e9f903f7f612"
+    },
+    "boundary_501_junit": {
+      "bytes": 85556,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/final-boundary-junit.xml",
+      "sha256": "6705b86c640b498d05ec310cae10577aea06fa6c792cb7ab99bdd83ac5aaf431"
+    },
+    "final_architecture_cli": {
+      "bytes": 418,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/final-architecture-check-ledger.json",
+      "sha256": "7586fecec95afbf41150bc50d32092e4d99b82bbcb27062cc242f8615c1bea22"
+    },
+    "final_lint": {
+      "bytes": 8766,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/final-lint-ledger.json",
+      "sha256": "04defc6dcb4902daf663afba4916f1dca18049bce10557dec8dafa7d6b6b0761"
+    },
+    "formatted_adapter_48": {
+      "bytes": 830,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/formatted-sro-targeted-test-ledger.json",
+      "sha256": "c9f8a6c5b53230588f1d0ef683e896a51566f4bd8055f5ec9045dc00690e1ee4"
+    },
+    "formatted_adapter_48_junit": {
+      "bytes": 7706,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/formatted-sro-targeted-test-junit.xml",
+      "sha256": "f4f05c43d35f6fe0d87b1fa587dda5b19e2c812e2b49599f71ad96e319f31b33"
+    },
+    "initial_architecture_failure": {
+      "bytes": 747,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/research-boundary-initial-failure.json",
+      "sha256": "a8728ca046504a344235b532a7493191ccd52cd586b29384d2350d80816c128b"
+    },
+    "initial_architecture_fixture_failures": {
+      "bytes": 505,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/research-boundary-test-initial.ledger.json",
+      "sha256": "14e289be5ca5c7200e8a66da56509d21bad42017951be97ebb8c0a345bbd6c7c"
+    },
+    "initial_style_errors": {
+      "bytes": 40860,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/style-adjustment/initial-ruff.json",
+      "sha256": "a10db80596a4f60184382865053fb430f02e3a42841cbd58781ff22e275efb2b"
+    },
+    "installed_synthetic_probe": {
+      "bytes": 4183,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/summary.json",
+      "sha256": "9f595b42f9bcfa26b8246aa10cc277fb22c3c39b15440b0072aed2f89920cb11"
+    },
+    "retention_boundary": {
+      "bytes": 684,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/retention-boundary.json",
+      "sha256": "2b7d0af8ead2d2025f2ab5763d26569256c921a3022abfd001d4172c06d9d231"
+    },
+    "runtime_environment": {
+      "bytes": 551,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/runtime-environment.json",
+      "sha256": "0b0fc829284a83663bff595fbcb3e112a0e52875c112d550c00b2f9e4d3a1048"
+    },
+    "style_normalized_ast_proof": {
+      "bytes": 1061,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/style-adjustment/ledger.json",
+      "sha256": "935847cf3b29819c59737365080d9d640dd542d98b1bd6c12309f16fffe205dd"
+    },
+    "wheel_source_match": {
+      "bytes": 87838,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-current-source-validation-20260930-_ku1finm/final-live-wheel-source-match.json",
+      "sha256": "cec574fcef77dc1f4655c6b55efbe81b68c7cd9ba1455e68712660409b8f2d5c"
+    }
+  }
+}

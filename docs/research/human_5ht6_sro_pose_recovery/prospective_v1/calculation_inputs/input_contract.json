@@ -1,0 +1,61 @@
+{
+  "candidate_pool_sha256": "5fa2b65522197a395c1dd6d88d6add82cfdb61ddaa2e5bced7a4cf528be5541b",
+  "chemistry_sha256": "1d960edf1ee7c450af7594b0fad6c6f605439e045da8292bfa48a74d4f95a3dc",
+  "coordinate_frame_id": "7XTB_original_cartesian_angstrom_development",
+  "original_prepared_ligand_sha256_identity_only": "aee0cdee35491fc44998a14c69c5e888b2de5e6c0c85b35bfedfb0562832445c",
+  "parameter_refs": {
+    "cross_parameters": {
+      "bytes": 634803,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/cross-parameters.json",
+      "sha256": "226cb9f4be87b40d312e4b3bdb0dbc785bd6d6e87daa68e2f6abec76dde22d52"
+    },
+    "extensions": {
+      "bytes": 10457,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/extensions.json",
+      "sha256": "871c1a252c87c0b4f134c8b572f009f99658fea88f1076c9ee3fe1461a0871f6"
+    },
+    "parameters": {
+      "bytes": 43995,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-numerical-validation-20260929-cpu-2zyhi89d/request/parameters.json",
+      "sha256": "16d3b25e6492ae8500771d60d6fe5b5db12089b8c7fa64d3f25a6f1230fad217"
+    },
+    "receptor": {
+      "bytes": 7511796,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-7xtb-chemical-graph-20260929-final1/receptor-canonical.json",
+      "sha256": "2c0970bcaf9e994f382e0f0c0fdacbfd1359bef60a10b879f757b31628658c4c"
+    }
+  },
+  "pocket": {
+    "center_angstrom": [
+      84.56507692307693,
+      110.49638461538461,
+      82.02238461538461
+    ],
+    "coordinate_frame_id": "7XTB_original_cartesian_angstrom_development",
+    "method_id": "public_SRO_heavy_centroid_same_math_development",
+    "method_version": "1",
+    "radius_angstrom": 10.0,
+    "source_artifact_sha256": "e81b271ee863340c0e1e65101be7695849bdd56f408c887b03b89929cc4e9cb7"
+  },
+  "runtime_adapter_status": "NOT_IMPLEMENTED_NOT_AUTHORIZED_TO_EXECUTE",
+  "schema_id": "sro_reference_free_calculation_contract/1",
+  "solver": {
+    "algorithm": "lbfgs",
+    "algorithm_id": "cpu_cartesian_lbfgs/1.3.0",
+    "armijo_constant": 0.0001,
+    "backtrack_factor": 0.5,
+    "curvature_relative_threshold": 1e-12,
+    "force_tolerance": 0.001,
+    "history_size": 10,
+    "initial_step_size": 0.001,
+    "max_accepted_steps": 416,
+    "max_atoms_per_cell": 256,
+    "max_backtracks": 12,
+    "max_neighbors": 256,
+    "max_objective_attempts": 417,
+    "max_restart_verifications": 2,
+    "maximum_atom_displacement": 0.05,
+    "schema_id": "cpu_cartesian_solver_config/1.3.0"
+  },
+  "source_ligand_or_provenance_or_evaluation_reference_path": null
+}

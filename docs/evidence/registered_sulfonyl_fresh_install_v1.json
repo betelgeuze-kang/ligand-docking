@@ -1,0 +1,92 @@
+{
+  "binding_source": {
+    "bytes": 28860,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/betelgeuze_product/installed_native_v4_registered_binding.py",
+    "sha256": "097f8b76d08b4796a173d6531a684b156abdfdd3ba61dd31859da8a503186226"
+  },
+  "binding_subset_test_count": 84,
+  "binding_tests": {
+    "bytes": 26833,
+    "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/tests/unit/test_installed_native_v4_registered_binding.py",
+    "sha256": "0bae41654eecf6671025e6318d1df9375f478a223137e82c73841e71016cc1ba"
+  },
+  "bootstrap": {
+    "bytes": 4487,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/runtime-bootstrap.json",
+    "sha256": "39e4ffcbfba20b12e2ebbf4d2ed213ed1825acb34b3a9feeed1de78a726352b4"
+  },
+  "build_install_probe": {
+    "bytes": 8083,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/product-validation/build-install-probe.json",
+    "sha256": "212733db20da6099e2c4d2c6c428286d0a7772e38730ef8694e5cefc884e8818"
+  },
+  "builder": {
+    "bytes": 6712,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/install_latest_product.py",
+    "sha256": "847c4000f72af68a9cbe05fcb7fde48545474dbef1870a918bdcfcc6b16875a5"
+  },
+  "execution_context_correction": {
+    "bytes": 1106,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/product-validation/execution-context-correction.json",
+    "sha256": "4a9f7114345eacf1ea7326769a60a77405a5e2959f5dbf6504867050274da2cf"
+  },
+  "fresh_dependencies": true,
+  "fresh_installed_identity_cases_passed": 11,
+  "fresh_installed_identity_diagnostic": {
+    "bytes": 15573,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/registered-fresh-component-review-20260930-f4_ux2ig/component-results.json",
+    "sha256": "938c9ef8b5459dbfbe6bfcbc917fe59274db65d8d0ce86114cc6de971673d262"
+  },
+  "fresh_installed_identity_execution": {
+    "bytes": 1121,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/registered-fresh-component-review-20260930-f4_ux2ig/execution.json",
+    "sha256": "2438d3d66528829e28548e07af8757b009688bec7e8acc4adbab2fdacfd77e6f"
+  },
+  "independent_code_review": {
+    "bytes": 5202,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/sulfonyl-stereo-independent-review-20260930-oat98rx3/product-code-review.json",
+    "sha256": "a8053deb1507baed5978b656e5f9840d30b70fc03dbdf0433376105cfaf65ac1"
+  },
+  "independent_installed_ownership": {
+    "bytes": 26922,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/registered-fresh-component-review-20260930-f4_ux2ig/ownership-review.json",
+    "sha256": "ac0b3d7c99678d93dcf893bb624f2bbdf3f187c512c6e9b88c92e8e55a9adad7"
+  },
+  "independent_technical_assessment": {
+    "bytes": 5828,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/sulfonyl-stereo-independent-review-20260930-oat98rx3/technical-assessment.json",
+    "sha256": "f598d5eb48bcdf27a0b8f62515c66212377e68d2d861adf04af92152036d897b"
+  },
+  "installed_cli_probe": {
+    "bytes": 1626,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/product-validation/registered-probe/installed-probe.json",
+    "sha256": "6700acb191cb9b1b9d3c10c6c89b2b27ca9e1736dc392edbd076cf282a60be01"
+  },
+  "product_dependency_resolution": {
+    "bytes": 2724,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/product-validation/product-install-report.json",
+    "sha256": "18829f44cf1f2a3f88cc6ffc4906fabfe98d85e870a9fd04149f1fbd1f538384"
+  },
+  "real_molecular_evaluations": 0,
+  "runtime_isolation_before_product": {
+    "bytes": 4972,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/runtime-isolation.json",
+    "sha256": "a424060ec691e5b401a3d0a5744b268251fb377f583b16d2f75482bde03147bc"
+  },
+  "schema_id": "registered_sulfonyl_fresh_install_evidence/1",
+  "scientifically_validated": false,
+  "service_qualified": false,
+  "source_head_before_commit": "7545b3b3827a55dfe0e57e69e3c486a3befc3ce7",
+  "source_regression": {
+    "bytes": 181,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/product-validation/source-regression.log",
+    "sha256": "607f9e95bbfd11c056c4e5ddf887d9a0428e72744c743e74154844cbcce4e119"
+  },
+  "source_regression_count": 120,
+  "status": "fresh_installed_synthetic_replay_passed",
+  "wheel_members": {
+    "bytes": 110712,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-fresh-registered-install-20260930-08p9vymi/product-validation/wheel-members.json",
+    "sha256": "bad880a88723b2826fb5aef1630b714499317af9d3c137f7604d4bff6eb2f3ef"
+  }
+}

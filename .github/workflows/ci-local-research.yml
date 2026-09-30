@@ -20,6 +20,13 @@ on:
       - 'tests/unit/test_empty_shadow_catalogue.py'
       - 'tests/unit/test_prepared_pose_resume.py'
       - 'tests/unit/test_public_assay_selector_shadow.py'
+      - 'docs/research/human_5ht6_d3_complex/**'
+      - 'tests/unit/test_d3_*.py'
+      - 'docs/research/human_5ht6_sro_numerical_preparation/**'
+      - 'tests/unit/test_sro_*.py'
+      - 'tools/product/primary_5ht6_2024_occurrences_v1.py'
+      - 'tests/unit/test_primary_5ht6_2024_occurrences_v1.py'
+      - 'docs/evidence/human_5ht6_2024_occurrence*.json'
       - '.github/workflows/ci-local-research.yml'
   push:
     branches: [main]
@@ -38,6 +45,13 @@ on:
       - 'tests/unit/test_local_research_native_boundary.py'
       - 'tests/unit/test_local_research_workflow.py'
       - 'tests/unit/test_empty_shadow_catalogue.py'
+      - 'docs/research/human_5ht6_d3_complex/**'
+      - 'tests/unit/test_d3_*.py'
+      - 'docs/research/human_5ht6_sro_numerical_preparation/**'
+      - 'tests/unit/test_sro_*.py'
+      - 'tools/product/primary_5ht6_2024_occurrences_v1.py'
+      - 'tests/unit/test_primary_5ht6_2024_occurrences_v1.py'
+      - 'docs/evidence/human_5ht6_2024_occurrence*.json'
       - '.github/workflows/ci-local-research.yml'
   workflow_dispatch:
 permissions:
@@ -68,7 +82,7 @@ jobs:
           python-version: '3.11'
       - name: Install CPU dependencies
         run: |
-          python -m pip install pytest==8.3.5 numpy==1.26.4 rdkit==2026.3.6 ruff==0.11.13 PyYAML==6.0.2
+          python -m pip install pytest==8.3.5 numpy==1.26.4 scipy==1.12.0 biopython==1.81 rdkit==2026.3.6 ruff==0.11.13 PyYAML==6.0.2
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
       - name: Preserve exact development source and environment
         run: |
@@ -78,8 +92,11 @@ jobs:
           python - <<'PY'
           import hashlib, json, pathlib, subprocess, tarfile
           tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
-          prefixes = ('betelgeuze_engine/', 'betelgeuze_engine_v2/', 'betelgeuze_product/', 'core/', 'tests/unit/', 'tools/')
+          prefixes = ('betelgeuze_engine/', 'betelgeuze_engine_v2/', 'betelgeuze_product/', 'core/', 'tests/unit/', 'tools/', 'docs/research/human_5ht6_d3_complex/', 'docs/research/human_5ht6_sro_numerical_preparation/')
           files = [p for p in tracked if p.endswith('.py') and p.startswith(prefixes)]
+          occurrence_inputs = ['docs/evidence/human_5ht6_2024_occurrence_contract_v1.json', 'docs/evidence/human_5ht6_2024_occurrences_v1.json']
+          assert all(path in tracked for path in occurrence_inputs)
+          files = sorted(set(files + occurrence_inputs))
           manifest = {p: hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for p in files}
           pathlib.Path('source-sha256.json').write_text(json.dumps(manifest, sort_keys=True, indent=2)+'\n')
           with tarfile.open('test-source.tar.gz', 'w:gz') as bundle:
@@ -92,6 +109,27 @@ jobs:
           set -euo pipefail
           python -m ruff check --isolated --no-cache tools/product/verify_installed_local_research.py tests/unit/test_verify_installed_local_research.py betelgeuze_product/json_output.py betelgeuze_product/local_research_workflow.py betelgeuze_product/rocm_diagnostic.py betelgeuze_product/local_research_verify.py tests/unit/test_local_research_delivery.py betelgeuze_engine/product/public_assay_streaming.py tests/unit/test_local_research_workflow.py tests/unit/test_empty_shadow_catalogue.py betelgeuze_product/native_backend_diagnostic.py tests/unit/test_local_research_native_boundary.py
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv tests/unit/test_verify_installed_local_research.py tests/unit/test_local_research_workflow.py tests/unit/test_empty_shadow_catalogue.py tests/unit/test_prepared_pose_resume.py tests/unit/test_prepared_rigid_poses.py tests/unit/test_public_assay_selector_shadow.py tests/unit/test_local_research_delivery.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_local_research_native_boundary.py --junitxml=local-research.xml 2>&1 | tee local-research.log
+      - name: Verify research trajectory and source-bound preparation with analytic fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ruff check --isolated --no-cache tools/product/primary_5ht6_2024_occurrences_v1.py tests/unit/test_primary_5ht6_2024_occurrences_v1.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -vv \
+            tests/unit/test_primary_5ht6_2024_occurrences_v1.py \
+            tests/unit/test_d3_feasible_step.py \
+            tests/unit/test_d3_feasible_step_runner.py \
+            tests/unit/test_d3_feasible_trajectory.py \
+            tests/unit/test_d3_feasible_trajectory_runner.py \
+            tests/unit/test_d3_feasible_trajectory_runner_flow.py \
+            tests/unit/test_d3_feasible_trajectory_audit.py \
+            tests/unit/test_d3_product_geometry_audit.py \
+            tests/unit/test_d3_lbfgs_development.py \
+            tests/unit/test_d3_constrained_runner.py \
+            tests/unit/test_sro_numerical_preparation.py \
+            tests/unit/test_sro_preparation_verifier.py \
+            tests/unit/test_sro_numerical_request.py \
+            tests/unit/test_sro_numerical_audit_runner.py \
+            --junitxml=research-trajectory.xml 2>&1 | tee research-trajectory.log
       - name: Install wheel in a clean CPU environment and verify resume
         shell: bash
         run: |
@@ -118,6 +156,8 @@ jobs:
           path: |
             local-research.xml
             local-research.log
+            research-trajectory.xml
+            research-trajectory.log
             checkout.txt
             dependencies.txt
             source-sha256.json

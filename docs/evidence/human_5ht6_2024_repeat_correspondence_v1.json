@@ -1,0 +1,335 @@
+{
+  "schema_id": "human_5ht6_2024_repeat_correspondence_evidence/1.0.0",
+  "artifacts": [
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/README.md",
+      "bytes": 3101,
+      "sha256": "7a68203d3554280b2f97c238cc4a8b05d7c53e5935f4076671410c98e33c6fdd"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/contract.json",
+      "bytes": 5876,
+      "sha256": "2f0dfecde79d8704c56cbf185a538f2a4dc74c02388d2fceb8eaae01b6b3b5e0"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/correspondence.json",
+      "bytes": 7319,
+      "sha256": "986415029c44198ab527dae104b65115ddbcf6f6103a24dee915b70a551be8b7"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/manifest.json",
+      "bytes": 1294,
+      "sha256": "8905c8825858e6b7ecf3621c57bb681013ba5ab5b051846b4248dd2e904afd87"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/source-page11-raw.txt",
+      "bytes": 3527,
+      "sha256": "242c8baab53ea71d3e6265e34e2f4b9c8ebf94852ed14481284e621e85445241"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/source-page11.png",
+      "bytes": 394684,
+      "sha256": "c92d48784572d6c55c22a4e8c6cda62439f9fd46e5666d9e06386055444e98a6"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/test_correspondence.py",
+      "bytes": 4180,
+      "sha256": "279d19bdbb6680ce346035edc07eed3b8f9d692d179f7aa04ec66eb148ebe403"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/validation.json",
+      "bytes": 1824,
+      "sha256": "b946c32b94e24db38305685347250f7b6520ea648603dda1e83ee47539b82158"
+    },
+    {
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/verify_correspondence.py",
+      "bytes": 7763,
+      "sha256": "af7fe88699cb92e039105a373771e076531fe56a669f007228f00093cc17db18"
+    }
+  ],
+  "source_pins": {
+    "lineage": {
+      "bytes": 31106,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_full_source_lineage_v1.json",
+      "sha256": "cd989ee652ff22e212dcbe702e706ac8856ae3fd533f5ee6aba265070c2f0c18"
+    },
+    "multi_paper_ledger": {
+      "bytes": 27675,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_ki_multi_paper_source_ledger_v1.json",
+      "sha256": "e5b5af4caa0e4efa3e5e3a502236357276051044431f45bda77b8b5163ca0452"
+    },
+    "occurrence_contract": {
+      "bytes": 31266,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_occurrence_contract_v1.json",
+      "sha256": "55fab87416d876a0ffd24313446590a5d2e1b0d775b3f7389d4b321c4b2292cc"
+    },
+    "occurrences": {
+      "bytes": 154330,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/분자동역학/docs/evidence/human_5ht6_2024_occurrences_v1.json",
+      "sha256": "6261d248b41d68a4754ea800b1a577c2de1442846b54c17b16e0a2fc1740dd64"
+    },
+    "page11_raw": {
+      "bytes": 3527,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/source-page11-raw.txt",
+      "sha256": "242c8baab53ea71d3e6265e34e2f4b9c8ebf94852ed14481284e621e85445241"
+    },
+    "page11_render": {
+      "bytes": 394684,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-table5-repeat-correspondence-dt9zycii/source-page11.png",
+      "sha256": "c92d48784572d6c55c22a4e8c6cda62439f9fd46e5666d9e06386055444e98a6"
+    },
+    "pdf": {
+      "bytes": 7957708,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+      "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+    },
+    "prior_bounded_metadata_result": {
+      "bytes": 3314,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-5ht6-reserved-metadata-sb8m9_a9/summary.json",
+      "sha256": "7c1f9b9992b58e7f092be862c1f8f2ba0d94144bfdcd99660b152e3d9556e82d"
+    },
+    "retained_layout": {
+      "bytes": 455125,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-layout.txt",
+      "sha256": "0d0a82e71aec1b94febbe739cacb2434ea783c3dd636d53a910747e362bba5b2"
+    }
+  },
+  "result": {
+    "boundary": {
+      "admitted": false,
+      "assigned_role": null,
+      "chemical_graph_verified": false,
+      "full_source_clearance": false,
+      "graph_nodes_emitted": 0,
+      "independent_holdout": false,
+      "independent_measurement_denominator": null,
+      "new_independent_measurements_credited": 0,
+      "prepared_states_bound": false,
+      "scientifically_qualified": false
+    },
+    "contract_sha256": "2f0dfecde79d8704c56cbf185a538f2a4dc74c02388d2fceb8eaae01b6b3b5e0",
+    "correspondences": [
+      {
+        "assayed_chemical_identity_established": false,
+        "endpoint": "Ki",
+        "entity": "PR68",
+        "independent_remeasurement_established": false,
+        "primary_mean": "0.037",
+        "primary_occurrence": "table5:PR68",
+        "primary_text_occurrences": [
+          {
+            "line": 11,
+            "sha256": "363fed81f7826e880cbab47650fc1026134118293834f812c36f571f7d607596"
+          },
+          {
+            "line": 25,
+            "sha256": "1ce0e31cdd79e7fa5dea1ef5086d3acac287a75156288b810f32e504228cb41f"
+          }
+        ],
+        "primary_to_repeat_correspondence": "same_printed_identifier_endpoint_and_mean",
+        "primary_uncertainty": {
+          "kind": "SD",
+          "value": "0.008"
+        },
+        "repeat_mean": "0.037",
+        "repeat_occurrence": "table6_Ki_PR68:PR68",
+        "repeat_reported_uncertainty": null,
+        "repeat_text_occurrence": {
+          "line": 43,
+          "sha256": "8e06669f9192bc850263ef66c6a1c73c11a9e4a0709cde30b7a2967ae039693f"
+        },
+        "table5_printed_substituent_tokens": {
+          "R1": "Cl",
+          "R2": "H",
+          "R3": "H",
+          "R4": "H",
+          "R5": "H",
+          "X": "NH",
+          "Z": "CH(CH3)"
+        },
+        "target": "human_5HT6",
+        "unit": "uM"
+      },
+      {
+        "assayed_chemical_identity_established": false,
+        "endpoint": "Ki",
+        "entity": "PR71",
+        "independent_remeasurement_established": false,
+        "primary_mean": "0.061",
+        "primary_occurrence": "table5:PR71",
+        "primary_text_occurrences": [
+          {
+            "line": 14,
+            "sha256": "d6dea80b7355452a615e64f96aa027dadb640bd3083e5730b611dcbc0d44c31e"
+          },
+          {
+            "line": 28,
+            "sha256": "10a7cc078ccfd163237b0eb668101fc92737869f2a5fae516acf18f5f5ef0d55"
+          }
+        ],
+        "primary_to_repeat_correspondence": "same_printed_identifier_endpoint_and_mean",
+        "primary_uncertainty": {
+          "kind": "SD",
+          "value": "0.014"
+        },
+        "repeat_mean": "0.061",
+        "repeat_occurrence": "table6_Ki_PR71:PR71",
+        "repeat_reported_uncertainty": null,
+        "repeat_text_occurrence": {
+          "line": 44,
+          "sha256": "44092c793441ef5fcd3cde54206c33061ee0425128c1621e5ce98b0caf521ce3"
+        },
+        "table5_printed_substituent_tokens": {
+          "R1": "H",
+          "R2": "H",
+          "R3": "H",
+          "R4": "Cl",
+          "R5": "H",
+          "X": "NH",
+          "Z": "CH(CH3)"
+        },
+        "target": "human_5HT6",
+        "unit": "uM"
+      },
+      {
+        "assayed_chemical_identity_established": false,
+        "endpoint": "Ki",
+        "entity": "PR73",
+        "independent_remeasurement_established": false,
+        "primary_mean": "0.043",
+        "primary_occurrence": "table5:PR73",
+        "primary_text_occurrences": [
+          {
+            "line": 16,
+            "sha256": "fa7da950290d5513aa2989393b4160a9f198acd27639fa528b9ea6de93c3a1d0"
+          },
+          {
+            "line": 30,
+            "sha256": "098728479a861dc7358a148753f47ecd950c05a8bf7e683b38673fd5342a818f"
+          }
+        ],
+        "primary_to_repeat_correspondence": "same_printed_identifier_endpoint_and_mean",
+        "primary_uncertainty": {
+          "kind": "SD",
+          "value": "0.011"
+        },
+        "repeat_mean": "0.043",
+        "repeat_occurrence": "table6_Ki_PR73:PR73",
+        "repeat_reported_uncertainty": null,
+        "repeat_text_occurrence": {
+          "line": 45,
+          "sha256": "56a37c97d7d4e02861cd6124cf897f762da5fcea5b2134e365f9cfd85fd898a8"
+        },
+        "table5_printed_substituent_tokens": {
+          "R1": "F",
+          "R2": "H",
+          "R3": "H",
+          "R4": "H",
+          "R5": "H",
+          "X": "NH",
+          "Z": "CH(CH3)"
+        },
+        "target": "human_5HT6",
+        "unit": "uM"
+      },
+      {
+        "assayed_chemical_identity_established": false,
+        "endpoint": "Ki",
+        "entity": "PR76",
+        "independent_remeasurement_established": false,
+        "primary_mean": "0.103",
+        "primary_occurrence": "table5:PR76",
+        "primary_text_occurrences": [
+          {
+            "line": 19,
+            "sha256": "a7ce68d8dd63facdf373753f54bd41cd8daf7e3bd1c86fbff18d0e0c8c36b5cd"
+          },
+          {
+            "line": 33,
+            "sha256": "93c9e35ca4299a0d8a635ad3e74238b3fbd050d3bcc9c5c00fc4568648c7cc7f"
+          }
+        ],
+        "primary_to_repeat_correspondence": "same_printed_identifier_endpoint_and_mean",
+        "primary_uncertainty": {
+          "kind": "SD",
+          "value": "0.025"
+        },
+        "repeat_mean": "0.103",
+        "repeat_occurrence": "table6_Ki_PR76:PR76",
+        "repeat_reported_uncertainty": null,
+        "repeat_text_occurrence": {
+          "line": 46,
+          "sha256": "e24027b85317715b9422573ab6830903050b8a521fb2dffc6fbafbcb51e37566"
+        },
+        "table5_printed_substituent_tokens": {
+          "R1": "H",
+          "R2": "H",
+          "R3": "H",
+          "R4": "H",
+          "R5": "H",
+          "X": "NCH3",
+          "Z": "CH(CH3)"
+        },
+        "target": "human_5HT6",
+        "unit": "uM"
+      },
+      {
+        "assayed_chemical_identity_established": false,
+        "endpoint": "Ki",
+        "entity": "PR77",
+        "independent_remeasurement_established": false,
+        "primary_mean": "0.373",
+        "primary_occurrence": "table5:PR77",
+        "primary_text_occurrences": [
+          {
+            "line": 20,
+            "sha256": "9be5b977dceb4c1886615b14750468e305fb40e1528d7875bc1c3a55702bf8bb"
+          },
+          {
+            "line": 34,
+            "sha256": "cdc37aab67e24668dd09d4e5402dffd4bfee70284ef370f819cedb4296ff5519"
+          }
+        ],
+        "primary_to_repeat_correspondence": "same_printed_identifier_endpoint_and_mean",
+        "primary_uncertainty": {
+          "kind": "SD",
+          "value": "0.092"
+        },
+        "repeat_mean": "0.373",
+        "repeat_occurrence": "table6_Ki_PR77:PR77",
+        "repeat_reported_uncertainty": null,
+        "repeat_text_occurrence": {
+          "line": 47,
+          "sha256": "bd98841527a8d07679bed735557abe057ad5ca2ac391047c6d50b53ee19f8439"
+        },
+        "table5_printed_substituent_tokens": {
+          "R1": "H",
+          "R2": "H",
+          "R3": "H",
+          "R4": "H",
+          "R5": "H",
+          "X": "O",
+          "Z": "CH(CH3)"
+        },
+        "target": "human_5HT6",
+        "unit": "uM"
+      }
+    ],
+    "denominators": {
+      "extracted_table5_text_layers": 2,
+      "failed_correspondences": 0,
+      "independent_measurement_denominator": null,
+      "primary_report_rows_in_scope": 5,
+      "printed_Ki_occurrences_in_scope": 10,
+      "requested_correspondences": 5,
+      "verified_correspondences": 5
+    },
+    "resolution": "The five previously untranscribed Table5 source occurrences now have exact printed Ki means and SD and source-bound Table6 correspondence. This sidecar does not rewrite the original ledger or occurrences.",
+    "schema_version": "primary_5ht6_table5_repeat_correspondence_v1",
+    "status": "RESOLVED_PRINTED_PRIMARY_REPEAT_CORRESPONDENCE_ONLY"
+  },
+  "verification_scope": "Root re-ran the pinned local verifier with fresh PDF extraction and the 10 mutation/regression checks. The script validates the retained transcription, not global source clearance or assayed chemical identity.",
+  "roles_changed": false,
+  "scientific_admission": false,
+  "new_independent_measurements_credited": 0
+}

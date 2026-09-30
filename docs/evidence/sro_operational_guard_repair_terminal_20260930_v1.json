@@ -1,0 +1,817 @@
+{
+  "HIP_qualified": false,
+  "archive_pins_preserved_after_export_and_metrics": true,
+  "calibration_admitted": false,
+  "campaign_status": "stopped",
+  "case02_diagnostic": {
+    "absolute_force_tolerance_unchanged": 1e-08,
+    "cause": null,
+    "confirmed_initial_cross_lj_kcal_per_mol": 96281.78117962461,
+    "confirmed_initial_force_error_kcal_per_mol_angstrom": 4.761386662721634e-08,
+    "confirmed_initial_minimum_cross_distance_angstrom": 0.755528775097289,
+    "confirmed_initial_severe_cross_overlaps": 16,
+    "hypothesis": "floating differences may be amplified in the steep initial LJ repulsive region",
+    "missing": [
+      "oracle raw force vectors",
+      "max-error atom and axis",
+      "internal/LJ/Coulomb force-error decomposition",
+      "exact transformed parameter binary64 differences"
+    ],
+    "relative_scale_description_is_not_a_pass": true
+  },
+  "case03_diagnostic": {
+    "exact_applicability_boundary": null,
+    "exception_message_and_raise_location_not_retained": true,
+    "known_completed_force_calls_includes_failed_attempt": true,
+    "process_returncode_zero_is_not_force_success": true,
+    "source_loss_boundary": "/tmp/engine-v2-sro-old-runtime-20260930-urt3cf_3/site/betelgeuze_product/cpu_refinement_v1_3/minimization.py:216"
+  },
+  "cases": [
+    {
+      "all_same_math_checks_passed": true,
+      "campaign_status": "completed",
+      "case_id": "perturbed_01",
+      "converged": false,
+      "dimensionless_scores": {
+        "baseline": 549.5332070559472,
+        "refined": -19.123378213240024
+      },
+      "force_dispatch": {
+        "attempts": 417,
+        "error_types": [],
+        "errors": 0,
+        "returned": 417
+      },
+      "force_work": {
+        "actual_force_calls": 417,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 417,
+        "max_objective_attempts": 417,
+        "max_restart_verifications": 2,
+        "max_total_force_calls": 419,
+        "optimizer_force_calls": 417,
+        "optimizer_graph_calls": 417,
+        "optimizer_objective_attempts": 417,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "unknown_pending_attempts": 0
+      },
+      "graph_dispatch": {
+        "attempts": 417,
+        "error_types": [],
+        "errors": 0,
+        "returned": 417
+      },
+      "inclusive_case_wall_ns": 1070607579211,
+      "last_accepted_metrics": {
+        "admitted": false,
+        "final": {
+          "direct_heavy_rmsd_angstrom": 1.2986175725739173,
+          "minimum_mapping": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "symmetry_heavy_rmsd_angstrom": 1.2986175725739173,
+          "translation_or_rotation_fit": false
+        },
+        "gates": {
+          "bond_change": true,
+          "geometry": true,
+          "ordering_score": true,
+          "raw_force": false,
+          "same_math_energy": true,
+          "same_math_force": true,
+          "strain": true
+        },
+        "initial": {
+          "direct_heavy_rmsd_angstrom": 2.5,
+          "minimum_mapping": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "symmetry_heavy_rmsd_angstrom": 2.5,
+          "translation_or_rotation_fit": false
+        },
+        "maximum_bond_change_angstrom": 0.12799851308070753,
+        "maximum_raw_atom_force": 0.4766251796903881,
+        "recovery_success": false,
+        "rmsd_improvement_angstrom": 1.2013824274260827,
+        "status": "completed",
+        "work": {
+          "AI_inference_calls": 0,
+          "accepted_steps": 410,
+          "failed_attempts": 0,
+          "initial_successful_objectives": 1,
+          "objective_attempts": 417,
+          "oracle_states": 2,
+          "proposal_calls": 0,
+          "rejected_attempts": 6,
+          "restart_force_calls": 0,
+          "score_calls": 2,
+          "unknown_pending_attempts": 0
+        }
+      },
+      "legacy_exported": true,
+      "legacy_omission_reason": null,
+      "minimization_status": "objective_budget_exhausted",
+      "native_failure_reason": null,
+      "nested_numerical_timings_ns_do_not_sum": {
+        "optimizer_force_ns": 725148991212,
+        "optimizer_graph_ns": 2346449106,
+        "optimizer_objective_ns": 728384252460,
+        "restart_force_ns": 0,
+        "restart_graph_ns": 0,
+        "restart_objective_ns": 0
+      },
+      "numeric_endpoint_audit": {
+        "denominator": {
+          "evaluated": 2,
+          "failed": 0,
+          "passed": 2,
+          "requested": 2,
+          "unknown": 0
+        },
+        "failure": null,
+        "states": [
+          {
+            "component_absolute_errors_kcal_per_mol": {
+              "cross_lennard_jones": 5.420588422566652e-10,
+              "cross_screened_coulomb": 1.2523315717771766e-13,
+              "ligand_internal": 7.815970093361102e-13,
+              "total": 5.420588422566652e-10
+            },
+            "energy_absolute_error_kcal_per_mol": 5.420588422566652e-10,
+            "force_component_absolute_error_kcal_per_mol_angstrom": 7.101334631443024e-09,
+            "label": "initial",
+            "passed": true
+          },
+          {
+            "component_absolute_errors_kcal_per_mol": {
+              "cross_lennard_jones": 2.2737367544323206e-13,
+              "cross_screened_coulomb": 1.4210854715202004e-13,
+              "ligand_internal": 8.526512829121202e-14,
+              "total": 1.7763568394002505e-13
+            },
+            "energy_absolute_error_kcal_per_mol": 1.7763568394002505e-13,
+            "force_component_absolute_error_kcal_per_mol_angstrom": 1.5403012199044497e-11,
+            "label": "last_accepted",
+            "passed": true
+          }
+        ],
+        "status": "passed"
+      },
+      "paired_decision": {
+        "candidate_id": "pose-00000-af03c32d7422",
+        "reason": "refinement_not_converged",
+        "variant": "none"
+      },
+      "refined_admitted": false,
+      "rich_work": {
+        "AI_inference_calls": 0,
+        "accepted_steps": 410,
+        "failed_attempts": 0,
+        "initial_successful_objectives": 1,
+        "objective_attempts": 417,
+        "oracle_states": 2,
+        "proposal_calls": 0,
+        "rejected_attempts": 6,
+        "restart_force_calls": 0,
+        "score_calls": 2,
+        "unknown_pending_attempts": 0
+      },
+      "saved_metric_status": "completed",
+      "score_dispatch": {
+        "attempts": 2,
+        "error_types": [],
+        "errors": 0,
+        "returned": 2
+      }
+    },
+    {
+      "all_same_math_checks_passed": false,
+      "campaign_status": "completed",
+      "case_id": "perturbed_02",
+      "converged": false,
+      "dimensionless_scores": {
+        "baseline": 4246.558456564353,
+        "refined": -18.297524271485994
+      },
+      "force_dispatch": {
+        "attempts": 417,
+        "error_types": [],
+        "errors": 0,
+        "returned": 417
+      },
+      "force_work": {
+        "actual_force_calls": 417,
+        "failed_optimizer_force_calls": 0,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 417,
+        "max_objective_attempts": 417,
+        "max_restart_verifications": 2,
+        "max_total_force_calls": 419,
+        "optimizer_force_calls": 417,
+        "optimizer_graph_calls": 417,
+        "optimizer_objective_attempts": 417,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "unknown_pending_attempts": 0
+      },
+      "graph_dispatch": {
+        "attempts": 417,
+        "error_types": [],
+        "errors": 0,
+        "returned": 417
+      },
+      "inclusive_case_wall_ns": 1065376783295,
+      "last_accepted_metrics": {
+        "admitted": false,
+        "final": {
+          "direct_heavy_rmsd_angstrom": 1.5165477572401618,
+          "minimum_mapping": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "symmetry_heavy_rmsd_angstrom": 1.5165477572401618,
+          "translation_or_rotation_fit": false
+        },
+        "gates": {
+          "bond_change": true,
+          "geometry": true,
+          "ordering_score": true,
+          "raw_force": false,
+          "same_math_energy": true,
+          "same_math_force": false,
+          "strain": true
+        },
+        "initial": {
+          "direct_heavy_rmsd_angstrom": 2.5,
+          "minimum_mapping": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "symmetry_heavy_rmsd_angstrom": 2.5,
+          "translation_or_rotation_fit": false
+        },
+        "maximum_bond_change_angstrom": 0.1129389578326585,
+        "maximum_raw_atom_force": 0.0015660184851978304,
+        "recovery_success": false,
+        "rmsd_improvement_angstrom": 0.9834522427598382,
+        "status": "completed",
+        "work": {
+          "AI_inference_calls": 0,
+          "accepted_steps": 413,
+          "failed_attempts": 0,
+          "initial_successful_objectives": 1,
+          "objective_attempts": 417,
+          "oracle_states": 2,
+          "proposal_calls": 0,
+          "rejected_attempts": 3,
+          "restart_force_calls": 0,
+          "score_calls": 2,
+          "unknown_pending_attempts": 0
+        }
+      },
+      "legacy_exported": true,
+      "legacy_omission_reason": null,
+      "minimization_status": "objective_budget_exhausted",
+      "native_failure_reason": null,
+      "nested_numerical_timings_ns_do_not_sum": {
+        "optimizer_force_ns": 718756087118,
+        "optimizer_graph_ns": 2320937635,
+        "optimizer_objective_ns": 721956489209,
+        "restart_force_ns": 0,
+        "restart_graph_ns": 0,
+        "restart_objective_ns": 0
+      },
+      "numeric_endpoint_audit": {
+        "denominator": {
+          "evaluated": 2,
+          "failed": 1,
+          "passed": 1,
+          "requested": 2,
+          "unknown": 0
+        },
+        "failure": null,
+        "states": [
+          {
+            "component_absolute_errors_kcal_per_mol": {
+              "cross_lennard_jones": 5.0640664994716644e-09,
+              "cross_screened_coulomb": 2.4868995751603507e-13,
+              "ligand_internal": 7.815970093361102e-13,
+              "total": 5.0640664994716644e-09
+            },
+            "energy_absolute_error_kcal_per_mol": 5.0640664994716644e-09,
+            "force_component_absolute_error_kcal_per_mol_angstrom": 4.761386662721634e-08,
+            "label": "initial",
+            "passed": false
+          },
+          {
+            "component_absolute_errors_kcal_per_mol": {
+              "cross_lennard_jones": 3.197442310920451e-14,
+              "cross_screened_coulomb": 1.4921397450962104e-13,
+              "ligand_internal": 1.3500311979441904e-13,
+              "total": 1.7763568394002505e-14
+            },
+            "energy_absolute_error_kcal_per_mol": 1.7763568394002505e-14,
+            "force_component_absolute_error_kcal_per_mol_angstrom": 2.035172030900867e-11,
+            "label": "last_accepted",
+            "passed": true
+          }
+        ],
+        "status": "failed"
+      },
+      "paired_decision": {
+        "candidate_id": "pose-00000-f762a9272a3f",
+        "reason": "refinement_not_converged",
+        "variant": "none"
+      },
+      "refined_admitted": false,
+      "rich_work": {
+        "AI_inference_calls": 0,
+        "accepted_steps": 413,
+        "failed_attempts": 0,
+        "initial_successful_objectives": 1,
+        "objective_attempts": 417,
+        "oracle_states": 2,
+        "proposal_calls": 0,
+        "rejected_attempts": 3,
+        "restart_force_calls": 0,
+        "score_calls": 2,
+        "unknown_pending_attempts": 0
+      },
+      "saved_metric_status": "completed",
+      "score_dispatch": {
+        "attempts": 2,
+        "error_types": [],
+        "errors": 0,
+        "returned": 2
+      }
+    },
+    {
+      "all_same_math_checks_passed": null,
+      "campaign_status": "failed",
+      "case_id": "perturbed_03",
+      "converged": false,
+      "dimensionless_scores": {
+        "baseline": 1503.850821296535,
+        "refined": null
+      },
+      "force_dispatch": {
+        "attempts": 1,
+        "error_types": [
+          "ReferencePhysicsApplicabilityError"
+        ],
+        "errors": 1,
+        "returned": 0
+      },
+      "force_work": {
+        "actual_force_calls": 1,
+        "failed_optimizer_force_calls": 1,
+        "failed_restart_force_calls": 0,
+        "known_completed_force_calls": 1,
+        "max_objective_attempts": 417,
+        "max_restart_verifications": 2,
+        "max_total_force_calls": 419,
+        "optimizer_force_calls": 1,
+        "optimizer_graph_calls": 1,
+        "optimizer_objective_attempts": 1,
+        "restart_force_calls": 0,
+        "restart_graph_calls": 0,
+        "restart_verification_attempts": 0,
+        "unknown_pending_attempts": 0
+      },
+      "graph_dispatch": {
+        "attempts": 1,
+        "error_types": [],
+        "errors": 0,
+        "returned": 1
+      },
+      "inclusive_case_wall_ns": 282238689163,
+      "last_accepted_metrics": {
+        "admitted": false,
+        "recovery_success": false,
+        "status": "not_observed",
+        "work": null
+      },
+      "legacy_exported": false,
+      "legacy_omission_reason": "legacy_start_coordinates_not_authenticated",
+      "minimization_status": "evaluation_failed",
+      "native_failure_reason": {
+        "exception_type": "ReferencePhysicsApplicabilityError",
+        "message": null,
+        "raise_location": null,
+        "scope": "first fixed-receptor force applicability rejection; finer cause not retained"
+      },
+      "nested_numerical_timings_ns_do_not_sum": {
+        "optimizer_force_ns": 602766491,
+        "optimizer_graph_ns": 5583306,
+        "optimizer_objective_ns": 610233052,
+        "restart_force_ns": 0,
+        "restart_graph_ns": 0,
+        "restart_objective_ns": 0
+      },
+      "numeric_endpoint_audit": null,
+      "paired_decision": {
+        "candidate_id": "pose-00000-64805d09a109",
+        "reason": "refinement_or_rescoring_failed",
+        "variant": "none"
+      },
+      "refined_admitted": false,
+      "rich_work": {
+        "AI_inference_calls": 0,
+        "accepted_steps": 0,
+        "failed_attempts": 1,
+        "initial_successful_objectives": 0,
+        "objective_attempts": 1,
+        "oracle_states": null,
+        "proposal_calls": 0,
+        "rejected_attempts": 0,
+        "restart_force_calls": 0,
+        "score_calls": 1,
+        "unknown_pending_attempts": 0
+      },
+      "saved_metric_status": "not_observed",
+      "score_dispatch": {
+        "attempts": 1,
+        "error_types": [],
+        "errors": 0,
+        "returned": 1
+      }
+    },
+    {
+      "all_same_math_checks_passed": null,
+      "campaign_status": "unstarted",
+      "case_id": "perturbed_04",
+      "force_dispatch": null,
+      "graph_dispatch": null,
+      "inclusive_case_wall_ns": null,
+      "last_accepted_metrics": {
+        "admitted": false,
+        "recovery_success": false,
+        "status": "not_observed",
+        "work": null
+      },
+      "legacy_exported": false,
+      "legacy_omission_reason": "unstarted_work_unknown",
+      "native_failure_reason": null,
+      "numeric_endpoint_audit": null,
+      "refined_admitted": false,
+      "rich_work": null,
+      "saved_metric_status": "not_observed",
+      "score_dispatch": null
+    }
+  ],
+  "completed_count": 2,
+  "cost_observation_case01": {
+    "invocation_stages": {
+      "implementation.verify": {
+        "calls": 2,
+        "completed": 2,
+        "cpu_ns": 18551484,
+        "failed": 0,
+        "wall_ns": 18553407
+      },
+      "inputs.parse": {
+        "calls": 1,
+        "completed": 1,
+        "cpu_ns": 4767105595,
+        "failed": 0,
+        "wall_ns": 4767963381
+      },
+      "inputs.verify_bytes": {
+        "calls": 5,
+        "completed": 5,
+        "cpu_ns": 7613482,
+        "failed": 0,
+        "wall_ns": 7611867
+      },
+      "scorer.construct": {
+        "calls": 1,
+        "completed": 1,
+        "cpu_ns": 1646071084,
+        "failed": 0,
+        "wall_ns": 1646157399
+      }
+    },
+    "invocation_wall_ns": 746877131104,
+    "saved_verification_stages": {
+      "implementation.verify": {
+        "calls": 2,
+        "completed": 2,
+        "cpu_ns": 62188604,
+        "failed": 0,
+        "wall_ns": 62192117
+      },
+      "inputs.parse": {
+        "calls": 1,
+        "completed": 1,
+        "cpu_ns": 43845163626,
+        "failed": 0,
+        "wall_ns": 43858481115
+      },
+      "inputs.verify_bytes": {
+        "calls": 5,
+        "completed": 5,
+        "cpu_ns": 8019342,
+        "failed": 0,
+        "wall_ns": 8018781
+      },
+      "scorer.construct": {
+        "calls": 1,
+        "completed": 1,
+        "cpu_ns": 16559243233,
+        "failed": 0,
+        "wall_ns": 16563099162
+      }
+    },
+    "saved_verification_wall_ns": 153948026133,
+    "scope": "nested inclusive CPU measurements; no sum of parent and child scopes",
+    "unmeasured": [
+      "journal serialization/hash/fsync/checkpoint/replay stage splits",
+      "trace/profile causal share",
+      "full product speedup",
+      "HIP parity/speedup"
+    ]
+  },
+  "denominator": 4,
+  "durable_delivery_archive": {
+    "all_copy_and_inventory_pins_verified": true,
+    "manifest_ref": {
+      "bytes": 9312,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-saved-export-20260930-nrz52e55/delivery-payload-manifest.json",
+      "sha256": "a2ea153e362aed26ed5fb3c89ae633edb12548695801d1d3d595a212c720fcef"
+    },
+    "payload_bytes": 2389584,
+    "payload_count": 49,
+    "relocated_replay_verified": false,
+    "self_referential_repository_sidecar_excluded": true
+  },
+  "durations_are_inclusive_do_not_sum": true,
+  "evidence_scope": "single reserved SRO microstate, four development starts, frozen saved endpoints and public transcription correspondence; no affinity or commercial qualification",
+  "failed_count": 1,
+  "fresh128_touched": false,
+  "goal_status": "active",
+  "inclusive_campaign_wall_ns": 2418245301483,
+  "independent_evaluation_admitted": false,
+  "known_started_dispatch_totals": {
+    "force": {
+      "attempts": 835,
+      "errors": 1,
+      "returned": 834
+    },
+    "graph": {
+      "attempts": 835,
+      "errors": 0,
+      "returned": 835
+    },
+    "score": {
+      "attempts": 5,
+      "errors": 0,
+      "returned": 5
+    }
+  },
+  "local_validation": {
+    "changed_code_ruff_and_diff_passed": true,
+    "optional_official_pdf_tests_skipped": 2,
+    "source_pins_unchanged": true,
+    "summary": "199 passed, 2 skipped, 31 subtests passed in 5.00s",
+    "target_campaign_rerun": false,
+    "unchanged_legacy_style_check": {
+      "files": [
+        "docs/research/human_5ht6_sro_pose_recovery/recovery_protocol.py",
+        "tests/unit/test_sro_pose_recovery_protocol.py"
+      ],
+      "log_ref": {
+        "bytes": 31492,
+        "path": "/tmp/engine-v2-sro-terminal-source-validation-20260930-rdionpmp/ruff.log",
+        "sha256": "9510d99dbe2e37eb52b5f202660020fc8345c47f2709db40517228c1b5da286e"
+      },
+      "reported_errors": 58,
+      "resolved": false,
+      "returncode": 1,
+      "scope": "unchanged byte-frozen protocol and its existing test formatting; not the new code delta"
+    },
+    "unit_test_internal_molecular_dispatch_counts_measured": false
+  },
+  "product_qualified": false,
+  "public_endpoint_correspondence": {
+    "fixed_result_ref": {
+      "bytes": 316336,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/primary_5ht6_2024_cross_artifact_reconciliation_20260930_v1.json",
+      "sha256": "509a9fd926c2ac785d1f972791553d4c836255fa5f8a634d1c040eee357d5dbd"
+    },
+    "independent_measurement_denominator": null,
+    "new_independent_measurement_credit": 0,
+    "training_calibration_evaluation_admitted": false
+  },
+  "published_at": "2026-09-30T12:26:30.187129+00:00",
+  "readonly_independent_terminal_review": {
+    "additional_findings": [],
+    "files_modified": false,
+    "full_947_payload_hashes_verified": true,
+    "molecular_calls_performed": false,
+    "reviewer": "sro_repair_revision_contract",
+    "scope": "agent report; not a cryptographic third-party signature"
+  },
+  "recovery_denominator": 4,
+  "recovery_success_count": 0,
+  "refs": {
+    "campaign": {
+      "bytes": 327193,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/campaign-result.json",
+      "sha256": "dce2b4b87a7768cd262c4c72dc4db9bfd9155a59aedb9fce92872489d6180276"
+    },
+    "campaign_launch_end": {
+      "bytes": 279,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign-launch-end.json",
+      "sha256": "4494202b6610c2fdaf570379ee387c7893053a396c1acfbee5a39e7242faf5ca"
+    },
+    "case01_invocation": {
+      "bytes": 2271,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/run/invocation-000000.end.json",
+      "sha256": "f9a394676e77b4c1654356aac26737a6fce763225e4091ba1acbd34c6a7bec8c"
+    },
+    "case01_saved_verification": {
+      "bytes": 1366,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/semantic-verification.json",
+      "sha256": "63d3e2cc2427959ddd5d09686f8630e27b86b0b062f8ad731b51c64593b5933e"
+    },
+    "case03_checkpoint": {
+      "bytes": 2767,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_03/native/run/numerical/checkpoints/checkpoint-00002.json",
+      "sha256": "531e2bde48c6f98111eba66debc5a60264f0551543de8ec84748cf1ad19d2428"
+    },
+    "case03_journal": {
+      "bytes": 3707,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_03/native/run/numerical/events.jsonl",
+      "sha256": "8cf16a617870234b5e48516e7e0998a261646ec0aea050fee9244e47775e89c3"
+    },
+    "export_phase": {
+      "bytes": 191540,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-saved-export-20260930-nrz52e55/saved-export-phase-receipt.json",
+      "sha256": "ccbb5009896aebee75dc8066d582cabe9b65f565e2b9220024998a3ffcb7be51"
+    },
+    "first_metric_integration_failure": {
+      "bytes": 1097,
+      "path": "/tmp/engine-v2-sro-metric-first-integration-failure-20260930.json",
+      "sha256": "cd7948f444efd91e156c427a84f8336cf5f60cceffdc24751930d86a5596aa42"
+    },
+    "local_validation": {
+      "bytes": 13240,
+      "path": "/tmp/engine-v2-sro-terminal-and-source-reconciliation-validation-v2-20260930.json",
+      "sha256": "f0b4a02a083ed8fde047bbba2ef5b4018398462a2efda0b73bf55c61f16ea019"
+    },
+    "metric_phase": {
+      "bytes": 198988,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-saved-export-20260930-nrz52e55/post-terminal-metrics-v2/metric-phase-receipt.json",
+      "sha256": "33ff30d0fbb9a4930ac9ef8ff2f47f610f5696680daa8df1089ba89d80620a0e"
+    },
+    "metrics": {
+      "bytes": 4714,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-saved-export-20260930-nrz52e55/post-terminal-metrics-v2/coordinate-evaluation.json",
+      "sha256": "2145026c1cb8dd453be44b1e335ab2b3d02bd7d6961904dd200dd7fec1889cf3"
+    },
+    "perturbed_01_dispatch": {
+      "bytes": 204791,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/dispatch.jsonl",
+      "sha256": "454734aa1fca0875809ecb980354a3bc2a98ac21dc8347156cf591a2898717f0"
+    },
+    "perturbed_01_numerical": {
+      "bytes": 197985,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/oracle/numerical-receipt.json",
+      "sha256": "b9b3049dff1a2296e707b7c8524b8b50ac1e25392fb88b6a9a54669b90ed24ed"
+    },
+    "perturbed_01_result": {
+      "bytes": 580914,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/run/result.json",
+      "sha256": "e5575ecaa554a961744386ad0c190881c388ac970f90b2c5faa5704c54ffa07b"
+    },
+    "perturbed_01_terminal": {
+      "bytes": 150235,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/terminal-case.json",
+      "sha256": "674f9cc6c33dc858677a1dc9408883defb1296a1d344ce22c1a5341331bd9002"
+    },
+    "perturbed_02_dispatch": {
+      "bytes": 204791,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_02/native/dispatch.jsonl",
+      "sha256": "6951edc9b476b89144bd06b963e8cf903030e32bc79a1e429fc40490ceb5c86f"
+    },
+    "perturbed_02_numerical": {
+      "bytes": 197983,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_02/oracle/numerical-receipt.json",
+      "sha256": "1f18b0c87de396ab330886094fa3085edecc98a7085ef60bf5acff60002184c7"
+    },
+    "perturbed_02_result": {
+      "bytes": 581656,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_02/native/run/result.json",
+      "sha256": "b6967cc95d06192048b095b5d4c218fd23563fa9fb94d5c20cfb88e02c0f3152"
+    },
+    "perturbed_02_terminal": {
+      "bytes": 150236,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_02/terminal-case.json",
+      "sha256": "9578cb2aaf44355b1ea351f3541f921758b789da150643d06d66480adac7d17d"
+    },
+    "perturbed_03_dispatch": {
+      "bytes": 756,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_03/native/dispatch.jsonl",
+      "sha256": "8009d35d3c3b6c70724177623252653f9175915fb6325209ef2f9bdd39cbd74e"
+    },
+    "perturbed_03_result": {
+      "bytes": 516990,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_03/native/run/result.json",
+      "sha256": "3fac9349089fb22e098e06a0001b07e13155b0f9c84b7db1f5a166d283f08a2a"
+    },
+    "perturbed_03_terminal": {
+      "bytes": 11602,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_03/terminal-case.json",
+      "sha256": "4b0b407640802b6f388de98e46619c1851c65f085a5ec3bc9ad4cda9c18b6a0e"
+    },
+    "plan": {
+      "bytes": 22983,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/plan.json",
+      "sha256": "b5d7eb702534259e6689ae257cb8bb0ebb2a356131fe33dd07a3d2616b21706c"
+    },
+    "public_correspondence": {
+      "bytes": 316336,
+      "path": "/home/betelgeuze/.codex/worktrees/engine-v2-integrated-baseline/\ubd84\uc790\ub3d9\uc5ed\ud559/docs/evidence/primary_5ht6_2024_cross_artifact_reconciliation_20260930_v1.json",
+      "sha256": "509a9fd926c2ac785d1f972791553d4c836255fa5f8a634d1c040eee357d5dbd"
+    },
+    "saved_export": {
+      "bytes": 9397,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-saved-export-20260930-nrz52e55/export/export-receipt.json",
+      "sha256": "cc75f6b40b06d6897f00a79b3666086bfbef96730052d416453f3e1cd18615d4"
+    },
+    "saved_results": {
+      "bytes": 328702,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-saved-export-20260930-nrz52e55/export/saved-recovery-results.json",
+      "sha256": "ecb3ef5e7d79889c86a975f3f638eee7f9540d063832291a9e45291feed1f81d"
+    },
+    "terminal_handle": {
+      "bytes": 1530,
+      "path": "/tmp/engine-v2-sro-operational-repair-terminal-handle-20260930.json",
+      "sha256": "b236b96c7e599af7ca0681329c75f2927b4bbad9ce3831eb6c1304747e16ad50"
+    },
+    "terminal_manifest": {
+      "bytes": 184818,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/terminal-payload-manifest.json",
+      "sha256": "362f6ee94a19ec7d0a40288d11511fd05b2cdd013a3b993ac16ead38851a9130"
+    }
+  },
+  "resume_or_retry_permitted": false,
+  "schema_id": "sro_operational_repair_terminal_evidence/1",
+  "scientifically_validated": false,
+  "source_checkout_before_publication": "53476bce346e4ed9d0dc47ae1bb8e8d817da7abf",
+  "terminal_payload_bytes": 60712054,
+  "terminal_payload_count": 947,
+  "training_admitted": false,
+  "unstarted_count": 1,
+  "unstarted_work": "unknown; not counted as zero"
+}

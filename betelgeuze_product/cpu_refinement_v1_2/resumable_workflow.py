@@ -14,7 +14,6 @@ from betelgeuze_product.reference_minimization_workflow import (
 )
 from .workflow import load_request, REQUEST_SCHEMA
 from .fixed_receptor import (
-    FIXED_REQUEST_SCHEMA,
     CrossParameters,
     FixedReceptorEnvironment,
 )
@@ -23,6 +22,7 @@ from .resume_verification import verify_resume_summary
 from .evidence_contracts import request_binding, same
 from .provenance import ResearchError, digest, exact_fields, source_manifest, integer
 from .work import verify_admitted_bytes, WorkMeter
+from .scoring_profile import FIXED_REQUEST_SCHEMAS, request_model, plan_model, request_policy, plan_policy
 
 
 def _verify_report(request, report):
@@ -64,8 +64,10 @@ def _verify_report(request, report):
         plan["coordinate_frame"],
         "request coordinate frame",
     )
-    fixed = request["schema_id"] == FIXED_REQUEST_SCHEMA
+    fixed = request["schema_id"] in FIXED_REQUEST_SCHEMAS
     same(fixed, plan["cross_parameters"] is not None, "request objective")
+    same(request_model(request), plan_model(plan), "request chemical feature model")
+    same(request_policy(request), plan_policy(plan), "request proposal policy")
     if fixed:
         same(request["solvation"], None, "fixed solvent boundary")
     return {
@@ -168,7 +170,7 @@ def run_resumable_request(request, output, *, resume=False, stop_after=None):
     binding = request_binding(request)
     sources = source_manifest()
     source = digest(sources)
-    fixed_mode = request["schema_id"] == FIXED_REQUEST_SCHEMA
+    fixed_mode = request["schema_id"] in FIXED_REQUEST_SCHEMAS
     prepared = (
         request
         if not fixed_mode
@@ -234,6 +236,8 @@ def run_resumable_request(request, output, *, resume=False, stop_after=None):
                 selection=selection,
                 fixed_environment=fixed,
                 request_sha256=digest(request),
+                scoring_model=request_model(request),
+                proposal_policy=request_policy(request),
             )
             check()
             if not summary["execution_complete"]:

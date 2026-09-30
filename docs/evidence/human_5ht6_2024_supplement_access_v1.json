@@ -1,0 +1,48 @@
+{
+  "schema_id": "human_5ht6_2024_supplement_access/1",
+  "source_doi": "10.3390/ijms251910287",
+  "publisher": "MDPI",
+  "recorded_at_utc": "2026-09-29T23:03:29+00:00",
+  "requested_url": "https://res.mdpi.com/d_attachment/ijms/ijms-25-10287/article_deploy/ijms-25-10287-s001.zip",
+  "resolved_url": "https://mdpi-res.com/d_attachment/ijms/ijms-25-10287/article_deploy/ijms-25-10287-s001.zip",
+  "http_status": 200,
+  "observed_content_type": "application/zip",
+  "archive": {
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-supplement-s001.zip",
+    "bytes": 16820378,
+    "sha256": "f27fbee99054e7b3d866e1e46164961758d4c5fd3c031e871aff9c454f3a8363",
+    "zip_crc_valid": true,
+    "member_count": 3,
+    "total_uncompressed_bytes": 18711792,
+    "members": [
+      {
+        "name": "SI_biological_research.pdf",
+        "bytes": 3548804,
+        "sha256": "425159e0da28fca8f3074e452c50a99c662230918be54c30660a3428606fb093",
+        "pdf_magic": true
+      },
+      {
+        "name": "SI_synthesis.pdf",
+        "bytes": 14617785,
+        "sha256": "0f0714a7cade0f6f9715ecab40f268caaefeb730b8f9d59b83bd82bce5094894",
+        "pdf_magic": true
+      },
+      {
+        "name": "SI_Table1.pdf",
+        "bytes": 545203,
+        "sha256": "d4998be58c84f82a42291db53370620caa313c7431f5fabf7f0a4194e3e65f8d",
+        "pdf_magic": true
+      }
+    ]
+  },
+  "scope": {
+    "archive_retrieved": true,
+    "member_content_review_complete": false,
+    "graph_identity_coverage_complete": false,
+    "independent_source_roles_assigned": false,
+    "new_assay_rows_admitted": 0,
+    "protected_fresh128_touched": false,
+    "scientific_qualification": false
+  },
+  "historical_receipt_note": "Earlier source-lineage receipts saying downloaded_in_this_audit=false describe their own earlier audits; this is a subsequent retrieval."
+}

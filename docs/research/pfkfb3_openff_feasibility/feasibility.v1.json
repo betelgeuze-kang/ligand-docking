@@ -1,0 +1,533 @@
+{
+  "schema_version": "pfkfb3_openff_source_role_feasibility_v1",
+  "status": "ARCHIVED_DEVELOPMENT_SOURCE_ONLY_COMPARISON_BLOCKED",
+  "source": {
+    "target": "human_PFKFB3",
+    "openff_commit": "fe6f96916b2e28f9c14398d77c838d6515e931b0",
+    "openff_directory": "data/2020-07-06_pfkfb3",
+    "openff_data_license": "CC-BY-4.0",
+    "primary_paper_doi": "10.1002/cmdc.201800569",
+    "archive_sha256": "50ae6280e8628005542cb560f77edbce0624737bf1feb813ec65e62df25b9b41",
+    "archive_bytes": 41960330,
+    "archive_member_manifest_sha256": "c09a6f58f21d5a9c3300b6a358973df4e88a7beb26503b56081f37e2cce3a26f",
+    "archive_bundled_in_checkout": false,
+    "archive_revalidated_by_offline_verifier": false,
+    "separate_parameter_record": {
+      "zenodo_record_id": 10495732,
+      "zenodo_record_created_date": "2024-01-12",
+      "zenodo_record_license_id": "cc-by-4.0",
+      "zenodo_archive_bytes": 381220,
+      "zenodo_archive_md5": "b058f4cf301b0c695f93af16c8fabf36",
+      "zenodo_archive_sha256": "9ea86b0e1641eb9ca4f691867c62f65b39c010d2a55d8a0adb1fbf7df9668371",
+      "record_metadata_rechecked_by_offline_verifier": false,
+      "archive_bytes_bundled_in_checkout": false,
+      "exact_file_version_declared_by_openff": false,
+      "file_specific_rights_reviewed": false,
+      "coevality_verified": false
+    },
+    "primary_paper_and_supplement_rights_reviewed_for_product": false,
+    "separate_protein_parameters_rights_and_coevality_reviewed": false
+  },
+  "official_openff_lfs_inventory": {
+    "relative_path": "openff_lfs_inventory.v1.json",
+    "size_bytes": 102836,
+    "sha256": "23345cfcb902ee7d0009ee630760797a6212ed7047f273eb4edef9487bc56e13",
+    "ligand_id_count": 40,
+    "official_source_file_count": 202,
+    "source_bytes_bundled_in_checkout": false,
+    "external_source_rechecked_by_offline_feasibility_verifier": false,
+    "prepared_state_assay_equivalence_verified": false
+  },
+  "reader_compatibility_receipt": {
+    "relative_path": "reader_compatibility.v1.json",
+    "size_bytes": 69617,
+    "sha256": "70bfb752447f182f215312ef2cfd8da3e6762525ae9ccfeb812edb76e0725200",
+    "reader_candidate_count": 40,
+    "reader_pass_count": 40,
+    "loader_reexecuted_by_offline_feasibility_verifier": false,
+    "source_coevality_verified": false,
+    "scientific_comparison_eligible": false
+  },
+  "primary_structure_crosswalk_receipt": {
+    "relative_path": "primary_structure_crosswalk.v1.json",
+    "size_bytes": 32944,
+    "sha256": "bfd3c57f0d3d992d30028a035dc52c9c4733eecf613ceffce2f0f44add636d52",
+    "direct_primary_anchor_count": 4,
+    "primary_text_motif_match_count": 14,
+    "unverified_count": 22,
+    "external_sources_rechecked_by_offline_feasibility_verifier": false,
+    "prepared_state_assay_equivalence_verified": false,
+    "scientific_comparison_eligible": false
+  },
+  "archived_context_observation": {
+    "candidate_count": 40,
+    "single_study_component_count": 1,
+    "blocked_candidate_count_in_archived_context": 0,
+    "reserved_or_unknown_nodes_in_archived_candidate_component": 0,
+    "archived_context_is_current_frozen_context": false,
+    "current_protected_component_clearance": null,
+    "archived_metadata_replayed_by_offline_verifier": false
+  },
+  "archived_lig_38_prepared_input_refs": [
+    {
+      "field": "protein_pdb",
+      "source_role": "openff_cc_by_4_0",
+      "source_path": "data/2020-07-06_pfkfb3/01_protein/crd/protein.pdb",
+      "bytes": 533236,
+      "sha256": "a92c23ece51dd98900faaf90a379bff0edaa8c5fb78bf0eb6100edd5995ff7a3"
+    },
+    {
+      "field": "protein_itp",
+      "source_role": "openff_cc_by_4_0",
+      "source_path": "data/2020-07-06_pfkfb3/01_protein/top/amber99sb-star-ildn-mut.ff/topol.itp",
+      "bytes": 1920050,
+      "sha256": "c1d4902f016c479d23ae91b697803cbadb8e0331fb35ee7bdc0d9ddbda7d9cee"
+    },
+    {
+      "field": "protein_atomtypes",
+      "source_role": "separate_zenodo_10495732_rights_not_reviewed",
+      "source_path": "ffnonbonded.itp",
+      "bytes": 7013,
+      "sha256": "70bb6bdf7c651267749a91c7b296536a284acf1ad67a7d7a5cd60bb8b5ff8370"
+    },
+    {
+      "field": "protein_defaults",
+      "source_role": "separate_zenodo_10495732_rights_not_reviewed",
+      "source_path": "forcefield.itp",
+      "bytes": 951,
+      "sha256": "a73df8ee82c58f106364276622f7bfab8130cdc2cb698342030ef84545569d0b"
+    },
+    {
+      "field": "ligand_sdf",
+      "source_role": "openff_cc_by_4_0",
+      "source_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/crd/lig_38.sdf",
+      "bytes": 4395,
+      "sha256": "407014add44d32a3a3b483aaa01e6799e7fe8350faf82ef720f1eb3d9ea32899"
+    },
+    {
+      "field": "ligand_gro",
+      "source_role": "openff_cc_by_4_0",
+      "source_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.gro",
+      "bytes": 3139,
+      "sha256": "33f82c3310153536aba0eb65d0c93e8548fd914cd3da4da8bf6f801544b25d0e"
+    },
+    {
+      "field": "ligand_itp",
+      "source_role": "openff_cc_by_4_0",
+      "source_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/lig_38.itp",
+      "bytes": 25219,
+      "sha256": "a2684ba2c58cccf8bb2eaafa25da5450ec633932eafd08e20a6888f83d457d59"
+    },
+    {
+      "field": "ligand_atomtypes",
+      "source_role": "openff_cc_by_4_0",
+      "source_path": "data/2020-07-06_pfkfb3/02_ligands/lig_38/top/openff-1.0.0.offxml/fflig_38.itp",
+      "bytes": 599,
+      "sha256": "48fef9061ce0d08ae363c190816ac60d32407fbd3664078d32b65b170da4dc90"
+    }
+  ],
+  "archived_v3_lig_38_numeric_report": {
+    "sha256": "0d8f9b94473840a03455e0c7955613195cfc5763c01bae8d309b735aeef23fb2",
+    "bytes": 31298164,
+    "source": "2026-09-09_external_delivery",
+    "bundled_in_checkout": false,
+    "is_one_of_40_individually_verified_historical_pfk40_reports": false
+  },
+  "historical_pfk40_numeric_reports": {
+    "documented_report_count": 40,
+    "source_document": "docs/prepared_cross_numeric_check.md",
+    "individual_report_refs_in_checkout": 0,
+    "report_bytes_replayed_by_offline_verifier": false,
+    "numeric_pass_count_admitted_for_scientific_comparison": 0
+  },
+  "assay_boundary": {
+    "endpoint_type_reported_by_catalogue": "IC50",
+    "experimental_values_read_or_copied_into_packet": false,
+    "original_paper_compound_table_mapping_verified": false,
+    "assay_relation_and_conditions_verified": false,
+    "same_assay_active_inactive_pair_proven": false,
+    "active_inactive_threshold_prespecified": false,
+    "prepared_state_assay_equivalence_verified": false
+  },
+  "candidates": [
+    {
+      "ligand_id": "lig_19",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_20",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_23",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_24",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_26",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_29",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_30",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_31",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_33",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_34",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_35",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_36",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_37",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_38",
+      "archived_prepared_input_ref_fields": [
+        "protein_pdb",
+        "protein_itp",
+        "protein_atomtypes",
+        "protein_defaults",
+        "ligand_sdf",
+        "ligand_gro",
+        "ligand_itp",
+        "ligand_atomtypes"
+      ],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_39",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_41",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_42",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_43",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_44",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_46",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_47",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_48",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_49",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_52",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_53",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_54",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_55",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_56",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_57",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_58",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_59",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_60",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_62",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_63",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_64",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_65",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_67",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_68",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_69",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    },
+    {
+      "ligand_id": "lig_70",
+      "archived_prepared_input_ref_fields": [],
+      "historical_pfk40_numeric_report_ref": null,
+      "fit_role": null,
+      "calibration_role": null,
+      "evaluation_role": null,
+      "eligible_source_state_join": false
+    }
+  ],
+  "eligibility": {
+    "eligible_source_state_join_count": 0,
+    "current_protected_context_clearance_verified": false,
+    "independent_fit_source_verified": false,
+    "four_arm_same_candidate_experiment_executable": false,
+    "experimental_comparison_eligible": false,
+    "training_admitted": false,
+    "scientifically_validated": false,
+    "product_ranking_enabled": false
+  }
+}

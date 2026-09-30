@@ -3,9 +3,13 @@ from __future__ import annotations
 import pytest
 
 from betelgeuze_product.docking_comparison_contract import (
+    CONTROLLED_CORE,
+    FULL_WORKFLOW,
+    SCOPED_POSE_SCHEMA_VERSION,
     DockingComparisonError,
     build_enrichment_comparison,
     build_pose_success_comparison,
+    build_scoped_pose_success_comparison,
 )
 
 _FAIR = {
@@ -171,3 +175,129 @@ def test_enrichment_mismatched_metric_def_blocks() -> None:
     out = build_enrichment_comparison(rows)
     assert out["summary"]["comparison_valid"] is False
     assert "mismatched_metric_def_version" in out["summary"]["unfairness_reasons"]
+
+
+def _scoped(tool_id: str, kind: str, scope: str, **over):
+    row = {
+        "schema_version": SCOPED_POSE_SCHEMA_VERSION,
+        "comparison_scope": scope,
+        "tool_id": tool_id,
+        "tool_kind": kind,
+        "tool_version": "test-version",
+        "dataset_id": "fixture",
+        "dataset_manifest_sha256": "dataset-hash",
+        "candidate_manifest_sha256": "candidate-hash",
+        "metric_def_version": "pose-v1",
+        "pose_success_rmsd_threshold_a": 2.0,
+        "complex_count": 10,
+        "completed_complex_count": 7,
+        "failed_complex_count": 2,
+        "unprocessed_complex_count": 1,
+        "top1_success_count": 4,
+        "top5_success_count": 6,
+        "result_artifact_sha256": "result-hash",
+    }
+    if scope == CONTROLLED_CORE:
+        row.update(
+            chemical_state_sha256="chemical-hash",
+            receptor_state_sha256="receptor-hash",
+            pocket_definition_sha256="pocket-hash",
+            shared_preparation_sha256="shared-prep-hash",
+            canonical_prepared_input_sha256="core-input-hash",
+            input_conversion={"method": "sdf-to-pdbqt", "version": "1", "source_sha256": "core-input-hash", "output_sha256": "converted-hash"},
+        )
+    else:
+        row.update(
+            preparation_policy_sha256=f"{tool_id}-recommended-prep",
+            preparation_recommendation_ref=f"{tool_id}-manual-version",
+            preparation_wall_seconds=2.0,
+            compute_wall_seconds=3.0,
+            validation_wall_seconds=1.0,
+            recovery_wall_seconds=1.0,
+            preparation_failed_complex_count=1,
+            peak_rss_kib=1024,
+            expert_intervention_count=0,
+            expert_intervention_wall_seconds=0.0,
+            expert_intervention_log_sha256="empty-intervention-log-hash",
+            elapsed_wall_seconds=8.0,
+        )
+    row.update(over)
+    return row
+
+
+def test_scoped_core_uses_full_universe_and_records_conversions() -> None:
+    rows = [
+        _scoped("subject", "subject", CONTROLLED_CORE),
+        _scoped("baseline", "baseline", CONTROLLED_CORE, top1_success_count=5),
+    ]
+    out = build_scoped_pose_success_comparison(rows, scope=CONTROLLED_CORE)
+    assert out["summary"]["comparison_valid"] is True
+    assert out["summary"]["status"] == "declared_comparison_consistent_unverified"
+    assert out["summary"]["source_artifacts_verified"] is False
+    assert out["summary"]["metrics_independently_recomputed"] is False
+    assert out["rows"][0]["top1_pose_success_rate"] == 0.4
+    assert out["rows"][0]["input_conversion"]["output_sha256"] == "converted-hash"
+    assert out["summary"]["subject_vs_baseline_deltas"][0]["top1_success_delta"] == -0.1
+
+
+def test_scoped_core_rejects_cross_scope_and_missing_conversion() -> None:
+    core = _scoped("subject", "subject", CONTROLLED_CORE)
+    full = _scoped("baseline", "baseline", FULL_WORKFLOW)
+    with pytest.raises(DockingComparisonError, match="mixed_or_missing_comparison_scope"):
+        build_scoped_pose_success_comparison([core, full], scope=CONTROLLED_CORE)
+    core.pop("input_conversion")
+    with pytest.raises(DockingComparisonError, match="missing input_conversion"):
+        build_scoped_pose_success_comparison([core], scope=CONTROLLED_CORE)
+
+
+def test_scoped_core_rejects_conversion_from_another_input() -> None:
+    core = _scoped("subject", "subject", CONTROLLED_CORE)
+    core["input_conversion"]["source_sha256"] = "different-prepared-input"
+    with pytest.raises(DockingComparisonError, match="conversion_source_mismatch"):
+        build_scoped_pose_success_comparison([core], scope=CONTROLLED_CORE)
+
+
+def test_scoped_full_workflow_accepts_tool_preparation_and_accounts_cost() -> None:
+    rows = [
+        _scoped("subject", "subject", FULL_WORKFLOW, expert_intervention_count=1,
+                expert_intervention_wall_seconds=0.5),
+        _scoped("baseline", "baseline", FULL_WORKFLOW),
+    ]
+    out = build_scoped_pose_success_comparison(rows, scope=FULL_WORKFLOW)
+    assert out["summary"]["comparison_valid"] is True
+    assert out["rows"][0]["preparation_policy_sha256"] != out["rows"][1]["preparation_policy_sha256"]
+    assert out["rows"][0]["cost_wall_seconds"]["recovery"] == 1.0
+    assert out["rows"][0]["failed_complex_count"] == 2
+    assert out["rows"][0]["preparation_failed_complex_count"] == 1
+    assert out["rows"][0]["peak_rss_kib"] == 1024
+    assert out["rows"][0]["expert_intervention_wall_seconds"] == 0.5
+    assert out["rows"][0]["other_wall_seconds"] == 0.5
+
+
+def test_scoped_denominators_and_cost_fail_closed() -> None:
+    bad = _scoped("subject", "subject", FULL_WORKFLOW, failed_complex_count=1)
+    with pytest.raises(DockingComparisonError, match="complex_denominator_mismatch"):
+        build_scoped_pose_success_comparison([bad], scope=FULL_WORKFLOW)
+    bad = _scoped("subject", "subject", FULL_WORKFLOW, recovery_wall_seconds=4.0)
+    with pytest.raises(DockingComparisonError, match="phase_cost_exceeds_elapsed_wall_seconds"):
+        build_scoped_pose_success_comparison([bad], scope=FULL_WORKFLOW)
+    bad = _scoped("subject", "subject", FULL_WORKFLOW, preparation_failed_complex_count=3)
+    with pytest.raises(DockingComparisonError, match="preparation_failures_exceed_failed_complexes"):
+        build_scoped_pose_success_comparison([bad], scope=FULL_WORKFLOW)
+    bad = _scoped("subject", "subject", FULL_WORKFLOW, peak_rss_kib=0)
+    with pytest.raises(DockingComparisonError, match="peak_rss_kib_must_be_measured"):
+        build_scoped_pose_success_comparison([bad], scope=FULL_WORKFLOW)
+    bad = _scoped("subject", "subject", FULL_WORKFLOW, expert_intervention_count=1)
+    with pytest.raises(DockingComparisonError, match="expert_intervention_count_time_mismatch"):
+        build_scoped_pose_success_comparison([bad], scope=FULL_WORKFLOW)
+
+
+def test_scoped_shared_state_mismatch_blocks_deltas() -> None:
+    rows = [
+        _scoped("subject", "subject", CONTROLLED_CORE),
+        _scoped("baseline", "baseline", CONTROLLED_CORE, receptor_state_sha256="different"),
+    ]
+    out = build_scoped_pose_success_comparison(rows, scope=CONTROLLED_CORE)
+    assert out["summary"]["comparison_valid"] is False
+    assert "mismatched_receptor_state_sha256" in out["summary"]["unfairness_reasons"]
+    assert out["summary"]["subject_vs_baseline_deltas"] == []

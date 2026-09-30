@@ -9,13 +9,15 @@ from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
 from betelgeuze_engine_v2.docking.scoring import DockingScoreDescriptor, ScoreDirection
 from betelgeuze_engine_v2.docking.scorer_v1 import _sha256 as score_receipt_digest
 from .comparison import choose_variant
-from .fixed_receptor import FIXED_REPORT_SCHEMA, FIXED_POLICY_ID
+from .fixed_receptor import FIXED_POLICY_ID
 from .evidence_contracts import (
     REPORT_SCHEMA, LEGACY_REPORT_SCHEMA, POLICY_ID, same, selection_config,
     verify_execution_evidence,
 )
 from .provenance import ResearchError, canonical, decode_coordinates, digest, finite, integer
 from .selection import candidate_from_row, select_final_candidates, refinement_admissible
+from .scoring_profile import FIXED_REPORT_SCHEMAS, EXPLICIT_REPORT_SCHEMAS, REGISTERED_REPORT_SCHEMA, report_model, descriptor as expected_score_descriptor, terms_class
+from .score_replay import _IDENTITIES, _COUNTS, _VALUES
 
 
 def verify_report(report: dict) -> dict:
@@ -28,17 +30,25 @@ def verify_report(report: dict) -> dict:
 
 
 def _verify_report(report: dict) -> dict:
-    if report.get("schema_id") not in {REPORT_SCHEMA, LEGACY_REPORT_SCHEMA, FIXED_REPORT_SCHEMA}:
+    if report.get("schema_id") not in ({REPORT_SCHEMA, LEGACY_REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS):
         raise ResearchError("unsupported comparison report")
     if digest({k: v for k, v in report.items() if k != "report_sha256"}) != report.get("report_sha256"):
         raise ResearchError("comparison report digest mismatch")
     if any(report.get(flag) is not False for flag in ("scientifically_validated", "customer_execution_allowed", "claim_safe")):
         raise ResearchError("research report cannot promote execution or scientific claims")
-    current = report["schema_id"] in {REPORT_SCHEMA, FIXED_REPORT_SCHEMA}
+    current = report["schema_id"] in ({REPORT_SCHEMA} | FIXED_REPORT_SCHEMAS)
     if current:
-        same(report["selection_policy_id"], FIXED_POLICY_ID if report["schema_id"] == FIXED_REPORT_SCHEMA else POLICY_ID, "selection policy")
+        same(report["selection_policy_id"], FIXED_POLICY_ID if report["schema_id"] in FIXED_REPORT_SCHEMAS else POLICY_ID, "selection policy")
     n = integer(report["atom_count"], 1, 256)
     verify_execution_evidence(report)
+    if report['schema_id'] == REGISTERED_REPORT_SCHEMA:
+        from .registered_evidence import verify_registered_evidence
+        verify_registered_evidence(report['proposal_policy'], atom_count=n,
+            authority=report['authority_input_receipt_sha256'], seed=report['budget']['seed'],
+            coordinate_frame=report['cross_parameters']['coordinate_frame_id'],
+            receptor_system_sha256=report['evaluator']['receptor_system_sha256'],
+            rows={name: arm['rows'] for name, arm in report['arms'].items()},
+            attempts=report['attempts'])
     k = integer(report["budget"]["top_k"], 1, 256)
     arms = report["arms"]
     if set(arms) != {"baseline", "refined"}:
@@ -57,6 +67,16 @@ def _verify_report(report: dict) -> dict:
                 succeeded += 1
                 score = finite(row["score"])
                 terms = row["terms"]
+                restored = terms_class(report_model(report))(**{k: terms[k] for k in _IDENTITIES + _COUNTS},
+                    **{k: float.fromhex(terms[k + "_binary64_hex"]) for k in _VALUES})
+                same(restored.to_dict(), terms, "versioned score terms")
+                if report["schema_id"] in EXPLICIT_REPORT_SCHEMAS:
+                    for term_key, scorer_key in (
+                        ("context_fingerprint_sha256", "context"),
+                        ("config_fingerprint_sha256", "config"),
+                        ("backend_receipt_sha256", "backend"),
+                    ):
+                        same(terms[term_key], report["scorer"][scorer_key], "scorer identity")
                 if (score.hex() != terms["total_score_binary64_hex"]
                         or terms["authority_input_receipt_sha256"] != report["authority_input_receipt_sha256"]
                         or score_receipt_digest({key: value for key, value in terms.items() if key != "receipt_sha256"}) != terms["receipt_sha256"]):
@@ -96,11 +116,7 @@ def _verify_report(report: dict) -> dict:
     config = selection_config(report["selection_config"] if current else first["config"], k)
     descriptor_doc = first["score_descriptor"]
     descriptor = DockingScoreDescriptor(**{**descriptor_doc, "direction": ScoreDirection(descriptor_doc["direction"])})
-    from betelgeuze_engine_v2.docking.scorer_v1 import SCORER_V1_SCORE_ID, SCORER_V1_APPLICABILITY_DOMAIN_ID
-    expected_descriptor = DockingScoreDescriptor(
-        SCORER_V1_SCORE_ID, ScoreDirection.MINIMIZE, None,
-        "uncalibrated_dimensionless_chemistry_pose_ordering_score", False,
-        applicability_domain_id=SCORER_V1_APPLICABILITY_DOMAIN_ID)
+    expected_descriptor = expected_score_descriptor(report_model(report))
     same(descriptor_doc, expected_descriptor.to_dict(), "uncalibrated scorer descriptor")
     for name in arms:
         raw = select_final_candidates(
@@ -135,7 +151,7 @@ def _verify_report(report: dict) -> dict:
         raise ResearchError("variant selection decisions are inconsistent")
     return {"structural_verification_passed": True, "report_sha256": report["report_sha256"],
             "scientifically_validated": False, "scoring_reexecuted": False,
-            "verification_schema_id": ("cpu_fixed_receptor_evidence_verification/1.0.0" if report["schema_id"] == FIXED_REPORT_SCHEMA
+            "verification_schema_id": ("cpu_fixed_receptor_evidence_verification/1.0.0" if report["schema_id"] in FIXED_REPORT_SCHEMAS
                                        else "cpu_evidence_verification/1.2.1"),
             "legacy_per_arm_selection_is_diagnostic": not current,
             "input_binding_evidence_present": current and report["request_binding"] is not None}

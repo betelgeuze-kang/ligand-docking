@@ -202,8 +202,15 @@ def sdf_v2000_string(
         stereo_code = _SDF_STEREO_CODE.get(bond.stereo)
         if stereo_code is None:
             raise MolecularWriteError(f"unsupported SDF bond stereo {bond.stereo!r}")
+        first, second = bond.atom_i, bond.atom_j
+        if stereo_code:
+            source_first = bond.metadata.get("sdf_v2000_stereo_first_atom_index")
+            if type(source_first) is not int or source_first not in (first, second):
+                raise MolecularWriteError("invalid SDF wedge first-atom orientation")
+            if source_first == second:
+                first, second = second, first
         lines.append(
-            f"{bond.atom_i + 1:3d}{bond.atom_j + 1:3d}{bond_type:3d}{stereo_code:3d}  0  0  0"
+            f"{first + 1:3d}{second + 1:3d}{bond_type:3d}{stereo_code:3d}  0  0  0"
         )
 
     def append_pairs(label: str, pairs: list[tuple[int, int]]) -> None:

@@ -57,7 +57,9 @@ def _restore_score_terms(scorer, proposal, document):
         if value.hex() != text:
             raise ResearchError("noncanonical hexadecimal score term")
         values[name] = value
-    result = ScorerV1Terms(**expected, **values, **{name: document[name] for name in _COUNTS})
+    from .chemical_features import ExplicitGraphScorer, ExplicitGraphTerms
+    term_type = ExplicitGraphTerms if isinstance(scorer, ExplicitGraphScorer) else ScorerV1Terms
+    result = term_type(**expected, **values, **{name: document[name] for name in _COUNTS})
     # Constructor verifies finite components, counts and the actual term sum.
     # Exact reproduction also checks schema, claim flags, and retained receipt.
     if canonical(result.to_dict()) != canonical(document):

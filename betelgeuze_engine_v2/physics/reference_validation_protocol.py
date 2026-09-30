@@ -27,7 +27,6 @@ import tempfile
 from typing import Any, Mapping
 
 from .reference_parameter_applicability import (
-    FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
     REFERENCE_PARAMETER_APPLICABILITY_PROFILE_ID,
 )
 
@@ -46,6 +45,12 @@ CPU_REFERENCE_VALIDATION_PROTOCOL_REVIEWER_IDENTITY_SHA256 = (
 )
 FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256 = (
     "1ee318ca1550953022783afa8b88eb66e3698489708c0a96969b855ca2995298"
+)
+
+# This pre-result CPU protocol binds the H5 record reviewed at its own freeze.
+# A later H5 review must not silently rebind this protocol or its receipt seals.
+FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256 = (
+    "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -1421,7 +1426,7 @@ def _build_protocol() -> CPUReferenceValidationProtocol:
             CPU_REFERENCE_VALIDATION_PROTOCOL_REVIEWER_IDENTITY_SHA256
         ),
         h5_applicability_record_sha256=(
-            FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
+            FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256
         ),
         fixtures=fixtures,
         mutations=mutations,
@@ -1610,6 +1615,7 @@ __all__ = [
     "CPU_REFERENCE_VALIDATION_PROTOCOL_SCHEMA_ID",
     "CPU_REFERENCE_VALIDATION_PROTOCOL_VERSION",
     "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256",
+    "FROZEN_CPU_REFERENCE_VALIDATION_H5_DEPENDENCY_SHA256",
     "CPUReferenceValidationAuthorizationDecision",
     "CPUReferenceValidationCase",
     "CPUReferenceValidationMetric",

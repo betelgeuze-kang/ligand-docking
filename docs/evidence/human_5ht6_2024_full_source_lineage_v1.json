@@ -1,0 +1,772 @@
+{
+  "assay_lineage": {
+    "binding": {
+      "equation_citation": 60,
+      "exact_construct_and_assayed_microstate_verified": false,
+      "nonspecific_binding_control": "methiothepine (paper spelling)",
+      "radioligand": "[3H]-LSD",
+      "reference_compound": "olanzapine",
+      "source_locations": [
+        "section 3.2.1, p.39",
+        "section 3.2.2, pp.39-40"
+      ],
+      "system": "Human 5-HT6 expressed in HEK293; radioligand competition",
+      "wet_assay_pH_established": false
+    },
+    "functional": {
+      "KB_method_citation": 56,
+      "Table6_reference": "SB258585",
+      "agonist_challenge": "5-CT",
+      "not_equivalent_to_binding_Ki": true,
+      "source_location": "section 3.2.3, p.40",
+      "system": "Human 5-HT6 HEK293 cAMP functional assay"
+    },
+    "method_citations": [
+      {
+        "automatic_identity_edge_emitted": false,
+        "bibliographic_text": "Cheng, Y.; Prusoff, W.H. Biochem. Pharmacol. 1973, 22, 3099-3108.",
+        "number": 60,
+        "primary_cited_source_opened": false,
+        "reference_measurement_origin_established": false,
+        "role": "Ki conversion-method citation"
+      },
+      {
+        "automatic_identity_edge_emitted": false,
+        "bibliographic_text": "Wichur, T.; et al. Discovery of 1-(phenylsulfonyl)-1H-indole-based multifunctional ligands targeting cholinesterases and 5-HT6 receptor with anti-aggregation properties against amyloid-beta and tau. Eur. J. Med. Chem. 2021, 225, 113783.",
+        "number": 56,
+        "primary_cited_source_opened": false,
+        "reference_measurement_origin_established": false,
+        "role": "Functional inhibition-curve/KB method citation"
+      }
+    ],
+    "reference_value_provenance": "Table 6 letter footnotes identify names, not source papers. Methods state reference use, but do not establish that these particular reference values are newly measured or copied. The separate Biomolecules SB-258585 reference has an earlier cited-value annotation; that origin and its binding Ki are not transferred to this 2024 functional KB."
+  },
+  "audit_date": "2026-09-29",
+  "checks_performed": [
+    "Verified retained primary PDF, public SB258585 response and original five-paper ledger hashes against existing pinned values.",
+    "Visually checked retained PDF pages 7-11 and 39-40; cross-checked Table 6 names, endpoint column ownership, units and missingness against text.",
+    "Read current document-key/node/component/preflight implementations; no bibliography traversal or endpoint-specific edge exclusion exists in the inspected functions.",
+    "Checked the historical reference candidate id exists in both public candidate metadata and its saved preflight, with blocked_identity as recorded.",
+    "Checked three historical 2024 results remain identity_clear_review_required and all 30 original ledger roles remain null.",
+    "Computed only the public DOI hash and copied the matching retained public canonical key; no protected component traversal or new full preflight was executed."
+  ],
+  "conditional_SB258585_key_trace": {
+    "conclusion": "The printed occurrence supplies a concrete reason that the three-row graph cannot establish whole-source clearance. The conditional key trace is not a new protected-universe preflight, global clearance, chemical equivalence, or proof of an admission defect.",
+    "conditions": [
+      "Treat the explicitly printed 2024 Table 6 SB258585 functional-reference occurrence as an included public identity node.",
+      "Use the retained PubChem CID 3248571 identity for this name link, without claiming assayed salt/microstate equivalence.",
+      "Retain the current shared-document/shared-chemical-key semantics."
+    ],
+    "historical_terminal_receipt": {
+      "candidate_count_as_recorded": 13,
+      "candidate_id": "paper:10.3390/biom13010012:SB-258585-cited-reference",
+      "component_id_as_recorded": "b254f58a3c44c7a0fb72552993ec22256b7f928e24b8c3a5664c8d67e53d4aae",
+      "component_nodes_as_recorded": 135178,
+      "context_nodes_as_recorded": 168175,
+      "input": "historical_biomolecules_family_preflight",
+      "reserved_nodes_count_as_recorded": 1336,
+      "status_as_recorded": "blocked_identity"
+    },
+    "new_2024_blocked_identity_verdict": false,
+    "new_blocked_row_count": null,
+    "new_component_id": null,
+    "new_full_preflight_executed": false,
+    "protected_context_loaded": false,
+    "public_identity": {
+      "CID": 3248571,
+      "InChIKey": "BDHMSYNBSBZCAF-UHFFFAOYSA-N",
+      "SMILES": "CN1CCN(CC1)C2=C(C=CC(=C2)NS(=O)(=O)C3=CC=C(C=C3)I)OC",
+      "assayed_state_match_verified": false,
+      "source_formula": "C18H22IN3O3S"
+    },
+    "status": "conditional_public_metadata_trace_to_historically_blocked_candidate; expanded_review_blocked",
+    "terminal_protected_path_rederived": false,
+    "typed_public_path": [
+      {
+        "basis": "same explicitly supplied 2024 article DOI",
+        "from": "2024 PR49/PR58/PR59 ledger occurrences",
+        "key": "9dafc52112590aba7dc65c1c6477655dd30d56c1df10d90f3811bd19d2bf24ac",
+        "kind": "document",
+        "to": "proposed 2024 Table 6 SB258585 reference occurrence"
+      },
+      {
+        "basis": "reuse of retained public SB258585 identity metadata, conditional on occurrence inclusion",
+        "from": "proposed 2024 Table 6 SB258585 reference occurrence",
+        "key": "ef0a164b53e7ea2e71e2c73a8b9886264fad9422e3655936b158471810fa5ab4",
+        "kind": "canonical",
+        "to": "paper:10.3390/biom13010012:SB-258585-cited-reference"
+      }
+    ]
+  },
+  "execution_boundary": {
+    "database_restore_count": 0,
+    "download_count": 0,
+    "generic_implementation_bug_fixed": false,
+    "model_weights_opened": false,
+    "new_experiments": 0,
+    "new_tests_or_tool_added": false,
+    "old_ledgers_modified": false,
+    "product_code_modified": false,
+    "protected_outcomes_opened": false,
+    "protected_raw_or_semantic_contexts_opened": false
+  },
+  "historical_review_preservation": {
+    "2024_rows_as_recorded": [
+      {
+        "candidate_id": "paper:10.3390/ijms251910287:PR49",
+        "chemical_key_available": true,
+        "component_nodes": 3,
+        "direct_reserved_key_overlap": false,
+        "direct_unknown_policy_key_overlap": false,
+        "document_key_available": true,
+        "identity_component_id": "0e4fa985b7499757ffdeb6cd9181de6802da0f95e2178cb455d3fd4819ef694a",
+        "reserved_nodes_count": 0,
+        "status": "identity_clear_review_required",
+        "unknown_policy_nodes_count": 0
+      },
+      {
+        "candidate_id": "paper:10.3390/ijms251910287:PR58",
+        "chemical_key_available": true,
+        "component_nodes": 3,
+        "direct_reserved_key_overlap": false,
+        "direct_unknown_policy_key_overlap": false,
+        "document_key_available": true,
+        "identity_component_id": "0e4fa985b7499757ffdeb6cd9181de6802da0f95e2178cb455d3fd4819ef694a",
+        "reserved_nodes_count": 0,
+        "status": "identity_clear_review_required",
+        "unknown_policy_nodes_count": 0
+      },
+      {
+        "candidate_id": "paper:10.3390/ijms251910287:PR59",
+        "chemical_key_available": true,
+        "component_nodes": 3,
+        "direct_reserved_key_overlap": false,
+        "direct_unknown_policy_key_overlap": false,
+        "document_key_available": true,
+        "identity_component_id": "0e4fa985b7499757ffdeb6cd9181de6802da0f95e2178cb455d3fd4819ef694a",
+        "reserved_nodes_count": 0,
+        "status": "identity_clear_review_required",
+        "unknown_policy_nodes_count": 0
+      }
+    ],
+    "complete_source_family_reviewed": false,
+    "current_annotation": "blocked_review pending occurrence-scope and whole-family identity review; historical identity_clear_review_required is retained as its original narrower result",
+    "original_three_row_component_membership_changed": false,
+    "source_roles_assigned": false
+  },
+  "inputs": {
+    "component_policy_implementation": {
+      "byte_count": 18674,
+      "path": "betelgeuze_product/public_assay_components.py",
+      "sha256": "7425e0d0fcd39a677ac769dd3f56026441753f7e12af4214a25efd0bf25ffaf9"
+    },
+    "historical_biomolecules_family_preflight": {
+      "byte_count": 8495,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-service-validation-20260929/biom-table1-family-preflight.json",
+      "sha256": "abd45287a4231846aa2321efe4ba89d5fba93208ee60647032a2a569de5bcfa2"
+    },
+    "historical_five_paper_preflight": {
+      "byte_count": 13921,
+      "path": "docs/evidence/human_5ht6_ki_multi_paper_identity_screen_v1.json",
+      "sha256": "816ab8870686105ab99f0e734820380aaf43e605c74a51cf00084c60c6c1be7b"
+    },
+    "historical_reference_candidate_builder": {
+      "byte_count": 15324,
+      "path": "tools/analysis/human_5ht6_primary_diagnostic_v1.py",
+      "sha256": "93ed614c9aebbe9e825d7f3eb830360569e68799d57f4e862df03688030403ca"
+    },
+    "historical_retrospective_plan": {
+      "byte_count": 1298,
+      "path": "docs/evidence/human_5ht6_primary_retrospective_plan_v1.json",
+      "sha256": "326ac102ab6763e2953d5528274e2c541afdfded4c6bd93a08ad7878d0e74b73"
+    },
+    "original_2024_ledger": {
+      "byte_count": 3005,
+      "path": "docs/evidence/human_5ht6_ki_2024_source_ledger_v1.json",
+      "sha256": "277f62f7cad26e85f4401aa4e53cfe5992da19dddec692500b7b552d21d33189"
+    },
+    "original_candidate_builder": {
+      "byte_count": 20305,
+      "path": "tools/product/primary_5ht6_ki_multi_paper_v1.py",
+      "sha256": "9d797ef658655e861b450a592d1cd4a73a45775ce429fc0d27f18ac5aa91c75e"
+    },
+    "original_five_paper_ledger": {
+      "byte_count": 27675,
+      "path": "docs/evidence/human_5ht6_ki_multi_paper_source_ledger_v1.json",
+      "sha256": "e5b5af4caa0e4efa3e5e3a502236357276051044431f45bda77b8b5163ca0452"
+    },
+    "preflight_implementation": {
+      "byte_count": 5648,
+      "path": "betelgeuze_product/public_assay_preflight.py",
+      "sha256": "6f501581fec2fc83cb86e3c08b953e0df64bdf10935fda23cadcfb8b724e9af0"
+    },
+    "primary_pdf": {
+      "byte_count": 7957708,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024.pdf",
+      "sha256": "4bd52d8bbb3c216b3d6976d17584a2d00b6608643df50278b80e7b94f4ab02ca"
+    },
+    "public_biomolecules_candidate_metadata": {
+      "byte_count": 16014,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-service-validation-20260929/biom-table1-family-candidates.json",
+      "sha256": "5c07f26a37a1b3d80a85829b45c98ba29778109e2bd98204336b024e4657d8d6"
+    },
+    "public_sb258585_identity": {
+      "byte_count": 262,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-service-validation-20260929/sb258585-pubchem-properties.json",
+      "sha256": "376c75688a3087730348870ad6fd63f8f4c73b5c15a5e955db81cb7a2c0e3a5f"
+    },
+    "retained_layout_text": {
+      "byte_count": 455125,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/5ht6-primary-20260929/2024-layout.txt",
+      "sha256": "0d0a82e71aec1b94febbe739cacb2434ea783c3dd636d53a910747e362bba5b2"
+    }
+  },
+  "next_substantive_action": "Prepare an explicit reference-occurrence inclusion contract and metadata-only source manifest from the inventoried primary/source-supplement material. Keep endpoint relations separate, freeze semantics independently of seen outcomes, and request a fresh sanctioned role/preflight decision only when the required complete metadata is available. Do not restore ChEMBL or consume protected semantic contexts to fill this audit.",
+  "other_main_article_occurrence_metadata": {
+    "additional_method_controls": [
+      {
+        "names": [
+          "SB-699551",
+          "chlorpromazine",
+          "5-HT",
+          "risperidone",
+          "dopamine",
+          "forskolin"
+        ],
+        "role": "other printed receptor-assay controls; no normalized chemical identity assigned",
+        "source_location": "sections 3.2.2-3.2.3, pp.39-40"
+      },
+      {
+        "names": [
+          "ketoconazole",
+          "quinidine",
+          "doxorubicin",
+          "warfarin"
+        ],
+        "role": "CYP/hepatotoxicity/plasma-protein-binding references; endpoint-specific",
+        "source_location": "Figure 2 p.15 and sections 3.5.2-3.5.5 p.42"
+      }
+    ],
+    "chromatography_reference_names": {
+      "names": [
+        "acetanilide",
+        "butyrophenone",
+        "diclofenac",
+        "octanonophenone",
+        "acetophenone",
+        "benzimidazole",
+        "colchicine",
+        "indole",
+        "indometacin",
+        "paracetamol",
+        "theophylline",
+        "nicardipine",
+        "nizatidine",
+        "carbamazepine",
+        "heptanophenone",
+        "hexanophenone",
+        "propiophenone",
+        "valerophenone"
+      ],
+      "source_location": "section 3.4, p.41",
+      "supplement_TableS1_not_reviewed": true
+    },
+    "not_exhaustive_for_every_bibliographic_chemical_or_reagent": true,
+    "source_conflicts_kept": [
+      {
+        "issue": "D2 Table 6 footnote names ziprasidone, while binding Methods name risperidone. Neither is silently substituted.",
+        "location": "Table 6 p.11 versus section 3.2.2 p.40"
+      },
+      {
+        "issue": "Keep the printed 5-HT5A reference SB269970 separate from the nonspecific-binding control SB-699551; no external correction or identity equivalence is assumed.",
+        "location": "Table 6 p.11 and Methods pp.39-40"
+      }
+    ],
+    "status": "bounded text inventory; not chemically complete graph nodes or cross-target admission",
+    "table7": {
+      "compound_ids": [
+        "PR9",
+        "PR11",
+        "PR17",
+        "PR19",
+        "PR30",
+        "PR36",
+        "PR41",
+        "PR42",
+        "PR43",
+        "PR44",
+        "PR46",
+        "PR47",
+        "PR49",
+        "PR51",
+        "PR53",
+        "PR54",
+        "PR58",
+        "PR61",
+        "PR64",
+        "PR66",
+        "PR67",
+        "PR68",
+        "PR71",
+        "PR73",
+        "PR74",
+        "PR75",
+        "PR76",
+        "PR77",
+        "PR78"
+      ],
+      "endpoint": "antiproliferative IC50 on distinct cell lines",
+      "not_5HT6_binding_labels": true,
+      "physical_pdf_page": 12,
+      "reference_names": [
+        "doxorubicin",
+        "gefitinib",
+        "afatinib"
+      ]
+    },
+    "table8": {
+      "compound_ids": [
+        "PR11",
+        "PR41",
+        "PR42",
+        "PR44",
+        "PR54",
+        "PR58",
+        "PR68",
+        "PR71",
+        "PR73",
+        "PR74",
+        "PR77"
+      ],
+      "endpoints": [
+        "chromatographic hydrophobicity indices",
+        "phospholipid affinity",
+        "HSA binding"
+      ],
+      "not_5HT6_binding_labels": true,
+      "physical_pdf_page": 14
+    },
+    "table9": {
+      "compound_ids": [
+        "PR68",
+        "PR73",
+        "PR76"
+      ],
+      "not_5HT6_binding_labels": true,
+      "physical_pdf_page": 14,
+      "reference_names_by_endpoint": {
+        "PAMPA": "caffeine",
+        "metabolic_stability": "verapamil",
+        "plasma_protein_binding": "warfarin"
+      }
+    }
+  },
+  "outcome_exposure": {
+    "additional_visible_published_values_not_claimed_blind": true,
+    "all_30_already_reviewed_before_retrospective_diagnostic": true,
+    "historical_five_paper_rows": 30,
+    "independent_holdout_established": false,
+    "new_experimental_data_generated": false,
+    "original_30_row_measurement_ledger_expanded": false,
+    "model_prediction_ledger_created": false,
+    "this_audit_viewed_public_tables_1_through_6": true
+  },
+  "policy_semantics_review": {
+    "admission_bug_demonstrated": false,
+    "bibliography_edges_generated": false,
+    "code_locations": {
+      "component_index": "betelgeuze_product/public_assay_components.py:322",
+      "document_keys": "betelgeuze_product/public_assay_components.py:104",
+      "node_from_raw": "betelgeuze_product/public_assay_components.py:170",
+      "original_candidate_nodes": "tools/product/primary_5ht6_ki_multi_paper_v1.py:264",
+      "preflight": "betelgeuze_product/public_assay_preflight.py:59",
+      "previous_SB_reference_node": "tools/analysis/human_5ht6_primary_diagnostic_v1.py:79"
+    },
+    "component_policy": "all_supplied_metadata_components_before_target_endpoint_selection_v1",
+    "paper_control_inclusion_policy_complete": false,
+    "policy_changed": false,
+    "preflight_completeness_policy": "declared_and_supported_chemical_document_keys_v1",
+    "verified_behavior": [
+      "document_keys consumes explicitly supplied Article DOI, PMID, ChEMBL document and patent identifiers; it does not traverse a bibliography.",
+      "node_from_raw hashes supplied document and supported chemical keys. It does not encode endpoint or distinguish assayed test compounds from reference controls.",
+      "component_index joins supplied nodes sharing any complete typed key; endpoint filtering does not remove a supplied node.",
+      "The original paper builder emits only ledger rows. A prior separate diagnostic explicitly added the Biomolecules Table 1 SB-258585 reference. No general whole-paper parser or automatic reference expansion is claimed.",
+      "preflight always sets training_allowed, calibration_allowed and independent_evaluation_allowed false, including identity_clear_review_required."
+    ]
+  },
+  "primary_binding_table_inventory": {
+    "existing_exclusions_preserved": {
+      "PR65_PR66": "Table 4 methylpiperazine/morpholine assignments conflict with synthesis entries; neither identity is repaired or admitted here."
+    },
+    "existing_source_ledger_ids": [
+      "PR49",
+      "PR58",
+      "PR59"
+    ],
+    "groups": [
+      {
+        "compound_graphs_newly_verified": false,
+        "endpoint": "human_5HT6_radioligand_competition_Ki",
+        "measurement_values_transcribed_here": false,
+        "physical_pdf_page": 7,
+        "printed_compound_ids": [
+          "PR1",
+          "PR2",
+          "PR3",
+          "PR4",
+          "PR5",
+          "PR6",
+          "PR7",
+          "PR8",
+          "PR9",
+          "PR10",
+          "PR11",
+          "PR12"
+        ],
+        "printed_unit": "uM",
+        "row_count": 12,
+        "table": 1,
+        "uncertainty_kind": "SD"
+      },
+      {
+        "compound_graphs_newly_verified": false,
+        "endpoint": "human_5HT6_radioligand_competition_Ki",
+        "measurement_values_transcribed_here": false,
+        "physical_pdf_page": 8,
+        "printed_compound_ids": [
+          "PR13",
+          "PR14",
+          "PR15",
+          "PR16",
+          "PR17",
+          "PR18",
+          "PR19",
+          "PR20",
+          "PR21",
+          "PR22",
+          "PR23",
+          "PR24",
+          "PR25",
+          "PR26",
+          "PR27",
+          "PR28"
+        ],
+        "printed_unit": "uM",
+        "row_count": 16,
+        "table": 2,
+        "uncertainty_kind": "SD"
+      },
+      {
+        "compound_graphs_newly_verified": false,
+        "endpoint": "human_5HT6_radioligand_competition_Ki",
+        "measurement_values_transcribed_here": false,
+        "physical_pdf_page": 9,
+        "printed_compound_ids": [
+          "PR29",
+          "PR30",
+          "PR31",
+          "PR32",
+          "PR33",
+          "PR34",
+          "PR35",
+          "PR36",
+          "PR37",
+          "PR38"
+        ],
+        "printed_unit": "uM",
+        "row_count": 10,
+        "table": 3,
+        "uncertainty_kind": "SD"
+      },
+      {
+        "compound_graphs_newly_verified": false,
+        "endpoint": "human_5HT6_radioligand_competition_Ki",
+        "measurement_values_transcribed_here": false,
+        "physical_pdf_page": 10,
+        "printed_compound_ids": [
+          "PR39",
+          "PR40",
+          "PR41",
+          "PR42",
+          "PR43",
+          "PR44",
+          "PR45",
+          "PR46",
+          "PR47",
+          "PR48",
+          "PR49",
+          "PR50",
+          "PR51",
+          "PR52",
+          "PR53",
+          "PR54",
+          "PR55",
+          "PR56",
+          "PR57",
+          "PR58",
+          "PR59",
+          "PR60",
+          "PR61",
+          "PR62",
+          "PR63",
+          "PR64",
+          "PR65",
+          "PR66"
+        ],
+        "printed_unit": "uM",
+        "row_count": 28,
+        "table": 4,
+        "uncertainty_kind": "SD"
+      },
+      {
+        "compound_graphs_newly_verified": false,
+        "endpoint": "human_5HT6_radioligand_competition_Ki",
+        "measurement_values_transcribed_here": false,
+        "physical_pdf_page": 11,
+        "printed_compound_ids": [
+          "PR67",
+          "PR68",
+          "PR69",
+          "PR70",
+          "PR71",
+          "PR72",
+          "PR73",
+          "PR74",
+          "PR75",
+          "PR76",
+          "PR77",
+          "PR78"
+        ],
+        "printed_unit": "uM",
+        "row_count": 12,
+        "table": 5,
+        "uncertainty_kind": "SD"
+      }
+    ],
+    "identity_mapping_complete": false,
+    "new_calibration_rows": 0,
+    "new_fit_rows": 0,
+    "new_independent_evaluation_rows": 0,
+    "original_ledger_row_count_unchanged": 30,
+    "unique_printed_compound_ids": 78
+  },
+  "qualification": {
+    "new_calibration_admission": false,
+    "new_development_cohort_admission": false,
+    "new_independent_evaluation_admission": false,
+    "new_model_or_engine_comparison": false,
+    "new_prepared_state_binding": false,
+    "new_training_admission": false,
+    "production_qualification": false,
+    "scientific_validation": false,
+    "status": "NOT_PROMOTED / NOT_QUALIFIED"
+  },
+  "remaining_gaps": [
+    "Define and freeze explicit inclusion semantics for test compounds, reference controls, assay reagents and cited-only comparisons before using a new dataset; do not exclude observed inconvenient connections after outcomes are known.",
+    "Complete supplementary and whole-source identity mapping, including controls, salts/stereochemistry and the unresolved PR65/PR66 conflict; the 78 IDs are not 78 verified chemical graphs.",
+    "Resolve reference-value origin and keep binding Ki, functional KB/EC50, cytotoxicity and ADMET endpoints separate.",
+    "Complete rights review for intended use, assay-state/construct/microstate correspondence and independent role assignment.",
+    "Obtain an allowed, source-bound cohort not already used for development and freeze fit/calibration/evaluation roles before outcomes are opened. Current seen rows cannot be relabelled as an independent blind holdout.",
+    "The retained PR49/7XTB preparation remains a computational development case; no observed PR49 reference pose or PR49/PR59 affinity ranking is established."
+  ],
+  "review_status": "blocked_review",
+  "schema_version": "human_5ht6_2024_full_source_lineage_annotation_v1",
+  "scope": "Versioned source-occurrence and endpoint annotation from retained public files. The filename denotes the full-source review objective, not completed whole-family identity clearance.",
+  "source": {
+    "binding_table_pages_visually_reviewed": [
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "doi": "10.3390/ijms251910287",
+    "license_notice": "CC BY 4.0 in retained article; intended training/product-use review remains incomplete",
+    "method_pages_visually_reviewed": [
+      39,
+      40
+    ],
+    "organism_target_scope": "human 5-HT6; other printed targets and controls catalogued only to preserve source lineage",
+    "primary_pdf_url": "https://ruj.uj.edu.pl/server/api/core/bitstreams/db463f70-771f-42ec-8060-ab5423b38e45/content",
+    "supplement": {
+      "declared_url": "https://www.mdpi.com/article/10.3390/ijms251910287/s1",
+      "downloaded_in_this_audit": false,
+      "known_remaining_scope": "Main text points to Supplementary Table S1 for chromatographic compounds/reference standards and to supplementary computational data. No complete supplementary occurrence or identity inventory is claimed.",
+      "reviewed": false
+    },
+    "text_extraction_caution": "The retained layout text repeats overprinted table text. Table membership and Table 6 endpoint columns were checked against rendered source PDF pages."
+  },
+  "source_checkout_head": "6ebaccafed8a9090b6bc1a620d7cd1ff153d5fd0",
+  "table6": {
+    "endpoint_columns": {
+      "EC50": "Functional cAMP response; Methods 3.2.3.",
+      "KB": "Functional antagonism derived from inhibition curves; Methods 3.2.3. It is not an additional binding Ki.",
+      "Ki": "Radioligand competition binding; Methods 3.2.1-3.2.2."
+    },
+    "new_independent_Ki_compound_rows_established": 0,
+    "numeric_EC50_compound_occurrences": 1,
+    "numeric_KB_compound_occurrences": 4,
+    "numeric_Ki_compound_occurrences": 6,
+    "physical_pdf_page": 11,
+    "pooled_with_primary_Ki_ledger": false,
+    "printed_missingness": {
+      "NA": "not active in the respective printed functional endpoint; not a numeric zero or weak-binding Ki label",
+      "ND": "not determined; not an inactive label",
+      "NT": "nontoxic in the printed HEK293 test; not a receptor-activity label",
+      "dash": "no numeric value reported"
+    },
+    "references": [
+      {
+        "admitted": false,
+        "endpoint": "Ki",
+        "footnote": "a",
+        "measurement_origin_class": "author_reported_reference_value; new_measurement_vs_reused_literature_value_unresolved",
+        "origin": "2024 article Table 6 Ref. row and lettered name footnote",
+        "printed_name": "ziprasidone",
+        "printed_target": "D2",
+        "printed_unit": "uM",
+        "printed_value": "0.0009",
+        "row_specific_bibliographic_citation": null,
+        "structure_identity_review": "not_performed_here"
+      },
+      {
+        "admitted": false,
+        "endpoint": "Ki",
+        "footnote": "b",
+        "measurement_origin_class": "author_reported_reference_value; new_measurement_vs_reused_literature_value_unresolved",
+        "origin": "2024 article Table 6 Ref. row and lettered name footnote",
+        "printed_name": "buspirone",
+        "printed_target": "5-HT1A",
+        "printed_unit": "uM",
+        "printed_value": "0.032",
+        "row_specific_bibliographic_citation": null,
+        "structure_identity_review": "not_performed_here"
+      },
+      {
+        "admitted": false,
+        "endpoint": "Ki",
+        "footnote": "c",
+        "measurement_origin_class": "author_reported_reference_value; new_measurement_vs_reused_literature_value_unresolved",
+        "origin": "2024 article Table 6 Ref. row and lettered name footnote",
+        "printed_name": "SB269970",
+        "printed_target": "5-HT5A",
+        "printed_unit": "uM",
+        "printed_value": "0.061",
+        "row_specific_bibliographic_citation": null,
+        "structure_identity_review": "not_performed_here"
+      },
+      {
+        "admitted": false,
+        "endpoint": "Ki",
+        "footnote": "d",
+        "measurement_origin_class": "author_reported_reference_value; new_measurement_vs_reused_literature_value_unresolved",
+        "origin": "2024 article Table 6 Ref. row and lettered name footnote",
+        "printed_name": "olanzapine",
+        "printed_target": "human 5-HT6",
+        "printed_unit": "uM",
+        "printed_value": "0.007",
+        "row_specific_bibliographic_citation": null,
+        "structure_identity_review": "not_performed_here"
+      },
+      {
+        "admitted": false,
+        "endpoint": "KB",
+        "footnote": "e",
+        "measurement_origin_class": "author_reported_reference_value; new_measurement_vs_reused_literature_value_unresolved",
+        "origin": "2024 article Table 6 Ref. row and lettered name footnote",
+        "printed_name": "SB258585",
+        "printed_target": "human 5-HT6",
+        "printed_unit": "uM",
+        "printed_value": "0.0003",
+        "row_specific_bibliographic_citation": null,
+        "structure_identity_review": "retained_public_identity_available_for_name_link_only"
+      },
+      {
+        "admitted": false,
+        "endpoint": "Ki",
+        "footnote": "f",
+        "measurement_origin_class": "author_reported_reference_value; new_measurement_vs_reused_literature_value_unresolved",
+        "origin": "2024 article Table 6 Ref. row and lettered name footnote",
+        "printed_name": "clozapine",
+        "printed_target": "5-HT7",
+        "printed_unit": "uM",
+        "printed_value": "0.062",
+        "row_specific_bibliographic_citation": null,
+        "structure_identity_review": "not_performed_here"
+      }
+    ],
+    "tested_compound_occurrences": [
+      {
+        "EC50_printed_token": "NA",
+        "KB_printed_token": "0.081",
+        "Ki_occurrence_relation": "repeated_same_compound_and_mean_in_earlier_Ki_table; independent_remeasurement_not_established",
+        "Ki_printed_token": "0.077",
+        "compound_id": "PR49",
+        "earlier_Ki_table": 4,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      },
+      {
+        "EC50_printed_token": "ND",
+        "KB_printed_token": "ND",
+        "Ki_occurrence_relation": "not_determined_in_extended_panel",
+        "Ki_printed_token": "ND",
+        "compound_id": "PR66",
+        "earlier_Ki_table": 4,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      },
+      {
+        "EC50_printed_token": "NA",
+        "KB_printed_token": "0.079",
+        "Ki_occurrence_relation": "repeated_same_compound_and_mean_in_earlier_Ki_table; independent_remeasurement_not_established",
+        "Ki_printed_token": "0.037",
+        "compound_id": "PR68",
+        "earlier_Ki_table": 5,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      },
+      {
+        "EC50_printed_token": "NA",
+        "KB_printed_token": "0.035",
+        "Ki_occurrence_relation": "repeated_same_compound_and_mean_in_earlier_Ki_table; independent_remeasurement_not_established",
+        "Ki_printed_token": "0.061",
+        "compound_id": "PR71",
+        "earlier_Ki_table": 5,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      },
+      {
+        "EC50_printed_token": "NA",
+        "KB_printed_token": "0.134",
+        "Ki_occurrence_relation": "repeated_same_compound_and_mean_in_earlier_Ki_table; independent_remeasurement_not_established",
+        "Ki_printed_token": "0.043",
+        "compound_id": "PR73",
+        "earlier_Ki_table": 5,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      },
+      {
+        "EC50_printed_token": "0.199",
+        "KB_printed_token": "NA",
+        "Ki_occurrence_relation": "repeated_same_compound_and_mean_in_earlier_Ki_table; independent_remeasurement_not_established",
+        "Ki_printed_token": "0.103",
+        "compound_id": "PR76",
+        "earlier_Ki_table": 5,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      },
+      {
+        "EC50_printed_token": "NA",
+        "KB_printed_token": "NA",
+        "Ki_occurrence_relation": "repeated_same_compound_and_mean_in_earlier_Ki_table; independent_remeasurement_not_established",
+        "Ki_printed_token": "0.373",
+        "compound_id": "PR77",
+        "earlier_Ki_table": 5,
+        "new_independent_measurement": false,
+        "printed_unit": "uM"
+      }
+    ],
+    "units": "uM"
+  }
+}

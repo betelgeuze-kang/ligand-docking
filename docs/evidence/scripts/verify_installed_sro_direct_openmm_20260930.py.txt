@@ -1,0 +1,124 @@
+"""Compare one installed product endpoint to a new fixed-coordinate OpenMM audit."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import struct
+from pathlib import Path
+
+
+def ref(path: Path) -> dict:
+    raw = path.read_bytes()
+    return {"path": str(path), "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def check(item: dict) -> bytes:
+    path = Path(item["path"])
+    raw = path.read_bytes()
+    assert len(raw) == item["bytes"] and hashlib.sha256(raw).hexdigest() == item["sha256"]
+    return raw
+
+
+def bits_equal(a: float, b: float) -> bool:
+    return struct.pack(">d", a) == struct.pack(">d", b)
+
+
+def verify(packet: Path) -> dict:
+    protocol = json.loads((packet / "protocol.json").read_bytes())
+    assert protocol["schema_id"] == "installed_sro_direct_same_math_protocol/1"
+    assert protocol["planned_snapshots"] == ["initial", "supplied_final"]
+    assert protocol["perturbations"] == 0
+    assert protocol["energy_absolute_tolerance_kcal_per_mol"] == 1e-8
+    assert protocol["force_component_absolute_tolerance_kcal_per_mol_angstrom"] == 1e-8
+    assert protocol["new_experimental_labels"] == 0 and not protocol["protected_evaluation_used"]
+    for item in (protocol["product_wheel"], protocol["oracle_source"],
+                 protocol["final_coordinates_from_product"],
+                 *protocol["historical_xml_and_request"].values()):
+        check(item)
+    product = json.loads(check(protocol["product_result"]))["result"]
+    audit_path = Path(protocol["output_path"])
+    audit = json.loads(audit_path.read_bytes())
+    assert audit["audit_source_sha256"] == protocol["oracle_source"]["sha256"]
+    for key, item in protocol["historical_xml_and_request"].items():
+        assert audit["inputs"][key]["sha256"] == item["sha256"]
+    assert audit["final_coordinates"]["sha256"] == protocol["final_coordinates_from_product"]["sha256"]
+    assert audit["denominator"] == {"requested": 2, "evaluated": 2, "passed": 2, "rejected": 0}
+    assert [row["snapshot"] for row in audit["snapshots"]] == protocol["planned_snapshots"]
+    assert audit["all_same_math_checks_passed"] is True
+    assert audit["reference_platform"] == "Reference"
+    assert audit["source_XML_equivalence_claimed"] is False
+    assert audit["intrareceptor_energy_evaluated"] is False
+    final = audit["snapshots"][-1]
+    assert final["passed"] is True and final["status"] == "evaluated"
+    current = product["numerical_result"]["checkpoint"]["state"]["current"]
+    expected_xyz = json.loads(check(protocol["final_coordinates_from_product"]))["coordinates_angstrom"]
+    coords = [[float.fromhex(v) for v in atom] for atom in current["coordinates"]]
+    assert all(bits_equal(a, b) for x, y in zip(coords, expected_xyz, strict=True)
+               for a, b in zip(x, y, strict=True))
+    assert all(bits_equal(a, b) for x, y in zip(coords, final["coordinates_angstrom"], strict=True)
+               for a, b in zip(x, y, strict=True))
+    reference = final["reference_same_math"]
+    energy = float.fromhex(current["energy"])
+    oracle_energy = reference["internal_energy"] + reference["cross_energy"]
+    energy_error = abs(energy - oracle_energy)
+    forces = [[float.fromhex(value) for value in atom] for atom in current["forces"]]
+    oracle_forces = [[a + b for a, b in zip(x, y, strict=True)]
+                     for x, y in zip(reference["internal_forces"], reference["cross_forces"], strict=True)]
+    force_errors = [abs(a - b) for x, y in zip(forces, oracle_forces, strict=True)
+                    for a, b in zip(x, y, strict=True)]
+    assert len(force_errors) == 78
+    component_reference = {
+        "ligand_internal": reference["internal_energy"],
+        "cross_lennard_jones": reference["cross_components"]["cross_lennard_jones"],
+        "cross_screened_coulomb": reference["cross_components"]["cross_screened_coulomb"],
+        "total": oracle_energy,
+    }
+    component_errors = {
+        key: abs(float.fromhex(current["components"][key]) - value)
+        for key, value in component_reference.items()
+    }
+    passed = (
+        energy_error <= protocol["energy_absolute_tolerance_kcal_per_mol"]
+        and max(force_errors) <= protocol["force_component_absolute_tolerance_kcal_per_mol_angstrom"]
+        and all(error <= protocol["energy_absolute_tolerance_kcal_per_mol"]
+                for error in component_errors.values())
+    )
+    return {
+        "schema_id": "installed_sro_direct_openmm_endpoint_comparison/1",
+        "status": "passed" if passed else "failed",
+        "protocol": ref(packet / "protocol.json"),
+        "installed_product_result": protocol["product_result"],
+        "new_openmm_audit": ref(audit_path),
+        "product_and_reference_coordinates_binary64_exact": True,
+        "snapshots": audit["denominator"],
+        "final_total_energy_absolute_error_kcal_per_mol": energy_error,
+        "final_max_force_component_absolute_error_kcal_per_mol_angstrom": max(force_errors),
+        "final_component_absolute_errors_kcal_per_mol": component_errors,
+        "final_force_components_checked": len(force_errors),
+        "energy_tolerance_kcal_per_mol": protocol["energy_absolute_tolerance_kcal_per_mol"],
+        "force_component_tolerance_kcal_per_mol_angstrom":
+            protocol["force_component_absolute_tolerance_kcal_per_mol_angstrom"],
+        "new_experimental_labels": 0,
+        "source_xml_equivalence_claimed": False,
+        "affinity_or_pose_recovery_validated": False,
+        "scientifically_validated": False,
+        "product_qualified": False,
+        "new_openmm_same_math_observations_performed": True,
+        "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("packet", type=Path)
+    args = parser.parse_args()
+    outcome = verify(args.packet)
+    target = args.packet / "direct-comparison.json"
+    with target.open("x") as stream:
+        json.dump(outcome, stream, sort_keys=True, indent=2, allow_nan=False)
+        stream.write("\n")
+    print(json.dumps(outcome, sort_keys=True))
+    if outcome["status"] != "passed":
+        raise SystemExit(2)
