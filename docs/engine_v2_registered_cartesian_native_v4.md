@@ -89,6 +89,19 @@ inference are included in arm wall/setup time, without a separate training
 timing claim. The CI extension requests a fresh dependency environment, but no
 hosted CI result is claimed by the local receipt.
 
+A subsequent [local fresh-install receipt](evidence/native_v4_cartesian_fresh_install_v1.json)
+uses the same immutable wheel in a new Python 3.10 virtual environment with
+`include-system-site-packages = false`, CPU PyTorch 2.6.0+cpu and the declared
+`native-v4-fit-replay-v1` extra. `pip check` and the installed-package probe
+passed. The two-candidate/four-arm run made six force and twelve score calls;
+completed verify/resume made zero new worker, force or score calls. The call-cap
+and swapped-candidate preflights were rejected. Its 260 probe files, complete
+package list, wheel hash and execution receipt are retained. After verification,
+the disposable 1.5 GB virtual environment was removed to reclaim space; the
+installed-package path in its original probe is historical, not a currently
+present environment. This establishes a local clean installation and synthetic
+execution on one host, not a hosted CI pass or service qualification.
+
 The immutable wheel, synthetic input/result files and run journals are preserved
 under the receipt's `archive_root` with an `archive-manifest.json` of file sizes
 and hashes. The original bound requests contain absolute `/tmp` paths. Exact
