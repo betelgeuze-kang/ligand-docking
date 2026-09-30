@@ -7,6 +7,7 @@ A stopped case is retained; subsequent cases remain unstarted with unknown work.
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
 import io
@@ -308,6 +309,11 @@ def _oracle_result(oracle_dir, case_id, *, plan_ref, plan, native_ref):
     require(lifecycle["failure"] is None and lifecycle["plan_ref"] == plan_ref and
             lifecycle["native_child_ref"] == native_ref and lifecycle["numerical_receipt_ref"] == ref,
             "oracle_lifecycle_integrity_failure")
+    if plan.get("schema_id") == "sro_native_execution_plan/2":
+        require(lifecycle.get("schema_id") == "sro_endpoint_oracle_lifecycle/2" and
+                type(lifecycle.get("operational_revision")) is dict and
+                compact_hash(lifecycle["operational_revision"]) == compact_hash(plan["operational_revision"]),
+                "oracle_operational_revision_changed")
     child = read_bound(native_ref)
     case = next(case for case in plan["cases"] if case["case_id"] == case_id)
     source = Path(__file__).absolute().parent
@@ -375,13 +381,16 @@ def run_campaign(plan_ref, review_ref, output):
     source_layout(plan_ref, review_ref, plan)
     driver = _load_driver(plan["driver_source_ref"])
     plan = _validate(plan_ref, review_ref, driver)
+    revision = driver.operational_revision_contract(plan) if plan.get("schema_id") == "sro_native_execution_plan/2" else None
+    lineage = {"operational_revision": revision} if revision is not None else {}
     output = Path(output).absolute()
     require(str(output.resolve()) == str(output) and output.is_relative_to(source.parent), "canonical_output_scope_required")
     output.mkdir(mode=0o700)
     start = time.monotonic_ns()
     rows = [{"case_id": case_id, "status": "unstarted", "started_at": None, "work": None,
              "terminal_case_ref": None, "error": None} for case_id in CASE_IDS]
-    publish(output / "campaign-start.json", {"schema_id": "sro_four_case_campaign_start/1",
+    campaign_start_ref = publish(output / "campaign-start.json", {"schema_id": "sro_four_case_campaign_start/2" if revision is not None else "sro_four_case_campaign_start/1",
+            **lineage,
             "plan_ref": plan_ref, "review_ref": review_ref, "supervisor_source_ref": file_ref(Path(__file__).absolute()),
             "started_at": now(), "case_order": CASE_IDS, "denominator": 4})
     for row in rows:
@@ -432,7 +441,8 @@ def run_campaign(plan_ref, review_ref, output):
         row["all_same_math_checks_passed"] = same_math
         row["work"] = None  # Raw retained evidence is authoritative; missing quantities remain unknown.
         row["actual_receipt_refs"] = inventory(case_root)
-        terminal = {"schema_id": "sro_four_case_terminal_case/1", **row,
+        terminal = {"schema_id": "sro_four_case_terminal_case/2" if revision is not None else "sro_four_case_terminal_case/1",
+                    **lineage, **row,
                     "supervisor_ref": supervisor_ref, "ended_at": now(),
                     "inclusive_wall_ns": time.monotonic_ns() - case_start,
                     "deadline_monotonic_ns": deadline, "durations_are_inclusive_do_not_sum": True,
@@ -444,10 +454,13 @@ def run_campaign(plan_ref, review_ref, output):
             row["postfailure_integrity_ref"] = publish(case_root / "postfailure-integrity.json",
                 failure_integrity(plan_ref, review_ref, driver))
             row["terminal_case_ref"] = publish(case_root / "terminal-seal-watchdog.json", {
-                "schema_id": "sro_four_case_terminal_case/1", **row, "prior_terminal_case_ref": row["terminal_case_ref"]})
+                "schema_id": "sro_four_case_terminal_case/2" if revision is not None else "sro_four_case_terminal_case/1",
+                **lineage, **row, "prior_terminal_case_ref": row["terminal_case_ref"]})
         if row["status"] != "completed":
             break
-    receipt = {"schema_id": "sro_four_case_campaign/1", "plan_ref": plan_ref, "review_ref": review_ref,
+    receipt = {"schema_id": "sro_four_case_campaign/2" if revision is not None else "sro_four_case_campaign/1",
+               **lineage, **({"campaign_start_ref": campaign_start_ref} if revision is not None else {}),
+               "plan_ref": plan_ref, "review_ref": review_ref,
                "execution_order": CASE_IDS, "case_results": rows, "denominator": 4,
                "completed_count": sum(row["status"] == "completed" for row in rows),
                "unstarted_count": sum(row["status"] == "unstarted" for row in rows),
@@ -460,6 +473,53 @@ def run_campaign(plan_ref, review_ref, output):
 
 
 # Saved-data arithmetic after terminal campaign receipts; no molecular calls.
+# Static lineage anchors are copied from the reviewed runtime contract.
+# Saved export authenticates these pins without executing a supplied driver.
+EXPORT_REPAIRED_AUDIT_ROOT = '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-repaired-input-audit-20260930-l4bw70_2'
+EXPORT_REPAIRED_ROOT_AUDIT_SHA = '4881344d3f3a2f35d2a08dfd800e88f0b4b9b3ebacd77e6859b3407ad33ca462'
+EXPORT_REPAIRED_DERIVATION_SHA = '4705e1f7a7220245ed0cdf54bfd4d2f01d31fedf1ad6322fe172770e3695be1c'
+EXPORT_REPAIRED_AUDIT_MANIFEST_SHA = '4a40f8c0799174cc7370c1a0f90a60f1da904efd7df6ab920dd0e96837379def'
+EXPORT_REPAIRED_ADAPTER_SHA = '1d3e4fe6a47bd7a54e3028e13b05ea255b1d3fea96e7a48189ef09e797324970'
+EXPORT_AUDIT_ROOT = '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf'
+EXPORT_OLD_SITE = '/tmp/engine-v2-sro-old-runtime-20260930-urt3cf_3/site'
+EXPORT_WHEEL_SHA = '00814229724d90cca5b81d00c2a78a4ae6dfe983e95930552ca693d2c13484b8'
+EXPORT_BUDGET = {'objective_attempts': 417,
+ 'accepted_steps': 416,
+ 'restart_force_calls': 2,
+ 'score_calls': 2,
+ 'oracle_states': 2,
+ 'wall_seconds': 7200}
+EXPORT_OPERATIONAL_REVISION = {'schema_id': 'sro_operational_repair_revision/1',
+ 'experiment_id': 'sro_saved_geometry_guard_repair_20260930',
+ 'purpose': 'operational_guard_repair',
+ 'kind': 'new_operational_experiment',
+ 'predecessor_campaign_ref': {'path': '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-four-case-recovery-20260930-el_s4ivg/campaign/campaign-result.json',
+                              'sha256': '2916e26111cd8bdab1cc4c924d6bac679c5c478171086d7f7173d562d32a9019',
+                              'bytes': 10624},
+ 'predecessor_dispatch_ref': {'path': '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-four-case-recovery-20260930-el_s4ivg/campaign/perturbed_01/native/dispatch.jsonl',
+                              'sha256': '95ae55a57c7e3ddbad6294ee1c8976a11326f5b849d49a410575e97211d983ba',
+                              'bytes': 732},
+ 'predecessor_root_audit_ref': {'path': '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/root-audit.json',
+                                'sha256': 'ec0d4b2e9bc77250d5f694bec2520bf3a8b9d308d4f2610ff0845ecddb0096bb',
+                                'bytes': 1067184},
+ 'predecessor_derivation_ref': {'path': '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/derived-inputs/derivation.json',
+                                'sha256': '9ab197d0e47bb97750dca7a2cbbf105a831af82d5e92dfafa1ebf752fab0220c',
+                                'bytes': 13218},
+ 'predecessor_audit_manifest_ref': {'path': '/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/manifest.json',
+                                    'sha256': 'c1ba37cd6493ca9234c8d1ac162442a3b57d216d8a600854fedd6e5d05422b59',
+                                    'bytes': 6575},
+ 'predecessor_denominator': 4,
+ 'predecessor_completed_count': 0,
+ 'predecessor_failed_count': 1,
+ 'predecessor_unstarted_count': 3,
+ 'predecessor_force_dispatch': {'attempts': 1, 'returned': 0, 'errors': 1},
+ 'predecessor_unstarted_work': 'unknown',
+ 'resume': False,
+ 'budget_reset': False,
+ 'independent_dataset': False,
+ 'scientific_protocol_changed': False,
+ 'source_roles_changed': False}
+
 EXPORT_CHEMISTRY_SHA = "1d960edf1ee7c450af7594b0fad6c6f605439e045da8292bfa48a74d4f95a3dc"
 EXPORT_INPUT_HASHES = {
     "ligand": "aee0cdee35491fc44998a14c69c5e888b2de5e6c0c85b35bfedfb0562832445c",
@@ -644,6 +704,102 @@ def _export_binding(campaign_path, campaign):
     return plan
 
 
+def _export_operational_revision(campaign_path, campaign, plan):
+    """Authenticate the one repaired lineage using saved pins only."""
+    if campaign["schema_id"] == "sro_four_case_campaign/1":
+        require(plan.get("schema_id") != "sro_native_execution_plan/2" and
+                "operational_revision" not in plan and "operational_revision" not in campaign,
+                "legacy_export_revision_injection")
+        return None
+    require(plan.get("schema_id") == "sro_native_execution_plan/2", "export_plan_revision_binding")
+    require(EXPORT_REPAIRED_AUDIT_ROOT is not None and plan["audit_root"] == EXPORT_REPAIRED_AUDIT_ROOT and
+            all(type(value) is str and SHA.fullmatch(value) for value in (
+                EXPORT_REPAIRED_ROOT_AUDIT_SHA, EXPORT_REPAIRED_DERIVATION_SHA, EXPORT_REPAIRED_AUDIT_MANIFEST_SHA)),
+            "export_repaired_audit_anchors_required")
+    root = Path(plan["audit_root"])
+    for field, name, digest in (
+        ("root_audit_ref", "root-audit.json", EXPORT_REPAIRED_ROOT_AUDIT_SHA),
+        ("derivation_ref", "derived-inputs/derivation.json", EXPORT_REPAIRED_DERIVATION_SHA),
+        ("audit_manifest_ref", "manifest.json", EXPORT_REPAIRED_AUDIT_MANIFEST_SHA),
+        ("adapter_ref", "runtime_adapter_snapshot.py", EXPORT_REPAIRED_ADAPTER_SHA),
+    ):
+        ref = plan[field]
+        require(type(ref) is dict and set(ref) == {"path", "sha256", "bytes"} and
+                ref["path"] == str(root / name) and ref["sha256"] == digest,
+                "export_operational_audit_binding")
+    revision = plan.get("operational_revision")
+    require(type(revision) is dict and compact_hash(revision) == compact_hash(EXPORT_OPERATIONAL_REVISION) and
+            type(campaign.get("operational_revision")) is dict and
+            compact_hash(campaign["operational_revision"]) == compact_hash(revision),
+            "export_operational_revision_changed")
+    require(plan["installed_site"] == EXPORT_OLD_SITE and plan["wheel_ref"]["sha256"] == EXPORT_WHEEL_SHA and
+            compact_hash(plan["budget"]) == compact_hash(EXPORT_BUDGET), "export_old_runtime_required")
+    require(plan.get("actual_execution_authorized") is False and plan.get("scientifically_validated") is False,
+            "export_operational_claim_boundary")
+    # Exact role and revision checks precede all predecessor body reads.
+    predecessor = read_bound(revision["predecessor_campaign_ref"])
+    require(predecessor["schema_id"] == "sro_four_case_campaign/1" and predecessor["status"] == "stopped" and
+            predecessor["denominator"] == 4 and predecessor["execution_order"] == CASE_IDS and
+            predecessor["completed_count"] == 0 and predecessor["unstarted_count"] == 3 and
+            [(row["case_id"], row["status"]) for row in predecessor["case_results"]] ==
+            [(CASE_IDS[0], "failed"), *[(case_id, "unstarted") for case_id in CASE_IDS[1:]]] and
+            predecessor["scientifically_validated"] is False and predecessor["product_qualified"] is False and
+            predecessor["HIP_qualified"] is False, "export_stopped_predecessor_required")
+    require(revision["predecessor_dispatch_ref"] in predecessor["case_results"][0]["actual_receipt_refs"],
+            "export_predecessor_dispatch_binding")
+    events = [loads(line) for line in read_bound(revision["predecessor_dispatch_ref"], parse=False).splitlines()]
+    force = [event for event in events if event["kind"] == "force"]
+    require(len(force) == 2 and force[0]["event"] == "begin" and force[1]["event"] == "end" and
+            force[0]["index"] == force[1]["index"] == 0 and force[1]["error_type"] == "AdapterError",
+            "export_predecessor_force_attempt_required")
+    read_bound(revision["predecessor_root_audit_ref"], parse=False)
+    old_derivation = read_bound(revision["predecessor_derivation_ref"])
+    old_manifest = read_bound(revision["predecessor_audit_manifest_ref"])
+    derivation = read_bound(plan["derivation_ref"])
+    normalized = deepcopy(derivation)
+    require(normalized["adapter_source_sha256"] == EXPORT_REPAIRED_ADAPTER_SHA,
+            "export_repaired_derivation_adapter_required")
+    normalized["adapter_source_sha256"] = old_derivation["adapter_source_sha256"]
+    require(compact_hash(normalized) == compact_hash(old_derivation), "export_scientific_derivation_changed")
+    audit = read_bound(plan["root_audit_ref"])
+    require(audit["source_adapter_sha256"] == EXPORT_REPAIRED_ADAPTER_SHA and
+            audit["requested_derivatives"] == audit["prepared_derivatives"] == 4 and
+            audit["reference_body_reads"] == audit["original_ligand_body_reads"] == 0 and
+            audit["actual_execution_authorized"] is False and audit["scientifically_validated"] is False and
+            all(type(audit[field]) is int and audit[field] == 0 for field in (
+                "actual_new_OpenMM_observations", "actual_new_force_calls", "actual_new_native_graph_calls",
+                "actual_new_optimizer_calls", "actual_new_score_calls")), "export_zero_dispatch_audit_required")
+    manifest = read_bound(plan["audit_manifest_ref"])
+    read_bound(plan["adapter_ref"], parse=False)
+    require([case["case_id"] for case in derivation["cases"]] == CASE_IDS, "export_four_case_revision_required")
+    expected_cases = []
+    for case in derivation["cases"]:
+        name = case["case_id"] + "-installed-binding.json"
+        binding_ref = {**manifest["payload_files"][name], "path": str(root / name)}
+        expected_cases.append({**deepcopy(case), "expected_binding_ref": binding_ref})
+    require(compact_hash(plan["cases"]) == compact_hash(expected_cases), "export_operational_cases_changed")
+    for case in plan["cases"]:
+        name = case["case_id"] + "-installed-binding.json"
+        old_ref = {**old_manifest["payload_files"][name], "path": str(Path(EXPORT_AUDIT_ROOT) / name)}
+        new_ref = case["expected_binding_ref"]
+        require(new_ref["path"] == str(root / name), "export_repaired_binding_role")
+        old_binding, new_binding = read_bound(old_ref), read_bound(new_ref)
+        require(compact_hash(new_binding["input_binding"]) == compact_hash(old_binding["input_binding"]),
+                "export_operational_input_binding_changed")
+    start_ref = campaign.get("campaign_start_ref")
+    require(type(start_ref) is dict and start_ref.get("path") == str(campaign_path.parent / "campaign-start.json"),
+            "export_campaign_start_role")
+    start = read_bound(start_ref)
+    supervisor_path = str(campaign_path.parent.parent / "source" / "campaign_supervisor.py")
+    supervisor_ref = next(ref for ref in plan["oracle_phase"]["source_refs"] if ref["path"] == supervisor_path)
+    require(start["schema_id"] == "sro_four_case_campaign_start/2" and start["plan_ref"] == campaign["plan_ref"] and
+            start["review_ref"] == campaign["review_ref"] and start["supervisor_source_ref"] == supervisor_ref and
+            start["case_order"] == CASE_IDS and start["denominator"] == 4 and
+            type(start.get("operational_revision")) is dict and
+            compact_hash(start["operational_revision"]) == compact_hash(revision), "export_campaign_start_revision_changed")
+    return revision
+
+
 def export_results(campaign_ref, output):
     """Export retained last-accepted endpoints, never a better historical state.
 
@@ -653,10 +809,12 @@ def export_results(campaign_ref, output):
     campaign_path = Path(campaign_ref["path"])
     require(campaign_path.name == "campaign-result.json" and campaign_path.parent.name == "campaign", "campaign_role_required")
     campaign = read_bound(campaign_ref)
-    require(campaign["schema_id"] == "sro_four_case_campaign/1" and campaign["execution_order"] == CASE_IDS and
+    require(campaign["schema_id"] in {"sro_four_case_campaign/1", "sro_four_case_campaign/2"} and campaign["execution_order"] == CASE_IDS and
             campaign["denominator"] == 4 and [row["case_id"] for row in campaign["case_results"]] == CASE_IDS,
             "four_case_campaign_required")
     plan = _export_binding(campaign_path, campaign)
+    revision = _export_operational_revision(campaign_path, campaign, plan)
+    lineage = {"operational_revision": revision} if revision is not None else {}
     output = Path(output).absolute()
     require(not output.is_relative_to(campaign_path.parent), "export_cannot_change_frozen_campaign")
     output.mkdir(mode=0o700)
@@ -675,7 +833,13 @@ def export_results(campaign_ref, output):
         terminal_ref = row["terminal_case_ref"]
         require(terminal_ref["path"] in {str(case_root / "terminal-case.json"), str(case_root / "terminal-seal-watchdog.json")},
                 "terminal_case_role")
-        read_bound(terminal_ref)
+        terminal = read_bound(terminal_ref)
+        if revision is not None:
+            require(terminal.get("schema_id") == "sro_four_case_terminal_case/2" and
+                    type(terminal.get("operational_revision")) is dict and
+                    compact_hash(terminal["operational_revision"]) == compact_hash(revision) and
+                    terminal.get("case_id") == case_id and terminal.get("status") == status,
+                    "terminal_operational_revision_changed")
         for ref in row["actual_receipt_refs"]:
             require(Path(ref["path"]).is_relative_to(case_root), "case_receipt_role")
             read_bound(ref, parse=False)
@@ -754,7 +918,8 @@ def export_results(campaign_ref, output):
         rich["legacy_exported"] = True
     legacy_ref = publish(output / "saved-recovery-results.json", {"schema_id": "sro_saved_recovery_results/1",
         "protocol_sha256": PROTOCOL_SHA, "authority": EXPORT_AUTHORITY, "case_results": legacy_rows})
-    return publish(output / "export-receipt.json", {"schema_id": "sro_saved_recovery_export/1", "campaign_ref": campaign_ref,
+    return publish(output / "export-receipt.json", {"schema_id": "sro_saved_recovery_export/2" if revision is not None else "sro_saved_recovery_export/1",
+        **lineage, "campaign_ref": campaign_ref,
         "saved_results_ref": legacy_ref, "case_results": rich_rows, "denominator": 4,
         "export_source_ref": file_ref(Path(__file__).absolute()),
         "new_native_force_calls": 0, "new_native_score_calls": 0, "new_openmm_observations": 0,

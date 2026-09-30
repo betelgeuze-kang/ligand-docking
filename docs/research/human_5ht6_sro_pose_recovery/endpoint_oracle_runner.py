@@ -213,7 +213,7 @@ def validate_spec(spec, phase, runner_ref):
 def source_layout(plan, spec_ref):
     """Gate reviewed source roles before opening or executing supplied refs."""
     source = Path(__file__).resolve(strict=True).parent
-    require(plan["schema_id"] == "sro_native_execution_plan/1"
+    require(plan["schema_id"] in {"sro_native_execution_plan/1", "sro_native_execution_plan/2"}
             and plan["protocol_sha256"] == PROTOCOL_SHA and plan["manifest_sha256"] == MANIFEST_SHA,
             "frozen_plan_role_required")
     require(plan["driver_source_ref"]["path"] == str(source / "runtime_execution.py"),
@@ -248,6 +248,7 @@ def run(plan_ref, case_id, child_ref, spec_ref, output):
         bound(ref, parse=False)
     driver = load_source(plan["driver_source_ref"], "sro_oracle_validated_driver")
     driver.validate_plan(plan)
+    revision = driver.operational_revision_contract(plan) if plan["schema_id"] == "sro_native_execution_plan/2" else None
     case = next(case for case in plan["cases"] if case["case_id"] == case_id)
     child, binding_ref, endpoint_ref = native_snapshot(plan, case, child_ref, driver, plan_ref=plan_ref)
     derivation = bound(plan["derivation_ref"])
@@ -276,7 +277,8 @@ def run(plan_ref, case_id, child_ref, spec_ref, output):
         driver.validate_plan(plan)
     except BaseException as exc:
         failure = {"type": type(exc).__name__, "reason": str(exc)}
-    lifecycle = {"schema_id": "sro_endpoint_oracle_lifecycle/1", "case_id": case_id,
+    lifecycle = {"schema_id": "sro_endpoint_oracle_lifecycle/2" if revision is not None else "sro_endpoint_oracle_lifecycle/1",
+        **({"operational_revision": revision} if revision is not None else {}), "case_id": case_id,
         "completed_at": datetime.now(timezone.utc).isoformat(), "plan_ref": plan_ref,
         "native_child_ref": child_ref, "oracle_spec_ref": spec_ref, "runner_source_ref": runner_ref,
         "numerical_receipt_ref": receipt_ref, "failure": failure,

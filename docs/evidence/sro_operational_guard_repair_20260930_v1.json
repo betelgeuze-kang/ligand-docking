@@ -1,0 +1,366 @@
+{
+  "HIP_qualified": false,
+  "absolute_runtime_dependencies_required": true,
+  "all_final_validation_commands_passed": true,
+  "all_five_goals_complete": false,
+  "architecture_cli_passed_at_identical_six_source_pins": true,
+  "architecture_scope": "repository_packaging_rules; not_built_image_runtime",
+  "automatic_retry_or_resume": false,
+  "campaign_status": "running_after_first_operational_completion",
+  "case02_started_observed": true,
+  "complete_native_kernel_or_OS_counter": false,
+  "current_campaign_terminal_manifest": null,
+  "experiment_root": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6",
+  "final_validation_ref": {
+    "bytes": 7930,
+    "path": "/tmp/engine-v2-sro-operational-repair-validation-20260930-paeelq9z/validation.json",
+    "sha256": "2ec78a52c19f316705c7346da99f6d3f096260af18b3faf313577118c209f1b2"
+  },
+  "first_completed_case": {
+    "baseline_uncalibrated_score": 549.5332070559472,
+    "case_id": "perturbed_01",
+    "case_inclusive_wall_seconds": 1070.607579211,
+    "endpoint_states_ref": {
+      "bytes": 154164,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/endpoint-states.json",
+      "sha256": "7f1fff6e36802bfe97e8423919bb1c4077ade2b195d32fe4c665cd5e3c2c7a9d"
+    },
+    "force_limit": 0.001,
+    "force_work": {
+      "actual_force_calls": 417,
+      "failed_optimizer_force_calls": 0,
+      "failed_restart_force_calls": 0,
+      "known_completed_force_calls": 417,
+      "max_objective_attempts": 417,
+      "max_restart_verifications": 2,
+      "max_total_force_calls": 419,
+      "optimizer_force_calls": 417,
+      "optimizer_graph_calls": 417,
+      "optimizer_objective_attempts": 417,
+      "restart_force_calls": 0,
+      "restart_graph_calls": 0,
+      "restart_verification_attempts": 0,
+      "unknown_pending_attempts": 0
+    },
+    "geometry_checks": {
+      "bond_lengths_preserved": true,
+      "declared_chirality_preserved": true,
+      "element_vdw_ligand_overlap_free": true,
+      "element_vdw_receptor_overlap_free": true,
+      "inside_declared_pocket": true,
+      "ligand_self_clash_free": true,
+      "proper_rotation": true,
+      "receptor_ligand_clash_free": true
+    },
+    "internal_energy_delta_kcal_per_mol": -4.813357797690557,
+    "internal_increase_limit_kcal_per_mol": 5.0,
+    "max_atom_l2_force": 0.4766251796903881,
+    "max_bond_length_delta_angstrom": 0.12799851308070753,
+    "minimization_status": "objective_budget_exhausted",
+    "native_child_ref": {
+      "bytes": 143223,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/child-result.json",
+      "sha256": "7eb8a1f14daf29a6d8441476de57e445cbe57b6c43c51eefaa771fe3603f58aa"
+    },
+    "nested_durations_must_not_be_added": true,
+    "operational_status": "completed",
+    "oracle_call_counts": {
+      "backend_initialize": {
+        "attempted": 1,
+        "completed": 1,
+        "failed": 0
+      },
+      "comparison": {
+        "attempted": 2,
+        "completed": 2,
+        "failed": 0
+      },
+      "context_create": {
+        "attempted": 2,
+        "completed": 2,
+        "failed": 0
+      },
+      "context_release": {
+        "attempted": 2,
+        "completed": 2,
+        "failed": 0
+      },
+      "environment_inventory": {
+        "attempted": 1,
+        "completed": 1,
+        "failed": 0
+      },
+      "get_state": {
+        "attempted": 8,
+        "completed": 8,
+        "failed": 0
+      },
+      "set_positions": {
+        "attempted": 4,
+        "completed": 4,
+        "failed": 0
+      },
+      "state_values": {
+        "attempted": 8,
+        "completed": 8,
+        "failed": 0
+      },
+      "system_build": {
+        "attempted": 1,
+        "completed": 1,
+        "failed": 0
+      }
+    },
+    "oracle_enclosing_wall_seconds": 1.715201311992132,
+    "oracle_energy_absolute_tolerance_kcal_per_mol": 1e-08,
+    "oracle_force_component_absolute_tolerance_kcal_per_mol_angstrom": 1e-08,
+    "oracle_ref": {
+      "bytes": 197985,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/oracle/numerical-receipt.json",
+      "sha256": "b9b3049dff1a2296e707b7c8524b8b50ac1e25392fb88b6a9a54669b90ed24ed"
+    },
+    "oracle_state_denominator": {
+      "evaluated": 2,
+      "failed": 0,
+      "passed": 2,
+      "requested": 2,
+      "unknown": 0
+    },
+    "oracle_states": [
+      {
+        "energy_absolute_error_kcal_per_mol": 5.420588422566652e-10,
+        "force_component_absolute_error_kcal_per_mol_angstrom": 7.101334631443024e-09,
+        "force_components_checked": 78,
+        "label": "initial",
+        "passed": true
+      },
+      {
+        "energy_absolute_error_kcal_per_mol": 1.7763568394002505e-13,
+        "force_component_absolute_error_kcal_per_mol_angstrom": 1.5403012199044497e-11,
+        "force_components_checked": 78,
+        "label": "last_accepted",
+        "passed": true
+      }
+    ],
+    "paired_decision": {
+      "candidate_id": "pose-00000-af03c32d7422",
+      "reason": "refinement_not_converged",
+      "variant": "none"
+    },
+    "pose_recovery_rmsd_not_evaluated_in_this_update": true,
+    "refined_admitted": false,
+    "refined_uncalibrated_score": -19.123378213240024,
+    "result_ref": {
+      "bytes": 580914,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/run/result.json",
+      "sha256": "e5575ecaa554a961744386ad0c190881c388ac970f90b2c5faa5704c54ffa07b"
+    },
+    "same_math_is_not_source_XML_equivalence_or_physical_validation": true,
+    "score_calls": 2,
+    "terminal_ref": {
+      "bytes": 150235,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/terminal-case.json",
+      "sha256": "674f9cc6c33dc858677a1dc9408883defb1296a1d344ce22c1a5341331bd9002"
+    },
+    "verification_ref": {
+      "bytes": 1366,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/campaign/perturbed_01/native/semantic-verification.json",
+      "sha256": "63d3e2cc2427959ddd5d09686f8630e27b86b0b062f8ad731b51c64593b5933e"
+    }
+  },
+  "first_validation_boundary_result": {
+    "failed": 1,
+    "passed": 283,
+    "reason": "test_fixture_shared_sys_modules; production_preload_guard_rejected",
+    "subtests_passed": 31
+  },
+  "first_validation_ref": {
+    "bytes": 8184,
+    "path": "/tmp/engine-v2-sro-operational-repair-validation-20260930-1f2jub1y/validation.json",
+    "sha256": "f64f94d0a0ea456d83e0d5f784a67817c9e076116c16338d3a2bd986efc75b8b"
+  },
+  "fresh_128_evaluation_or_training_admission": false,
+  "fresh_audit_cases": [
+    {
+      "binding_exact": true,
+      "case_id": "perturbed_01",
+      "implementation_members": 232,
+      "loaded_origins": 181
+    },
+    {
+      "binding_exact": true,
+      "case_id": "perturbed_02",
+      "implementation_members": 232,
+      "loaded_origins": 181
+    },
+    {
+      "binding_exact": true,
+      "case_id": "perturbed_03",
+      "implementation_members": 232,
+      "loaded_origins": 181
+    },
+    {
+      "binding_exact": true,
+      "case_id": "perturbed_04",
+      "implementation_members": 232,
+      "loaded_origins": 181
+    }
+  ],
+  "fresh_audit_dispatch_counts": {
+    "OpenMM": 0,
+    "force": 0,
+    "native_graph": 0,
+    "optimizer": 0,
+    "score": 0
+  },
+  "fresh_audit_dispatch_scope": "known_python_public_dispatch_names_and_OpenMM_Python_C_calls; constructors_reference_arithmetic_allowed",
+  "fresh_audit_payload_bytes": 4685206,
+  "fresh_audit_payload_count": 13,
+  "fresh_audit_read_scope": "Path.read_bytes_only",
+  "fresh_audit_refs": {
+    "derived-inputs/derivation.json": {
+      "bytes": 13218,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-repaired-input-audit-20260930-l4bw70_2/derived-inputs/derivation.json",
+      "sha256": "4705e1f7a7220245ed0cdf54bfd4d2f01d31fedf1ad6322fe172770e3695be1c"
+    },
+    "manifest.json": {
+      "bytes": 2136,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-repaired-input-audit-20260930-l4bw70_2/manifest.json",
+      "sha256": "4a40f8c0799174cc7370c1a0f90a60f1da904efd7df6ab920dd0e96837379def"
+    },
+    "root-audit.json": {
+      "bytes": 4793,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-repaired-input-audit-20260930-l4bw70_2/root-audit.json",
+      "sha256": "4881344d3f3a2f35d2a08dfd800e88f0b4b9b3ebacd77e6859b3407ad33ca462"
+    }
+  },
+  "fresh_audit_verification_ref": {
+    "bytes": 2244,
+    "path": "/tmp/engine-v2-sro-fresh-repair-audit-verification-20260930.json",
+    "sha256": "79ee3752909ba48d5ea4b27d4f28c7b92ba31c132fcf099dd67ebdfc0eb801f8"
+  },
+  "fresh_audit_wall_seconds": 420.910686996,
+  "goal_status": "active",
+  "goals_directly_supported": [
+    2,
+    5
+  ],
+  "hosted_CI_for_new_commit": "pending_separate_exact_commit_observation",
+  "learning_qualified": false,
+  "local_passed_subtests": 31,
+  "local_passed_tests": 284,
+  "local_pytest_reported_seconds": 23.41,
+  "new_operational_denominator": 4,
+  "numeric_preservation_is_inherited_authenticated_unchanged_input_and_proof_evidence": true,
+  "observed_at": "2026-09-30T10:21:51.681270+00:00",
+  "observed_completed_cases": 1,
+  "observed_refined_admitted_cases": 0,
+  "operational_revision": {
+    "budget_reset": false,
+    "experiment_id": "sro_saved_geometry_guard_repair_20260930",
+    "independent_dataset": false,
+    "kind": "new_operational_experiment",
+    "predecessor_audit_manifest_ref": {
+      "bytes": 6575,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/manifest.json",
+      "sha256": "c1ba37cd6493ca9234c8d1ac162442a3b57d216d8a600854fedd6e5d05422b59"
+    },
+    "predecessor_campaign_ref": {
+      "bytes": 10624,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-four-case-recovery-20260930-el_s4ivg/campaign/campaign-result.json",
+      "sha256": "2916e26111cd8bdab1cc4c924d6bac679c5c478171086d7f7173d562d32a9019"
+    },
+    "predecessor_completed_count": 0,
+    "predecessor_denominator": 4,
+    "predecessor_derivation_ref": {
+      "bytes": 13218,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/derived-inputs/derivation.json",
+      "sha256": "9ab197d0e47bb97750dca7a2cbbf105a831af82d5e92dfafa1ebf752fab0220c"
+    },
+    "predecessor_dispatch_ref": {
+      "bytes": 732,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-four-case-recovery-20260930-el_s4ivg/campaign/perturbed_01/native/dispatch.jsonl",
+      "sha256": "95ae55a57c7e3ddbad6294ee1c8976a11326f5b849d49a410575e97211d983ba"
+    },
+    "predecessor_failed_count": 1,
+    "predecessor_force_dispatch": {
+      "attempts": 1,
+      "errors": 1,
+      "returned": 0
+    },
+    "predecessor_root_audit_ref": {
+      "bytes": 1067184,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf/root-audit.json",
+      "sha256": "ec0d4b2e9bc77250d5f694bec2520bf3a8b9d308d4f2610ff0845ecddb0096bb"
+    },
+    "predecessor_unstarted_count": 3,
+    "predecessor_unstarted_work": "unknown",
+    "purpose": "operational_guard_repair",
+    "resume": false,
+    "schema_id": "sro_operational_repair_revision/1",
+    "scientific_protocol_changed": false,
+    "source_roles_changed": false
+  },
+  "plan_ref": {
+    "bytes": 22983,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/plan.json",
+    "sha256": "b5d7eb702534259e6689ae257cb8bb0ebb2a356131fe33dd07a3d2616b21706c"
+  },
+  "product_qualified": false,
+  "production_preload_guard_unchanged": true,
+  "prospective_ref": {
+    "bytes": 5724,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/prospective-operational-revision.json",
+    "sha256": "a24eebf9e7781a663f769fb579137b8c852a9e6c2e96951c746daebf1f630d4f"
+  },
+  "review_ref": {
+    "bytes": 393,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/execution-review.json",
+    "sha256": "b5bdf9b81294191c25549a49f219b37a324bcc428ba00f11c9d931bf0c3fa081"
+  },
+  "schema_id": "sro_operational_guard_repair_progress/1",
+  "scientifically_validated": false,
+  "source_refs": {
+    "campaign_supervisor.py": {
+      "bytes": 58406,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/source/campaign_supervisor.py",
+      "sha256": "b27c623d2fff44375f917d779894a4a1406a08072785389fa1c2d513b563611d"
+    },
+    "endpoint_oracle_runner.py": {
+      "bytes": 15987,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/source/endpoint_oracle_runner.py",
+      "sha256": "3ba697ed8eba6c2d35ba11682ef033a1ff989c677eab65ea980fe33489d9a1b5"
+    },
+    "runtime_execution.py": {
+      "bytes": 44115,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/source/runtime_execution.py",
+      "sha256": "4082b31f4eadb019d2bc7017c0b8e66dde9085bcd04eadef8683e10359266f27"
+    },
+    "sro_recovery_endpoint_numerics_v1.py": {
+      "bytes": 33633,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/source/sro_recovery_endpoint_numerics_v1.py",
+      "sha256": "9a1598e8f94e98ff691a435e8f6a43835a9408c58e9da07051fdd7a56e90f1e1"
+    }
+  },
+  "source_roles_changed": false,
+  "technical_review_ref": {
+    "bytes": 3029,
+    "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-guard-repair-four-case-20260930-p76d71f6/technical-prelaunch-review.json",
+    "sha256": "19f78686e3a66b064a55598eed6b06d628a54748bbc4fe85a2d5b90a1e436142"
+  },
+  "test_only_fixture_isolation_repair": true,
+  "tmp_originals_deleted": false,
+  "unit_internal_molecular_dispatches_measured": false,
+  "unstarted_case_work_is_unknown": true,
+  "validation_archive": {
+    "full_payload_set_size_hashes_verified": true,
+    "manifest_ref": {
+      "bytes": 11657,
+      "path": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-validation-20260930-fh00gkym/manifest.json",
+      "sha256": "d52a2e82a5c33debb4992de50f3483c0341c4c8585e70ad5287ba49ed5470bfb"
+    },
+    "payload_bytes": 604483,
+    "payload_count": 38,
+    "root": "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-operational-repair-validation-20260930-fh00gkym"
+  }
+}

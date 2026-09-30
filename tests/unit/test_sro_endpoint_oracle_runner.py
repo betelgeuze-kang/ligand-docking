@@ -292,3 +292,82 @@ def test_duplicate_and_nonfinite_json_rejected():
         runner.loads(b'{"a":1,"a":2}')
     with pytest.raises(runner.RunnerError, match="nonfinite_json"):
         runner.loads(b'{"a":NaN}')
+
+
+def test_schema_two_source_roles_preserve_metadata_only_gate(layout, monkeypatch):
+    plan, spec_ref, source = layout
+    plan["schema_id"] = "sro_native_execution_plan/2"
+    monkeypatch.setattr(runner, "bound", lambda *_args, **_kwargs: pytest.fail("role gate read a body"))
+    monkeypatch.setattr(runner, "load_source", lambda *_args, **_kwargs: pytest.fail("role gate executed source"))
+    assert runner.source_layout(plan, spec_ref) == source
+
+
+@pytest.mark.parametrize("field,value,reason", [
+    ("schema_id", "sro_native_execution_plan/3", "frozen_plan_role_required"),
+    ("protocol_sha256", "f" * 64, "frozen_plan_role_required"),
+    ("manifest_sha256", "f" * 64, "frozen_plan_role_required"),
+])
+def test_schema_two_still_rejects_changed_frozen_contract(layout, field, value, reason):
+    plan, spec_ref, _source = layout
+    plan["schema_id"] = "sro_native_execution_plan/2"
+    plan[field] = value
+    with pytest.raises(runner.RunnerError, match=reason):
+        runner.source_layout(plan, spec_ref)
+
+
+def test_schema_two_lifecycle_carries_validated_revision_without_molecular_calls(layout, monkeypatch):
+    plan, spec_ref, source = layout
+    revision = {"explicit_fake_boundary": "validated operational lineage"}
+    plan.update(schema_id="sro_native_execution_plan/2", operational_revision=revision,
+                cases=[{"case_id": "perturbed_01", "request_file_ref": {"test_request": True}}],
+                derivation_ref={"test_derivation": True}, wheel_ref={"test_wheel": True})
+    plan_ref, child_ref = {"test_plan": True}, {"test_child": True}
+    parameter_refs = {name: {"test_parameter": name} for name in ("parameters", "extensions", "cross_parameters")}
+    oracle_ref = {"path": str(source / "sro_recovery_endpoint_numerics_v1.py")}
+    phase = plan["oracle_phase"]
+    phase.update(python_executable=str(Path(runner.sys.executable).absolute()),
+                 python_binary_ref=runner.file_ref(Path(runner.sys.executable).resolve(strict=True)))
+    oracle_spec = {"oracle_source_ref": oracle_ref, "dependency_site": str(source),
+                   "original_parameter_refs": parameter_refs, "ligand_xml_ref": {"test_xml": "ligand"},
+                   "receptor_xml_ref": {"test_xml": "receptor"}}
+    # This synthetic interpreter belongs only to the fake lifecycle fixture.
+    # Other suites may have product modules loaded in the real shared sys.
+    monkeypatch.setattr(runner, "sys", SimpleNamespace(
+        flags=SimpleNamespace(isolated=1, dont_write_bytecode=1), modules={},
+        executable=runner.sys.executable, path=list(runner.sys.path)))
+    validations, revisions, observations = [], [], []
+    driver = SimpleNamespace(validate_plan=lambda value: validations.append(value),
+        operational_revision_contract=lambda value: revisions.append(value) or revision)
+    oracle = SimpleNamespace(audit_case=lambda **kwargs: observations.append(kwargs) or {"explicit_fake_boundary": True})
+    def bound(ref, **kwargs):
+        if ref == plan_ref:
+            return plan
+        if ref == spec_ref:
+            return oracle_spec
+        if ref == plan["derivation_ref"]:
+            return {"original_input_refs": parameter_refs}
+        return b"synthetic pinned source"
+    monkeypatch.setattr(runner, "bound", bound)
+    monkeypatch.setattr(runner, "validate_spec", lambda value, *_args: value)
+    monkeypatch.setattr(runner, "load_source", lambda ref, name: driver if name == "sro_oracle_validated_driver" else oracle)
+    monkeypatch.setattr(runner, "native_snapshot", lambda *_args, **_kwargs: ({}, {"test_binding": True}, {"test_endpoint": True}))
+    output = source.parent / "oracle-output"
+    receipt_ref = runner.run(plan_ref, "perturbed_01", child_ref, spec_ref, output)
+    lifecycle = json.loads((output / "lifecycle.json").read_bytes())
+    assert lifecycle["schema_id"] == "sro_endpoint_oracle_lifecycle/2"
+    assert lifecycle["operational_revision"] == revision
+    assert lifecycle["numerical_receipt_ref"] == receipt_ref
+    assert lifecycle["new_native_force_calls"] == lifecycle["new_native_score_calls"] == 0
+    assert validations == [plan, plan]
+    assert revisions == [plan]
+    assert len(observations) == 1  # Explicit fake callable; no numerical observation.
+
+
+def test_schema_two_arbitrary_driver_rejected_before_body_read(layout, monkeypatch):
+    plan, spec_ref, _source = layout
+    plan["schema_id"] = "sro_native_execution_plan/2"
+    plan["driver_source_ref"]["path"] = "/arbitrary/unreviewed.py"
+    monkeypatch.setattr(runner, "bound", lambda *_args, **_kwargs: pytest.fail("arbitrary source body read"))
+    monkeypatch.setattr(runner, "load_source", lambda *_args, **_kwargs: pytest.fail("arbitrary source executed"))
+    with pytest.raises(runner.RunnerError, match="reviewed_driver_role_path_required"):
+        runner.source_layout(plan, spec_ref)

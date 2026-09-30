@@ -1,6 +1,7 @@
 """Portable supervisor tests use fake boundaries, never molecular evaluations."""
 from __future__ import annotations
 
+import ast
 from copy import deepcopy
 import importlib.util
 import json
@@ -24,6 +25,9 @@ class FakeDriver:
     def validate_plan(self, plan):
         self.validations += 1
         assert plan["execution_order"] == supervisor.CASE_IDS
+
+    def operational_revision_contract(self, plan):
+        return deepcopy(plan["operational_revision"])
 
     def review_execution(self, plan_ref, review_ref):
         return supervisor.read_bound(review_ref)
@@ -647,3 +651,273 @@ def test_unknown_pending_score_remains_separate_from_receipt_reuse(tmp_path):
     assert accounting["unknown_pending_score_attempts"] == 1
     assert accounting["reused_score_receipts"] == 1
     assert accounting["raw_dispatch_starts"]["score"] == 1
+
+
+def resave(path, value):
+    """Only mutable synthetic test documents use this helper."""
+    path = Path(path)
+    path.write_bytes(supervisor.encode(value))
+    return supervisor.file_ref(path)
+
+
+def repaired_campaign(campaign):
+    path, plan_ref, review_ref, observed, driver = campaign
+    plan = supervisor.read_bound(plan_ref)
+    revision = {"explicit_fake_boundary": "validated operational lineage"}
+    plan.update(schema_id="sro_native_execution_plan/2", operational_revision=revision)
+    return path, resave(plan_ref["path"], plan), review_ref, observed, driver
+
+
+def test_schema_two_parent_carries_lineage_and_keeps_case_supervisor_one(campaign):
+    revised = repaired_campaign(campaign)
+    result = run_fixture(revised)
+    assert result["schema_id"] == "sro_four_case_campaign/2"
+    assert result["operational_revision"] == {"explicit_fake_boundary": "validated operational lineage"}
+    start = supervisor.read_bound(result["campaign_start_ref"])
+    assert start["schema_id"] == "sro_four_case_campaign_start/2"
+    assert start["operational_revision"] == result["operational_revision"]
+    assert result["denominator"] == result["completed_count"] == 4
+    for row in result["case_results"]:
+        terminal = supervisor.read_bound(row["terminal_case_ref"])
+        assert terminal["schema_id"] == "sro_four_case_terminal_case/2"
+        assert terminal["operational_revision"] == result["operational_revision"]
+        case_supervisor = supervisor.read_bound(terminal["supervisor_ref"])
+        assert case_supervisor["schema_id"] == "sro_native_case_supervisor/1"
+        assert "operational_revision" not in case_supervisor
+        assert case_supervisor["plan_ref"] == result["plan_ref"]
+
+
+def test_schema_two_fatal_preserves_failed_one_unstarted_three(campaign, monkeypatch):
+    revised = repaired_campaign(campaign)
+    monkeypatch.setattr(supervisor, "_native_result", lambda *_args: (_ for _ in ()).throw(
+        supervisor.CampaignError("explicit fake adapter failure")))
+    result = run_fixture(revised)
+    assert result["schema_id"] == "sro_four_case_campaign/2"
+    assert result["denominator"] == 4 and result["completed_count"] == 0 and result["unstarted_count"] == 3
+    assert [row["status"] for row in result["case_results"]] == ["failed", "unstarted", "unstarted", "unstarted"]
+    assert len(revised[3]) == 1
+    assert all(row["work"] is None for row in result["case_results"])
+
+
+@pytest.fixture
+def repaired_saved_campaign(tmp_path, monkeypatch):
+    """All anchors and bodies here are fabricated portable saved-data fixtures."""
+    archive, campaign_ref, _ = make_saved_campaign(tmp_path, no_native=True)
+    campaign = supervisor.read_bound(campaign_ref)
+    plan = supervisor.read_bound(campaign["plan_ref"])
+    audit_root, old_root, predecessor_root = tmp_path / "fresh-audit", tmp_path / "old-audit", tmp_path / "predecessor"
+    for root in (audit_root, old_root, predecessor_root):
+        root.mkdir()
+    (audit_root / "derived-inputs").mkdir()
+    (old_root / "derived-inputs").mkdir()
+    adapter = audit_root / "runtime_adapter_snapshot.py"
+    adapter.write_text("# fabricated audited adapter; never executed\n")
+    adapter_ref = supervisor.file_ref(adapter)
+    payloads = {}
+    for case in plan["cases"]:
+        name = case["case_id"] + "-installed-binding.json"
+        binding = {"input_binding": {"explicit_fake_boundary": case["case_id"]}}
+        old_binding_ref = supervisor.publish(old_root / name, binding)
+        payloads[name] = {key: old_binding_ref[key] for key in ("sha256", "bytes")}
+        case["expected_binding_ref"] = supervisor.publish(audit_root / name, binding)
+    old_manifest_ref = supervisor.publish(old_root / "manifest.json", {"payload_files": payloads})
+    old_derivation = {"adapter_source_sha256": "a" * 64, "explicit_fake_boundary": "frozen scientific inputs",
+        "cases": [{key: value for key, value in case.items() if key != "expected_binding_ref"} for case in plan["cases"]]}
+    old_derivation_ref = supervisor.publish(old_root / "derived-inputs/derivation.json", old_derivation)
+    derivation_ref = supervisor.publish(audit_root / "derived-inputs/derivation.json",
+        {**old_derivation, "adapter_source_sha256": adapter_ref["sha256"]})
+    old_audit_ref = supervisor.publish(old_root / "root-audit.json", {"explicit_fake_boundary": True})
+    audit = {"source_adapter_sha256": adapter_ref["sha256"], "requested_derivatives": 4, "prepared_derivatives": 4,
+             "reference_body_reads": 0, "original_ligand_body_reads": 0,
+             "actual_execution_authorized": False, "scientifically_validated": False}
+    audit.update({key: 0 for key in ("actual_new_OpenMM_observations", "actual_new_force_calls",
+        "actual_new_native_graph_calls", "actual_new_optimizer_calls", "actual_new_score_calls")})
+    audit_ref = supervisor.publish(audit_root / "root-audit.json", audit)
+    manifest_ref = supervisor.publish(audit_root / "manifest.json", {"payload_files": {case["case_id"] + "-installed-binding.json":
+        {key: case["expected_binding_ref"][key] for key in ("sha256", "bytes")} for case in plan["cases"]}})
+    dispatch = predecessor_root / "dispatch.jsonl"
+    dispatch.write_bytes(b'{"kind":"force","event":"begin","index":0}\n'
+                         b'{"kind":"force","event":"end","index":0,"error_type":"AdapterError"}\n')
+    dispatch_ref = supervisor.file_ref(dispatch)
+    predecessor = {"schema_id": "sro_four_case_campaign/1", "status": "stopped", "denominator": 4,
+        "execution_order": supervisor.CASE_IDS, "completed_count": 0, "unstarted_count": 3,
+        "scientifically_validated": False, "product_qualified": False, "HIP_qualified": False,
+        "case_results": [{"case_id": case_id, "status": "failed" if index == 0 else "unstarted",
+                          "actual_receipt_refs": [dispatch_ref] if index == 0 else []}
+                         for index, case_id in enumerate(supervisor.CASE_IDS)]}
+    predecessor_ref = supervisor.publish(predecessor_root / "campaign-result.json", predecessor)
+    revision = deepcopy(supervisor.EXPORT_OPERATIONAL_REVISION)
+    revision.update(predecessor_campaign_ref=predecessor_ref, predecessor_dispatch_ref=dispatch_ref,
+                    predecessor_root_audit_ref=old_audit_ref, predecessor_derivation_ref=old_derivation_ref,
+                    predecessor_audit_manifest_ref=old_manifest_ref)
+    for name, value in {"EXPORT_REPAIRED_AUDIT_ROOT": str(audit_root), "EXPORT_REPAIRED_ROOT_AUDIT_SHA": audit_ref["sha256"],
+        "EXPORT_REPAIRED_DERIVATION_SHA": derivation_ref["sha256"], "EXPORT_REPAIRED_AUDIT_MANIFEST_SHA": manifest_ref["sha256"],
+        "EXPORT_REPAIRED_ADAPTER_SHA": adapter_ref["sha256"], "EXPORT_AUDIT_ROOT": str(old_root),
+        "EXPORT_OPERATIONAL_REVISION": revision}.items():
+        monkeypatch.setattr(supervisor, name, value)
+    plan.update(schema_id="sro_native_execution_plan/2", operational_revision=deepcopy(revision), audit_root=str(audit_root),
+        root_audit_ref=audit_ref, derivation_ref=derivation_ref, audit_manifest_ref=manifest_ref, adapter_ref=adapter_ref,
+        installed_site=supervisor.EXPORT_OLD_SITE, wheel_ref={"sha256": supervisor.EXPORT_WHEEL_SHA},
+        budget=deepcopy(supervisor.EXPORT_BUDGET), actual_execution_authorized=False, scientifically_validated=False)
+    plan_ref = resave(campaign["plan_ref"]["path"], plan)
+    review = supervisor.read_bound(campaign["review_ref"])
+    review["plan_sha256"] = plan_ref["sha256"]
+    review_ref = resave(campaign["review_ref"]["path"], review)
+    start_ref = supervisor.publish(archive / "campaign/campaign-start.json", {
+        "schema_id": "sro_four_case_campaign_start/2", "operational_revision": deepcopy(revision),
+        "plan_ref": plan_ref, "review_ref": review_ref, "case_order": supervisor.CASE_IDS, "denominator": 4,
+        "supervisor_source_ref": supervisor.file_ref(archive / "source/campaign_supervisor.py")})
+    terminal_ref = campaign["case_results"][0]["terminal_case_ref"]
+    campaign["case_results"][0]["terminal_case_ref"] = resave(terminal_ref["path"], {
+        "schema_id": "sro_four_case_terminal_case/2", "operational_revision": deepcopy(revision),
+        "case_id": "perturbed_01", "status": "failed"})
+    campaign.update(schema_id="sro_four_case_campaign/2", operational_revision=deepcopy(revision),
+                    plan_ref=plan_ref, review_ref=review_ref, campaign_start_ref=start_ref)
+    campaign_ref = resave(campaign_ref["path"], campaign)
+    return {"archive": archive, "campaign_ref": campaign_ref, "campaign": campaign, "plan": plan, "revision": revision}
+
+
+def test_schema_two_export_authenticates_lineage_keeps_legacy_schema(repaired_saved_campaign, monkeypatch):
+    fixture = repaired_saved_campaign
+    monkeypatch.setattr(supervisor, "_load_driver", lambda *_args: pytest.fail("saved driver executed"))
+    exported = supervisor.read_bound(supervisor.export_results(fixture["campaign_ref"], fixture["archive"] / "export"))
+    assert exported["schema_id"] == "sro_saved_recovery_export/2"
+    assert exported["operational_revision"] == fixture["revision"]
+    assert exported["denominator"] == len(exported["case_results"]) == 4
+    assert [row["status"] for row in exported["case_results"]] == ["failed", "unstarted", "unstarted", "unstarted"]
+    assert exported["case_results"][0]["work"]["failed_attempts"] == 1
+    assert all(row["work"] is None for row in exported["case_results"][1:])
+    saved = supervisor.read_bound(exported["saved_results_ref"])
+    assert saved["schema_id"] == "sro_saved_recovery_results/1"
+    assert "operational_revision" not in saved
+    assert exported["new_native_force_calls"] == exported["new_native_score_calls"] == exported["new_openmm_observations"] == 0
+
+
+@pytest.mark.parametrize("field,value", [("resume", True), ("budget_reset", True), ("independent_dataset", True),
+    ("scientific_protocol_changed", True), ("source_roles_changed", True), ("resume", 0), ("extra", False)])
+def test_schema_two_export_rejects_lineage_mutation_before_predecessor_reads(repaired_saved_campaign, monkeypatch, field, value):
+    fixture = repaired_saved_campaign
+    fixture["campaign"]["operational_revision"][field] = value
+    campaign_ref = resave(fixture["campaign_ref"]["path"], fixture["campaign"])
+    original = supervisor.read_bound
+    def reading(ref, **kwargs):
+        assert ref != fixture["revision"]["predecessor_campaign_ref"], "unvalidated predecessor opened"
+        return original(ref, **kwargs)
+    monkeypatch.setattr(supervisor, "read_bound", reading)
+    with pytest.raises(supervisor.CampaignError, match="export_operational_revision_changed"):
+        supervisor.export_results(campaign_ref, fixture["archive"] / "export")
+    assert not (fixture["archive"] / "export").exists()
+
+
+def test_schema_two_export_rejects_legacy_schema_downgrade(repaired_saved_campaign):
+    fixture = repaired_saved_campaign
+    fixture["campaign"]["schema_id"] = "sro_four_case_campaign/1"
+    campaign_ref = resave(fixture["campaign_ref"]["path"], fixture["campaign"])
+    with pytest.raises(supervisor.CampaignError, match="legacy_export_revision_injection"):
+        supervisor.export_results(campaign_ref, fixture["archive"] / "export")
+
+
+@pytest.mark.parametrize("role,reason", [("terminal", "terminal_operational_revision_changed"),
+                                       ("start", "export_campaign_start_revision_changed")])
+def test_schema_two_export_rejects_resealed_receipt_lineage(repaired_saved_campaign, role, reason):
+    fixture = repaired_saved_campaign
+    if role == "terminal":
+        ref = fixture["campaign"]["case_results"][0]["terminal_case_ref"]
+    else:
+        ref = fixture["campaign"]["campaign_start_ref"]
+    document = supervisor.read_bound(ref)
+    document["operational_revision"]["resume"] = 0  # False and 0 must not compare as authenticated identical types.
+    changed_ref = resave(ref["path"], document)
+    if role == "terminal":
+        fixture["campaign"]["case_results"][0]["terminal_case_ref"] = changed_ref
+    else:
+        fixture["campaign"]["campaign_start_ref"] = changed_ref
+    campaign_ref = resave(fixture["campaign_ref"]["path"], fixture["campaign"])
+    with pytest.raises(supervisor.CampaignError, match=reason):
+        supervisor.export_results(campaign_ref, fixture["archive"] / "export")
+
+
+def test_schema_two_export_rejects_changed_predecessor_bytes(repaired_saved_campaign):
+    fixture = repaired_saved_campaign
+    predecessor = fixture["revision"]["predecessor_campaign_ref"]
+    document = supervisor.read_bound(predecessor)
+    document["denominator"] = 3
+    resave(predecessor["path"], document)
+    with pytest.raises(supervisor.CampaignError, match="bound_file_changed"):
+        supervisor.export_results(fixture["campaign_ref"], fixture["archive"] / "export")
+
+
+def test_saved_export_static_anchors_match_runtime_without_executing_source():
+    """Parse only literal contract assignments; no runtime source is executed."""
+    values = {}
+    def literal(node):
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Name):
+            return values[node.id]
+        if isinstance(node, ast.Dict):
+            return {literal(key): literal(value) for key, value in zip(node.keys, node.values)}
+        if isinstance(node, ast.List):
+            return [literal(value) for value in node.elts]
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return literal(node.left) + literal(node.right)
+        raise ValueError("nonliteral assignment")
+    source = SOURCE.with_name("runtime_execution.py")
+    for statement in ast.parse(source.read_text()).body:
+        if isinstance(statement, ast.Assign) and len(statement.targets) == 1 and isinstance(statement.targets[0], ast.Name):
+            try:
+                values[statement.targets[0].id] = literal(statement.value)
+            except (KeyError, ValueError):
+                pass
+    for name in ("REPAIRED_AUDIT_ROOT", "REPAIRED_ROOT_AUDIT_SHA", "REPAIRED_DERIVATION_SHA",
+                 "REPAIRED_AUDIT_MANIFEST_SHA", "REPAIRED_ADAPTER_SHA", "AUDIT_ROOT", "OLD_SITE", "WHEEL_SHA",
+                 "BUDGET", "OPERATIONAL_REVISION"):
+        assert supervisor.compact_hash(getattr(supervisor, "EXPORT_" + name)) == supervisor.compact_hash(values[name])
+
+
+@pytest.mark.parametrize("field,value", [("request_file_ref", {"path": "/wrong/request.json", "sha256": "f" * 64, "bytes": 1}),
+    ("derived_input_refs", {"ligand": {"path": "/wrong/ligand.json", "sha256": "f" * 64, "bytes": 1}}),
+    ("source_candidate_coordinates_sha256", "f" * 64),
+    ("expected_binding_ref", {"path": "/wrong/binding.json", "sha256": "f" * 64, "bytes": 1})])
+def test_schema_two_export_rejects_resealed_full_case_mutation(repaired_saved_campaign, field, value):
+    fixture = repaired_saved_campaign
+    fixture["plan"]["cases"][0][field] = value
+    plan_ref = resave(fixture["campaign"]["plan_ref"]["path"], fixture["plan"])
+    review = supervisor.read_bound(fixture["campaign"]["review_ref"])
+    review["plan_sha256"] = plan_ref["sha256"]
+    fixture["campaign"]["review_ref"] = resave(fixture["campaign"]["review_ref"]["path"], review)
+    fixture["campaign"]["plan_ref"] = plan_ref
+    campaign_ref = resave(fixture["campaign_ref"]["path"], fixture["campaign"])
+    with pytest.raises(supervisor.CampaignError, match="export_operational_cases_changed"):
+        supervisor.export_results(campaign_ref, fixture["archive"] / "export")
+
+
+def test_schema_two_export_rejects_wrong_start_supervisor_source_role(repaired_saved_campaign):
+    fixture = repaired_saved_campaign
+    start_ref = fixture["campaign"]["campaign_start_ref"]
+    start = supervisor.read_bound(start_ref)
+    start["supervisor_source_ref"] = next(ref for ref in fixture["plan"]["oracle_phase"]["source_refs"]
+        if ref["path"].endswith("endpoint_oracle_runner.py"))
+    fixture["campaign"]["campaign_start_ref"] = resave(start_ref["path"], start)
+    campaign_ref = resave(fixture["campaign_ref"]["path"], fixture["campaign"])
+    with pytest.raises(supervisor.CampaignError, match="export_campaign_start_revision_changed"):
+        supervisor.export_results(campaign_ref, fixture["archive"] / "export")
+
+
+@pytest.mark.parametrize("field", ["actual_execution_authorized", "scientifically_validated"])
+def test_schema_two_export_rejects_plan_claim_boundary_before_predecessor_reads(repaired_saved_campaign, monkeypatch, field):
+    fixture = repaired_saved_campaign
+    fixture["plan"][field] = True
+    plan_ref = resave(fixture["campaign"]["plan_ref"]["path"], fixture["plan"])
+    review = supervisor.read_bound(fixture["campaign"]["review_ref"])
+    review["plan_sha256"] = plan_ref["sha256"]
+    fixture["campaign"]["review_ref"] = resave(fixture["campaign"]["review_ref"]["path"], review)
+    fixture["campaign"]["plan_ref"] = plan_ref
+    campaign_ref = resave(fixture["campaign_ref"]["path"], fixture["campaign"])
+    original = supervisor.read_bound
+    def reading(ref, **kwargs):
+        assert ref != fixture["revision"]["predecessor_campaign_ref"], "unvalidated predecessor opened"
+        return original(ref, **kwargs)
+    monkeypatch.setattr(supervisor, "read_bound", reading)
+    with pytest.raises(supervisor.CampaignError, match="export_operational_claim_boundary"):
+        supervisor.export_results(campaign_ref, fixture["archive"] / "export")

@@ -39,6 +39,63 @@ GEOMETRY_CHECKS = {
     "receptor_ligand_clash_free",
 }
 AUDIT_ROOT = "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-recovery-input-audit-20260930-bnag1vbf"
+# One prospective operational repair; populated only from the fresh audit receipt.
+REPAIRED_AUDIT_ROOT = "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-repaired-input-audit-20260930-l4bw70_2"
+REPAIRED_ROOT_AUDIT_SHA = (
+    "4881344d3f3a2f35d2a08dfd800e88f0b4b9b3ebacd77e6859b3407ad33ca462"
+)
+REPAIRED_DERIVATION_SHA = (
+    "4705e1f7a7220245ed0cdf54bfd4d2f01d31fedf1ad6322fe172770e3695be1c"
+)
+REPAIRED_AUDIT_MANIFEST_SHA = (
+    "4a40f8c0799174cc7370c1a0f90a60f1da904efd7df6ab920dd0e96837379def"
+)
+REPAIRED_ADAPTER_SHA = (
+    "1d3e4fe6a47bd7a54e3028e13b05ea255b1d3fea96e7a48189ef09e797324970"
+)
+PREDECESSOR_ROOT = "/mnt/193005ba-8531-4d0b-87c2-43c01ee2ce25/ligand_heavy_runs/engine-v2-sro-four-case-recovery-20260930-el_s4ivg"
+OPERATIONAL_REVISION = {
+    "schema_id": "sro_operational_repair_revision/1",
+    "experiment_id": "sro_saved_geometry_guard_repair_20260930",
+    "purpose": "operational_guard_repair",
+    "kind": "new_operational_experiment",
+    "predecessor_campaign_ref": {
+        "path": PREDECESSOR_ROOT + "/campaign/campaign-result.json",
+        "sha256": "2916e26111cd8bdab1cc4c924d6bac679c5c478171086d7f7173d562d32a9019",
+        "bytes": 10624,
+    },
+    "predecessor_dispatch_ref": {
+        "path": PREDECESSOR_ROOT + "/campaign/perturbed_01/native/dispatch.jsonl",
+        "sha256": "95ae55a57c7e3ddbad6294ee1c8976a11326f5b849d49a410575e97211d983ba",
+        "bytes": 732,
+    },
+    "predecessor_root_audit_ref": {
+        "path": AUDIT_ROOT + "/root-audit.json",
+        "sha256": ROOT_AUDIT_SHA,
+        "bytes": 1067184,
+    },
+    "predecessor_derivation_ref": {
+        "path": AUDIT_ROOT + "/derived-inputs/derivation.json",
+        "sha256": DERIVATION_SHA,
+        "bytes": 13218,
+    },
+    "predecessor_audit_manifest_ref": {
+        "path": AUDIT_ROOT + "/manifest.json",
+        "sha256": AUDIT_MANIFEST_SHA,
+        "bytes": 6575,
+    },
+    "predecessor_denominator": 4,
+    "predecessor_completed_count": 0,
+    "predecessor_failed_count": 1,
+    "predecessor_unstarted_count": 3,
+    "predecessor_force_dispatch": {"attempts": 1, "returned": 0, "errors": 1},
+    "predecessor_unstarted_work": "unknown",
+    "resume": False,
+    "budget_reset": False,
+    "independent_dataset": False,
+    "scientific_protocol_changed": False,
+    "source_roles_changed": False,
+}
 FRAME = "7XTB_original_cartesian_angstrom_development"
 SHA = re.compile(r"^[0-9a-f]{64}$")
 FILE_FIELDS = ("ligand", "parameters", "extensions", "cross_parameters", "receptor")
@@ -299,16 +356,171 @@ def request_contract(request):
     return request
 
 
+def audit_anchors(audit_root):
+    """Select one exact frozen audit; caller-supplied hashes are never accepted."""
+    if audit_root == AUDIT_ROOT:
+        return "sro_native_execution_plan/1", (
+            ROOT_AUDIT_SHA,
+            DERIVATION_SHA,
+            AUDIT_MANIFEST_SHA,
+        )
+    require(
+        REPAIRED_AUDIT_ROOT is not None and audit_root == REPAIRED_AUDIT_ROOT,
+        "declared_audit_root_required",
+    )
+    require(
+        all(
+            type(value) is str and SHA.fullmatch(value)
+            for value in (
+                REPAIRED_ROOT_AUDIT_SHA,
+                REPAIRED_DERIVATION_SHA,
+                REPAIRED_AUDIT_MANIFEST_SHA,
+            )
+        ),
+        "repaired_audit_anchors_required",
+    )
+    return "sro_native_execution_plan/2", (
+        REPAIRED_ROOT_AUDIT_SHA,
+        REPAIRED_DERIVATION_SHA,
+        REPAIRED_AUDIT_MANIFEST_SHA,
+    )
+
+
+def operational_revision_contract(plan):
+    """Authenticate lineage metadata without opening protected source bodies."""
+    if plan.get("schema_id") == "sro_native_execution_plan/1":
+        require(
+            "operational_revision" not in plan and plan.get("audit_root") == AUDIT_ROOT,
+            "legacy_revision_injection",
+        )
+        return None
+    require(plan.get("schema_id") == "sro_native_execution_plan/2", "plan_contract")
+    schema, anchors = audit_anchors(plan["audit_root"])
+    require(schema == plan["schema_id"], "plan_audit_revision_binding")
+    root = Path(plan["audit_root"])
+    for field, name, digest in (
+        ("root_audit_ref", "root-audit.json", anchors[0]),
+        ("derivation_ref", "derived-inputs/derivation.json", anchors[1]),
+        ("audit_manifest_ref", "manifest.json", anchors[2]),
+        ("adapter_ref", "runtime_adapter_snapshot.py", REPAIRED_ADAPTER_SHA),
+    ):
+        ref = plan[field]
+        require(
+            type(ref) is dict
+            and set(ref) == {"path", "sha256", "bytes"}
+            and ref["path"] == str(root / name)
+            and ref["sha256"] == digest,
+            "operational_revision_audit_binding",
+        )
+    revision = plan.get("operational_revision")
+    # Check the complete typed reference record before any predecessor body read.
+    require(
+        type(revision) is dict
+        and native_digest(revision) == native_digest(OPERATIONAL_REVISION),
+        "operational_revision_changed",
+    )
+    require(
+        plan["actual_execution_authorized"] is False
+        and plan["scientifically_validated"] is False,
+        "operational_revision_claim_boundary",
+    )
+    predecessor = bound(revision["predecessor_campaign_ref"])
+    require(
+        predecessor["schema_id"] == "sro_four_case_campaign/1"
+        and predecessor["status"] == "stopped"
+        and predecessor["denominator"] == 4
+        and predecessor["execution_order"] == CASE_IDS
+        and predecessor["completed_count"] == 0
+        and predecessor["unstarted_count"] == 3
+        and [(row["case_id"], row["status"]) for row in predecessor["case_results"]]
+        == [
+            (CASE_IDS[0], "failed"),
+            *[(case_id, "unstarted") for case_id in CASE_IDS[1:]],
+        ]
+        and predecessor["scientifically_validated"] is False
+        and predecessor["product_qualified"] is False
+        and predecessor["HIP_qualified"] is False,
+        "stopped_predecessor_required",
+    )
+    require(
+        revision["predecessor_dispatch_ref"]
+        in predecessor["case_results"][0]["actual_receipt_refs"],
+        "predecessor_dispatch_binding",
+    )
+    events = [
+        loads(line)
+        for line in bound(
+            revision["predecessor_dispatch_ref"], parse=False
+        ).splitlines()
+    ]
+    force = [event for event in events if event["kind"] == "force"]
+    require(
+        len(force) == 2
+        and force[0]["event"] == "begin"
+        and force[1]["event"] == "end"
+        and force[0]["index"] == force[1]["index"] == 0
+        and force[1]["error_type"] == "AdapterError",
+        "predecessor_force_attempt_required",
+    )
+    bound(revision["predecessor_root_audit_ref"], parse=False)
+    old_derivation = bound(revision["predecessor_derivation_ref"])
+    old_manifest = bound(revision["predecessor_audit_manifest_ref"])
+    derivation = bound(plan["derivation_ref"])
+    normalized = deepcopy(derivation)
+    require(
+        normalized["adapter_source_sha256"] == REPAIRED_ADAPTER_SHA,
+        "repaired_derivation_adapter_required",
+    )
+    normalized["adapter_source_sha256"] = old_derivation["adapter_source_sha256"]
+    require(
+        native_digest(normalized) == native_digest(old_derivation),
+        "scientific_derivation_changed",
+    )
+    audit = bound(plan["root_audit_ref"])
+    require(
+        audit["source_adapter_sha256"] == REPAIRED_ADAPTER_SHA
+        and audit["requested_derivatives"] == audit["prepared_derivatives"] == 4
+        and audit["reference_body_reads"] == audit["original_ligand_body_reads"] == 0
+        and audit["actual_execution_authorized"] is False
+        and audit["scientifically_validated"] is False
+        and all(
+            type(audit[field]) is int and audit[field] == 0
+            for field in (
+                "actual_new_OpenMM_observations",
+                "actual_new_force_calls",
+                "actual_new_native_graph_calls",
+                "actual_new_optimizer_calls",
+                "actual_new_score_calls",
+            )
+        ),
+        "zero_dispatch_repaired_audit_required",
+    )
+    for case in plan["cases"]:
+        name = case["case_id"] + "-installed-binding.json"
+        old_ref = {
+            **old_manifest["payload_files"][name],
+            "path": str(Path(AUDIT_ROOT) / name),
+        }
+        old_binding = bound(old_ref)
+        new_binding = bound(case["expected_binding_ref"])
+        require(
+            native_digest(new_binding["input_binding"])
+            == native_digest(old_binding["input_binding"]),
+            "operational_input_binding_changed",
+        )
+    return revision
+
+
 def build_plan(audit_root, python_executable, output, *, oracle_phase=None):
     """Build a create-only plan from already audited derivative inputs, no calls."""
     root = Path(audit_root).resolve(strict=True)
-    require(str(root) == AUDIT_ROOT, "declared_audit_root_required")
+    plan_schema, anchors = audit_anchors(str(root))
     audit_ref = pin(root / "root-audit.json")
     derivation_ref = pin(root / "derived-inputs/derivation.json")
     manifest_ref = pin(root / "manifest.json")
     require(
         (audit_ref["sha256"], derivation_ref["sha256"], manifest_ref["sha256"])
-        == (ROOT_AUDIT_SHA, DERIVATION_SHA, AUDIT_MANIFEST_SHA),
+        == anchors,
         "frozen_audit_source_changed",
     )
     audit = bound(audit_ref)
@@ -377,7 +589,7 @@ def build_plan(audit_root, python_executable, output, *, oracle_phase=None):
         "audited_adapter_required",
     )
     plan = {
-        "schema_id": "sro_native_execution_plan/1",
+        "schema_id": plan_schema,
         "created_at": now(),
         "protocol_sha256": PROTOCOL_SHA,
         "manifest_sha256": MANIFEST_SHA,
@@ -399,11 +611,16 @@ def build_plan(audit_root, python_executable, output, *, oracle_phase=None):
         "actual_execution_authorized": False,
         "scientifically_validated": False,
     }
+    if plan_schema == "sro_native_execution_plan/2":
+        plan["operational_revision"] = deepcopy(OPERATIONAL_REVISION)
+    operational_revision_contract(plan)
     publish(Path(output).absolute(), plan)
     return plan
 
 
 def validate_plan(plan):
+    require(type(plan) is dict, "plan_fields")
+    plan_schema, anchors = audit_anchors(plan.get("audit_root"))
     require(
         type(plan) is dict
         and set(plan)
@@ -429,11 +646,16 @@ def validate_plan(plan):
             "oracle_phase",
             "actual_execution_authorized",
             "scientifically_validated",
-        },
+        }
+        | (
+            {"operational_revision"}
+            if plan_schema == "sro_native_execution_plan/2"
+            else set()
+        ),
         "plan_fields",
     )
     require(
-        plan["schema_id"] == "sro_native_execution_plan/1"
+        plan["schema_id"] == plan_schema
         and plan["protocol_sha256"] == PROTOCOL_SHA
         and plan["manifest_sha256"] == MANIFEST_SHA
         and native_digest(plan["budget"]) == native_digest(BUDGET)
@@ -442,16 +664,14 @@ def validate_plan(plan):
         "plan_contract",
     )
     require(
-        plan["audit_root"] == AUDIT_ROOT
-        and plan["installed_site"] == OLD_SITE
-        and plan["wheel_ref"]["sha256"] == WHEEL_SHA,
+        plan["installed_site"] == OLD_SITE and plan["wheel_ref"]["sha256"] == WHEEL_SHA,
         "old_runtime_required",
     )
     require(
         pin(Path(__file__).resolve()) == plan["driver_source_ref"],
         "executing_driver_changed",
     )
-    root = Path(AUDIT_ROOT)
+    root = Path(plan["audit_root"])
     for field, name in [
         ("root_audit_ref", "root-audit.json"),
         ("derivation_ref", "derived-inputs/derivation.json"),
@@ -465,7 +685,7 @@ def validate_plan(plan):
             plan["derivation_ref"]["sha256"],
             plan["audit_manifest_ref"]["sha256"],
         )
-        == (ROOT_AUDIT_SHA, DERIVATION_SHA, AUDIT_MANIFEST_SHA),
+        == anchors,
         "frozen_audit_source_changed",
     )
     manifest = bound(plan["audit_manifest_ref"])
@@ -543,6 +763,7 @@ def validate_plan(plan):
             and len(proof["rebound_identity_fields"]) == 5,
             "numeric_preservation_required",
         )
+    operational_revision_contract(plan)
     return plan
 
 
@@ -793,8 +1014,6 @@ def completed_observations(result):
         "last_accepted_geometry_binding",
     )
     return result
-
-
 
 
 def require_saved_geometry_guard(adapter):

@@ -307,4 +307,9 @@ negative results and four correctly rebound SRO inputs. The later
 retains the stopped campaign: one failed case, three unstarted cases and no
 authenticated numerical endpoints. Future guard regressions pass, but another
 target run requires a new audited snapshot and reviewed prospective plan.
+The separate [operational guard-repair experiment](docs/research/sro_operational_guard_repair_20260930.md)
+records that fresh audit, unchanged four-input protocol and reviewed execution
+sources. The first case completes saved verification and independent numerical
+checks, but is rejected because its final force exceeds the convergence limit.
+The remaining fixed cases are running in that progress record.
 Scientific, learning, HIP and service qualification remain open.
