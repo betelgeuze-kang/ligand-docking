@@ -67,7 +67,8 @@ jobs:
       - name: Lint new implementation and tests without exclusions
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
-            betelgeuze_product/cpu_refinement_v1_3 tests/unit/test_cartesian_*.py \
+            betelgeuze_product/cpu_refinement_v1_3 betelgeuze_product/cpu_refinement_v1_4 \
+            tests/unit/test_cartesian_*.py \
             tests/ci/cartesian_refinement_wheel_probe.py \
             tests/unit/test_cpu_*.py \
             tools/verify_cpu_refinement_v1_2_install.py \

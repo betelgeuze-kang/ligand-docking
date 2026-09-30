@@ -1,0 +1,49 @@
+name: ci-human-5ht6-endpoint-intake
+on:
+  pull_request:
+    paths:
+      - 'tools/product/primary_5ht6*.py'
+      - 'tools/verify_primary_5ht6_endpoint_prepared_intake_v1.py'
+      - 'tests/unit/test_primary_5ht6_endpoint_prepared_intake_v1.py'
+      - 'docs/evidence/**'
+      - 'docs/research/human_5ht6_endpoint_prepared_intake_20260930.md'
+      - '.github/workflows/ci-human-5ht6-endpoint-intake.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: human-5ht6-endpoint-intake-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  metadata-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.11'
+      - name: Install pinned check dependencies
+        run: python -m pip install pytest==8.3.5 ruff==0.11.13
+      - name: Lint the metadata contract and tests
+        run: |
+          python -m ruff check --isolated --no-cache \
+            tools/product/primary_5ht6_endpoint_prepared_intake_v1.py \
+            tools/verify_primary_5ht6_endpoint_prepared_intake_v1.py \
+            tests/unit/test_primary_5ht6_endpoint_prepared_intake_v1.py
+          git diff --check
+      - name: Verify metadata boundaries and missingness
+        run: |
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest \
+            -p no:cacheprovider -W error -q \
+            tests/unit/test_primary_5ht6_endpoint_prepared_intake_v1.py
+      - name: Rebuild and verify the fixed public intake record
+        run: |
+          python -B tools/verify_primary_5ht6_endpoint_prepared_intake_v1.py \
+            --repo-root "$PWD" \
+            --verify-record docs/evidence/primary_5ht6_endpoint_prepared_intake_20260930_v1.json
