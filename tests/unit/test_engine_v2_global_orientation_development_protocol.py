@@ -83,6 +83,7 @@ def test_current_source_fails_frozen_global_orientation_protocol(
 @pytest.mark.parametrize("relative_path", [
     "betelgeuze_engine_v2/io/sdf.py",
     "betelgeuze_engine_v2/molecular/serialization.py",
+    "betelgeuze_engine_v2/physics/reference_parameter_applicability.py",
 ])
 def test_historical_view_rejects_new_mutation_to_changed_source(
     monkeypatch: pytest.MonkeyPatch, relative_path: str,

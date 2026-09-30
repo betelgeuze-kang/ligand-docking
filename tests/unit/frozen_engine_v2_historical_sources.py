@@ -28,7 +28,7 @@ HISTORICAL_MANIFEST_SHA256 = (
     "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7"
 )
 CURRENT_MANIFEST_SHA256 = (
-    "6f8f3797a3b97d3f04cba224a579a3dcd10e108b79dc5ab43e8825a33e95e6c6"
+    "4977c5bc7c3e0a424203aeccd7fb2a370fbd4cfab1e1ff2f9e7b2a74ae80dc19"
 )
 HISTORICAL_PROTOCOL_SHA256 = (
     "7ecbb5fa10ce95b035cdc0c11b2c27469caa019aa994315831ad2631cca0fdc3"
@@ -65,6 +65,12 @@ REVIEWED_CURRENT_SOURCE_SHA256 = {
     **KNOWN_3AD331560_SOURCE_SHA256,
     "betelgeuze_engine_v2/molecular/serialization.py": (
         "5a697e413368137308076632437452a7fcb39a1e949f56ace14c749d271195b6"
+    ),
+    # The H5 review refresh in 47806adee changes only the reviewed serialization
+    # and applicability-record SHA strings. This is a test-only historical view;
+    # it does not authorize the current source under the old frozen protocol.
+    "betelgeuze_engine_v2/physics/reference_parameter_applicability.py": (
+        "f8ce56bb37c4f8dd369adec91e8835f503acb2f0016df366ad2a41a917f88296"
     ),
 }
 
