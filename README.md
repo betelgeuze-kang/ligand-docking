@@ -309,7 +309,13 @@ authenticated numerical endpoints. Future guard regressions pass, but another
 target run requires a new audited snapshot and reviewed prospective plan.
 The separate [operational guard-repair experiment](docs/research/sro_operational_guard_repair_20260930.md)
 records that fresh audit, unchanged four-input protocol and reviewed execution
-sources. The first case completes saved verification and independent numerical
-checks, but is rejected because its final force exceeds the convergence limit.
-The remaining fixed cases are running in that progress record.
+sources. That document is a historical first-completion snapshot. The
+[terminal report](docs/research/sro_operational_guard_repair_terminal_20260930.md)
+preserves two completed cases, one force applicability failure and one unstarted
+case, with zero admitted recoveries in the four requested development starts.
+Saved export and post-terminal coordinate evaluation preserve the full failure
+denominator and unchanged scientific gates. The
+[public transcription reconciliation](docs/research/human_5ht6_2024_cross_artifact_reconciliation_20260930.md)
+links existing report occurrences while leaving chemical identity, independent
+measurement counts and training/calibration/evaluation admissions unresolved.
 Scientific, learning, HIP and service qualification remain open.
