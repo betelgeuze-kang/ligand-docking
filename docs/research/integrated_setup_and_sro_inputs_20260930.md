@@ -1,5 +1,10 @@
 # Integrated CPU setup and SRO input milestone — 2026-09-30
 
+This is the pre-execution input milestone. The later
+[execution and guard-repair report](sro_stopped_campaign_and_guard_repair_20260930.md)
+records the stopped first native case and the separately verified future repair.
+The historical input audit below remains unchanged.
+
 The installed paper-development preparation path now avoids one redundant
 canonical decode per ligand and receptor while retaining independent original
 and Cartesian admissions, fresh source checks and mutable-content checks. Four

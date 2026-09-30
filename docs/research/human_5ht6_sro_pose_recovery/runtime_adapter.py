@@ -709,23 +709,102 @@ def _prepare_inputs(packet, review, output):
     return receipt
 
 
-@contextmanager
-def forbid_physics():
-    """Deny known native dispatch methods, with a profiling backstop.
+_PHYSICS_GUARDS = []
 
-    Direct sentinels remain active if a helper catches an exception. Profile
-    exceptions can disable CPython profiling, so they alone are insufficient.
-    Constructors and parsing remain available. This is a single-thread guard.
+
+def _unguarded_callable(value):
+    for state in reversed(_PHYSICS_GUARDS):
+        entry = state["sentinels"].get(id(value))
+        if entry is not None and entry[0] is value:
+            value = entry[1]
+    return value
+
+
+def _guard_alias_slots():
+    """All loaded module/class slots; no arbitrary closure/container sandbox."""
+    seen = set()
+    for module in tuple(sys.modules.values()):
+        if module is None:
+            continue
+        for name, value in tuple(vars(module).items()):
+            yield module, name, value
+            if issubclass(type(value), type) and id(value) not in seen:
+                seen.add(id(value))
+                for method, function in tuple(vars(value).items()):
+                    yield value, method, function
+
+
+@contextmanager
+def forbid_physics(*, allow_saved_geometry=False):
+    """Deny dispatch; optionally reconstruct only known saved-pose geometry.
+
+    The strict default also denies validity methods named evaluate. Saved-result
+    verification may admit the exact installed geometry methods, including the
+    sparse compatibility installer. Their nested force/score/graph calls remain
+    forbidden. This single-thread guard restores imported aliases and prior
+    profile/trace state on either exit. Its call-event tracing is guard overhead,
+    not evidence about engine performance or scientific qualification.
     """
     from unittest.mock import patch
+    from types import MethodType
 
-    # Import contracts/dispatch before patching; imports do no molecular work.
+    require(type(allow_saved_geometry) is bool, "saved_geometry_mode_boolean")
+    # Complete known lazy imports BEFORE replacing any exported dispatch alias.
     from betelgeuze_product.cpu_refinement_v1_3 import (
         workflow as workflow,
         minimization as minimization,
     )
+    from betelgeuze_product.cpu_refinement import reference_forcefield_v1_1
+    from betelgeuze_product.cpu_refinement_v1_2 import openmm_periodic_extension
+    from betelgeuze_engine_v2.docking.validity import PoseValidityContext
+    from betelgeuze_engine_v2.docking.contact_validity import (
+        ElementAwarePoseValidityContext,
+    )
 
-    previous = sys.getprofile()
+    force_original = _unguarded_callable(
+        reference_forcefield_v1_1.evaluate_reference_force_field
+    )
+    require(
+        _unguarded_callable(openmm_periodic_extension.evaluate_reference_force_field)
+        is force_original,
+        "periodic_force_alias_changed",
+    )
+    allow_saved_geometry = allow_saved_geometry and all(
+        state["allow_saved_geometry"] for state in _PHYSICS_GUARDS
+    )
+    geometry_targets = set()
+    geometry_codes = set()
+    if allow_saved_geometry:
+        known_geometry = {
+            ("betelgeuze_engine_v2.docking.validity", "PoseValidityContext.evaluate"),
+            (
+                "betelgeuze_engine_v2.docking.contact_validity",
+                "ElementAwarePoseValidityContext.evaluate",
+            ),
+            (
+                "betelgeuze_engine_v2.docking.sparse_base_validity",
+                "install_sparse_element_aware_base_validity.<locals>.evaluate",
+            ),
+        }
+        for cls in (PoseValidityContext, ElementAwarePoseValidityContext):
+            function = _unguarded_callable(vars(cls)["evaluate"])
+            module = sys.modules.get(getattr(function, "__module__", ""))
+            code = getattr(function, "__code__", None)
+            require(
+                (
+                    getattr(function, "__module__", None),
+                    getattr(function, "__qualname__", None),
+                )
+                in known_geometry
+                and module is not None
+                and code is not None
+                and Path(code.co_filename).resolve() == Path(module.__file__).resolve(),
+                "unknown_saved_geometry_implementation",
+            )
+            geometry_targets.add((id(cls), "evaluate"))
+            geometry_codes.add(id(code))
+
+    previous_profile, previous_trace = sys.getprofile(), sys.gettrace()
     prohibited = {
         "evaluate",
         "evaluate_cross",
@@ -742,13 +821,15 @@ def forbid_physics():
         "_build_rust_native_context",
         "build_compact_radius_graph",
     }
-    attempts = []
+    attempts, targets, sentinels, frame_traces = [], [], {}, {}
+    state = {"sentinels": sentinels, "allow_saved_geometry": allow_saved_geometry}
 
-    def deny(label):
+    def deny(label, original):
         def forbidden(*args, **kwargs):
             attempts.append(label)
             raise AdapterError("molecular_execution_forbidden:" + label)
 
+        sentinels[id(forbidden)] = (forbidden, original)
         return forbidden
 
     def profile(frame, event, arg):
@@ -761,6 +842,7 @@ def forbid_physics():
                 or (
                     module.startswith("betelgeuze")
                     and (name in prohibited or name.startswith("minimize"))
+                    and id(frame.f_code) not in geometry_codes
                 )
             )
             if forbidden:
@@ -773,29 +855,62 @@ def forbid_physics():
         ):
             attempts.append("OpenMM")
             raise AdapterError("OpenMM_observation_forbidden")
+        if previous_profile is not None:
+            previous_profile(frame, event, arg)
 
-    with ExitStack() as stack:
-        seen = set()
-        for module_name, module in tuple(sys.modules.items()):
-            if module is None or not module_name.startswith("betelgeuze"):
-                continue
-            for name, value in tuple(vars(module).items()):
-                if callable(value) and (
-                    name in prohibited or name.startswith("minimize")
-                ):
-                    target = (id(module), name)
-                    if target not in seen:
-                        stack.enter_context(
-                            patch.object(module, name, deny(module_name + "." + name))
-                        )
-                        seen.add(target)
-                if isinstance(value, type) and value.__module__.startswith(
-                    "betelgeuze"
-                ):
-                    for method in tuple(vars(value)):
-                        if method in prohibited or method.startswith("minimize"):
+    def retain_trace(frame, prior):
+        frame_traces[frame] = [prior, frame.f_trace_lines, frame.f_trace_opcodes]
+        if prior is None:
+            frame.f_trace_lines = False
+            frame.f_trace_opcodes = False
+
+    def trace(frame, event, arg):
+        # A raised profile exception disables profiling in CPython. A trace call
+        # runs before the next profile call and keeps repeated caught calls denied.
+        if sys.getprofile() is not profile:
+            sys.setprofile(profile)
+        if frame not in frame_traces:
+            retain_trace(frame, previous_trace if event == "call" else frame.f_trace)
+        record = frame_traces[frame]
+        prior = record[0]
+        if prior is not None and prior is not trace:
+            record[0] = prior(frame, event, arg)
+        if event == "return":
+            frame.f_trace_lines, frame.f_trace_opcodes = record[1:]
+            frame_traces.pop(frame, None)
+            return record[0]
+        return trace
+
+    try:
+        with ExitStack() as stack:
+            seen = set()
+            for module_name, module in tuple(sys.modules.items()):
+                if module is None or not module_name.startswith("betelgeuze"):
+                    continue
+                for name, value in tuple(vars(module).items()):
+                    if callable(value) and (
+                        name in prohibited or name.startswith("minimize")
+                    ):
+                        target = (id(module), name)
+                        if target not in seen:
+                            targets.append((module, name, value))
+                            stack.enter_context(
+                                patch.object(
+                                    module, name, deny(module_name + "." + name, value)
+                                )
+                            )
+                            seen.add(target)
+                    if isinstance(value, type) and value.__module__.startswith(
+                        "betelgeuze"
+                    ):
+                        for method, function in tuple(vars(value).items()):
                             target = (id(value), method)
-                            if target not in seen:
+                            if (
+                                (method in prohibited or method.startswith("minimize"))
+                                and target not in seen
+                                and target not in geometry_targets
+                            ):
+                                targets.append((value, method, function))
                                 stack.enter_context(
                                     patch.object(
                                         value,
@@ -805,17 +920,73 @@ def forbid_physics():
                                             + "."
                                             + value.__name__
                                             + "."
-                                            + method
+                                            + method,
+                                            function,
                                         ),
                                     )
                                 )
                                 seen.add(target)
-        sys.setprofile(profile)
-        try:
-            yield
-            require(not attempts, "caught_molecular_execution_attempt")
-        finally:
-            sys.setprofile(previous)
+            _PHYSICS_GUARDS.append(state)
+            # Existing caller frames also need exception events for caught C calls.
+            frame = sys._getframe()
+            while frame is not None:
+                retain_trace(frame, frame.f_trace)
+                frame.f_trace = trace
+                frame = frame.f_back
+            sys.settrace(trace)
+            sys.setprofile(profile)
+            try:
+                yield
+                require(not attempts, "caught_molecular_execution_attempt")
+            finally:
+                sys.settrace(previous_trace)
+                for frame, (prior, lines, opcodes) in tuple(frame_traces.items()):
+                    frame.f_trace = prior
+                    frame.f_trace_lines, frame.f_trace_opcodes = lines, opcodes
+                frame_traces.clear()
+                sys.setprofile(previous_profile)
+    finally:
+        if state in _PHYSICS_GUARDS:
+            _PHYSICS_GUARDS.remove(state)
+        # Imports may copy a sentinel under any alias, even an unprohibited name.
+        # Restore those module/class slots after ExitStack restores original slots.
+        for target, name, value in _guard_alias_slots():
+            descriptor = (
+                type(value) if type(value) in (staticmethod, classmethod) else None
+            )
+            bound = type(value) is MethodType
+            candidate = value.__func__ if descriptor is not None or bound else value
+            entry = sentinels.get(id(candidate))
+            if entry is not None and entry[0] is candidate:
+                restored = entry[1]
+                if descriptor is not None:
+                    restored = descriptor(restored)
+                elif bound:
+                    restored = MethodType(restored, value.__self__)
+                setattr(target, name, restored)
+        require(
+            all(
+                vars(target).get(name) is original for target, name, original in targets
+            ),
+            "dispatch_callable_restore_failed",
+        )
+        for _, _, value in _guard_alias_slots():
+            candidate = (
+                value.__func__
+                if type(value) in (staticmethod, classmethod, MethodType)
+                else value
+            )
+            entry = sentinels.get(id(candidate))
+            require(
+                entry is None or entry[0] is not candidate, "leaked_dispatch_sentinel"
+            )
+        require(
+            _unguarded_callable(
+                openmm_periodic_extension.evaluate_reference_force_field
+            )
+            is force_original,
+            "periodic_force_alias_restore_failed",
+        )
 
 
 def prepare_inputs(packet, review, output):

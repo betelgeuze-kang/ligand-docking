@@ -302,5 +302,9 @@ those stages.
 
 The [integrated setup and actual SRO input milestone](docs/research/integrated_setup_and_sro_inputs_20260930.md)
 records the installed synthetic probe, local boundary tests, unchanged-gate
-negative results and four correctly rebound SRO inputs. The prospective recovery
-cases have not been optimized; scientific and service qualification remain open.
+negative results and four correctly rebound SRO inputs. The later
+[SRO execution and guard-repair report](docs/research/sro_stopped_campaign_and_guard_repair_20260930.md)
+retains the stopped campaign: one failed case, three unstarted cases and no
+authenticated numerical endpoints. Future guard regressions pass, but another
+target run requires a new audited snapshot and reviewed prospective plan.
+Scientific, learning, HIP and service qualification remain open.

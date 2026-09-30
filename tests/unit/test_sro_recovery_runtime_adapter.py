@@ -479,8 +479,9 @@ def test_mutation_after_source_read_is_rejected_before_receipt(tmp_path, monkeyp
 
 
 @pytest.mark.parametrize("target_kind", ["force", "score", "graph", "minimize"])
+@pytest.mark.parametrize("allow_saved_geometry", [False, True])
 def test_direct_dispatch_sentinels_survive_caught_exceptions(
-    tmp_path, monkeypatch, target_kind
+    tmp_path, monkeypatch, target_kind, allow_saved_geometry
 ):
     from betelgeuze_product.cpu_refinement_v1_3 import workflow, minimization
     from betelgeuze_product.cpu_refinement_v1_2.chemical_features import (
@@ -502,7 +503,7 @@ def test_direct_dispatch_sentinels_survive_caught_exceptions(
     with pytest.raises(
         adapter.AdapterError, match="caught_molecular_execution_attempt"
     ):
-        with adapter.forbid_physics():
+        with adapter.forbid_physics(allow_saved_geometry=allow_saved_geometry):
             for _ in range(2):
                 try:
                     getattr(target, attribute)()
@@ -616,3 +617,270 @@ def test_sources_bind_request_numeric_config_and_never_open_original_ligand(
     )
     with pytest.raises(adapter.AdapterError, match="frozen_settings_changed"):
         adapter._sources(frozen)
+
+
+@pytest.mark.parametrize("exceptional_exit", [False, True])
+def test_guard_restores_late_import_aliases_and_descriptors(
+    monkeypatch, exceptional_exit
+):
+    import sys
+    from types import ModuleType
+    from betelgeuze_product.cpu_refinement import reference_forcefield_v1_1 as base
+    from betelgeuze_product.cpu_refinement_v1_2 import openmm_periodic_extension
+
+    from betelgeuze_product.cpu_refinement_v1_3 import workflow
+
+    original = base.evaluate_reference_force_field
+    original_method = workflow.FixedReceptorEvaluator.evaluate
+    synthetic_self = SimpleNamespace()
+    consumer = ModuleType("sro_guard_late_consumer")
+    monkeypatch.setitem(sys.modules, consumer.__name__, consumer)
+
+    def guarded_import():
+        with adapter.forbid_physics():
+            consumer.cached_force = base.evaluate_reference_force_field
+            consumer.cached_bound = workflow.FixedReceptorEvaluator.evaluate.__get__(
+                synthetic_self
+            )
+            consumer.Consumer = type(
+                "Consumer",
+                (),
+                {"cached_force": staticmethod(base.evaluate_reference_force_field)},
+            )
+            if exceptional_exit:
+                raise RuntimeError("synthetic exit")
+
+    if exceptional_exit:
+        with pytest.raises(RuntimeError, match="synthetic exit"):
+            guarded_import()
+    else:
+        guarded_import()
+    assert base.evaluate_reference_force_field is original
+    assert openmm_periodic_extension.evaluate_reference_force_field is original
+    assert consumer.cached_force is original
+    assert consumer.cached_bound.__func__ is original_method
+    assert consumer.cached_bound.__self__ is synthetic_self
+    assert vars(consumer.Consumer)["cached_force"].__func__ is original
+
+
+def test_fresh_cpu_subprocess_restores_periodic_force_alias():
+    import os
+    import subprocess
+    import sys
+    import textwrap
+
+    # An explicit installed site exercises wheel imports; otherwise use fresh
+    # current-source imports. Neither lane opens target/reference data or calls
+    # force, score, graph, optimizer, OpenMM or an oracle.
+    import torch
+
+    package_site = os.environ.get("SRO_GUARD_TEST_INSTALLED_SITE", str(ROOT))
+    dependency_site = str(Path(torch.__file__).resolve().parents[1])
+    script = textwrap.dedent("""
+        import sys
+        from pathlib import Path
+        from types import ModuleType
+        sys.path.insert(0, sys.argv[1])
+        sys.path.append(sys.argv[3])
+        adapter = ModuleType('synthetic_guard_adapter')
+        adapter.__file__ = sys.argv[2]
+        exec(compile(Path(sys.argv[2]).read_bytes(), sys.argv[2], 'exec'), adapter.__dict__)
+        from betelgeuze_product.cpu_refinement_v1_3 import workflow, minimization
+        from betelgeuze_product.cpu_refinement import reference_forcefield_v1_1 as base
+        assert 'betelgeuze_product.cpu_refinement_v1_2.openmm_periodic_extension' not in sys.modules
+        original = base.evaluate_reference_force_field
+        before_profile, before_trace = sys.getprofile(), sys.gettrace()
+        for fail in (False, True):
+            try:
+                with adapter.forbid_physics():
+                    from betelgeuze_product.cpu_refinement_v1_2 import openmm_periodic_extension
+                    assert openmm_periodic_extension.evaluate_reference_force_field is not original
+                    if fail:
+                        raise RuntimeError('synthetic exit')
+            except RuntimeError:
+                assert fail
+            assert base.evaluate_reference_force_field is original
+            assert openmm_periodic_extension.evaluate_reference_force_field is original
+            assert sys.getprofile() is before_profile and sys.gettrace() is before_trace
+        print('fresh alias imports restored; zero numerical dispatch')
+    """)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-B",
+            "-c",
+            script,
+            package_site,
+            str(ROOT / "docs/research/human_5ht6_sro_pose_recovery/runtime_adapter.py"),
+            dependency_site,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (
+        result.stdout.strip() == "fresh alias imports restored; zero numerical dispatch"
+    )
+
+
+@pytest.mark.parametrize("allow_saved_geometry", [False, True])
+@pytest.mark.parametrize(
+    "module,name",
+    [
+        ("betelgeuze_product.synthetic", "evaluate"),
+        ("betelgeuze_product.synthetic", "score_terms"),
+        ("betelgeuze_product.synthetic", "minimize"),
+        ("betelgeuze_engine_v2.geometry", "build_compact_radius_graph"),
+        ("betelgeuze_engine_v2.native_graph.synthetic", "constructor"),
+        ("openmm.synthetic", "observe"),
+    ],
+)
+def test_unknown_dispatch_stays_denied_after_repeated_caught_profile_exceptions(
+    allow_saved_geometry, module, name
+):
+    calls = []
+    namespace = {"__name__": module, "calls": calls}
+    exec("def " + name + "():\n    calls.append(1)\n", namespace)
+    with pytest.raises(
+        adapter.AdapterError, match="caught_molecular_execution_attempt"
+    ):
+        with adapter.forbid_physics(allow_saved_geometry=allow_saved_geometry):
+            for _ in range(3):
+                with pytest.raises(
+                    adapter.AdapterError, match="molecular_execution_forbidden"
+                ):
+                    namespace[name]()
+    assert calls == []
+
+
+def test_saved_geometry_mode_reconstructs_synthetic_pose_without_dispatch(
+    tmp_path, monkeypatch
+):
+    from tests.unit.test_cartesian_workflow import (
+        request,
+        observe_numerical_and_score_calls,
+    )
+    from betelgeuze_product.cpu_refinement_v1_3 import workflow
+    from betelgeuze_product.cpu_refinement_v1_2.work import WorkMeter
+
+    req = request(tmp_path)
+    calls = observe_numerical_and_score_calls(monkeypatch)
+    with adapter.forbid_physics():
+        admitted = workflow._admit(req, WorkMeter())
+    context = admitted.authority.validity_context
+    with pytest.raises(adapter.AdapterError, match="molecular_execution_forbidden"):
+        with adapter.forbid_physics():
+            context.evaluate(admitted.proposal)
+    with adapter.forbid_physics(allow_saved_geometry=True):
+        validity = context.evaluate(admitted.proposal)
+    assert validity.complete
+    assert calls == {"numerical_graph": 0, "force": 0, "score": 0}
+
+
+def test_saved_geometry_rejects_equal_but_distinct_code_object():
+    from types import FunctionType
+    from betelgeuze_engine_v2.docking.contact_validity import (
+        ElementAwarePoseValidityContext,
+    )
+
+    method = ElementAwarePoseValidityContext.evaluate
+    cloned_code = method.__code__.replace()
+    assert cloned_code == method.__code__ and cloned_code is not method.__code__
+    clone = FunctionType(cloned_code, method.__globals__, closure=method.__closure__)
+    with pytest.raises(adapter.AdapterError, match="molecular_execution_forbidden"):
+        with adapter.forbid_physics(allow_saved_geometry=True):
+            clone(None, None)
+
+
+def test_saved_geometry_nested_guard_cannot_weaken_strict_outer():
+    from betelgeuze_engine_v2.docking.contact_validity import (
+        ElementAwarePoseValidityContext,
+    )
+
+    with pytest.raises(adapter.AdapterError, match="molecular_execution_forbidden"):
+        with adapter.forbid_physics():
+            with adapter.forbid_physics(allow_saved_geometry=True):
+                ElementAwarePoseValidityContext.evaluate(None, None)
+
+
+@pytest.mark.parametrize("exceptional_exit", [False, True])
+def test_guard_preserves_prior_profile_trace_and_caller_frame_flags(exceptional_exit):
+    import sys
+
+    frame = sys._getframe()
+    before = (
+        sys.getprofile(),
+        sys.gettrace(),
+        frame.f_trace,
+        frame.f_trace_lines,
+        frame.f_trace_opcodes,
+    )
+    events, profile_events = [], []
+
+    def prior_trace(frame, event, arg):
+        if frame.f_code.co_name == "probe":
+            events.append(event)
+        return prior_trace
+
+    def prior_profile(frame, event, arg):
+        if frame.f_code.co_name == "probe":
+            profile_events.append(event)
+
+    def probe():
+        value = 1
+        return value
+
+    try:
+        sys.settrace(prior_trace)
+        sys.setprofile(prior_profile)
+        frame.f_trace = prior_trace
+        frame.f_trace_lines, frame.f_trace_opcodes = True, False
+
+        def guarded_probe():
+            with adapter.forbid_physics(allow_saved_geometry=True):
+                assert probe() == 1
+                if exceptional_exit:
+                    raise RuntimeError("synthetic exit")
+
+        if exceptional_exit:
+            with pytest.raises(RuntimeError, match="synthetic exit"):
+                guarded_probe()
+        else:
+            guarded_probe()
+        assert sys.getprofile() is prior_profile
+        assert sys.gettrace() is prior_trace
+        assert frame.f_trace is prior_trace
+        assert frame.f_trace_lines is True and frame.f_trace_opcodes is False
+        assert "line" in events and "return" in events
+        assert "call" in profile_events and "return" in profile_events
+    finally:
+        sys.settrace(before[1])
+        frame.f_trace, frame.f_trace_lines, frame.f_trace_opcodes = before[2:]
+        sys.setprofile(before[0])
+
+
+def test_guard_final_assertion_rejects_a_missed_bound_sentinel_alias(monkeypatch):
+    from betelgeuze_product.cpu_refinement_v1_3 import workflow
+
+    consumer = SimpleNamespace()
+    scans = []
+
+    def missed_alias_scan():
+        scans.append(1)
+        # Simulate a restore scan missing a newly cached bound alias. The final
+        # independent assertion must still recognize its sentinel __func__.
+        return (
+            iter(())
+            if len(scans) == 1
+            else iter(((consumer, "bound", consumer.bound),))
+        )
+
+    monkeypatch.setattr(adapter, "_guard_alias_slots", missed_alias_scan)
+    with pytest.raises(adapter.AdapterError, match="leaked_dispatch_sentinel"):
+        with adapter.forbid_physics():
+            consumer.bound = workflow.FixedReceptorEvaluator.evaluate.__get__(
+                SimpleNamespace()
+            )
