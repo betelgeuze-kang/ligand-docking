@@ -35,6 +35,7 @@ from betelgeuze_engine_v2.physics.reference_parameters import (
 SCHEMA_ID = "betelgeuze.prepared_v2_cross_interaction/1.0.0"
 MAX_RECEPTOR_ATOMS = 10000
 MAX_LIGAND_ATOMS = 256
+EXTENDED_MAX_LIGAND_ATOMS = 512
 TILE_ATOMS_PER_COMPONENT = 64
 MINIMUM_PAIR_DISTANCE_ANGSTROM = ReferenceApplicabilityDomain().minimum_pair_distance_angstrom
 SUPPORTED_ELEMENTS = frozenset({"H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I"})
@@ -207,6 +208,7 @@ def evaluate_prepared_cross_interaction(
     switch_start_angstrom: float = 8.0, dielectric: float = 1.0,
     screening_kappa_per_angstrom: float = 0.0,
     projection_partition: str = "source_order_v1",
+    ligand_size_profile: str = "standard_256_v1",
 ) -> dict[str, Any]:
     """Evaluate every receptor-ligand pair under the declared switched model.
 
@@ -218,12 +220,17 @@ def evaluate_prepared_cross_interaction(
     if (type(projection_partition) is not str
             or projection_partition not in {"source_order_v1", "spatial_median_v1"}):
         raise PreparedInteractionError("unsupported projection_partition")
+    if (type(ligand_size_profile) is not str
+            or ligand_size_profile not in {"standard_256_v1", "extended_512_v1"}):
+        raise PreparedInteractionError("unsupported ligand_size_profile")
+    ligand_limit = (EXTENDED_MAX_LIGAND_ATOMS
+                    if ligand_size_profile == "extended_512_v1" else MAX_LIGAND_ATOMS)
     fields = {"coordinate_frame_id", "prepared_state_id", "parameter_source_id", "charge_source_id"}
     if (not isinstance(source_declarations, Mapping) or set(source_declarations) != fields
             or any(type(v) is not str or not v.strip() for v in source_declarations.values())):
         raise PreparedInteractionError("complete explicit source declarations are required")
     rp, receptor_sha256 = _component(receptor, receptor_parameters, MAX_RECEPTOR_ATOMS, "receptor")
-    lp, ligand_sha256 = _component(ligand, ligand_parameters, MAX_LIGAND_ATOMS, "ligand")
+    lp, ligand_sha256 = _component(ligand, ligand_parameters, ligand_limit, "ligand")
     config = {"cutoff_angstrom": _finite(cutoff_angstrom, "cutoff", 0.0),
               "switch_start_angstrom": _finite(switch_start_angstrom, "switch start", 0.0),
               "dielectric": _finite(dielectric, "dielectric", 0.0),
@@ -365,5 +372,12 @@ def evaluate_prepared_cross_interaction(
             "max_atoms_per_component_block": TILE_ATOMS_PER_COMPONENT,
             "source_index_blocks_sha256": sha256_canonical({"receptor": receptor_blocks, "ligand": ligand_blocks}),
             "scope": "mathematical partition only; source state, cross pairs, model and admission unchanged",
+        }
+    if ligand_size_profile != "standard_256_v1":
+        result["input_domain"] = {
+            "ligand_size_profile": ligand_size_profile,
+            "max_ligand_atoms": ligand_limit,
+            "max_receptor_atoms": MAX_RECEPTOR_ATOMS,
+            "scope": "input size only; unchanged tiled kernel and numerical guards",
         }
     return result

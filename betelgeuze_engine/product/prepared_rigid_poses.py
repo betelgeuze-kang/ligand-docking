@@ -189,7 +189,10 @@ def _evaluate_rigid_pose_request(request: dict, *, journal=None) -> dict:
             execution = request["execution"]
             if (
                 type(execution) is not dict
-                or set(execution) != {"projection_partition", "preparation_reuse"}
+                or set(execution) not in (
+                    {"projection_partition", "preparation_reuse"},
+                    {"projection_partition", "preparation_reuse", "ligand_size_profile"},
+                )
                 or execution["projection_partition"]
                 not in ("source_order_v1", "spatial_median_v1")
                 or execution["preparation_reuse"] not in ("request", "none")
@@ -197,6 +200,12 @@ def _evaluate_rigid_pose_request(request: dict, *, journal=None) -> dict:
                 raise ValueError(
                     "explicit supported projection_partition and preparation_reuse required"
                 )
+            if "ligand_size_profile" in execution and (
+                type(execution["ligand_size_profile"]) is not str
+                or execution["ligand_size_profile"]
+                not in ("standard_256_v1", "extended_512_v1")
+            ):
+                raise ValueError("unsupported ligand_size_profile in rigid-pose execution")
             execution_declaration = dict(execution)
             if (
                 type(request["evaluation"]) is not dict
@@ -298,6 +307,7 @@ def _evaluate_rigid_pose_request(request: dict, *, journal=None) -> dict:
                 source_declarations=declarations,
                 **request["evaluation"],
                 projection_partition=execution["projection_partition"],
+                ligand_size_profile=execution.get("ligand_size_profile", "standard_256_v1"),
             )
             row["evaluation_completed"] = True
             _verify_sources(provenance)

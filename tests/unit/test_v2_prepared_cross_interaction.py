@@ -870,3 +870,53 @@ def test_spatial_partition_never_hides_minimum_distance_failure(side):
 def test_spatial_partition_cutoff_and_switch_boundaries_match_oracle(distance):
     state = _pair(distance)
     _assert_oracle(_evaluate(*state, projection_partition="spatial_median_v1"), state)
+
+
+# Large ligands retain all source atoms; both ends must contribute forces.
+def _large_ligand_state(count):
+    receptor = _system([[0., 0., 0.], [1.4*(count-1), 0., 0.]], [.2, -.3])
+    ligand = _system([[1.4*i, 4., 0.] for i in range(count)],
+                     [.15 if i % 2 else -.12 for i in range(count)])
+    return receptor, ligand, _parameters(receptor), _parameters(ligand)
+
+
+@pytest.mark.parametrize("count", [256, 257, 315, 512])
+@pytest.mark.parametrize("partition", ["source_order_v1", "spatial_median_v1"])
+def test_extended_ligand_boundary_full_energy_force_and_identity(count, partition):
+    state = _large_ligand_state(count)
+    before = [canonical_system_sha256(s) for s in state[:2]]
+    result = _evaluate(*state, pocket_radius_angstrom=1000.,
+                       ligand_size_profile="extended_512_v1", projection_partition=partition)
+    _assert_oracle(result, state)
+    assert [canonical_system_sha256(s) for s in state[:2]] == before
+    assert result["input_domain"]["max_ligand_atoms"] == 512
+    assert len(result["quantities"]["ligand_cross_forces_kcal_per_mol_angstrom"]) == count
+    assert abs(result["quantities"]["ligand_cross_forces_kcal_per_mol_angstrom"][-1][1]) > 1e-6
+    if count == 256:
+        standard = _evaluate(*state, pocket_radius_angstrom=1000., projection_partition=partition)
+        assert standard["quantities"] == result["quantities"]
+        assert standard["sources"] == result["sources"]
+        assert "input_domain" not in standard
+
+
+@pytest.mark.parametrize("count,profile", [(257,"standard_256_v1"),(513,"extended_512_v1")])
+def test_ligand_size_profiles_keep_hard_upper_bound(count, profile):
+    with pytest.raises(adapter.PreparedInteractionError, match="ligand requires a bounded"):
+        _evaluate(*_large_ligand_state(count), ligand_size_profile=profile)
+
+
+@pytest.mark.parametrize("profile", [None, True, 512, [], "unbounded"])
+def test_ligand_size_profile_rejects_invalid_values(profile):
+    with pytest.raises(adapter.PreparedInteractionError, match="unsupported ligand_size_profile"):
+        _evaluate(*_pair(), ligand_size_profile=profile)
+
+
+@pytest.mark.parametrize("partition", ["source_order_v1", "spatial_median_v1"])
+def test_extended_ligand_cannot_hide_short_contact_in_last_block(partition):
+    receptor, ligand, rp, lp = _large_ligand_state(315)
+    xyz = ligand.coordinates.clone()
+    xyz[0,-1] = xyz[0,0]
+    ligand = replace(ligand, coordinates=xyz)
+    with pytest.raises((adapter.PreparedInteractionError, ReferencePhysicsApplicabilityError)):
+        _evaluate(receptor, ligand, rp, lp, ligand_size_profile="extended_512_v1",
+                  projection_partition=partition, pocket_radius_angstrom=1000.)
