@@ -117,6 +117,31 @@ def test_v2_ordered_molecules_preserve_original_atoms_and_source_indices(request
     assert not evidence["coordinates_generated"] and not any(evidence["claim_policy"].values())
 
 
+def test_v2_bond_equilibrium_observation_uses_original_molecule_indices_and_hash(request_doc):
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+
+    request = _ordered_bonded_molecules(request_doc)
+    second = request["protein_chains"][0]["molecule_itps"][1]
+    _change(second, lambda text: text.replace("[ bonds ]\n1 2 1\n", "[ bonds ]\n1 2 1 .1 100\n"))
+    receptor, ligand, _, _, evidence = parser.load_prepared_gromacs_components(request)
+    observation = observe_prepared_source_geometry(receptor, ligand, evidence)
+    assert observation["status"] == "observed"
+    lengths = observation["groups"]["receptor"]["supplied_direct_bond_lengths"]
+    assert lengths["bond_count"] == 3
+    assert lengths["explicit_source_equilibrium_count"] == 1
+    assert lengths["unknown_source_equilibrium_count"] == 2
+    row = next(row for row in lengths["shortest_pairs"]
+               if [atom["atom_index"] for atom in row["atoms"]] == [3, 4])
+    assert row["distance_angstrom"] == pytest.approx(1.0)
+    assert row["source_equilibrium"] == {
+        "status": "explicit", "equilibrium_length_nm_token": ".1",
+        "equilibrium_length_angstrom": 1.0,
+        "source_topology": "protein_chain__molecule_1", "source_line": 7,
+        "source_sha256": second["sha256"], "measured_minus_source_angstrom": 0.0,
+    }
+    assert lengths["length_validity_assessed"] is False
+
+
 def test_v2_blank_element_transfer_resolves_original_molecule_source(request_doc):
     request = _ordered_bonded_molecules(request_doc)
     request["pdb_element_policy"] = "pdb_blank_element_from_matching_topology_atomic_number"
@@ -199,8 +224,88 @@ def test_explicit_units_zeros_coordinates_and_provenance(request_doc):
     assert not provenance["within_molecule_gen_pairs_and_fudge_values_applied"]
     assert provenance["sdf_data_field_projection"]["data_fields"] == {"source_identity": ["synthetic-001"]}
     assert provenance["sdf_data_field_projection"]["original_sha256"] == request_doc["ligand_sdf"]["sha256"]
+    charge = provenance["ligand_source_net_charge_observation"]
+    assert charge["selected_atom_count"] == 3
+    assert charge["sdf_encoded_formal_charge_sum_e"] == 0
+    assert charge["itp_printed_partial_charge_sum_e"] == "0.0"
+    assert charge["itp_minus_sdf_charge_sum_e"] == "0.0"
+    assert charge["arithmetic_relation"] == "equal_as_encoded"
+    assert charge["diagnostic_unavailable_reason"] is None
+    assert charge["sdf_source_sha256"] == request_doc["ligand_sdf"]["sha256"]
+    assert charge["itp_source_sha256"] == request_doc["ligand_itp"]["sha256"]
+    assert not charge["chemical_state_identity_verified"]
+    assert not charge["force_field_assignment_validated"]
     assert "#ifdef POSRES" in provenance["original_topologies"]["protein_chain_A"]["source_text"]
     assert not provenance["posres_enabled"]
+
+
+def test_sdf_itp_net_charge_difference_is_diagnostic_only(request_doc):
+    _change(request_doc["ligand_sdf"], lambda text: text.replace(
+        "M  END\n", "M  CHG  1   1   1\nM  END\n"))
+    _, ligand, _, lparams, provenance = parser.load_prepared_gromacs_components(request_doc)
+    charge = provenance["ligand_source_net_charge_observation"]
+    assert ligand.atoms[0].formal_charge == 1
+    assert [row["charge_e"] for row in lparams] == [0., -.2, .2]
+    assert charge["sdf_encoded_formal_charge_sum_e"] == 1
+    assert charge["itp_printed_partial_charge_sum_e"] == "0.0"
+    assert charge["itp_minus_sdf_charge_sum_e"] == "-1.0"
+    assert charge["arithmetic_relation"] == "different_as_encoded"
+    assert charge["diagnostic_unavailable_reason"] is None
+    assert "not chemical-state identity" in charge["scope"]
+    assert not charge["chemical_state_identity_verified"]
+    assert not charge["force_field_assignment_validated"]
+    assert not provenance["source_coevality_verified"]
+    assert not any(provenance["claim_policy"].values())
+
+
+def test_printed_charge_cancellation_preserves_sub_float_residue(request_doc):
+    _change(request_doc["ligand_itp"], lambda text: text.replace(
+        "C0 1 0.0 12.01", "C0 1 1.00000000000000000000000000001 12.01"
+    ).replace(
+        "C1 2 -0.2 12.01", "C1 2 -1.00000000000000000000000000000 12.01"
+    ).replace("H2 3 0.2 1.008", "H2 3 0.0 1.008"))
+    _, _, _, _, provenance = parser.load_prepared_gromacs_components(request_doc)
+    charge = provenance["ligand_source_net_charge_observation"]
+    assert charge["itp_printed_partial_charge_sum_e"] == "1E-29"
+    assert charge["itp_minus_sdf_charge_sum_e"] == "1E-29"
+    assert charge["arithmetic_relation"] == "different_as_encoded"
+    assert charge["diagnostic_unavailable_reason"] is None
+    assert not any(provenance["claim_policy"].values())
+
+
+@pytest.mark.parametrize(("token", "reason"), [
+    ("1e-99999999999999999999999999999", "charge_token_not_decimal_parseable"),
+    ("1e-4096", "charge_precision_span_exceeds_diagnostic_bound"),
+])
+def test_unavailable_decimal_charge_is_diagnostic_only(request_doc, token, reason):
+    _change(request_doc["ligand_itp"], lambda text: text.replace(
+        "C0 1 0.0 12.01", f"C0 1 {token} 12.01"))
+    _, _, _, lparams, provenance = parser.load_prepared_gromacs_components(request_doc)
+    charge = provenance["ligand_source_net_charge_observation"]
+    assert lparams[0]["charge_e"] == 0.0
+    assert charge["sdf_encoded_formal_charge_sum_e"] == 0
+    assert charge["itp_printed_partial_charge_sum_e"] is None
+    assert charge["itp_minus_sdf_charge_sum_e"] is None
+    assert charge["arithmetic_relation"] == "indeterminate"
+    assert charge["diagnostic_unavailable_reason"] == reason
+    assert not provenance["source_coevality_verified"]
+    assert not any(provenance["claim_policy"].values())
+
+
+@pytest.mark.parametrize("tail", ["nan 100", ".1 inf", ".1", ".1 100 extra"])
+def test_prepared_explicit_bond_parameters_require_finite_complete_pair(request_doc, tail):
+    _change(request_doc["ligand_itp"], lambda text: text.replace(
+        "[ bonds ]\n1 2 1\n2 3 1", f"[ bonds ]\n1 2 1 {tail}\n2 3 1"))
+    with pytest.raises(parser.PreparedGromacsInputError, match="function-1 bond|explicit function-1 bond parameter"):
+        parser.load_prepared_gromacs_components(request_doc)
+
+
+def test_prepared_explicit_bond_pair_coexists_with_inherited_bond(request_doc):
+    _change(request_doc["ligand_itp"], lambda text: text.replace(
+        "[ bonds ]\n1 2 1\n2 3 1", "[ bonds ]\n1 2 1 .1 100\n2 3 1"))
+    _, ligand, _, _, evidence = parser.load_prepared_gromacs_components(request_doc)
+    assert ligand.atom_count == 3
+    assert evidence["ligand_source_bond_adjacency"] == [[0, 1], [1, 2]]
 
 
 @pytest.mark.parametrize("key", ["protein_pdb", "protein_atomtypes", "protein_defaults", "ligand_sdf", "ligand_gro", "ligand_itp", "ligand_atomtypes", "ligand_defaults"])
@@ -438,7 +543,9 @@ def test_sdf_metadata_cannot_declare_a_second_record(request_doc):
 
 
 # Captured from the exact parent synthetic reader, with only temporary source paths
-# normalized to filenames for the evidence hash. No physical result is involved.
+# normalized to filenames for the evidence hash. New additive observations are
+# excluded below so these hashes still pin the exact preexisting evidence bytes.
+# No physical result is involved.
 _LEGACY_HASHES = {'v1': {'ligand_sha256': '25ceffb61e2f4f6a2d082857e9854bc97459e02200ada0dc18bdde14b915bf41', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'cd93021607d9c80f6ea5038a45033d980ecd6c4d047b5cb46c89753585051a54', 'receptor_sha256': '3daf09cf7efbc6b5a04e1c46381036f74e5b6c64d4ede9b372d51e02031deb0d', 'rparams_sha256': '97cc50485e59db0920a655d164be9ccb7adb5e658099463519d31fb0e05ee77c'}, 'v2_A': {'ligand_sha256': '130568cdef74933d4068dc514bac38905e23b498d41726575a12ccb3b900e17b', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'af5fec38ac62465fa0bbd3f3478885058cf5d69745d0e1d197b48be2841257d4', 'receptor_sha256': '68b64152a9230407e7d99e7614599031ef453e06d77cd02ca6101205efa6b5a5', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}, 'v2_blank': {'ligand_sha256': '80c5980514a399d228551adb8afba3d8c7ae203b838c86bc1078175d73dc51fb', 'lparams_sha256': '47fb12fba5f5242891acb4a50b9658c4bdc13f551841ee19342eb3056819347d', 'normalized_provenance_sha256': 'b78ef03e115fa76377b96ba7d887688f44e42001924393f1afcb87a8fd3f8160', 'receptor_sha256': 'b2cc41481417b18f7b3d4f64c85e6b17e8ef96deae3d5a5a000d95fb4508307a', 'rparams_sha256': 'c596b3414b35cddd183316a8660709a81427c40326d515a465089dbcd24eedd4'}}
 
 
@@ -447,12 +554,13 @@ def _json_hash(value):
 
 
 @pytest.mark.parametrize("version", ["v1", "v2_blank", "v2_A"])
-def test_legacy_reader_canonical_and_evidence_hashes_unchanged(request_doc, version):
+def test_legacy_reader_canonical_and_preexisting_evidence_hashes_unchanged(request_doc, version):
     request = request_doc if version == "v1" else _ordered_bonded_molecules(request_doc, "" if version == "v2_blank" else "A")
     receptor, ligand, rparams, lparams, evidence = parser.load_prepared_gromacs_components(request)
     normalized = copy.deepcopy(evidence)
     for source in normalized["sources"].values():
         source["path"] = Path(source["path"]).name
+    normalized.pop("ligand_source_net_charge_observation")
     actual = {
         "receptor_sha256": parser.canonical_system_sha256(receptor),
         "ligand_sha256": parser.canonical_system_sha256(ligand),

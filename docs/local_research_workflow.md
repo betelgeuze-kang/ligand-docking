@@ -87,7 +87,10 @@ independent scientific signature or hostile same-user modifications.
 ## Per-pose cross geometry observations
 
 The summary and HTML expose each pose's existing cross observation radius, pair
-count and closest observed distance. Measured zero pairs remains zero; missing
+count and closest observed distance. They additionally expose the closest
+cross distance over all supplied pairs even when none lies within the 1 Å
+window; the summary JSON retains both atom identities. Measured zero pairs
+within the radius remains zero; missing
 or failed observations remain unavailable. These bounded observations do not
 change energy, forces, admission, execution status or training eligibility. A
 completed calculation is not evidence of a physically valid pose. Full atom
@@ -136,9 +139,13 @@ python3 -m venv /absolute/new-research-env
 `-I` flag and a supplied fresh synthetic two-pose request. It rejects project or
 numerical imports outside the virtual environment, verifies CPU Torch, launches
 separate installed CLI processes for execution/resume/verification, and checks
-that both original rows are restored exactly. It preserves commands, stdout,
-stderr, package versions, module paths and the request digest in a new evidence
-directory. CI now includes this same clean-environment wheel check. The script
+that both original rows are restored exactly with zero new calculations. It
+checks both attempts' final report and request-binding digests, their physics
+and HTML artifact hashes, and each attempt's read-only verifier result. An
+altered HTML file in a private copy must be rejected without changing the
+original run. It preserves commands, stdout, stderr, package versions, module
+paths and the request digest in a new evidence directory. CI includes this
+same clean-environment wheel check. The script
 itself is developer tooling and is not required by the installed product.
 
 A subsequent local clean-environment check on 2026-09-13 installed all base

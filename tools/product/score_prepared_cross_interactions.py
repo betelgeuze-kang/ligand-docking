@@ -90,10 +90,12 @@ def evaluate_request(request: dict, *, checkpoint_dir=None, resume=False) -> dic
             from betelgeuze_engine.product.prepared_gromacs_input import load_prepared_gromacs_components
             from betelgeuze_engine.product.v2_cross_interaction import evaluate_prepared_cross_interaction
             from betelgeuze_engine.product.compiled_gromacs_cross_input import (
-                SCHEMA as COMPILED_SCHEMA, load_compiled_gromacs_cross_particles,
+                COMPILED_SCHEMAS, load_compiled_gromacs_cross_particles,
             )
+            prepared = case["prepared_input"]
+            prepared_schema = prepared.get("schema_version") if isinstance(prepared, dict) else None
             loader = (load_compiled_gromacs_cross_particles
-                      if isinstance(case["prepared_input"], dict) and case["prepared_input"].get("schema_version") == COMPILED_SCHEMA
+                      if type(prepared_schema) is str and prepared_schema in COMPILED_SCHEMAS
                       else load_prepared_gromacs_components)
             receptor, ligand, rp, lp, provenance = loader(case["prepared_input"])
             row["preparation_provenance"] = provenance

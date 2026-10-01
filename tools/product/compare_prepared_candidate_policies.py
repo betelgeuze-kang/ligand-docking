@@ -13,6 +13,7 @@ from collections import Counter
 import copy
 import fcntl
 import hashlib
+import importlib.metadata
 import json
 import math
 import os
@@ -70,11 +71,16 @@ def file_ref(path):
 
 def publish(path, value, *, deadline=None):
     """Publish a complete immutable JSON file; interrupted temporary files aren't rows."""
+    return _publish_canonical_text(path, canonical(value), deadline=deadline)
+
+
+def _publish_canonical_text(path, encoded, *, deadline=None):
+    """Publish canonical JSON already encoded by this module."""
     path = Path(path)
     temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex)
     try:
         with temporary.open("x", encoding="utf-8") as stream:
-            stream.write(canonical(value) + "\n")
+            stream.write(encoded + "\n")
             stream.flush()
             os.fsync(stream.fileno())
         if deadline is not None and time.monotonic() >= deadline:
@@ -83,6 +89,49 @@ def publish(path, value, *, deadline=None):
         return True
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _has_stable_mapping_keys(value, normalized):
+    """Guard the JSON round trip against key coercion or collisions.
+
+    Equal subtrees need no descent: JSON normalization preserved their keys,
+    including large lists of numeric coordinates and forces.
+    """
+    pending = [(value, normalized)]
+    while pending:
+        item, decoded = pending.pop()
+        if isinstance(item, dict):
+            if (
+                type(decoded) is not dict
+                or len(item) != len(decoded)
+                or any(type(key) is not str for key in item)
+            ):
+                return False
+            if item == decoded:
+                continue
+            if item.keys() != decoded.keys():
+                return False
+            pending.extend((value, decoded[key]) for key, value in item.items())
+        elif isinstance(item, (list, tuple)):
+            if type(decoded) is not list or len(item) != len(decoded):
+                return False
+            if item == decoded:
+                continue
+            pending.extend(zip(item, decoded))
+    return True
+
+
+def _checked_pose_report(path, raw_report, check_report):
+    """Keep the numeric check on normalized JSON and publish the same bytes."""
+    encoded = canonical(raw_report)
+    report = json.loads(encoded)
+    checked = check_report(report)
+    if _has_stable_mapping_keys(raw_report, report):
+        _publish_canonical_text(path, encoded)
+    else:
+        # Match the original second encoding if JSON changed mapping keys.
+        publish(path, report)
+    return report, checked
 
 
 def _number(value, *, positive=False):
@@ -296,6 +345,11 @@ def freeze(protocol):
     runtime["comparison_tools"] = {
         str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted((root / "tools/product").glob("*.py"))
+    }
+    # The shared pose-journal binding predates this selector workflow. Keep its
+    # historical meaning while binding the libraries used by cold fitting here.
+    runtime["comparison_selector_dependencies"] = {
+        name: importlib.metadata.version(name) for name in ("scikit-learn", "scipy")
     }
     result = {
         "protocol": copy.deepcopy(protocol),
@@ -519,13 +573,16 @@ def worker(run_dir, arm, deadline):
         from tools.product.verify_prepared_cross_numerics import check_report
 
     called = 0
+    stop_reason = "order_exhausted"
     for rid in order:
         if time.monotonic() >= deadline:
+            stop_reason = "deadline"
             break
         if (
             arm != "similarity"
             and called >= frozen["protocol"]["max_engine_calls_per_arm"]
         ):
+            stop_reason = "engine_call_cap"
             break
         tick, cpu = time.perf_counter(), time.process_time()
         result = {
@@ -551,12 +608,12 @@ def worker(run_dir, arm, deadline):
                               d3_summary=summary, d3_report=file_ref(file))
             elif frozen["requests"][rid] is not None:
                 called += 1
-                report = json.loads(
-                    canonical(evaluate_rigid_pose_request(frozen["requests"][rid]))
-                )
-                checked = check_report(report)
                 file = directory / (sha(rid) + ".poses.json")
-                publish(file, report)
+                report, checked = _checked_pose_report(
+                    file,
+                    evaluate_rigid_pose_request(frozen["requests"][rid]),
+                    check_report,
+                )
                 result.update(
                     status="failed",
                     reason="incomplete_or_failed_numeric_pose",
@@ -590,12 +647,14 @@ def worker(run_dir, arm, deadline):
             {"payload": result, "sha256": sha(result)},
             deadline=deadline,
         ):
+            stop_reason = "deadline"
             break
     publish(
         directory / "worker-complete.json",
         {
             "binding": binding,
             "engine_calls": called,
+            "stop_reason": stop_reason,
             "process_cpu_seconds": time.process_time(),
             "process_peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         },
@@ -603,6 +662,28 @@ def worker(run_dir, arm, deadline):
 
 
 def _arm_summary(directory, frozen, binding, completion):
+    observations = {}
+    for name in ("priority.json", "worker-complete.json"):
+        if (directory / name).exists():
+            observation = read(directory / name)
+            if observation["binding"] != binding:
+                raise ValueError("worker_observation_binding_mismatch")
+            if name == "priority.json" and observation["setup_cost"].get("model_reference"):
+                payload = bound(observation["setup_cost"]["model_reference"])
+                if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
+                    for key in ("checkpoint", "protocol"):
+                        bound(payload[key])
+            observations[name] = observation
+    priority = observations.get("priority.json")
+    worker_complete = observations.get("worker-complete.json")
+    stop_reason = None if worker_complete is None else worker_complete["stop_reason"]
+    if stop_reason not in (None, "order_exhausted", "deadline", "engine_call_cap"):
+        raise ValueError("invalid_worker_stop_reason")
+    if stop_reason == "engine_call_cap" and (
+        directory.name == "similarity"
+        or worker_complete["engine_calls"] != frozen["protocol"]["max_engine_calls_per_arm"]
+    ):
+        raise ValueError("invalid_engine_call_cap_observation")
     rows = []
     for rid in frozen["pool"]:
         path = directory / (sha(rid) + ".row.json")
@@ -626,20 +707,47 @@ def _arm_summary(directory, frozen, binding, completion):
                 value = item
             else:
                 value["reason"] = "completed_after_budget"
-        elif (directory / "priority.json").exists():
-            priority = read(directory / "priority.json")
+        elif priority is not None:
             if priority["binding"] != binding or priority["arm"] != directory.name:
                 raise ValueError("priority_binding_mismatch")
             if directory.name != "engine" and rid not in priority["order"]:
                 value.update(status="unsupported", reason="predictor_abstained")
+            elif completion["status"] == "complete" and stop_reason in ("engine_call_cap", "deadline"):
+                value["reason"] = stop_reason
+        if value["status"] == "evaluated":
+            _number(value["score"])
+        elif value["score"] is not None:
+            raise ValueError("unscored_comparison_row_has_score")
+        if directory.name == "similarity" and value["status"] == "evaluated":
+            if (priority is None or rid not in priority["predictions"]
+                    or value["score"] != _number(priority["predictions"][rid])):
+                raise ValueError("similarity_score_prediction_mismatch")
         if value.get("pose_report"):
-            from betelgeuze_engine.product.prepared_pose_journal import _file_hash
+            from tools.product.public_assay_components import loads
+            from tools.product.verify_prepared_cross_numerics import MAX_BYTES as MAX_POSE_BYTES, check_report
 
-            if (
-                _file_hash(Path(value["pose_report"]["path"]))
-                != value["pose_report"]["sha256"]
-            ):
+            reference = value["pose_report"]
+            if type(reference) is not dict or set(reference) != {"path", "sha256"}:
+                raise ValueError("invalid_pose_report_reference")
+            with Path(reference["path"]).open("rb") as stream:
+                raw = stream.read(MAX_POSE_BYTES + 1)
+            if len(raw) > MAX_POSE_BYTES or hashlib.sha256(raw).hexdigest() != reference["sha256"]:
                 raise ValueError("pose_report_hash_mismatch")
+            report = loads(raw.decode())
+            checked = check_report(report)
+            if (value.get("pose_denominator") != report["denominator"]
+                    or value.get("numeric_denominator") != checked["denominator"]):
+                raise ValueError("pose_report_denominator_mismatch")
+            if checked["status"] == "passed":
+                expected = min(row["result"]["quantities"]["cross_total_kcal_per_mol"]
+                               for row in report["rows"])
+                if value["status"] != "evaluated" or value["score"] != expected:
+                    raise ValueError("pose_report_score_mismatch")
+            elif value["status"] != "failed":
+                raise ValueError("pose_report_numeric_status_mismatch")
+        elif (frozen["protocol"]["schema_version"] != D3_SCHEMA
+              and directory.name != "similarity" and value["status"] == "evaluated"):
+            raise ValueError("evaluated_rigid_row_missing_pose_report")
         if value.get("d3_report"):
             from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
             summary = policy_adapter.summarize(bound(value["d3_report"]), request=frozen["requests"][rid])
@@ -655,18 +763,6 @@ def _arm_summary(directory, frozen, binding, completion):
         (r for r in rows if r["status"] == "evaluated"),
         key=lambda r: (direction * r["score"], r["record_id"]),
     )
-    observations = {}
-    for name in ("priority.json", "worker-complete.json"):
-        if (directory / name).exists():
-            value = read(directory / name)
-            if value["binding"] != binding:
-                raise ValueError("worker_observation_binding_mismatch")
-            if name == "priority.json" and value["setup_cost"].get("model_reference"):
-                payload = bound(value["setup_cost"]["model_reference"])
-                if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
-                    for key in ("checkpoint", "protocol"):
-                        bound(payload[key])
-            observations[name] = value
     return {
         "worker_observations": observations,
         "rows": rows,
@@ -941,6 +1037,7 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
         if evaluation_summary.get(key) != frozen["provenance"][key]:
             raise ValueError("native_evaluation_role_scope_mismatch")
     from tools.product.train_public_chembl_selector import load_intake
+    from tools.product.public_chembl_measurement import threshold_activity_label
 
     summary, _, scope, records = load_intake(
         Path(evaluation_dir), summary_sha256, "evaluation"
@@ -952,18 +1049,21 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
         raise ValueError("native_evaluation_denominator_mismatch")
     identities = {r["record_id"]: r for r in frozen["rows"]}
     threshold = _number(scope["positive_threshold_negative_log10_molar"])
-    labels = {}
+    labels, label_basis_counts = {}, Counter()
     for rid, row in selected.items():
         if (
             row["component_id"] != identities[rid]["component_id"]
             or row["assay_id"] != identities[rid]["assay_id"]
         ):
             raise ValueError("native_evaluation_identity_changed")
-        labels[rid] = (
-            row["observation"]["negative_log10_molar"] >= threshold
-            if row["eligible_for_point_model"]
-            else None
-        )
+        if row["eligible_for_point_model"] is True or (
+                row.get("eligible_for_threshold_classification") is True
+                and row.get("threshold_classification_issues") == []):
+            label, basis = threshold_activity_label(row["observation"], threshold)
+        else:
+            label, basis = None, "threshold_classification_ineligible"
+        labels[rid] = label
+        label_basis_counts[basis] += 1
     by_assay = {}
     for assay in sorted({r["assay_id"] for r in selected.values()}):
         pool = [rid for rid in result["pool"] if selected[rid]["assay_id"] == assay]
@@ -986,6 +1086,7 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
         "requested": len(labels),
         "known": sum(v is not None for v in labels.values()),
         "unknown": sum(v is None for v in labels.values()),
+        "classification_basis_counts": dict(sorted(label_basis_counts.items())),
         "endpoint": scope["endpoint"],
         "positive_threshold_negative_log10_molar": threshold,
         "same_prepared_assay_state_verified": False,
