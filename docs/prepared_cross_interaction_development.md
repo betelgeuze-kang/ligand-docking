@@ -86,6 +86,22 @@ parsers are reused. Any explicitly enabled transfer of a blank PDB element from
 an exactly matched topology atomic number records the raw blank, source value,
 source and projected hashes; it does not infer an element from an atom name.
 
+`ligand_source_net_charge_observation` records the selected ligand atom count,
+the sum of SDF V2000 encoded atomic formal charges, and the sum of the printed
+ITP `[ atoms ]` partial-charge tokens in units of elementary charge. Within a
+bounded, safely parseable decimal range, the ITP tokens are summed exactly as
+printed, without float rounding or an equality tolerance. The signed
+`itp_minus_sdf_charge_sum_e` and `arithmetic_relation` (`equal_as_encoded` or
+`different_as_encoded`) describe only that arithmetic. If a charge token cannot
+be parsed or its precision/exponent span exceeds the diagnostic bound, the ITP
+sum and difference are null, the relation is `indeterminate`, and the observation
+records a reason; the prepared input can still load. The observation carries
+both source SHA-256 hashes. The scorer still uses the supplied ITP partial
+charges; the diagnostic does not rewrite charges or reject an otherwise valid
+input. Any arithmetic relation, including `indeterminate`, leaves chemical-state
+identity and force-field assignment unverified and does not establish source
+coevality, assay-state equivalence, or qualification.
+
 The initial public development candidate comes from OpenFF's pinned
 protein-ligand-benchmark 0.2.1 CDK2/lig_1h1q prepared files. Its prepared ligand
 state is retained even where the current CCD tautomer differs. The separately
@@ -256,6 +272,40 @@ The supplied direct adjacency alone separates direct bonds from other pairs;
 claimed. A missing source molecule or `[ bonds ]` section leaves bond-filtered
 counts null. An explicit empty section is retained as supplied information,
 not evidence that the chemical topology is complete.
+
+For prepared GROMACS file inputs, an explicit function-1 `[ bonds ]` equilibrium
+length is bound by original molecule atom indices, source row and file SHA-256.
+The [GROMACS topology format](https://manual.gromacs.org/current/reference-manual/topologies/topology-file-formats.html#table-14-details-of-moleculetype-directives)
+specifies this `b0` value in nm; the observer converts it to Å and reports
+measured length minus that source value on the bounded displayed rows. Full
+explicit/unknown counts and the largest absolute difference cover every supplied
+direct bond, including undisplayed rows. Inherited parameters and inputs without
+a bound source row remain unknown. The compiled-particle profile does not provide
+this row mapping. No source-equilibrium difference is treated as a calibrated
+bond-quality threshold: `length_validity_assessed` and
+`affects_score_or_admission` remain false.
+
+The same observer separately lists source `[ angles ]` triplets. For an explicit
+function-1 row, it compares the measured source-coordinate angle with the
+printed equilibrium `theta0`, which the
+[GROMACS topology format](https://manual.gromacs.org/current/reference-manual/topologies/topology-file-formats.html)
+specifies in degrees. It binds the triplet to original molecule atom indices,
+the source line and file SHA-256. Inherited parameters, unsupported functions
+or parameter widths, and angles with a zero-length arm remain unknown rather
+than becoming a measured zero. An absent section, missing source mapping, or
+compiled-particle profile has a null angle observation; an explicitly empty
+section has a measured zero row count only when the postflight source hashes
+and canonical source atom indices are bound. Otherwise it remains unknown.
+At most 16 rows with the largest
+measured-versus-source differences are displayed, while complete category
+counts and the maximum absolute difference cover every source row. This is a
+source-geometry diagnostic, not bonded-energy evaluation or a calibrated angle
+quality threshold: `angle_validity_assessed` and
+`affects_score_or_admission` remain false.
+Source-parameter categories (explicit, inherited, unsupported) partition the
+source rows independently of geometry categories (measured, undefined). Thus
+an explicit `theta0` with a zero-length coordinate arm counts as explicit and
+undefined, with no measured-minus-source difference.
 
 Missing preparation, nonfinite/unsupported geometry, invalid adjacency or the
 bounded neighbor/cell capacity yields an unavailable observation with null

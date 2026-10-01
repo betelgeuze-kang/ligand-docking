@@ -76,6 +76,15 @@ a free retry. Missing, unsupported, failed and unprocessed candidates all remain
 in the original pool denominator. Immutable publication never overwrites prior
 results. A final successful comparison receipt also rechecks its original inputs.
 
+The comparison's frozen runtime also records the installed scikit-learn and SciPy
+versions used by selector fitting. A version change rejects resume; the shared
+prepared-pose journal retains its existing runtime format. A normally completed
+engine worker records `engine_call_cap` when it stops at the prespecified call
+limit, and unvisited candidates in its order carry that reason. An observed
+worker deadline remains distinct from a call cap, including a worker that exits
+just before the parent observes the hard deadline. Worker-failure and
+interrupted-budget reasons retain their separate meanings.
+
 ## Evaluation and interpretation
 
 The separate `evaluate` command requires the comparison and frozen-file paths
@@ -88,6 +97,27 @@ unknown; they are not negatives. Metrics are separated by assay and include the
 whole pool's coverage, unfilled top-k positions and known-positive recall.
 Boundary ties receive fractional expected counts instead of an ID-based advantage.
 `evaluate_synthetic` is a Python API for independently stored boolean test labels.
+
+The source-bound ChEMBL intake now records a separate development-test
+`eligible_for_threshold_classification` decision. It preserves the original
+published and standard relations and keeps censored values ineligible for the
+exact-point Ridge fit. After the comparison is frozen, `evaluate` uses a
+prespecified active definition of concentration **at or below** the cutoff.
+An exact point is classified normally. For a right-censored concentration,
+`> B` proves inactive when `B` is at or above the cutoff, while `>= B` proves
+inactive only when `B` is above it. A left-censored `< B` or `<= B` proves
+active when `B` is at or below the cutoff. Bounds that overlap the cutoff,
+approximate values, ranges, malformed observations and source/role-ineligible
+records remain unknown. Each published and standard bound is compared from
+its captured decimal value; both must independently prove the same label.
+Captured floating-point bounds, potentially rounded cutoff conversions and
+published/standard bounds that cross the threshold remain unknown. The report
+counts exact, one-sided and unknown bases separately. For example, with
+active defined as IC50 <= 1 µM, `> 1 µM` is a
+known threshold-negative, while `>= 1 µM` remains unknown. This is a binary
+threshold inference from an experimental bound, not an exact IC50 estimate.
+Native intake versions without the explicit threshold gate retain their prior
+unknown handling for censored values.
 
 Neither output establishes primary-source correctness, assay/prepared-state
 equivalence, blind evaluation, calibrated uncertainty, scientific qualification,

@@ -433,6 +433,15 @@ def normalized_record(metadata, assignment, scope, graph_node, activity=None, or
             issues.append("data_validity_comment_requires_individual_resolution")
         if activity.get("activity_comment") not in (None, ""):
             issues.append("activity_comment_requires_individual_resolution")
+    threshold_issues = ["not_development_test_role" if assignment["role"] != "development_test"
+                        else "outcome_withheld"]
+    if assignment["role"] == "development_test" and activity is not None:
+        threshold_admission = measurement.admission(profile, purpose="threshold_evaluation")
+        # Only the point-fit restriction is replaced. All source, identity,
+        # method, role, endpoint and quality issues remain authoritative.
+        threshold_issues = sorted((set(issues) - {
+            "measurement_not_exact", "measurement_not_supported_exact_point",
+        }) | set(threshold_admission["issues"]))
     target_annotation = {"chembl_target_id": native["target_chembl_id"], "scope": scope["target_scope"],
                          "physical_state_verified": False, "endpoint_subtype": scope["endpoint_subtype"]}
     return {
@@ -452,6 +461,8 @@ def normalized_record(metadata, assignment, scope, graph_node, activity=None, or
                                 "withheld_by_preassigned_role" if activity is None else "retrieved"),
         "admission_issues": sorted(set(issues)),
         "eligible_for_point_model": activity is not None and not issues,
+        "threshold_classification_issues": threshold_issues,
+        "eligible_for_threshold_classification": not threshold_issues,
         "assay_id": "chembl:assay:" + native["assay_chembl_id"],
         "coordinates": None, "atom_order": None, "pose": None, "environment": None,
         "potential_energy": None, "energy_residual": None, "force_labels": None,

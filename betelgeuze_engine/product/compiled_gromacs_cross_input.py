@@ -8,6 +8,7 @@ No preprocessor, preparation program, external solver or learned model runs.
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 
 import torch
@@ -58,6 +59,9 @@ def _compiled(raw: bytes, selected: set[str]):
                 owner, name = None, None
             else:
                 _require(owner is not globals_ and owner is not None, "section outside a molecule")
+                # A header with no rows is still an explicitly supplied section.
+                # In particular, an empty [ bonds ] differs from no [ bonds ].
+                owner.setdefault(section, [])
             continue
         tokens = line.split()
         row = {"line": line_no, "tokens": tokens, "raw": original}
@@ -215,7 +219,9 @@ def load_compiled_gromacs_cross_particles(request):
     _require(all(type(v) is int for v in request["excluded_molecules"].values()) and request["excluded_molecules"] == excluded,
              "excluded molecule inventory must exactly match declaration")
     states, parameters, adjacencies = {}, {}, {}
+    bond_sections = {}
     for side, name in zip(("receptor", "ligand"), names):
+        bond_sections[side] = {"source_molecule": name, "present": "bonds" in molecules[name]}
         rows, adjacency = _projection(molecules[name], request["omitted_inert_sites"][side], types)
         _require(len(rows) <= (10000 if side == "receptor" else 256), "selected particle count exceeds cross profile capacity")
         used = {row["atomtype"] for row in rows}
@@ -225,6 +231,15 @@ def load_compiled_gromacs_cross_particles(request):
     for key in sources:
         _require(_read_source(request[key], key, {}) == raw[key], "compiled source changed during parsing")
     count = sum(s.atom_count for s in states.values())
+    charge_observation = {
+        side: {
+            "selected_particle_count": len(parameters[side]),
+            "source_partial_charge_sum_e": math.fsum(
+                atom["charge_e"] for atom in parameters[side]),
+            "formal_charge_balance_assessed": False,
+        }
+        for side in ("receptor", "ligand")
+    }
     provenance = {
         "schema_version": SCHEMA, "sources": sources, "source_hashes_postflight_verified": True,
         "source_declarations": request["source_declarations"], "declarations_verified": False,
@@ -232,6 +247,9 @@ def load_compiled_gromacs_cross_particles(request):
         "source_topology_text": raw["topology"].decode(), "molecule_roster": roster,
         "omitted_inert_sites": request["omitted_inert_sites"], "excluded_molecules": excluded,
         "site_accounting": {"requested_source_sites": len(gro), "selected_physical_sites": count, "omitted_source_sites": len(gro)-count},
+        "selected_molecule_bond_section_presence": bond_sections,
+        "selected_source_partial_charge_observation": charge_observation,
+        "partial_charge_observation_scope": "selected physical source particles only; not formal charge or chemical-state validation",
         "receptor_source_bond_adjacency": adjacencies["receptor"], "ligand_source_bond_adjacency": adjacencies["ligand"],
         "defaults": defaults, "source_box_nm_ignored_for_nonperiodic_cross": box,
         "calculation_scope": "nonperiodic_source_particle_cross_nonbonded_only",
