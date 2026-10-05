@@ -47,6 +47,14 @@ charges, poses or negative assay observations are invented. The caller still
 needs an independently verified assay/chemical/prepared-state link before any
 scientific interpretation: this runner does not supply that link.
 
+When assembling or rechecking a completed result, the similarity arm's scored
+value must match its committed priority prediction. Each scored rigid-engine row
+must have a hash-matched pose report whose independent scalar check passes,
+whose denominators match the row, and whose minimum cross energy equals the
+recorded score. Failed and unsupported rows cannot carry a score. This
+verification runs before native post-freeze outcome loading. It binds the software
+receipt to its numerical evidence; it does not establish physical validity.
+
 ## Cost and interruption
 
 Each arm has a fresh CPU process. Its budget includes process startup/imports,
