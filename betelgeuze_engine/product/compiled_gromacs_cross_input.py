@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from decimal import Decimal
 
 import torch
 
@@ -23,8 +24,64 @@ from betelgeuze_engine_v2.molecular import (
 from betelgeuze_engine_v2.molecular.models import element_for_atomic_number
 
 SCHEMA = "compiled_gromacs_cross_particles_v1"
+SCHEMA_V2 = "compiled_gromacs_cross_particles_v2"
+COMPILED_SCHEMAS = {SCHEMA, SCHEMA_V2}
 _GLOBAL = {"defaults", "atomtypes", "system", "molecules"}
 _MOLECULE = {"moleculetype", "atoms", "bonds", "pairs", "angles", "dihedrals"}
+
+
+def _gro_coordinate_tokens(line: str, width: int, label: str) -> list[str]:
+    """Read three coordinates, including adjacent full-width GRO fields."""
+    fields = line[20:]
+    tokens = fields.split()
+    if len(tokens) != 3 and len(fields) == 3 * width:
+        tokens = [fields[index:index + width].strip() for index in range(0, len(fields), width)]
+    _require(len(tokens) == 3 and all(tokens), f"{label}: exactly three GRO coordinates required")
+    return tokens
+
+
+def _gro_with_fixed_width(raw: bytes, label: str, width: int):
+    """Normalize only coordinate spacing before shared GRO numeric validation."""
+    lines = raw.decode("utf-8").splitlines()
+    _require(len(lines) >= 4, f"{label}: truncated GRO")
+    normalized = lines[:2]
+    for line in lines[2:-1]:
+        _require(len(line) >= 20, f"{label}: short GRO atom record")
+        normalized.append(line[:20] + " " + " ".join(_gro_coordinate_tokens(line, width, label)))
+    normalized.append(lines[-1])
+    return _gro(("\n".join(normalized) + "\n").encode("utf-8"), label)
+
+
+def _coordinate_refinement(original: bytes, refined: bytes, count: int) -> dict:
+    """Bind a more precise GRO carrier by an inclusive half-step distance bound."""
+    before, after = original.decode("utf-8").splitlines(), refined.decode("utf-8").splitlines()
+    _require(len(before) == len(after) == count + 3, "coordinate refinement inventory mismatch")
+    _require(before[:2] == after[:2] and before[-1] == after[-1],
+             "coordinate refinement header or box mismatch")
+    max_delta_nm = Decimal(0)
+    changed = 0
+    for first, second in zip(before[2:-1], after[2:-1]):
+        _require(first[:20] == second[:20], "coordinate refinement atom identity or order mismatch")
+        old = _gro_coordinate_tokens(first, 8, "original coordinate refinement")
+        new = _gro_coordinate_tokens(second, 15, "refined coordinate refinement")
+        for a, b in zip(old, new):
+            _require(re.fullmatch(r"-?[0-9]+\.[0-9]{3}", a) is not None,
+                     "coordinate refinement requires three-decimal original GRO coordinates")
+            _require(re.fullmatch(r"-?[0-9]+\.[0-9]{4,12}", b) is not None,
+                     "coordinate refinement requires four-to-twelve-decimal supplied coordinates")
+            delta = abs(Decimal(a) - Decimal(b))
+            _require(delta <= Decimal("0.0005"), "refined coordinate exceeds original GRO inclusive half-step bound")
+            max_delta_nm = max(max_delta_nm, delta)
+            changed += delta != 0
+    return {"status": "all_source_sites_within_inclusive_half_step_bound",
+            "source_site_count": count, "changed_coordinate_component_count": changed,
+            "max_component_delta_angstrom": float(max_delta_nm * 10),
+            "inclusive_half_step_bound_nm": "0.0005",
+            "exact_original_rounding_reconstruction_verified": False,
+            "original_coordinate_decimals_nm": 3,
+            "supplied_coordinate_decimals_nm": "4_to_12",
+            "source_coordinate_origin_verified": False,
+            "assay_state_equivalence_verified": False}
 
 
 def _compiled(raw: bytes, selected: set[str]):
@@ -112,7 +169,7 @@ def _projection(molecule, omitted, types):
     return rows, adjacency
 
 
-def _state(side, name, rows, adjacency, gro, offset, types, sources):
+def _state(side, name, rows, adjacency, gro, offset, types, sources, schema):
     atoms, parameters, residues, coordinates = [], [], [], []
     groups = {}
     for index, source in enumerate(rows):
@@ -140,7 +197,8 @@ def _state(side, name, rows, adjacency, gro, offset, types, sources):
         chains=(Chain(0, name, tuple(range(len(residues)))),),
         coordinates=torch.tensor([coordinates], dtype=torch.float64, device="cpu"),
         provenance=StructureProvenance(source_format="mathematical_projection", source_id=name,
-            parser_name=SCHEMA, parser_version="1", parent_sha256=tuple(s["sha256"] for s in sources.values())),
+            parser_name=schema, parser_version="2" if schema == SCHEMA_V2 else "1",
+            parent_sha256=tuple(s["sha256"] for s in sources.values())),
         metadata={"is_prepared_molecular_state": False, "chemical_topology_verified": False,
                   "canonical_chain_is_source_molecule_group": True, "biopolymer_chain_identity_available": False,
                   "source_bond_adjacency": [list(pair) for pair in sorted(adjacency)]})
@@ -149,9 +207,13 @@ def _state(side, name, rows, adjacency, gro, offset, types, sources):
 
 
 def load_compiled_gromacs_cross_particles(request):
-    _keys(request, {"schema_version", "topology", "coordinates", "selected_molecules", "excluded_molecules",
-                    "omitted_inert_sites", "source_declarations", "source_relationship"}, "compiled request")
-    _require(request["schema_version"] == SCHEMA, "unsupported compiled cross profile")
+    schema = request.get("schema_version") if type(request) is dict else None
+    required = {"schema_version", "topology", "coordinates", "selected_molecules", "excluded_molecules",
+                "omitted_inert_sites", "source_declarations", "source_relationship"}
+    if schema == SCHEMA_V2:
+        required.add("refined_coordinates")
+    _keys(request, required, "compiled request")
+    _require(type(schema) is str and schema in COMPILED_SCHEMAS, "unsupported compiled cross profile")
     _keys(request["selected_molecules"], {"receptor", "ligand"}, "selected molecules")
     _keys(request["omitted_inert_sites"], {"receptor", "ligand"}, "omitted inert sites")
     names = [_text(request["selected_molecules"][s], s) for s in ("receptor", "ligand")]
@@ -161,9 +223,18 @@ def load_compiled_gromacs_cross_particles(request):
         _text(value, key)
     _text(request["source_relationship"], "source relationship")
     sources = {}
-    raw = {k: _read_source(request[k], k, sources) for k in ("topology", "coordinates")}
+    source_fields = ("topology", "coordinates", "refined_coordinates") if schema == SCHEMA_V2 else ("topology", "coordinates")
+    raw = {k: _read_source(request[k], k, sources) for k in source_fields}
     globals_, molecules = _compiled(raw["topology"], set(names))
-    gro, box = _gro(raw["coordinates"], "compiled coordinates")
+    gro, box = (_gro_with_fixed_width(raw["coordinates"], "compiled coordinates", 8)
+                if schema == SCHEMA_V2 else _gro(raw["coordinates"], "compiled coordinates"))
+    refinement = None
+    if schema == SCHEMA_V2:
+        refined_gro, refined_box = _gro_with_fixed_width(raw["refined_coordinates"],
+                                                          "refined compiled coordinates", 15)
+        refinement = _coordinate_refinement(raw["coordinates"], raw["refined_coordinates"], len(gro))
+        _require(box == refined_box, "coordinate refinement box mismatch")
+        gro = refined_gro
     _require(len(gro) <= 99999, "wrapped GRO serials are outside this profile")
     defaults = _defaults({"sections": globals_}, "compiled defaults")
     types = {}
@@ -220,13 +291,13 @@ def load_compiled_gromacs_cross_particles(request):
         _require(len(rows) <= (10000 if side == "receptor" else 256), "selected particle count exceeds cross profile capacity")
         used = {row["atomtype"] for row in rows}
         selected_types = _atomtypes({"sections": {"atomtypes": [types[k] for k in sorted(used)]}}, side)
-        states[side], parameters[side] = _state(side, name, rows, adjacency, gro, positions[name], selected_types, sources)
+        states[side], parameters[side] = _state(side, name, rows, adjacency, gro, positions[name], selected_types, sources, schema)
         adjacencies[side] = [list(pair) for pair in sorted(adjacency)]
     for key in sources:
         _require(_read_source(request[key], key, {}) == raw[key], "compiled source changed during parsing")
     count = sum(s.atom_count for s in states.values())
     provenance = {
-        "schema_version": SCHEMA, "sources": sources, "source_hashes_postflight_verified": True,
+        "schema_version": schema, "sources": sources, "source_hashes_postflight_verified": True,
         "source_declarations": request["source_declarations"], "declarations_verified": False,
         "source_relationship": request["source_relationship"], "source_coevality_verified": False,
         "source_topology_text": raw["topology"].decode(), "molecule_roster": roster,
@@ -242,4 +313,6 @@ def load_compiled_gromacs_cross_particles(request):
         "coordinates_generated": False, "external_solver_called": False,
         "source_full_simulation_hamiltonian_reproduced": False,
         "source_topology_sha256": hashlib.sha256(raw["topology"]).hexdigest()}
+    if refinement is not None:
+        provenance["coordinate_refinement_observation"] = refinement
     return states["receptor"], states["ligand"], parameters["receptor"], parameters["ligand"], provenance
