@@ -1,10 +1,11 @@
 """Fresh synthetic compiled-source controls; no public/protected inputs."""
 import copy
 import hashlib
+from pathlib import Path
 
 import pytest
 
-from betelgeuze_engine.product.compiled_gromacs_cross_input import SCHEMA, load_compiled_gromacs_cross_particles
+from betelgeuze_engine.product.compiled_gromacs_cross_input import SCHEMA, SCHEMA_V2, load_compiled_gromacs_cross_particles
 from tools.product.score_prepared_cross_interactions import evaluate_request
 
 
@@ -70,12 +71,140 @@ LIG 1
 
 
 def _edit(request, field, old, new):
-    from pathlib import Path
     path = Path(request[field]["path"])
     text = path.read_text()
     assert old in text
     path.write_text(text.replace(old, new))
     request[field]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _refined_request(tmp_path, *, dummy=False):
+    request = _request(tmp_path, dummy=dummy)
+    original = Path(request["coordinates"]["path"]).read_text().splitlines()
+    refined = original[:2]
+    for line in original[2:-1]:
+        xyz = [float(token) for token in line[20:].split()]
+        if line[10:15].strip() == "H1" and line[5:10].strip() == "REC":
+            xyz[0] = .1104
+        if line[10:15].strip() == "N1":
+            xyz[0] = .3997
+        refined.append(line[:20] + "".join(f"{value:12.6f}" for value in xyz))
+    refined.append(original[-1])
+    path = tmp_path / "refined.gro"
+    path.write_text("\n".join(refined) + "\n")
+    request["schema_version"] = SCHEMA_V2
+    request["refined_coordinates"] = {
+        "path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "source_id": "synthetic:precision-refinement",
+    }
+    return request
+
+
+def test_refined_coordinates_keep_original_source_and_drive_actual_consumer(tmp_path):
+    request = _refined_request(tmp_path)
+    receptor, ligand, rp, lp, evidence = load_compiled_gromacs_cross_particles(request)
+    assert receptor.coordinates[0, 0].tolist() == [0, 0, 0]
+    assert receptor.coordinates[0, 1].tolist() == pytest.approx([1.104, 0, 0])
+    assert ligand.coordinates[0, 0].tolist() == pytest.approx([3.997, 0, 0])
+    assert ligand.coordinates[0, 1].tolist() == [4, 1, 0]
+    assert list(evidence["sources"]) == ["topology", "coordinates", "refined_coordinates"]
+    observation = evidence["coordinate_refinement_observation"]
+    assert observation["source_site_count"] == 5
+    assert observation["changed_coordinate_component_count"] == 2
+    assert observation["max_component_delta_angstrom"] == pytest.approx(.004)
+    assert observation["status"] == "all_source_sites_within_inclusive_half_step_bound"
+    assert observation["inclusive_half_step_bound_nm"] == "0.0005"
+    assert not observation["exact_original_rounding_reconstruction_verified"]
+    assert not observation["source_coordinate_origin_verified"]
+    assert not evidence["eligible_for_same_state_assay_join"]
+    evaluation = {"pocket_center_angstrom": [4, 0, 0], "pocket_radius_angstrom": 5.,
+                  "cutoff_angstrom": 10., "switch_start_angstrom": 8.,
+                  "dielectric": 1., "screening_kappa_per_angstrom": 0.}
+    result = evaluate_request({"schema_version": "prepared_cross_interaction_request_v1", "cases": [
+        {"case_id": "refined", "prepared_input": request, "evaluation": evaluation}]})
+    row = result["rows"][0]
+    assert row["status"] == "evaluated"
+    assert row["source_geometry_observation"]["status"] == "observed"
+    # Compiled bond/angle diagnostics from the donor stack are not part of this port.
+    for side in ("receptor", "ligand"):
+        group = row["source_geometry_observation"]["groups"][side]
+        assert group["direct_bond_pair_count"] is None
+        assert group["non_direct_bond_pair_count"] is None
+    assert receptor.provenance.parser_name == ligand.provenance.parser_name == SCHEMA_V2
+    assert receptor.provenance.parser_version == ligand.provenance.parser_version == "2"
+    assert receptor.provenance.parent_sha256 == tuple(request[k]["sha256"] for k in ("topology", "coordinates", "refined_coordinates"))
+    from tests.unit.test_v2_prepared_cross_interaction import _assert_oracle
+    _assert_oracle(row["result"], (receptor, ligand, rp, lp), dielectric=1., kappa=0.)
+
+
+@pytest.mark.parametrize("defect,field,old,new,reason", [
+    ("outside", "refined_coordinates", "0.110400", "0.110600", "half-step bound"),
+    ("identity", "refined_coordinates", "1REC     H1", "1REC     X1", "atom identity"),
+    ("box", "refined_coordinates", "4 4 4", "5 4 4", "header or box"),
+    ("precision", "refined_coordinates", "0.110400", "0.110", "four-to-twelve"),
+    ("source_precision", "coordinates", "0.110", "0.11", "three-decimal"),
+])
+def test_refinement_rejects_unbound_or_ambiguous_coordinates(tmp_path, defect, field, old, new, reason):
+    request = _refined_request(tmp_path)
+    _edit(request, field, old, new)
+    with pytest.raises(ValueError, match=reason):
+        load_compiled_gromacs_cross_particles(request)
+
+
+def test_v1_rejects_refinement_field_and_v2_checks_its_hash(tmp_path):
+    request = _refined_request(tmp_path)
+    request["schema_version"] = SCHEMA
+    with pytest.raises(ValueError, match="exact keys"):
+        load_compiled_gromacs_cross_particles(request)
+    request["schema_version"] = SCHEMA_V2
+    request["refined_coordinates"]["sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="source SHA-256 mismatch"):
+        load_compiled_gromacs_cross_particles(request)
+
+
+def test_refinement_parses_adjacent_full_width_original_and_precise_gro_fields(tmp_path):
+    request = _refined_request(tmp_path)
+    original_path = Path(request["coordinates"]["path"])
+    refined_path = Path(request["refined_coordinates"]["path"])
+    original = original_path.read_text().splitlines()
+    refined = refined_path.read_text().splitlines()
+    prefix = original[2][:20]
+    original[2] = prefix + "".join(f"{value:8.3f}" for value in (-123.456, -234.567, -345.678))
+    refined[2] = prefix + "".join(f"{value:15.10f}" for value in (-123.4561, -234.5671, -345.6781))
+    assert len(original[2][20:].split()) == len(refined[2][20:].split()) == 1
+    for path, lines, field in ((original_path, original, "coordinates"),
+                               (refined_path, refined, "refined_coordinates")):
+        path.write_text("\n".join(lines) + "\n")
+        request[field]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    receptor, _, _, _, evidence = load_compiled_gromacs_cross_particles(request)
+    assert receptor.coordinates[0, 0].tolist() == pytest.approx([-1234.561, -2345.671, -3456.781])
+    assert evidence["coordinate_refinement_observation"]["source_site_count"] == 5
+
+
+@pytest.mark.parametrize("dummy,atom_name,old,new", [
+    (False, "O1", "3.000000", "3.000600"),
+    (True, "AT1", "0.055000", "0.055600"),
+])
+def test_refinement_checks_excluded_and_omitted_sites(tmp_path, dummy, atom_name, old, new):
+    request = _refined_request(tmp_path, dummy=dummy)
+    path = Path(request["refined_coordinates"]["path"])
+    lines = path.read_text().splitlines()
+    index = next(index for index, line in enumerate(lines) if line[10:15].strip() == atom_name)
+    assert old in lines[index]
+    lines[index] = lines[index].replace(old, new)
+    path.write_text("\n".join(lines) + "\n")
+    request["refined_coordinates"]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    with pytest.raises(ValueError, match="half-step bound"):
+        load_compiled_gromacs_cross_particles(request)
+
+
+def test_refinement_half_step_endpoint_is_inclusive_without_printout_claim(tmp_path):
+    request = _refined_request(tmp_path)
+    _edit(request, "refined_coordinates", "0.110400", "0.110500")
+    _, _, _, _, evidence = load_compiled_gromacs_cross_particles(request)
+    observation = evidence["coordinate_refinement_observation"]
+    assert observation["max_component_delta_angstrom"] == pytest.approx(.005)
+    assert not observation["exact_original_rounding_reconstruction_verified"]
 
 
 @pytest.mark.parametrize("dummy", [False, True])
@@ -154,3 +283,62 @@ def test_actual_consumer_dispatch_retains_failed_case_and_same_kernel(tmp_path):
     from tests.unit.test_v2_prepared_cross_interaction import _assert_oracle
     receptor, ligand, rp, lp, _ = load_compiled_gromacs_cross_particles(good)
     _assert_oracle(result["rows"][0]["result"], (receptor, ligand, rp, lp), dielectric=1., kappa=0.)
+
+
+@pytest.mark.parametrize("schema", [None, True, [], {}, "compiled_gromacs_cross_particles_v3"])
+def test_refinement_schema_dispatch_fails_closed(tmp_path, schema):
+    request = _refined_request(tmp_path)
+    request["schema_version"] = schema
+    with pytest.raises(ValueError):
+        load_compiled_gromacs_cross_particles(request)
+
+
+@pytest.mark.parametrize("change", ["missing_refined", "extra_field"])
+def test_refinement_v2_exact_request_keys(tmp_path, change):
+    request = _refined_request(tmp_path)
+    if change == "missing_refined":
+        del request["refined_coordinates"]
+    else:
+        request["unexpected"] = False
+    with pytest.raises(ValueError, match="exact keys"):
+        load_compiled_gromacs_cross_particles(request)
+
+
+@pytest.mark.parametrize("field", ["topology", "coordinates", "refined_coordinates"])
+def test_refinement_postflight_checks_every_original_source(tmp_path, monkeypatch, field):
+    from betelgeuze_engine.product import compiled_gromacs_cross_input as compiled
+    request = _refined_request(tmp_path)
+    original = compiled._coordinate_refinement
+
+    def mutate_after_initial_read(*args):
+        observation = original(*args)
+        path = Path(request[field]["path"])
+        path.write_bytes(path.read_bytes() + b"\n")
+        return observation
+
+    monkeypatch.setattr(compiled, "_coordinate_refinement", mutate_after_initial_read)
+    with pytest.raises(ValueError, match="source SHA-256 mismatch"):
+        load_compiled_gromacs_cross_particles(request)
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf", "0.1104000000000", "0.1104 0.0"])
+def test_refinement_rejects_nonfinite_excess_precision_or_extra_coordinates(tmp_path, value):
+    request = _refined_request(tmp_path)
+    _edit(request, "refined_coordinates", "0.110400", value)
+    with pytest.raises(ValueError):
+        load_compiled_gromacs_cross_particles(request)
+
+
+@pytest.mark.parametrize("value", ["0.109500", "0.110500"])
+def test_refinement_both_half_step_endpoints_remain_unverified(tmp_path, value):
+    request = _refined_request(tmp_path)
+    _edit(request, "refined_coordinates", "0.110400", value)
+    _, _, _, _, evidence = load_compiled_gromacs_cross_particles(request)
+    observation = evidence["coordinate_refinement_observation"]
+    assert observation["max_component_delta_angstrom"] == pytest.approx(.005)
+    assert not observation["exact_original_rounding_reconstruction_verified"]
+    assert not observation["source_coordinate_origin_verified"]
+    assert not observation["assay_state_equivalence_verified"]
+    assert not evidence["chemical_state_identity_verified"]
+    assert not evidence["eligible_for_same_state_assay_join"]
+    assert not evidence["source_full_simulation_hamiltonian_reproduced"]
