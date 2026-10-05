@@ -13,6 +13,7 @@ from collections import Counter
 import copy
 import fcntl
 import hashlib
+import importlib.metadata
 import json
 import math
 import os
@@ -288,6 +289,17 @@ def _prediction_order(frozen, predictions):
     return sorted(predictions, key=lambda rid: (-predictions[rid], tie[rid], ordinal[rid]))
 
 
+def _selector_dependency_versions():
+    """Bind selector libraries without importing or requiring unused packages."""
+    versions = {}
+    for name in ("scikit-learn", "scipy"):
+        try:
+            versions[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            versions[name] = None
+    return versions
+
+
 def freeze(protocol):
     started = time.perf_counter()
     fields = {
@@ -345,6 +357,7 @@ def freeze(protocol):
         str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted((root / "tools/product").glob("*.py"))
     }
+    runtime["comparison_selector_dependencies"] = _selector_dependency_versions()
     result = {
         "protocol": copy.deepcopy(protocol),
         "rows": rows,
@@ -650,6 +663,152 @@ def worker(run_dir, arm, deadline):
     )
 
 
+def _replayed_priority_predictions(frozen, arm, priority):
+    """Replay selectors from frozen fit rows, including the AI model fit."""
+    from tools.product.comparison_morgan_features import features
+    import numpy as np
+
+    rows = frozen["rows"]
+    pool = frozen["pool"]
+    candidates = {row["record_id"]: row for row in rows if row["record_id"] in pool}
+    valid = [rid for rid in pool if candidates[rid]["smiles"]]
+    smiles = [candidates[rid]["smiles"] for rid in valid]
+    if arm in ("similarity", "similarity_engine"):
+        if not valid:
+            return {}
+        selected = [
+            row for row in rows
+            if row["role"] == "fit" and row["fit_value"] is not None and row["smiles"]
+        ]
+        x = features([row["smiles"] for row in selected])
+        z = features(smiles)
+        y = np.asarray([row["fit_value"] for row in selected])
+        unique = {}
+        for index, row in enumerate(selected):
+            unique.setdefault(row["smiles"], []).append(index)
+        fx = x[[indices[0] for indices in unique.values()]]
+        fy = np.asarray([y[indices].mean() for indices in unique.values()])
+        values = []
+        for query in z:
+            intersection = fx @ query
+            union = fx.sum(axis=1) + query.sum() - intersection
+            similarity = np.divide(
+                intersection, union, out=np.ones_like(union), where=union != 0
+            )
+            values.append(float(fy[similarity == similarity.max()].mean()))
+    elif arm == "ai_engine":
+        from sklearn.linear_model import Ridge
+
+        reference = priority["setup_cost"].get("model_reference")
+        if reference is None:
+            raise ValueError("missing_priority_model_reference")
+        if (frozen["reused_ai_model"] is not None
+                and reference != frozen["reused_ai_model"]["reference"]):
+            raise ValueError("priority_model_source_mismatch")
+        payload = bound(reference)
+        selected = [
+            row for row in rows
+            if row["role"] == "fit" and row["fit_value"] is not None and row["smiles"]
+        ]
+        x = features([row["smiles"] for row in selected])
+        y = np.asarray([row["fit_value"] for row in selected], dtype=np.float64)
+        weights = None
+        if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
+            from tools.product import public_chembl_assay_dataset as intake
+            from tools.product.train_public_chembl_selector import (
+                FEATURES, implementation_hashes, predict_checkpoint,
+            )
+
+            source = frozen["protocol"]["source"]
+            summary = bound({
+                "path": str(Path(source["input_dir"]) / "summary.json"),
+                "sha256": source["summary_sha256"],
+            })
+            training = bound(payload["protocol"])
+            checkpoint = bound(payload["checkpoint"])
+            use_component = summary["schema_version"] == intake.SCHEMA_V4
+            expected_weighting = (
+                "inverse_count_per_connected_source_component_and_canonical_isomeric_structure"
+                if use_component else
+                "inverse_count_per_source_assay_and_canonical_isomeric_structure"
+            )
+            if (
+                payload["evaluation_values_read"] != 0
+                or payload["split_plan_sha256"] != frozen["provenance"]["split_plan_sha256"]
+                or payload["intake_scope_sha256"] != frozen["provenance"]["intake_scope_sha256"]
+                or training["intake_summary_sha256"] != source["summary_sha256"]
+                or training["split_plan_sha256"] != frozen["provenance"]["split_plan_sha256"]
+                or training["intake_scope_sha256"] != frozen["provenance"]["intake_scope_sha256"]
+                or training["fit_record_ids"] != [row["record_id"] for row in selected]
+                or training["ridge_alpha"] != 10.0
+                or training["fit_replicate_weighting"] != expected_weighting
+                or training["features"] != FEATURES
+                or training["hyperparameter_search"] is not False
+                or training["implementation_hashes"] != implementation_hashes()
+                or checkpoint["training_protocol_sha256"] != payload["protocol"]["sha256"]
+                or checkpoint["split_plan_sha256"] != frozen["provenance"]["split_plan_sha256"]
+                or checkpoint["intake_scope_sha256"] != frozen["provenance"]["intake_scope_sha256"]
+                or checkpoint["endpoint"] != frozen["provenance"]["endpoint"]
+                or checkpoint["target_annotation_sha256"] != training["target_annotation_sha256"]
+                or checkpoint["implementation_hashes"] != implementation_hashes()
+            ):
+                raise ValueError("priority_model_source_mismatch")
+            group = "component_id" if use_component else "assay_id"
+            repetitions = Counter((row[group], row["smiles"]) for row in selected)
+            weights = np.asarray([
+                1.0 / repetitions[(row[group], row["smiles"])] for row in selected
+            ])
+            saved_weights = checkpoint["coefficients"]
+            saved_intercept = checkpoint["intercept"]
+        else:
+            if (
+                set(payload) != {
+                    "coefficients", "intercept", "evidence_kind",
+                    "fit_record_ids", "source_rows_sha256",
+                }
+                or payload["evidence_kind"] != "synthetic_constants"
+                or payload["fit_record_ids"] != [row["record_id"] for row in selected]
+                or payload["source_rows_sha256"] != sha(rows)
+            ):
+                raise ValueError("priority_model_source_mismatch")
+            saved_weights = payload["coefficients"]
+            saved_intercept = payload["intercept"]
+        model = Ridge(alpha=10.0, solver="cholesky").fit(x, y, sample_weight=weights)
+        saved = np.asarray(saved_weights, dtype=np.float64)
+        if (
+            saved.shape != (1024,)
+            or not np.isfinite(saved).all()
+            or not np.allclose(saved, model.coef_, rtol=1e-12, atol=1e-12)
+            or not math.isclose(_number(saved_intercept), float(model.intercept_),
+                                rel_tol=1e-12, abs_tol=1e-12)
+        ):
+            raise ValueError("priority_model_fit_mismatch")
+        if frozen["protocol"]["source"]["kind"] == "chembl_fit_intake":
+            # Preserve cold per-row and reused batch inference rounding after
+            # independently validating the serialized model against the fit.
+            queries = (
+                [smiles] if frozen["reused_ai_model"] is not None
+                else [[smile] for smile in smiles]
+            )
+            if not queries:
+                queries = [[selected[0]["smiles"]]]
+            values = [
+                value for query in queries
+                for value in predict_checkpoint(
+                    payload["checkpoint"]["path"], payload["checkpoint"]["sha256"],
+                    query, training["target_annotation_sha256"],
+                    endpoint=frozen["provenance"]["endpoint"],
+                )
+            ]
+            if not valid:
+                values = []
+        else:
+            values = features(smiles) @ saved + _number(saved_intercept) if valid else []
+    else:
+        raise ValueError("invalid_priority_arm")
+    return {rid: _number(float(value)) for rid, value in zip(valid, values)}
+
+
 def _arm_summary(directory, frozen, binding, completion):
     observations = {}
     for name in ("priority.json", "worker-complete.json"):
@@ -666,7 +825,45 @@ def _arm_summary(directory, frozen, binding, completion):
     priority = observations.get("priority.json")
     if priority is not None and priority["arm"] != directory.name:
         raise ValueError("priority_binding_mismatch")
+    if priority is not None:
+        if (
+            priority["arm"] != directory.name
+            or priority["evaluation_labels_read"] != 0
+            or type(priority["order"]) is not list
+            or type(priority["predictions"]) is not dict
+        ):
+            raise ValueError("invalid_priority_observation")
+        predictions = priority["predictions"]
+        if directory.name == "engine":
+            expected_order = frozen["pool"]
+            expected_predictions = set()
+        else:
+            expected_predictions = {
+                row["record_id"]
+                for row in frozen["rows"]
+                if row["record_id"] in frozen["pool"] and row["smiles"]
+            }
+            if set(predictions) != expected_predictions:
+                raise ValueError("priority_prediction_pool_mismatch")
+            for predicted in predictions.values():
+                _number(predicted)
+            expected_order = _prediction_order(frozen, predictions)
+        if set(predictions) != expected_predictions or priority["order"] != expected_order:
+            raise ValueError("priority_order_prediction_mismatch")
+        if directory.name != "engine":
+            # This is read-only receipt verification outside the worker deadline.
+            replayed = _replayed_priority_predictions(frozen, directory.name, priority)
+            if (
+                set(replayed) != set(predictions)
+                or any(
+                    not math.isclose(predictions[rid], replayed[rid], rel_tol=1e-12, abs_tol=1e-12)
+                    for rid in predictions
+                )
+                or _prediction_order(frozen, replayed) != priority["order"]
+            ):
+                raise ValueError("priority_model_prediction_mismatch")
     rows = []
+    committed_order = []
     for rid in frozen["pool"]:
         path = directory / (sha(rid) + ".row.json")
         value = {
@@ -685,6 +882,11 @@ def _arm_summary(directory, frozen, binding, completion):
                 or item["arm"] != directory.name
             ):
                 raise ValueError("committed_comparison_row_mismatch")
+            if priority is None:
+                raise ValueError("committed_row_without_priority")
+            if item.get("prediction") != priority["predictions"].get(rid):
+                raise ValueError("committed_row_prediction_mismatch")
+            committed_order.append((_number(item["completed_monotonic"]), rid))
             if item["completed_monotonic"] <= completion["deadline"]:
                 value = item
             else:
@@ -736,6 +938,10 @@ def _arm_summary(directory, frozen, binding, completion):
               and value["status"] == "evaluated"):
             raise ValueError("D3_evaluated_row_missing_report")
         rows.append(value)
+    if priority is not None:
+        observed_order = [rid for _, rid in sorted(committed_order)]
+        if observed_order != priority["order"][:len(observed_order)]:
+            raise ValueError("committed_row_priority_sequence_mismatch")
     direction = -1 if directory.name == "similarity" else 1
     ranked = sorted(
         (r for r in rows if r["status"] == "evaluated"),
@@ -790,6 +996,7 @@ def run(protocol, output_dir, *, resume=False):
         else:
             publish(output_dir / "frozen.json", envelope)
         arms = {}
+        receipt_verification_seconds = {}
         for arm in _execution_order(protocol):
             directory = output_dir / arm
             directory.mkdir(exist_ok=resume)
@@ -890,9 +1097,13 @@ def run(protocol, output_dir, *, resume=False):
             completion = read(directory / "completion.json")
             if completion["binding"] != binding:
                 raise ValueError("completion_binding_mismatch")
+            verification_started = time.perf_counter()
             arms[arm] = _arm_summary(directory, frozen, binding, completion)
+            receipt_verification_seconds[arm] = time.perf_counter() - verification_started
         # Recheck every bound input and all code before publishing completed comparison.
+        source_recheck_started = time.perf_counter()
         refreshed, _ = freeze(protocol)
+        source_recheck_seconds = time.perf_counter() - source_recheck_started
         if refreshed != frozen:
             raise ValueError("inputs_changed_during_comparison")
         result = {
@@ -907,6 +1118,12 @@ def run(protocol, output_dir, *, resume=False):
             "same_prepared_assay_state_verified": False,
             "end_to_end_cost_measured": False,
             "common_validation_seconds": setup_seconds,
+            "receipt_verification_cost": {
+                "arm_wall_seconds": receipt_verification_seconds,
+                "final_source_recheck_wall_seconds": source_recheck_seconds,
+                "scope": "read_only_receipt_and_fit_replay_after_each_worker_outside_equal_worker_deadlines",
+                "completed_run_only": True,
+            },
             "orchestrator_wall_seconds": time.perf_counter() - started,
             "cost_scope": frozen["scope"],
             "upstream_cost": None,

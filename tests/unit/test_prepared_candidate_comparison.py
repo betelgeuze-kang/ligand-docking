@@ -121,6 +121,17 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
     result = comparison.run(protocol, output)
     assert set(result["arms"]) == set(comparison.ARMS)
     assert result["pool"] == list("abcd")
+    verification = result["receipt_verification_cost"]
+    assert set(verification["arm_wall_seconds"]) == set(comparison.ARMS)
+    assert verification["completed_run_only"] is True
+    assert all(value >= 0 for value in verification["arm_wall_seconds"].values())
+    assert verification["final_source_recheck_wall_seconds"] >= 0
+    assert (
+        sum(verification["arm_wall_seconds"].values())
+        + verification["final_source_recheck_wall_seconds"]
+        + result["common_validation_seconds"]
+        <= result["orchestrator_wall_seconds"]
+    )
     for name, arm in result["arms"].items():
         assert arm["cost"]["status"] == "complete", (
             name,
@@ -342,22 +353,27 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
                 "deadline": time.monotonic() - 1,
             },
         )
+    order, predictions, setup = comparison._priority(
+        frozen, "similarity", directory / "similarity"
+    )
+    rid = order[0]
     retained = {
-        "record_id": "a",
+        "record_id": rid,
         "arm": "similarity",
         "binding": binding,
-        "score": 1.0,
+        "score": predictions[rid],
+        "prediction": predictions[rid],
         "status": "evaluated",
         "completed_monotonic": time.monotonic() - 10,
     }
     comparison.publish(
-        directory / "similarity" / (comparison.sha("a") + ".row.json"),
+        directory / "similarity" / (comparison.sha(rid) + ".row.json"),
         {"payload": retained, "sha256": comparison.sha(retained)},
     )
     comparison.publish(
         directory / "similarity/priority.json",
-        {"binding": binding, "arm": "similarity", "order": list("abcd"),
-         "predictions": dict.fromkeys("abcd", 1.0), "setup_cost": {},
+        {"binding": binding, "arm": "similarity", "order": order,
+         "predictions": predictions, "setup_cost": setup,
          "evaluation_labels_read": 0},
     )
     with (directory / "similarity/worker.lock").open("a") as lease:
@@ -372,7 +388,8 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
     assert result["arms"]["similarity"]["denominator"] == {
         "requested": 4,
         "evaluated": 1,
-        "not_processed": 3,
+        "not_processed": 2,
+        "unsupported": 1,
     }
     assert all(
         a["denominator"] == {"requested": 4, "not_processed": 4}
@@ -462,6 +479,26 @@ def test_native_shaped_synthetic_intake_preserves_roles_and_reuses_actual_traine
     assert saved["evaluation_values_read"] == 0
     assert saved["split_plan_sha256"] == provenance["split_plan_sha256"]
     assert cost["mode"] == "cold_fit_included"
+    priority = {"setup_cost": copy.deepcopy(cost)}
+    replayed = comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+    assert set(replayed) == set(predicted)
+    checkpoint_path = directory / "model/selector.json"
+    frozen_fit_path = directory / "model/frozen-fit.json"
+    saved_checkpoint = checkpoint_path.read_bytes()
+    saved_frozen_fit = frozen_fit_path.read_bytes()
+    try:
+        checkpoint = comparison.read(checkpoint_path)
+        checkpoint["intercept"] += 0.25
+        checkpoint_path.write_text(comparison.canonical(checkpoint) + "\n")
+        frozen_fit = comparison.read(frozen_fit_path)
+        frozen_fit["checkpoint"] = comparison.file_ref(checkpoint_path)
+        frozen_fit_path.write_text(comparison.canonical(frozen_fit) + "\n")
+        priority["setup_cost"]["model_reference"] = comparison.file_ref(frozen_fit_path)
+        with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
+            comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+    finally:
+        checkpoint_path.write_bytes(saved_checkpoint)
+        frozen_fit_path.write_bytes(saved_frozen_fit)
     # Exercise the complete native-shaped route with synthetic API data only.
     run_dir = source["root"] / "native-run"
     result = comparison.run(protocol, run_dir)
@@ -543,10 +580,10 @@ def test_synthetic_labels_cannot_be_read_before_frozen_result_validation(
 @pytest.mark.parametrize(
     "change,error",
     [
-        ("missing", "similarity_score_prediction_mismatch"),
+        ("missing", "committed_row_without_priority"),
         ("binding", "worker_observation_binding_mismatch"),
         ("arm", "priority_binding_mismatch"),
-        ("prediction", "similarity_score_prediction_mismatch"),
+        ("prediction", "priority_prediction_pool_mismatch"),
     ],
 )
 def test_evaluated_similarity_rows_require_bound_priority(integrity_run, change, error):
@@ -572,3 +609,355 @@ def test_evaluated_similarity_rows_require_bound_priority(integrity_run, change,
             )
     finally:
         path.write_bytes(original)
+
+
+@pytest.mark.parametrize(
+    "change,error",
+    [
+        ("order", "priority_order_prediction_mismatch"),
+        ("prediction", "priority_model_prediction_mismatch"),
+    ],
+)
+def test_resealed_priority_and_comparison_cannot_forge_selector_order(
+    integrity_run, change, error
+):
+    root, frozen, result = integrity_run
+    priority_path = root / "ai_engine/priority.json"
+    comparison_path = root / "comparison.json"
+    original_priority = priority_path.read_bytes()
+    original_comparison = comparison_path.read_bytes()
+    try:
+        priority = comparison.read(priority_path)
+        if change == "order":
+            assert len(priority["order"]) >= 2
+            priority["order"][:2] = reversed(priority["order"][:2])
+        else:
+            priority["predictions"][priority["order"][-1]] += 10.0
+            priority["order"] = comparison._prediction_order(
+                frozen, priority["predictions"]
+            )
+        priority_path.write_text(comparison.canonical(priority) + "\n")
+        resealed = copy.deepcopy(result)
+        resealed["arms"]["ai_engine"]["worker_observations"]["priority.json"] = priority
+        comparison_path.write_text(comparison.canonical(resealed) + "\n")
+        with pytest.raises(ValueError, match=error):
+            comparison.run(frozen["protocol"], root, resume=True)
+    finally:
+        priority_path.write_bytes(original_priority)
+        comparison_path.write_bytes(original_comparison)
+
+
+def test_resealed_model_priority_rows_and_comparison_cannot_forge_fit(integrity_run):
+    root, frozen, result = integrity_run
+    directory = root / "ai_engine"
+    priority_path = directory / "priority.json"
+    comparison_path = root / "comparison.json"
+    priority = comparison.read(priority_path)
+    model_path = Path(priority["setup_cost"]["model_reference"]["path"])
+    rows = [directory / (comparison.sha(rid) + ".row.json") for rid in frozen["pool"]]
+    paths = [model_path, priority_path, comparison_path, *rows]
+    original = {path: path.read_bytes() for path in paths if path.exists()}
+    try:
+        model = comparison.read(model_path)
+        model["intercept"] += 0.25
+        model_path.write_text(comparison.canonical(model) + "\n")
+        priority["setup_cost"]["model_reference"] = comparison.file_ref(model_path)
+        priority["predictions"] = {
+            rid: value + 0.25 for rid, value in priority["predictions"].items()
+        }
+        assert priority["order"] == comparison._prediction_order(
+            frozen, priority["predictions"]
+        )
+        priority_path.write_text(comparison.canonical(priority) + "\n")
+        resealed = copy.deepcopy(result)
+        arm = resealed["arms"]["ai_engine"]
+        arm["worker_observations"]["priority.json"] = priority
+        for path in rows:
+            if not path.exists():
+                continue
+            wrapped = comparison.read(path)
+            item = wrapped["payload"]
+            if item["record_id"] in priority["predictions"]:
+                item["prediction"] = priority["predictions"][item["record_id"]]
+            wrapped["sha256"] = comparison.sha(item)
+            path.write_text(comparison.canonical(wrapped) + "\n")
+            for summary_row in arm["rows"]:
+                if summary_row["record_id"] == item["record_id"]:
+                    summary_row["prediction"] = item["prediction"]
+        comparison_path.write_text(comparison.canonical(resealed) + "\n")
+        with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
+            comparison.run(frozen["protocol"], root, resume=True)
+    finally:
+        for path, content in original.items():
+            path.write_bytes(content)
+
+
+@pytest.mark.parametrize("missing", [None, "scikit-learn", "scipy"])
+def test_selector_dependency_versions_bind_missing_without_importing(monkeypatch, missing):
+    observed = []
+
+    def version(name):
+        observed.append(name)
+        if name == missing:
+            raise comparison.importlib.metadata.PackageNotFoundError(name)
+        return {"scikit-learn": "test-sklearn", "scipy": "test-scipy"}[name]
+
+    monkeypatch.setattr(comparison.importlib.metadata, "version", version)
+    assert comparison._selector_dependency_versions() == {
+        "scikit-learn": None if missing == "scikit-learn" else "test-sklearn",
+        "scipy": None if missing == "scipy" else "test-scipy",
+    }
+    assert observed == ["scikit-learn", "scipy"]
+
+
+@pytest.mark.parametrize("dependency", ["scikit-learn", "scipy"])
+@pytest.mark.parametrize("replacement", [None, "different-installed-version"])
+def test_selector_dependency_change_rejects_resume_before_receipt_replay(
+    integrity_run, monkeypatch, dependency, replacement
+):
+    root, frozen, _ = integrity_run
+    versions = copy.deepcopy(frozen["runtime"]["comparison_selector_dependencies"])
+    assert versions[dependency] is not None
+    versions[dependency] = replacement
+    monkeypatch.setattr(comparison, "_selector_dependency_versions", lambda: versions)
+
+    def unexpected_replay(*args):
+        raise AssertionError("receipt replay before runtime binding check")
+
+    monkeypatch.setattr(comparison, "_arm_summary", unexpected_replay)
+    with pytest.raises(ValueError, match="resume_input_or_runtime_changed"):
+        comparison.run(frozen["protocol"], root, resume=True)
+
+
+@pytest.mark.parametrize(
+    "change,error",
+    [
+        ("row_prediction", "committed_row_prediction_mismatch"),
+        ("missing_first_row", "committed_row_priority_sequence_mismatch"),
+        ("reordered_completion", "committed_row_priority_sequence_mismatch"),
+    ],
+)
+def test_committed_rows_remain_bound_to_priority_prefix(integrity_run, change, error):
+    root, frozen, result = integrity_run
+    directory = root / "ai_engine"
+    priority = comparison.read(directory / "priority.json")
+    assert len(priority["order"]) >= 2
+    paths = [directory / (comparison.sha(rid) + ".row.json")
+             for rid in priority["order"][:2]]
+    original = {path: path.read_bytes() for path in paths}
+    try:
+        if change == "missing_first_row":
+            paths[0].unlink()
+        else:
+            wrapped = comparison.read(paths[0])
+            if change == "row_prediction":
+                wrapped["payload"]["prediction"] += 0.25
+            else:
+                second = comparison.read(paths[1])
+                wrapped["payload"]["completed_monotonic"] = (
+                    second["payload"]["completed_monotonic"] + 1.0
+                )
+            wrapped["sha256"] = comparison.sha(wrapped["payload"])
+            paths[0].write_text(comparison.canonical(wrapped) + "\n")
+        with pytest.raises(ValueError, match=error):
+            comparison._arm_summary(
+                directory, frozen, result["binding"], result["arms"]["ai_engine"]["cost"]
+            )
+    finally:
+        for path, content in original.items():
+            path.write_bytes(content)
+
+
+def test_reused_selector_reference_cannot_be_replaced(integrity_run, tmp_path):
+    root, frozen, _ = integrity_run
+    priority = comparison.read(root / "ai_engine/priority.json")
+    reference = priority["setup_cost"]["model_reference"]
+    reused = copy.deepcopy(frozen)
+    reused["reused_ai_model"] = {"reference": reference}
+    replacement = tmp_path / "same-model-different-reference.json"
+    replacement.write_bytes(Path(reference["path"]).read_bytes())
+    priority["setup_cost"]["model_reference"] = comparison.file_ref(replacement)
+    with pytest.raises(ValueError, match="priority_model_source_mismatch"):
+        comparison._replayed_priority_predictions(reused, "ai_engine", priority)
+
+
+def test_empty_prediction_pool_still_checks_ai_fit(tmp_path):
+    protocol = _protocol(tmp_path / "input")
+    for row in protocol["source"]["rows"]:
+        if row["role"] == "development_test":
+            row["smiles"] = None
+    frozen, _ = comparison.freeze(protocol)
+    directory = tmp_path / "ai_engine"
+    directory.mkdir()
+    order, predictions, setup = comparison._priority(frozen, "ai_engine", directory)
+    assert order == [] and predictions == {}
+    priority = {"setup_cost": setup}
+    assert comparison._replayed_priority_predictions(frozen, "ai_engine", priority) == {}
+    assert comparison._replayed_priority_predictions(frozen, "similarity", {}) == {}
+    model_path = Path(setup["model_reference"]["path"])
+    model = comparison.read(model_path)
+    model["intercept"] += 0.25
+    model_path.write_text(comparison.canonical(model) + "\n")
+    priority["setup_cost"]["model_reference"] = comparison.file_ref(model_path)
+    with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
+        comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+
+
+def test_seeded_tied_priority_is_replayed_without_record_id_tiebreak(tmp_path):
+    protocol = _protocol(tmp_path / "input")
+    protocol.update(schema_version=comparison.ORDERED_SCHEMA, selection_seed=17,
+                    tie_policy="seeded_pool_order", arm_order=list(comparison.ARMS))
+    for row in protocol["source"]["rows"]:
+        if row["role"] == "fit":
+            row["fit_value"] = 6.0
+    frozen, _ = comparison.freeze(protocol)
+    directory = tmp_path / "similarity"
+    directory.mkdir()
+    order, predictions, setup = comparison._priority(frozen, "similarity", directory)
+    ordinal = {rid: index for index, rid in enumerate(frozen["pool"])}
+    expected = sorted(predictions, key=lambda rid: (
+        comparison.sha({"seed": 17, "pool_index": ordinal[rid]}), ordinal[rid]
+    ))
+    assert set(predictions.values()) == {6.0}
+    assert order == expected
+    replayed = comparison._replayed_priority_predictions(
+        frozen, "similarity", {"setup_cost": setup}
+    )
+    assert replayed == predictions
+    assert comparison._prediction_order(frozen, replayed) == expected
+
+
+@pytest.fixture
+def v4_cross_assay_duplicate_source(tmp_path):
+    """Synthetic V4 sources: duplicate structure, distinct assays, one component."""
+    import gzip
+    from tools.product import public_assay_components as components
+    from tools.product import public_assay_dataset as common
+    from tools.product import public_chembl_assay_dataset as intake
+    from tools.product import public_chembl_receptor_intake as receptor
+    from tests.unit import test_public_chembl_receptor_intake as receptor_fixture
+
+    root = tmp_path / "v4-synthetic-source"
+    root.mkdir()
+    manifest_ref, entries = receptor_fixture.synthetic_intake.__wrapped__(root)
+    first = comparison.bound(entries[0]["metadata_origin"])
+    entry = entries[1]
+    metadata = comparison.bound(entry["metadata_origin"])
+    metadata.update(canonical_smiles=first["canonical_smiles"],
+                    assay_chembl_id="CHEMBL99992")
+
+    def rewrite(reference, payload):
+        path = Path(reference["path"])
+        path.write_text(comparison.canonical(payload) + "\n")
+        return comparison.file_ref(path)
+
+    entry["metadata_origin"] = rewrite(entry["metadata_origin"], metadata)
+    native = comparison.bound(entry["activity_origin"])
+    native.update(canonical_smiles=metadata["canonical_smiles"],
+                  assay_chembl_id=metadata["assay_chembl_id"])
+    entry["activity_origin"] = rewrite(entry["activity_origin"], native)
+    method = comparison.bound(entry["method_origin"])
+    method["assay_chembl_id"] = metadata["assay_chembl_id"]
+    entry["method_origin"] = rewrite(entry["method_origin"], method)
+    primary = comparison.bound(entry["primary_origin"])
+    primary["native_activity"] = native
+    entry["primary_origin"] = rewrite(entry["primary_origin"], primary)
+
+    # Rebuild the identity node from the changed source metadata rather than
+    # overriding a derived component assignment or cached intake row.
+    manifest = comparison.bound(manifest_ref)
+    context_path = Path(manifest["identity_context"]["path"])
+    nodes = [json.loads(line) for line in gzip.decompress(context_path.read_bytes()).decode().splitlines()]
+    role = comparison.bound(entry["role_origin"])
+    node = components.node_from_raw(
+        {"ChEMBL Assay ID": metadata["assay_chembl_id"],
+         "ChEMBL Document ID": metadata["document_chembl_id"]},
+        common.chemical_identity(metadata["canonical_smiles"]),
+        node_id=entry["node_id"], record_id=role["record_id"],
+        ligand_id="chembl:molecule:" + metadata["molecule_chembl_id"],
+        extra_declarations=[{"role": role["assigned_role"]}],
+    )
+    nodes = [node if old["node_id"] == node["node_id"] else old for old in nodes]
+    context_path.write_bytes(gzip.compress(
+        "".join(comparison.canonical(item) + "\n" for item in nodes).encode(), mtime=0
+    ))
+    manifest["identity_context"] = comparison.file_ref(context_path)
+    metadata_path = Path(manifest["metadata_records"]["path"])
+    metadata_path.write_text("".join(comparison.canonical(item) + "\n" for item in entries))
+    manifest["metadata_records"] = comparison.file_ref(metadata_path)
+    manifest_ref = rewrite(manifest_ref, manifest)
+    output = tmp_path / "v4-fit-intake"
+    summary = receptor.build(manifest_ref["path"], manifest_ref["sha256"], output)
+    assert summary["schema_version"] == intake.SCHEMA_V4
+    assert summary["point_eligible"] == 6
+    return {"kind": "chembl_fit_intake", "input_dir": str(output),
+            "summary_sha256": comparison.file_ref(output / "summary.json")["sha256"]}
+
+
+def test_v4_replay_uses_component_weights_across_assays(
+    v4_cross_assay_duplicate_source, tmp_path
+):
+    import numpy as np
+    from sklearn.linear_model import Ridge
+
+    source = v4_cross_assay_duplicate_source
+    rows, _ = comparison.load_rows(source)
+    pool = [row["record_id"] for row in rows if row["role"] == "development_test"]
+    protocol = {
+        "schema_version": comparison.SCHEMA, "source": source,
+        "requests": dict.fromkeys(pool), "budget_seconds_per_arm": 20.0,
+        "max_engine_calls_per_arm": 2, "top_k": 1,
+    }
+    frozen, _ = comparison.freeze(protocol)
+    selected = [row for row in frozen["rows"]
+                if row["role"] == "fit" and row["fit_value"] is not None and row["smiles"]]
+    assert [row["record_id"] for row in selected] == [f"chembl:activity:{i}" for i in range(1, 7)]
+    assert selected[0]["smiles"] == selected[1]["smiles"]
+    assert selected[0]["component_id"] == selected[1]["component_id"]
+    assert selected[0]["assay_id"] != selected[1]["assay_id"]
+    assert len({row["component_id"] for row in selected}) == 2
+    assert all(row["fit_value"] is None for row in frozen["rows"] if row["role"] != "fit")
+    matrix = comparison_features([row["smiles"] for row in selected])
+    observed = np.asarray([row["fit_value"] for row in selected], dtype=np.float64)
+    # The two cross-assay repeats share a component/structure and total weight 1.
+    expected = Ridge(alpha=10.0, solver="cholesky").fit(
+        matrix, observed, sample_weight=np.asarray([0.5, 0.5, 1.0, 1.0, 1.0, 1.0])
+    )
+    # Every assay/structure pair is unique; the incorrect legacy weighting is 1.
+    assert len({(row["assay_id"], row["smiles"]) for row in selected}) == len(selected)
+    wrong = Ridge(alpha=10.0, solver="cholesky").fit(
+        matrix, observed, sample_weight=np.ones(len(selected))
+    )
+    assert (not np.allclose(expected.coef_, wrong.coef_, rtol=1e-12, atol=1e-12)
+            or not np.isclose(expected.intercept_, wrong.intercept_, rtol=1e-12, atol=1e-12))
+    directory = tmp_path / "v4-ai-arm"
+    directory.mkdir()
+    _, predictions, setup = comparison._priority(frozen, "ai_engine", directory)
+    priority = {"setup_cost": copy.deepcopy(setup)}
+    payload = comparison.bound(priority["setup_cost"]["model_reference"])
+    training = comparison.bound(payload["protocol"])
+    checkpoint = comparison.bound(payload["checkpoint"])
+    assert training["fit_replicate_weighting"] == (
+        "inverse_count_per_connected_source_component_and_canonical_isomeric_structure"
+    )
+    assert np.allclose(checkpoint["coefficients"], expected.coef_, rtol=1e-12, atol=1e-12)
+    assert np.isclose(checkpoint["intercept"], expected.intercept_, rtol=1e-12, atol=1e-12)
+    assert checkpoint["product_ranking_enabled"] is False
+    assert checkpoint["physical_energy"] is False
+    assert frozen["scientifically_validated"] is False
+    replayed = comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+    assert set(replayed) == set(predictions) == set(pool)
+    assert all(np.isclose(replayed[rid], predictions[rid], rtol=1e-12, atol=1e-12) for rid in pool)
+
+    # Reseal the checkpoint and its wrapper with an assay-weighted fit, keeping
+    # valid source/protocol references. Fit replay must detect the substitution.
+    checkpoint["coefficients"] = wrong.coef_.tolist()
+    checkpoint["intercept"] = float(wrong.intercept_)
+    checkpoint_path = Path(payload["checkpoint"]["path"])
+    checkpoint_path.write_text(comparison.canonical(checkpoint) + "\n")
+    payload["checkpoint"] = comparison.file_ref(checkpoint_path)
+    payload_path = Path(priority["setup_cost"]["model_reference"]["path"])
+    payload_path.write_text(comparison.canonical(payload) + "\n")
+    priority["setup_cost"]["model_reference"] = comparison.file_ref(payload_path)
+    with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
+        comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
