@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 import pytest
 from tools.product import compare_prepared_candidate_policies as comparison
 from tests.unit.test_prepared_candidate_comparison import _protocol
@@ -73,14 +74,29 @@ def test_actual_similarity_worker_never_imports_torch_or_physics(tmp_path):
     run = tmp_path / 'run'
     run.mkdir()
     (run / 'similarity').mkdir()
-    comparison.publish(run / 'frozen.json', {'payload': frozen, 'sha256': comparison.sha(frozen)})
-    code = "import json,sys,time,importlib.abc\nclass Block(importlib.abc.MetaPathFinder):\n    def find_spec(self,fullname,path=None,target=None):\n        if fullname=='torch' or fullname.startswith(('torch.','betelgeuze_engine.','betelgeuze_engine_v2.')):\n            raise AssertionError('pure similarity loaded '+fullname)\nsys.meta_path.insert(0,Block())\nfrom pathlib import Path\nfrom tools.product.compare_prepared_candidate_policies import worker\nworker(Path(sys.argv[1]),'similarity',time.monotonic()+20)\nprint(json.dumps({'torch_loaded':'torch' in sys.modules,'engine_loaded':any(k.startswith('betelgeuze_engine.') for k in sys.modules)}))\n"
+    binding = comparison.sha(frozen)
+    comparison.publish(run / 'frozen.json', {'payload': frozen, 'sha256': binding})
+    started = time.monotonic()
+    deadline = started + p['budget_seconds_per_arm']
+    comparison.publish(run / 'similarity/attempt.json', {
+        'receipt_version': comparison.RECEIPT_VERSION,
+        'arm': 'similarity',
+        'binding': binding,
+        'started_monotonic': started,
+        'deadline': deadline,
+    })
+    code = "import json,sys,time,importlib.abc\nclass Block(importlib.abc.MetaPathFinder):\n    def find_spec(self,fullname,path=None,target=None):\n        if fullname=='torch' or fullname.startswith(('torch.','betelgeuze_engine.','betelgeuze_engine_v2.')):\n            raise AssertionError('pure similarity loaded '+fullname)\nsys.meta_path.insert(0,Block())\nfrom pathlib import Path\nfrom tools.product.compare_prepared_candidate_policies import worker\nworker(Path(sys.argv[1]),'similarity',float(sys.argv[2]))\nprint(json.dumps({'torch_loaded':'torch' in sys.modules,'engine_loaded':any(k.startswith('betelgeuze_engine.') for k in sys.modules)}))\n"
     root = Path(comparison.__file__).resolve().parents[2]
     env = {**os.environ, 'PYTHONPATH': str(root), 'OPENBLAS_NUM_THREADS': '1'}
-    child = subprocess.run([sys.executable, '-c', code, str(run)], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    child = subprocess.run([sys.executable, '-c', code, str(run), str(deadline)], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
     assert child.returncode == 0, child.stdout + child.stderr
     assert json.loads(child.stdout) == {'torch_loaded': False, 'engine_loaded': False}
     result = json.loads((run / 'similarity/worker-complete.json').read_text())
+    assert result['receipt_version'] == comparison.RECEIPT_VERSION
+    assert result['arm'] == 'similarity'
+    assert result['binding'] == binding
+    assert result['stop_reason'] == 'order_exhausted'
+    assert result['committed_rows'] == 3
     assert result['engine_calls'] == 0
     assert len(list((run / 'similarity').glob('*.row.json'))) == 3
 
