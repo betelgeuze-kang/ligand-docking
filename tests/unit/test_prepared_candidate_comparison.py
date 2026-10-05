@@ -10,6 +10,8 @@ import time
 import pytest
 
 from tools.product import compare_prepared_candidate_policies as comparison
+from tools.product.comparison_morgan_features import features as comparison_features
+from tools.product.train_public_assay_selector import features as training_features
 from tests.unit.test_prepared_rigid_poses import _request
 from tests.unit import test_public_chembl_staged_intake as native_fixture
 
@@ -65,6 +67,23 @@ def _protocol(tmp_path, *, seconds=20.0, calls=10):
         "max_engine_calls_per_arm": calls,
         "top_k": 2,
     }
+
+
+def test_comparison_morgan_features_match_training_definition():
+    import numpy as np
+
+    smiles = [
+        "CCCC", "c1ccccc1", "C[C@H](N)O", "F/C=C/F", "[NH4+]",
+        "[13CH3]C(=O)O", "C1CCCCC1", "N#N", "O=C([O-])C",
+    ]
+    expected = training_features(smiles)
+    actual = comparison_features(smiles)
+    assert expected.shape == actual.shape == (len(smiles), 1024)
+    assert np.array_equal(actual, expected)
+    assert actual.dtype == expected.dtype
+    for bad in ("not_a_smiles", "C(C)(C)(C)(C)C"):
+        with pytest.raises(ValueError, match="invalid_inference_smiles"):
+            comparison_features([bad])
 
 
 @pytest.mark.parametrize(
