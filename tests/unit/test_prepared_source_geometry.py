@@ -14,9 +14,9 @@ from tests.unit.test_v2_prepared_cross_interaction import _pair, _system as _sep
 from tools.product import score_prepared_cross_interactions as consumer
 
 
-def _system(positions, charges):
+def _system(positions, charges, *, elements=None):
     from betelgeuze_engine_v2.molecular import Chain
-    system = _separate_chains(positions, charges)
+    system = _separate_chains(positions, charges, elements=elements)
     return replace(system, residues=tuple(replace(r, chain_index=0) for r in system.residues),
                    chains=(Chain(0, "A", tuple(range(len(system.residues)))),))
 
@@ -136,6 +136,7 @@ def test_graph_overflow_is_unavailable_without_zero_contact_count():
     assert observation["status"] == "unavailable"
     assert observation["reason"] == "bounded_neighbor_capacity_exceeded"
     assert observation["groups"] is None
+    assert observation.get("closest_pair_all_distances") is None
     assert observation["graph_diagnostics"]["overflow"] is True
 
 
@@ -182,3 +183,48 @@ def test_expected_molecule_sources_are_bound_to_canonical_atoms(missing):
     group = observe_prepared_source_geometry(receptor, _system([[4, 0, 0]], [0]), provenance)["groups"]["receptor"]
     assert group["pair_count_within_radius"] == 1
     assert group["non_direct_bond_pair_count"] == (None if missing else 1)
+
+
+def test_closest_cross_pair_is_observed_outside_one_angstrom_window():
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+    receptor = _system([[0, 0, 0]], [0], elements=["H"])
+    ligand = _system([[1.079, 0, 0]], [0], elements=["H"])
+    observation = observe_prepared_source_geometry(
+        receptor, ligand, _provenance({"bonds": []}, []))
+    assert observation["status"] == "observed"
+    cross = observation["groups"]["cross"]
+    assert cross["pair_count_within_radius"] == 0
+    assert cross["closest_pairs"] == []
+    nearest = cross["closest_pair_all_distances"]
+    assert nearest["distance_angstrom"] == pytest.approx(1.079)
+    assert [(atom["component"], atom["atom_index"], atom["element"])
+            for atom in nearest["atoms"]] == [
+                ("receptor", 0, "H"), ("ligand", 0, "H")]
+    assert observation["affects_score_or_admission"] is False
+
+
+def test_closest_cross_pair_ties_resolve_by_source_indices_across_tiles():
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+    receptor_positions = [[-2, 0, 0]] + [[100 + i, 0, 0] for i in range(1, 64)] + [[2, 0, 0]]
+    receptor = _system(receptor_positions, [0] * len(receptor_positions))
+    ligand = _system([[0, 0, 0]], [0])
+    observation = observe_prepared_source_geometry(
+        receptor, ligand, _provenance({"bonds": []}, []))
+    assert observation["status"] == "observed"
+    nearest = observation["groups"]["cross"]["closest_pair_all_distances"]
+    assert nearest["distance_angstrom"] == pytest.approx(2.0)
+    assert [atom["atom_index"] for atom in nearest["atoms"]] == [0, 0]
+
+
+def test_closest_cross_pair_observes_extended_ligand_without_radius_contact():
+    from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
+    receptor = _system([[0, 0, 0]], [0])
+    ligand = _system([[2 + 2 * i, 0, 0] for i in range(257)], [0] * 257)
+    observation = observe_prepared_source_geometry(
+        receptor, ligand, _provenance({"bonds": []}, []))
+    assert observation["status"] == "observed"
+    cross = observation["groups"]["cross"]
+    assert cross["pair_count_within_radius"] == 0
+    assert cross["closest_pair_all_distances"]["distance_angstrom"] == pytest.approx(2.0)
+
+
