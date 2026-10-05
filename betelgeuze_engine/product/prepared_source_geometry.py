@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import heapq
+import math
 from pathlib import Path
 import time
 
@@ -22,7 +23,8 @@ from betelgeuze_engine.product.prepared_validation import require_valid_prepared
 SCHEMA = "prepared_source_geometry_observation_v1"
 SEARCH_RADIUS_ANGSTROM = 1.0
 MAX_DISPLAYED_PAIRS = 16
-MAX_COMPONENT_ATOMS = {"receptor": 10000, "ligand": 256}
+MAX_COMPONENT_ATOMS = {"receptor": 10000, "ligand": 512}
+CROSS_DISTANCE_TILE_ATOMS = 64
 
 
 def _bond_context(provenance, side, system):
@@ -80,6 +82,34 @@ def _remember(heap, distance, first, second):
         heapq.heapreplace(heap, item)
 
 
+def _closest_cross_pair(receptor, ligand):
+    """Observe the nearest supplied cross pair, independent of the 1 A window."""
+    receptor_points = receptor.coordinates[0]
+    ligand_points = ligand.coordinates[0]
+    nearest = None
+    with torch.no_grad():
+        for r_start in range(0, receptor.atom_count, CROSS_DISTANCE_TILE_ATOMS):
+            r_block = receptor_points[r_start:r_start + CROSS_DISTANCE_TILE_ATOMS]
+            for l_start in range(0, ligand.atom_count, CROSS_DISTANCE_TILE_ATOMS):
+                l_block = ligand_points[l_start:l_start + CROSS_DISTANCE_TILE_ATOMS]
+                distances = torch.linalg.vector_norm(
+                    r_block[:, None, :] - l_block[None, :, :], dim=-1)
+                slot = int(torch.argmin(distances))
+                distance = float(distances.flatten()[slot])
+                if not math.isfinite(distance):
+                    raise ValueError("nonfinite closest cross distance")
+                pair = (distance, r_start + slot // len(l_block),
+                        l_start + slot % len(l_block))
+                if nearest is None or pair < nearest:
+                    nearest = pair
+    if nearest is None:
+        raise ValueError("closest cross pair unavailable")
+    distance, receptor_index, ligand_index = nearest
+    return {"distance_angstrom": distance,
+            "atoms": [_atom(receptor, "receptor", receptor_index),
+                      _atom(ligand, "ligand", ligand_index)]}
+
+
 def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSystem,
                                      preparation_provenance: dict) -> dict:
     """Observe unchanged canonical source coordinates before cross evaluation.
@@ -116,7 +146,8 @@ def observe_prepared_source_geometry(receptor: AllAtomSystem, ligand: AllAtomSys
                             "direct_bond_table_status": availability}
         groups["cross"] = {"source_atom_counts": {s: x.atom_count for s, x in systems.items()},
                            "possible_unique_pairs": receptor.atom_count * ligand.atom_count,
-                           "direct_bond_table_status": "not_classified_between_supplied_components"}
+                           "direct_bond_table_status": "not_classified_between_supplied_components",
+                           "closest_pair_all_distances": _closest_cross_pair(receptor, ligand)}
         answer["source_system_sha256"] = identities
         heaps, non_direct_heaps = {}, {}
         for name, group in groups.items():
