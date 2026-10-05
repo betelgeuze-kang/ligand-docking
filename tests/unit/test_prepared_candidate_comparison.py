@@ -236,6 +236,68 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
         comparison.run(protocol, output, resume=True)
 
 
+@pytest.fixture(scope="module")
+def integrity_run(tmp_path_factory):
+    root = tmp_path_factory.mktemp("comparison-score-integrity")
+    result = comparison.run(_protocol(root / "input"), root / "run")
+    frozen = comparison.read(root / "run/frozen.json")["payload"]
+    return root / "run", frozen, result
+
+
+@pytest.mark.parametrize(
+    "arm,rid,change,error",
+    [
+        ("similarity", "a", "score", "similarity_score_prediction_mismatch"),
+        ("engine", "a", "score", "pose_report_score_mismatch"),
+        ("engine", "c", "failed_score", "unscored_comparison_row_has_score"),
+        ("engine", "a", "missing_report", "evaluated_rigid_row_missing_pose_report"),
+        ("engine", "a", "numeric_denominator", "pose_report_denominator_mismatch"),
+        ("engine", "a", "pose_denominator", "pose_report_denominator_mismatch"),
+        ("engine", "a", "boolean_score", "invalid_comparison_number"),
+        ("engine", "a", "empty_report", "unsupported_report"),
+        ("engine", "a", "nonfinite_report", "nonfinite_identity_json"),
+    ],
+)
+def test_resealed_row_cannot_detach_score_from_prediction_or_pose(
+    integrity_run, arm, rid, change, error
+):
+    root, frozen, result = integrity_run
+    directory = root / arm
+    row_path = directory / (comparison.sha(rid) + ".row.json")
+    original_row = row_path.read_bytes()
+    wrapped = comparison.read(row_path)
+    row = wrapped["payload"]
+    report_path = Path(row["pose_report"]["path"]) if row.get("pose_report") else None
+    original_report = report_path.read_bytes() if report_path else None
+    try:
+        if change == "score":
+            row["score"] += 1.0
+        elif change == "failed_score":
+            row["score"] = 1.0
+        elif change == "missing_report":
+            row.pop("pose_report")
+        elif change == "boolean_score":
+            row["score"] = True
+        elif change == "pose_denominator":
+            row["pose_denominator"]["evaluated"] += 1
+        elif change == "numeric_denominator":
+            row["numeric_denominator"]["passed"] += 1
+        else:
+            assert report_path is not None
+            report_path.write_text(
+                '{"schema_version":"prepared_rigid_pose_cross_report_v1","rows":[]}'
+                if change == "empty_report" else '{"rows":[NaN]}'
+            )
+            row["pose_report"]["sha256"] = hashlib.sha256(report_path.read_bytes()).hexdigest()
+        row_path.write_text(comparison.canonical({"payload": row, "sha256": comparison.sha(row)}))
+        with pytest.raises(ValueError, match=error):
+            comparison._arm_summary(directory, frozen, result["binding"], result["arms"][arm]["cost"])
+    finally:
+        row_path.write_bytes(original_row)
+        if report_path is not None:
+            report_path.write_bytes(original_report)
+
+
 def test_hard_time_budget_keeps_all_candidates_and_has_no_free_retry(tmp_path):
     protocol = _protocol(tmp_path, seconds=0.03)
     output = tmp_path / "run"
@@ -291,6 +353,12 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
     comparison.publish(
         directory / "similarity" / (comparison.sha("a") + ".row.json"),
         {"payload": retained, "sha256": comparison.sha(retained)},
+    )
+    comparison.publish(
+        directory / "similarity/priority.json",
+        {"binding": binding, "arm": "similarity", "order": list("abcd"),
+         "predictions": dict.fromkeys("abcd", 1.0), "setup_cost": {},
+         "evaluation_labels_read": 0},
     )
     with (directory / "similarity/worker.lock").open("a") as lease:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -470,3 +538,37 @@ def test_synthetic_labels_cannot_be_read_before_frozen_result_validation(
     with pytest.raises(ValueError, match="synthetic_evaluation_freeze_mismatch"):
         comparison.evaluate_synthetic(result, frozen, labels, tmp_path / "metrics.json")
     assert labels["path"] not in reads
+
+
+@pytest.mark.parametrize(
+    "change,error",
+    [
+        ("missing", "similarity_score_prediction_mismatch"),
+        ("binding", "worker_observation_binding_mismatch"),
+        ("arm", "priority_binding_mismatch"),
+        ("prediction", "similarity_score_prediction_mismatch"),
+    ],
+)
+def test_evaluated_similarity_rows_require_bound_priority(integrity_run, change, error):
+    root, frozen, result = integrity_run
+    directory = root / "similarity"
+    path = directory / "priority.json"
+    original = path.read_bytes()
+    priority = comparison.read(path)
+    try:
+        if change == "missing":
+            path.unlink()
+        else:
+            if change == "binding":
+                priority["binding"] = "wrong"
+            elif change == "arm":
+                priority["arm"] = "engine"
+            else:
+                priority["predictions"].pop("a")
+            path.write_text(comparison.canonical(priority))
+        with pytest.raises(ValueError, match=error):
+            comparison._arm_summary(
+                directory, frozen, result["binding"], result["arms"]["similarity"]["cost"]
+            )
+    finally:
+        path.write_bytes(original)
