@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'tools/product/compare_prepared_candidate_policies.py'
+      - 'tools/product/comparison_morgan_features.py'
       - 'tools/product/diagnose_prepared_cross_numerics.py'
       - 'tools/product/public_chembl*.py'
       - 'tools/product/train_public*selector.py'
@@ -28,6 +29,7 @@ on:
     branches: [main]
     paths:
       - 'tools/product/compare_prepared_candidate_policies.py'
+      - 'tools/product/comparison_morgan_features.py'
       - 'tools/product/diagnose_prepared_cross_numerics.py'
       - 'tools/product/public_chembl*.py'
       - 'tools/product/train_public*selector.py'
@@ -91,7 +93,7 @@ jobs:
           PY
       - name: Lint and test
         run: |
-          python -m ruff check --isolated --no-cache betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_prepared_cross_force_diagnostic.py
+          python -m ruff check --isolated --no-cache tools/product/comparison_morgan_features.py betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_prepared_cross_force_diagnostic.py
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py --junitxml=candidate-comparison-junit.xml
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -104,6 +106,7 @@ jobs:
             candidate-comparison-source.json
             candidate-comparison-junit.xml
             tools/product/compare_prepared_candidate_policies.py
+            tools/product/comparison_morgan_features.py
             tools/product/diagnose_prepared_cross_numerics.py
             tests/unit/test_prepared_candidate_comparison.py
             tests/unit/test_candidate_report_serialization.py
