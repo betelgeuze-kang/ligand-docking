@@ -427,7 +427,7 @@ def _priority(frozen, arm, directory):
     if arm == "engine":
         return pool, {}, {}
     tick = time.perf_counter()
-    from tools.product.train_public_assay_selector import features
+    from tools.product.comparison_morgan_features import features
     import numpy as np
 
     selected = [
