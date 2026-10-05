@@ -70,11 +70,16 @@ def file_ref(path):
 
 def publish(path, value, *, deadline=None):
     """Publish a complete immutable JSON file; interrupted temporary files aren't rows."""
+    return _publish_canonical_text(path, canonical(value), deadline=deadline)
+
+
+def _publish_canonical_text(path, encoded, *, deadline=None):
+    """Publish canonical JSON already encoded by this module."""
     path = Path(path)
     temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex)
     try:
         with temporary.open("x", encoding="utf-8") as stream:
-            stream.write(canonical(value) + "\n")
+            stream.write(encoded + "\n")
             stream.flush()
             os.fsync(stream.fileno())
         if deadline is not None and time.monotonic() >= deadline:
@@ -83,6 +88,49 @@ def publish(path, value, *, deadline=None):
         return True
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _has_stable_mapping_keys(value, normalized):
+    """Guard the JSON round trip against key coercion or collisions.
+
+    Equal subtrees need no descent: JSON normalization preserved their keys,
+    including large lists of numeric coordinates and forces.
+    """
+    pending = [(value, normalized)]
+    while pending:
+        item, decoded = pending.pop()
+        if isinstance(item, dict):
+            if (
+                type(decoded) is not dict
+                or len(item) != len(decoded)
+                or any(type(key) is not str for key in item)
+            ):
+                return False
+            if item == decoded:
+                continue
+            if item.keys() != decoded.keys():
+                return False
+            pending.extend((value, decoded[key]) for key, value in item.items())
+        elif isinstance(item, (list, tuple)):
+            if type(decoded) is not list or len(item) != len(decoded):
+                return False
+            if item == decoded:
+                continue
+            pending.extend(zip(item, decoded))
+    return True
+
+
+def _checked_pose_report(path, raw_report, check_report):
+    """Keep the numeric check on normalized JSON and publish the same bytes."""
+    encoded = canonical(raw_report)
+    report = json.loads(encoded)
+    checked = check_report(report)
+    if _has_stable_mapping_keys(raw_report, report):
+        _publish_canonical_text(path, encoded)
+    else:
+        # Match the original second encoding if JSON changed mapping keys.
+        publish(path, report)
+    return report, checked
 
 
 def _number(value, *, positive=False):
@@ -551,12 +599,12 @@ def worker(run_dir, arm, deadline):
                               d3_summary=summary, d3_report=file_ref(file))
             elif frozen["requests"][rid] is not None:
                 called += 1
-                report = json.loads(
-                    canonical(evaluate_rigid_pose_request(frozen["requests"][rid]))
-                )
-                checked = check_report(report)
                 file = directory / (sha(rid) + ".poses.json")
-                publish(file, report)
+                report, checked = _checked_pose_report(
+                    file,
+                    evaluate_rigid_pose_request(frozen["requests"][rid]),
+                    check_report,
+                )
                 result.update(
                     status="failed",
                     reason="incomplete_or_failed_numeric_pose",
