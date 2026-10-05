@@ -54,6 +54,18 @@ whose denominators match the row, and whose minimum cross energy equals the
 recorded score. Failed and unsupported rows cannot carry a score. This
 verification runs before native post-freeze outcome loading. It binds the software
 receipt to its numerical evidence; it does not establish physical validity.
+The receipt also replays similarity predictions from fit-only rows and refits the
+AI Ridge selector from those rows. For native intake it uses the source-bound
+summary's prescribed assay or connected-component replicate weighting, and
+checks the saved protocol, checkpoint coefficients and intercept against that
+fit (relative and absolute tolerance 1e-12). Resealing a model, priority, rows and
+final summary cannot substitute a selector outside that fit tolerance while
+retaining those frozen fit inputs. These are local consistency checks, not source authentication or
+independent proof of execution history.
+Selector dependency versions (scikit-learn and SciPy) are part of the frozen
+runtime. An absent package is recorded as null rather than required by metadata
+inspection; paths that need it still require it at execution. Version or
+installed/absent changes reject resume, as do source/runtime fingerprint changes.
 
 ## Cost and interruption
 
@@ -65,12 +77,20 @@ receive no rank. Measured termination overhead is reported instead of hidden.
 Common preflight and final source verification are measured separately. Peak
 process memory and CPU time are recorded for workers that complete their receipt;
 a killed worker has no fabricated resource measurement.
+`receipt_verification_cost` records parent wall time for each arm's read-only
+receipt check, including selector fit replay, and the final source recheck. This
+work occurs after each worker and outside its equal deadline; it cannot improve
+that arm's candidate order or grant a retry. The saved measurement describes the
+original completed run, not a later `--resume` verification invocation. Parent
+`orchestrator_wall_seconds` includes this cost, but upstream preparation remains
+unmeasured, so `end_to_end_cost_measured` stays false.
 
 Acquisition, original molecular preparation, and pose generation already happened
 before these supplied requests. Their costs are **unmeasured** here. Consequently
 this is a provided-pose experiment, not an end-to-end docking speedup. A cold run
 includes training. A separate run with `reuse_ai_from` measures loading and using
-the same bound model, retains the original cold-run cost, and does not refit it.
+the same bound model and retains the original cold-run cost. Its worker does not
+refit; the separately measured parent receipt check replays the fit.
 The native model uses the existing checkpoint predictor; model or fit-source
 mutation rejects reuse. Repeated cost measurements and suitable real data remain
 necessary for any performance conclusion. Resuming a completed journal is not
