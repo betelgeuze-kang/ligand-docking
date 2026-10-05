@@ -441,6 +441,9 @@ def test_short_contact_observations_reach_summary_html_and_resume(tmp_path):
         observation = row["cross_geometry_observation"]
         cross = original["pose_geometry_observation"]["groups"]["cross"]
         assert observation["pair_count_within_radius"] == cross["pair_count_within_radius"]
+        assert observation["closest_pair_all_distances"] == cross["closest_pair_all_distances"]
+        assert observation["closest_distance_all_pairs_angstrom"] == (
+            cross["closest_pair_all_distances"]["distance_angstrom"])
         assert observation["physical_validity_assessed"] is False
         assert observation["affects_score_or_admission"] is False
     short, separated, overlap = report["physics"]["poses"]
@@ -449,10 +452,12 @@ def test_short_contact_observations_reach_summary_html_and_resume(tmp_path):
     assert short["status"] == "evaluated"  # Observation does not change numerical admission.
     assert separated["cross_geometry_observation"]["pair_count_within_radius"] == 0
     assert separated["cross_geometry_observation"]["closest_distance_angstrom"] is None
+    assert separated["cross_geometry_observation"]["closest_distance_all_pairs_angstrom"] > 1.0
     assert overlap["status"] == "failed"
     html = (run / "attempt-000001" / "report.html").read_text()
     assert "Cross pairs within observation radius" in html
     assert "Closest observed cross distance" in html
+    assert "Closest cross distance over all pairs" in html
     assert "0.5" in html
     resumed = workflow.run_workflow(r, run_dir=run, resume=True)
     assert [x["cross_geometry_observation"] for x in resumed["physics"]["poses"]] == [
@@ -471,6 +476,8 @@ def test_unavailable_geometry_is_not_reported_as_measured_zero(tmp_path, monkeyp
         assert obs["status"] == "unavailable"
         assert obs["pair_count_within_radius"] is None
         assert obs["closest_distance_angstrom"] is None
+        assert obs["closest_pair_all_distances"] is None
+        assert obs["closest_distance_all_pairs_angstrom"] is None
         assert obs["reason"] == "source_geometry_observation_failed"
 
 
@@ -479,3 +486,5 @@ def test_missing_historical_pose_observation_stays_unavailable():
     assert obs["status"] == "unavailable"
     assert obs["pair_count_within_radius"] is None
     assert obs["closest_distance_angstrom"] is None
+    assert obs["closest_pair_all_distances"] is None
+    assert obs["closest_distance_all_pairs_angstrom"] is None

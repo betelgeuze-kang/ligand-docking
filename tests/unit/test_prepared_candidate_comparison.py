@@ -95,7 +95,7 @@ def test_leakage_or_denominator_change_rejected_before_run(tmp_path, change):
     assert not (tmp_path / "out").exists()
 
 
-def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
+def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path, monkeypatch):
     protocol = _protocol(tmp_path)
     before = copy.deepcopy(protocol)
     output = tmp_path / "run"
@@ -153,6 +153,24 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
         for p in output.rglob("*")
         if p.is_file()
     }
+    dependencies = comparison.read(output / "frozen.json")["payload"]["runtime"][
+        "comparison_selector_dependencies"
+    ]
+    assert dependencies == {
+        name: comparison.importlib.metadata.version(name) for name in ("scikit-learn", "scipy")
+    }
+    installed_version = comparison.importlib.metadata.version
+    for changed_name in ("scikit-learn", "scipy"):
+        with monkeypatch.context() as changed:
+            def drifted_version(name):
+                version = installed_version(name)
+                return version + ".drift" if name == changed_name else version
+
+            changed.setattr(comparison.importlib.metadata, "version", drifted_version)
+            with pytest.raises(ValueError, match="resume_input_or_runtime_changed"):
+                comparison.run(protocol, output, resume=True)
+    # Resume's source/runtime preflight rejects drift without any endpoint input.
+    assert comparison.run(protocol, output, resume=True) == result
     assert protocol == before
     committed = output / "engine" / (comparison.sha("a") + ".row.json")
     saved = committed.read_bytes()
@@ -217,6 +235,62 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
         comparison.run(protocol, output, resume=True)
 
 
+@pytest.fixture(scope="module")
+def integrity_run(tmp_path_factory):
+    root = tmp_path_factory.mktemp("comparison-score-integrity")
+    result = comparison.run(_protocol(root / "input"), root / "run")
+    frozen = comparison.read(root / "run/frozen.json")["payload"]
+    return root / "run", frozen, result
+
+
+@pytest.mark.parametrize(
+    "arm,rid,change,error",
+    [
+        ("similarity", "a", "score", "similarity_score_prediction_mismatch"),
+        ("engine", "a", "score", "pose_report_score_mismatch"),
+        ("engine", "c", "failed_score", "unscored_comparison_row_has_score"),
+        ("engine", "a", "missing_report", "evaluated_rigid_row_missing_pose_report"),
+        ("engine", "a", "numeric_denominator", "pose_report_denominator_mismatch"),
+        ("engine", "a", "empty_report", "unsupported_report"),
+        ("engine", "a", "nonfinite_report", "nonfinite_identity_json"),
+    ],
+)
+def test_resealed_row_cannot_detach_score_from_prediction_or_pose(
+    integrity_run, arm, rid, change, error
+):
+    root, frozen, result = integrity_run
+    directory = root / arm
+    row_path = directory / (comparison.sha(rid) + ".row.json")
+    original_row = row_path.read_bytes()
+    wrapped = comparison.read(row_path)
+    row = wrapped["payload"]
+    report_path = Path(row["pose_report"]["path"]) if row.get("pose_report") else None
+    original_report = report_path.read_bytes() if report_path else None
+    try:
+        if change == "score":
+            row["score"] += 1.0
+        elif change == "failed_score":
+            row["score"] = 1.0
+        elif change == "missing_report":
+            row.pop("pose_report")
+        elif change == "numeric_denominator":
+            row["numeric_denominator"]["passed"] += 1
+        else:
+            assert report_path is not None
+            report_path.write_text(
+                '{"schema_version":"prepared_rigid_pose_cross_report_v1","rows":[]}'
+                if change == "empty_report" else '{"rows":[NaN]}'
+            )
+            row["pose_report"]["sha256"] = hashlib.sha256(report_path.read_bytes()).hexdigest()
+        row_path.write_text(comparison.canonical({"payload": row, "sha256": comparison.sha(row)}))
+        with pytest.raises(ValueError, match=error):
+            comparison._arm_summary(directory, frozen, result["binding"], result["arms"][arm]["cost"])
+    finally:
+        row_path.write_bytes(original_row)
+        if report_path is not None:
+            report_path.write_bytes(original_report)
+
+
 def test_hard_time_budget_keeps_all_candidates_and_has_no_free_retry(tmp_path):
     protocol = _protocol(tmp_path, seconds=0.03)
     output = tmp_path / "run"
@@ -230,16 +304,50 @@ def test_hard_time_budget_keeps_all_candidates_and_has_no_free_retry(tmp_path):
 
 def test_engine_call_cap_keeps_failures_and_remaining_denominator(tmp_path):
     protocol = _protocol(tmp_path, calls=1)
-    result = comparison.run(protocol, tmp_path / "run")
+    output = tmp_path / "run"
+    result = comparison.run(protocol, output)
     for name in ("engine", "ai_engine", "similarity_engine"):
+        arm = result["arms"][name]
+        assert arm["cost"]["status"] == "complete"
+        assert arm["worker_observations"]["worker-complete.json"]["engine_calls"] == 1
         assert (
-            result["arms"][name]["worker_observations"]["worker-complete.json"][
-                "engine_calls"
-            ]
-            == 1
+            arm["worker_observations"]["worker-complete.json"]["stop_reason"]
+            == "engine_call_cap"
         )
-        assert result["arms"][name]["denominator"]["requested"] == 4
+        assert arm["denominator"]["requested"] == 4
+        ordered = arm["worker_observations"]["priority.json"]["order"]
+        unprocessed = [row for row in arm["rows"] if row["status"] == "not_processed"]
+        assert {row["record_id"] for row in unprocessed} == set(ordered[1:])
+        assert all(row["reason"] == "engine_call_cap" for row in unprocessed)
+        assert sum(
+            count for status, count in arm["denominator"].items() if status != "requested"
+        ) == 4
     assert result["arms"]["similarity"]["denominator"]["evaluated"] == 3
+    assert (
+        result["arms"]["similarity"]["worker_observations"]["worker-complete.json"][
+            "stop_reason"
+        ]
+        == "order_exhausted"
+    )
+    # The worker can observe its deadline and exit before the parent marks the
+    # arm budget exhausted. Preserve that observed reason for ordered skips.
+    worker_path = output / "engine/worker-complete.json"
+    worker_bytes = worker_path.read_bytes()
+    try:
+        worker = comparison.read(worker_path)
+        worker["stop_reason"] = "deadline"
+        worker_path.write_text(comparison.canonical(worker))
+        frozen = comparison.read(output / "frozen.json")["payload"]
+        replay = comparison._arm_summary(
+            output / "engine", frozen, result["binding"], result["arms"]["engine"]["cost"]
+        )
+        assert all(
+            row["reason"] == "deadline"
+            for row in replay["rows"]
+            if row["status"] == "not_processed"
+        )
+    finally:
+        worker_path.write_bytes(worker_bytes)
 
 
 def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
@@ -272,6 +380,12 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
     comparison.publish(
         directory / "similarity" / (comparison.sha("a") + ".row.json"),
         {"payload": retained, "sha256": comparison.sha(retained)},
+    )
+    comparison.publish(
+        directory / "similarity/priority.json",
+        {"binding": binding, "arm": "similarity", "order": list("abcd"),
+         "predictions": dict.fromkeys("abcd", 1.0), "setup_cost": {},
+         "evaluation_labels_read": 0},
     )
     with (directory / "similarity/worker.lock").open("a") as lease:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -383,10 +497,32 @@ def test_native_shaped_synthetic_intake_preserves_roles_and_reuses_actual_traine
         "path": str(frozen_fit_path),
         "sha256": hashlib.sha256(frozen_fit_path.read_bytes()).hexdigest(),
     }
-    native_fixture.build(
-        source, native_fixture.capture(source, "evaluation", frozen_fit), "evaluation"
+    development_ids = sorted(a["activity_id"] for a in source["plan"]["assignments"]
+                             if a["role"] == "development_test")
+    assert len(development_ids) >= 4
+
+    def censor_synthetic_outcomes(response):
+        for activity in response["activities"]:
+            if activity["activity_id"] in development_ids[:4]:
+                position = development_ids.index(activity["activity_id"])
+                relation = (">", ">=", "<", ">")[position]
+                published = "999.999" if position == 3 else "1000"
+                activity.update(value=published, standard_value="1000",
+                                relation=relation, standard_relation=relation)
+
+    evaluation_capture = native_fixture.rewrite_capture_response(
+        native_fixture.capture(source, "evaluation", frozen_fit), censor_synthetic_outcomes
     )
+    native_fixture.build(source, evaluation_capture, "evaluation")
     eval_dir = source["root"] / "evaluation-intake"
+    evaluated_records = [json.loads(line) for line in (eval_dir / "records.jsonl").read_text().splitlines()]
+    by_activity = {r["activity_id"]: r for r in evaluated_records}
+    for activity_id in development_ids[:4]:
+        row = by_activity[activity_id]
+        assert row["eligible_for_point_model"] is False
+        assert row["eligible_for_threshold_classification"] is True
+        assert row["threshold_classification_issues"] == []
+        assert row["observation"]["source_activity"]["relation"] in {">", ">=", "<"}
     result_ref = {
         "path": str(run_dir / "comparison.json"),
         "sha256": hashlib.sha256(
@@ -404,7 +540,15 @@ def test_native_shaped_synthetic_intake_preserves_roles_and_reuses_actual_traine
         hashlib.sha256((eval_dir / "summary.json").read_bytes()).hexdigest(),
         source["root"] / "native-metrics.json",
     )
-    assert evaluated["requested"] == len(pool) and evaluated["known"] == len(pool)
+    assert evaluated["requested"] == len(pool) and evaluated["known"] == len(pool) - 2
+    assert evaluated["unknown"] == 2
+    assert evaluated["classification_basis_counts"] == {
+        "censored_bound_overlaps_threshold": 1,
+        "exact_point": len(pool) - 4,
+        "left_censored_bound_proves_active": 1,
+        "right_censored_bound_proves_inactive": 1,
+        "source_bound_not_jointly_proven": 1,
+    }
     assert sum(
         item["similarity"]["requested"]
         for item in evaluated["metrics_by_assay"].values()
