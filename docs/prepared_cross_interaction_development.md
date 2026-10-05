@@ -49,7 +49,8 @@ print every coordinate with three decimal places in nm. The refined file must
 retain the exact title, count, atom identity/order fields and box line, print
 four to twelve decimal places in nm, and put every coordinate component within
 an inclusive 0.0005 nm distance of its original value. Standard adjacent
-fixed-width 8.3 and 15.10 GRO coordinate fields are accepted. The reader
+fixed-width 8.3 original fields and (n+5).n refined fields for n=4..12
+are accepted (including 15.10). Whitespace-separated coordinates remain accepted. The reader
 checks every source site, including excluded and explicitly omitted sites, then
 evaluates the refined coordinates.
 Both coordinate files receive postflight hash checks and distinct provenance.

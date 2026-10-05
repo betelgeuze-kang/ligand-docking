@@ -26,21 +26,28 @@ from betelgeuze_engine_v2.molecular.models import element_for_atomic_number
 SCHEMA = "compiled_gromacs_cross_particles_v1"
 SCHEMA_V2 = "compiled_gromacs_cross_particles_v2"
 COMPILED_SCHEMAS = {SCHEMA, SCHEMA_V2}
+# Standard n-decimal GRO coordinate fields have width n + 5.
+_REFINED_GRO_WIDTHS = tuple(range(9, 18))
 _GLOBAL = {"defaults", "atomtypes", "system", "molecules"}
 _MOLECULE = {"moleculetype", "atoms", "bonds", "pairs", "angles", "dihedrals"}
 
 
-def _gro_coordinate_tokens(line: str, width: int, label: str) -> list[str]:
+def _gro_coordinate_tokens(line: str, width: int | tuple[int, ...], label: str) -> list[str]:
     """Read three coordinates, including adjacent full-width GRO fields."""
     fields = line[20:]
     tokens = fields.split()
-    if len(tokens) != 3 and len(fields) == 3 * width:
-        tokens = [fields[index:index + width].strip() for index in range(0, len(fields), width)]
+    if len(tokens) != 3:
+        widths = (width,) if isinstance(width, int) else width
+        for candidate_width in widths:
+            if len(fields) == 3 * candidate_width:
+                tokens = [fields[index:index + candidate_width].strip()
+                          for index in range(0, len(fields), candidate_width)]
+                break
     _require(len(tokens) == 3 and all(tokens), f"{label}: exactly three GRO coordinates required")
     return tokens
 
 
-def _gro_with_fixed_width(raw: bytes, label: str, width: int):
+def _gro_with_fixed_width(raw: bytes, label: str, width: int | tuple[int, ...]):
     """Normalize only coordinate spacing before shared GRO numeric validation."""
     lines = raw.decode("utf-8").splitlines()
     _require(len(lines) >= 4, f"{label}: truncated GRO")
@@ -63,7 +70,7 @@ def _coordinate_refinement(original: bytes, refined: bytes, count: int) -> dict:
     for first, second in zip(before[2:-1], after[2:-1]):
         _require(first[:20] == second[:20], "coordinate refinement atom identity or order mismatch")
         old = _gro_coordinate_tokens(first, 8, "original coordinate refinement")
-        new = _gro_coordinate_tokens(second, 15, "refined coordinate refinement")
+        new = _gro_coordinate_tokens(second, _REFINED_GRO_WIDTHS, "refined coordinate refinement")
         for a, b in zip(old, new):
             _require(re.fullmatch(r"-?[0-9]+\.[0-9]{3}", a) is not None,
                      "coordinate refinement requires three-decimal original GRO coordinates")
@@ -231,7 +238,7 @@ def load_compiled_gromacs_cross_particles(request):
     refinement = None
     if schema == SCHEMA_V2:
         refined_gro, refined_box = _gro_with_fixed_width(raw["refined_coordinates"],
-                                                          "refined compiled coordinates", 15)
+                                                          "refined compiled coordinates", _REFINED_GRO_WIDTHS)
         refinement = _coordinate_refinement(raw["coordinates"], raw["refined_coordinates"], len(gro))
         _require(box == refined_box, "coordinate refinement box mismatch")
         gro = refined_gro

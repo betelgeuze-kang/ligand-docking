@@ -342,3 +342,96 @@ def test_refinement_both_half_step_endpoints_remain_unverified(tmp_path, value):
     assert not evidence["chemical_state_identity_verified"]
     assert not evidence["eligible_for_same_state_assay_join"]
     assert not evidence["source_full_simulation_hamiltonian_reproduced"]
+
+
+def _negative_fixed_width_refinement(tmp_path, decimals, *, spaced=False):
+    request = _refined_request(tmp_path, dummy=True)
+    shifts = (-123.456, -234.567, -345.678)
+    for field, precision in (("coordinates", 3), ("refined_coordinates", decimals)):
+        path = Path(request[field]["path"])
+        lines = path.read_text().splitlines()
+        for index in range(2, len(lines) - 1):
+            line = lines[index]
+            values = [float(value) + shift for value, shift in zip(line[20:].split(), shifts)]
+            fields = [f"{value:{precision + 5}.{precision}f}" for value in values]
+            assert all(len(value) == precision + 5 for value in fields)
+            lines[index] = line[:20] + (" ".join(fields) if spaced else "".join(fields))
+            assert len(lines[index][20:].split()) == (3 if spaced else 1)
+        path.write_text("\n".join(lines) + "\n")
+        request[field]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return request
+
+
+@pytest.mark.parametrize("decimals", range(4, 13))
+@pytest.mark.parametrize("spaced", [False, True])
+def test_every_refined_gro_precision_drives_energy_and_forces(tmp_path, decimals, spaced):
+    request = _negative_fixed_width_refinement(tmp_path, decimals, spaced=spaced)
+    receptor, ligand, rp, lp, evidence = load_compiled_gromacs_cross_particles(request)
+    assert receptor.coordinates[0, 0].tolist() == pytest.approx([-1234.56, -2345.67, -3456.78])
+    assert receptor.coordinates[0, 1].tolist() == pytest.approx([-1233.456, -2345.67, -3456.78])
+    assert ligand.coordinates[0, 0].tolist() == pytest.approx([-1230.563, -2345.67, -3456.78])
+    observation = evidence["coordinate_refinement_observation"]
+    assert observation["source_site_count"] == 6  # Includes water and omitted virtual site.
+    assert observation["changed_coordinate_component_count"] == 2
+    assert observation["max_component_delta_angstrom"] == pytest.approx(.004)
+    assert evidence["source_hashes_postflight_verified"]
+    assert not evidence["eligible_for_same_state_assay_join"]
+    assert not observation["source_coordinate_origin_verified"]
+    assert not observation["exact_original_rounding_reconstruction_verified"]
+    assert receptor.provenance.parent_sha256 == tuple(
+        request[field]["sha256"] for field in ("topology", "coordinates", "refined_coordinates"))
+    evaluation = {"pocket_center_angstrom": [-1230.56, -2345.67, -3456.78],
+                  "pocket_radius_angstrom": 5., "cutoff_angstrom": 10.,
+                  "switch_start_angstrom": 8., "dielectric": 1.,
+                  "screening_kappa_per_angstrom": 0.}
+    result = evaluate_request({"schema_version": "prepared_cross_interaction_request_v1", "cases": [
+        {"case_id": "negative-precise", "prepared_input": request, "evaluation": evaluation}]})
+    row = result["rows"][0]
+    assert row["status"] == "evaluated"
+    from tests.unit.test_v2_prepared_cross_interaction import _assert_oracle
+    _assert_oracle(row["result"], (receptor, ligand, rp, lp), dielectric=1., kappa=0.)
+
+
+@pytest.mark.parametrize("decimals", range(4, 13))
+@pytest.mark.parametrize("atom_name", ["C1", "O1", "AT1"])
+def test_variable_width_refinement_still_bounds_selected_excluded_omitted_sites(tmp_path, decimals, atom_name):
+    request = _negative_fixed_width_refinement(tmp_path, decimals)
+    path = Path(request["refined_coordinates"]["path"])
+    lines = path.read_text().splitlines()
+    index = next(index for index, line in enumerate(lines) if line[10:15].strip() == atom_name)
+    width = decimals + 5
+    value = float(lines[index][20:20 + width]) + .0006
+    lines[index] = lines[index][:20] + f"{value:{width}.{decimals}f}" + lines[index][20 + width:]
+    path.write_text("\n".join(lines) + "\n")
+    request["refined_coordinates"]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    with pytest.raises(ValueError, match="half-step bound"):
+        load_compiled_gromacs_cross_particles(request)
+
+
+@pytest.mark.parametrize("decimals", range(4, 13))
+@pytest.mark.parametrize("defect", ["velocity", "short_field", "unequal_fields", "nonfinite"])
+def test_variable_width_refinement_rejects_malformed_atom_records(tmp_path, decimals, defect):
+    request = _negative_fixed_width_refinement(tmp_path, decimals)
+    path = Path(request["refined_coordinates"]["path"])
+    lines = path.read_text().splitlines()
+    width = decimals + 5
+    fields = [lines[2][20 + i * width:20 + (i + 1) * width] for i in range(3)]
+    if defect == "velocity":
+        lines[2] += " 0.1000 0.1000 0.1000"
+    elif defect == "short_field":
+        lines[2] = lines[2][:-1]
+    elif defect == "unequal_fields":
+        lines[2] = lines[2][:20] + fields[0] + " " + fields[1] + fields[2][1:]
+    else:
+        lines[2] = lines[2][:20] + "nan".rjust(width) + "".join(fields[1:])
+    path.write_text("\n".join(lines) + "\n")
+    request["refined_coordinates"]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    with pytest.raises(ValueError):
+        load_compiled_gromacs_cross_particles(request)
+
+
+@pytest.mark.parametrize("decimals", [3, 13])
+def test_adjacent_refined_precision_outside_profile_still_rejected(tmp_path, decimals):
+    request = _negative_fixed_width_refinement(tmp_path, decimals)
+    with pytest.raises(ValueError):
+        load_compiled_gromacs_cross_particles(request)
