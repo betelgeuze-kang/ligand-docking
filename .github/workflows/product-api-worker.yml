@@ -63,6 +63,8 @@ on:
       - "tests/unit/test_build_self_hosted_license_distribution_audit.py"
       - "tests/unit/test_build_refine_tier_public_benchmark_readiness.py"
       - "tests/unit/test_apply_refine_tier_public_benchmark_work_order.py"
+      - "tests/support/**"
+      - "tests/unit/test_shared_test_support.py"
       - "tests/unit/test_api_job_store.py"
       - "tests/unit/test_api_goal_import.py"
       - "tests/unit/test_api_casp17_import.py"
@@ -148,6 +150,11 @@ jobs:
           python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_github_workflow_trust_boundaries.py
           tests/unit/test_github_action_sha_pins.py
+
+      - name: Run shared API test support contracts
+        run: >-
+          python -m pytest --confcutdir=tests/unit -q
+          tests/unit/test_shared_test_support.py
 
       - name: Run scientific input dispatch enforcement contracts
         shell: bash
