@@ -137,6 +137,11 @@ def test_four_real_cpu_arms_failure_denominator_and_resume(tmp_path):
             name,
             (output / name / "worker.log").read_text(),
         )
+        assert arm["cost"]["receipt_version"] == comparison.RECEIPT_VERSION
+        terminal = arm["worker_observations"]["worker-complete.json"]
+        assert terminal["receipt_version"] == comparison.RECEIPT_VERSION
+        assert terminal["stop_reason"] == "order_exhausted"
+        assert terminal["committed_rows"] == (4 if name == "engine" else 3)
         assert arm["denominator"]["requested"] == 4
         assert set(r["record_id"] for r in arm["rows"]) == set("abcd")
         assert (
@@ -330,6 +335,7 @@ def test_engine_call_cap_keeps_failures_and_remaining_denominator(tmp_path):
             ]
             == 1
         )
+        assert result["arms"][name]["worker_observations"]["worker-complete.json"]["stop_reason"] == "engine_call_cap"
         assert result["arms"][name]["denominator"]["requested"] == 4
     assert result["arms"]["similarity"]["denominator"]["evaluated"] == 3
 
@@ -345,12 +351,15 @@ def test_interrupted_attempt_forfeits_budget_and_does_not_rerun(tmp_path):
     )
     for arm in comparison.ARMS:
         (directory / arm).mkdir()
+        deadline = time.monotonic() - 1
         comparison.publish(
             directory / arm / "attempt.json",
             {
+                "receipt_version": comparison.RECEIPT_VERSION,
+                "arm": arm,
                 "binding": binding,
-                "started_monotonic": time.monotonic() - 20,
-                "deadline": time.monotonic() - 1,
+                "started_monotonic": deadline - protocol["budget_seconds_per_arm"],
+                "deadline": deadline,
             },
         )
     order, predictions, setup = comparison._priority(
@@ -961,3 +970,32 @@ def test_v4_replay_uses_component_weights_across_assays(
     priority["setup_cost"]["model_reference"] = comparison.file_ref(payload_path)
     with pytest.raises(ValueError, match="priority_model_fit_mismatch"):
         comparison._replayed_priority_predictions(frozen, "ai_engine", priority)
+
+
+def test_zero_engine_call_cap_remains_rejected(tmp_path):
+    with pytest.raises(ValueError, match="invalid_comparison_count_budget"):
+        comparison.freeze(_protocol(tmp_path, calls=0))
+
+
+def test_completed_run_rejects_resealed_missing_terminal_reason(tmp_path):
+    protocol = _protocol(tmp_path / "input")
+    output = tmp_path / "run"
+    result = comparison.run(protocol, output)
+    terminal_path = output / "engine/worker-complete.json"
+    terminal = comparison.read(terminal_path)
+    terminal.pop("stop_reason")
+    terminal_path.write_text(comparison.canonical(terminal) + "\n")
+    result["arms"]["engine"]["worker_observations"]["worker-complete.json"] = terminal
+    (output / "comparison.json").write_text(comparison.canonical(result) + "\n")
+    with pytest.raises(ValueError, match="invalid_worker_completion_receipt"):
+        comparison.run(protocol, output, resume=True)
+
+
+def test_completed_run_cannot_downgrade_receipt_version(tmp_path):
+    protocol = _protocol(tmp_path / "input")
+    output = tmp_path / "run"
+    result = comparison.run(protocol, output)
+    result.pop("execution_receipt_version")
+    (output / "comparison.json").write_text(comparison.canonical(result) + "\n")
+    with pytest.raises(ValueError, match="unsupported_execution_receipt_version"):
+        comparison.run(protocol, output, resume=True)
