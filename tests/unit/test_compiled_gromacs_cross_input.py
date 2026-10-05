@@ -5,6 +5,7 @@ import hashlib
 import pytest
 
 from betelgeuze_engine.product.compiled_gromacs_cross_input import SCHEMA, load_compiled_gromacs_cross_particles
+from betelgeuze_engine.product.prepared_source_geometry import observe_prepared_source_geometry
 from tools.product.score_prepared_cross_interactions import evaluate_request
 
 
@@ -88,10 +89,65 @@ def test_complete_projection_keeps_sources_zeros_and_omissions(tmp_path, dummy):
     assert rp[1]["epsilon_kcal_per_mol"] == lp[1]["charge_e"] == 0
     assert evidence["site_accounting"] == {"requested_source_sites": 6 if dummy else 5, "selected_physical_sites": 4, "omitted_source_sites": 2 if dummy else 1}
     assert evidence["receptor_source_bond_adjacency"] == evidence["ligand_source_bond_adjacency"] == [[0, 1]]
+    assert evidence["selected_molecule_bond_section_presence"] == {
+        "receptor": {"source_molecule": "REC", "present": True},
+        "ligand": {"source_molecule": "LIG", "present": True},
+    }
+    charges = evidence["selected_source_partial_charge_observation"]
+    assert charges["receptor"]["selected_particle_count"] == 2
+    assert charges["ligand"]["selected_particle_count"] == 2
+    assert charges["receptor"]["source_partial_charge_sum_e"] == pytest.approx(.3)
+    assert charges["ligand"]["source_partial_charge_sum_e"] == pytest.approx(-.3)
+    assert not charges["receptor"]["formal_charge_balance_assessed"]
+    assert not charges["ligand"]["formal_charge_balance_assessed"]
+    assert "not formal charge" in evidence["partial_charge_observation_scope"]
     assert not receptor.bonds and not ligand.bonds
     assert not evidence["chemical_state_identity_verified"] and not evidence["eligible_for_same_state_assay_join"]
     assert receptor.atoms[0].metadata["formal_charge_observation"] is None
     assert evidence["source_hashes_postflight_verified"]
+
+
+@pytest.mark.parametrize("section,present", [("[ bonds ]\n", True), ("", False)])
+def test_selected_bond_header_presence_distinguishes_empty_from_missing(tmp_path, section, present):
+    request = _request(tmp_path)
+    _edit(request, "topology", "[ bonds ]\n1 2 1 .1 100\n\n[ moleculetype ]\nWATER",
+          section + "\n[ moleculetype ]\nWATER")
+    _edit(request, "coordinates", "1REC     H1    2   0.110", "1REC     H1    2   0.060")
+    receptor, ligand, _, _, evidence = load_compiled_gromacs_cross_particles(request)
+    assert evidence["selected_molecule_bond_section_presence"]["receptor"] == {
+        "source_molecule": "REC", "present": present}
+    assert evidence["receptor_source_bond_adjacency"] == []
+    observation = observe_prepared_source_geometry(receptor, ligand, evidence)
+    assert observation["status"] == "observed"
+    group = observation["groups"]["receptor"]
+    assert group["direct_bond_table_status"] == (
+        "present_in_all_source_molecules_not_chemical_completeness" if present
+        else "missing_in_one_or_more_source_molecules")
+    assert group["pair_count_within_radius"] == 1
+    assert group["direct_bond_pair_count"] == (0 if present else None)
+    assert group["non_direct_bond_pair_count"] == (1 if present else None)
+    if present:
+        assert group["supplied_direct_bond_lengths"]["bond_count"] == 0
+    else:
+        assert group["supplied_direct_bond_lengths"] is None
+    assert observation["groups"]["ligand"]["supplied_direct_bond_lengths"]["bond_count"] == 1
+
+
+def test_compiled_bond_section_provenance_must_match_selected_source(tmp_path):
+    request = _request(tmp_path)
+    receptor, ligand, _, _, evidence = load_compiled_gromacs_cross_particles(request)
+    evidence["selected_molecule_bond_section_presence"]["receptor"]["source_molecule"] = "LIG"
+    group = observe_prepared_source_geometry(receptor, ligand, evidence)["groups"]["receptor"]
+    assert group["direct_bond_table_status"] == "source_bond_section_presence_unavailable"
+    assert group["supplied_direct_bond_lengths"] is None
+
+
+@pytest.mark.parametrize("tail", ["nan 100", ".1 inf", ".1", ".1 100 extra"])
+def test_selected_explicit_bond_parameters_require_finite_complete_pair(tmp_path, tail):
+    request = _request(tmp_path)
+    _edit(request, "topology", "1 2 1 .1 100", f"1 2 1 {tail}")
+    with pytest.raises(ValueError, match="function-1 bond|explicit function-1 bond parameter"):
+        load_compiled_gromacs_cross_particles(request)
 
 
 @pytest.mark.parametrize("defect", ["duplicate_type", "duplicate_molecule", "selected_conditional", "inventory_conditional", "nonfinite_charge", "nonfinite_environment", "name", "residue_partition", "selected_copy_count", "missing_atomtype"])
@@ -150,6 +206,10 @@ def test_actual_consumer_dispatch_retains_failed_case_and_same_kernel(tmp_path):
     assert result["denominator"] == {"requested": 2, "evaluated": 1, "failed": 1, "skipped": 0}
     q = result["rows"][0]["result"]["quantities"]
     assert q["affinity"] is q["strain"] is q["solvation"] is q["residual"] is None
+    geometry = result["rows"][0]["source_geometry_observation"]
+    assert geometry["status"] == "observed"
+    assert geometry["groups"]["receptor"]["supplied_direct_bond_lengths"]["bond_count"] == 1
+    assert geometry["groups"]["ligand"]["supplied_direct_bond_lengths"]["bond_count"] == 1
     assert "SHA-256 mismatch" in result["rows"][1]["reason"]
     from tests.unit.test_v2_prepared_cross_interaction import _assert_oracle
     receptor, ligand, rp, lp, _ = load_compiled_gromacs_cross_particles(good)
