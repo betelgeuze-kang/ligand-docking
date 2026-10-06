@@ -10,6 +10,12 @@ on:
       - 'tools/product/train_public*selector.py'
       - 'tools/product/public_assay*.py'
       - 'tools/product/verify_prepared_cross_numerics.py'
+      - 'betelgeuze_product/comparison_receipts.py'
+      - 'betelgeuze_product/prepared_cross_numeric_reference.py'
+      - 'tests/unit/test_installed_comparison_receipts.py'
+      - 'tests/unit/test_installed_comparison_contract.py'
+      - 'docs/engine_v2_installed_synthetic_receipt.md'
+      - 'pyproject.toml'
       - 'betelgeuze_engine/product/prepared*.py'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/censored_rank_metrics.py'
@@ -36,6 +42,12 @@ on:
       - 'tools/product/train_public*selector.py'
       - 'tools/product/public_assay*.py'
       - 'tools/product/verify_prepared_cross_numerics.py'
+      - 'betelgeuze_product/comparison_receipts.py'
+      - 'betelgeuze_product/prepared_cross_numeric_reference.py'
+      - 'tests/unit/test_installed_comparison_receipts.py'
+      - 'tests/unit/test_installed_comparison_contract.py'
+      - 'docs/engine_v2_installed_synthetic_receipt.md'
+      - 'pyproject.toml'
       - 'betelgeuze_engine/product/prepared*.py'
       - 'betelgeuze_engine/product/v2_cross_interaction.py'
       - 'betelgeuze_engine/product/censored_rank_metrics.py'
@@ -87,7 +99,7 @@ jobs:
           python - <<'PY'
           import hashlib, json, pathlib, subprocess, sys
           root = pathlib.Path.cwd()
-          files = sorted(list(root.glob('tools/product/*.py')) + list(root.glob('tests/unit/test_prepared*py')) + [root / 'betelgeuze_engine/product/censored_rank_metrics.py', root / 'tests/unit/test_censored_rank_metrics.py', root / 'tests/unit/test_candidate_report_serialization.py', root / 'tests/unit/test_candidate_execution_receipts.py'])
+          files = sorted(list(root.glob('tools/product/*.py')) + list(root.glob('tests/unit/test_prepared*py')) + [root / 'betelgeuze_engine/product/censored_rank_metrics.py', root / 'tests/unit/test_censored_rank_metrics.py', root / 'tests/unit/test_candidate_report_serialization.py', root / 'tests/unit/test_candidate_execution_receipts.py', root / 'betelgeuze_product/comparison_receipts.py', root / 'betelgeuze_product/prepared_cross_numeric_reference.py', root / 'tests/unit/test_installed_comparison_receipts.py', root / 'tests/unit/test_installed_comparison_contract.py'])
           data = {'head': subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
                   'python':sys.version, 'source_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
                   'scope':'synthetic CPU arithmetic and policy contracts; no public downloads or scientific qualification'}
@@ -95,8 +107,28 @@ jobs:
           PY
       - name: Lint and test
         run: |
-          python -m ruff check --isolated --no-cache tools/product/comparison_morgan_features.py betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_prepared_cross_force_diagnostic.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py --junitxml=candidate-comparison-junit.xml
+          python -m ruff check --isolated --no-cache tools/product/comparison_morgan_features.py betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_prepared_cross_force_diagnostic.py betelgeuze_product/comparison_receipts.py betelgeuze_product/prepared_cross_numeric_reference.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_comparison_contract.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_comparison_contract.py --junitxml=candidate-comparison-junit.xml
+      - name: Build wheel and verify synthetic receipt outside checkout
+        run: |
+          python -m pip install setuptools==75.8.2 wheel==0.46.3
+          python -m pip wheel --no-deps --no-build-isolation . -w "$RUNNER_TEMP/comparison-wheels"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from tests.unit.test_prepared_candidate_comparison import _protocol, comparison
+          root = Path(os.environ['RUNNER_TEMP']) / 'installed-comparison-fixture'
+          comparison.run(_protocol(root / 'inputs'), root / 'legacy')
+          PY
+          python -m venv "$RUNNER_TEMP/comparison-installed"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip install -r requirements-package.txt
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip install --no-deps "$RUNNER_TEMP"/comparison-wheels/*.whl
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.comparison_receipts export-synthetic --source-run "$RUNNER_TEMP/installed-comparison-fixture/legacy" --output-dir "$RUNNER_TEMP/installed-comparison-fixture/portable"
+          rm -rf "$RUNNER_TEMP/installed-comparison-fixture/inputs" "$RUNNER_TEMP/installed-comparison-fixture/legacy"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.comparison_receipts verify-run --run-dir "$RUNNER_TEMP/installed-comparison-fixture/portable"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -c 'import sys, betelgeuze_product.comparison_receipts as c; assert "site-packages" in c.__file__; assert not any(x == "tools" or x.startswith("tools.") for x in sys.modules)'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -105,6 +137,11 @@ jobs:
             betelgeuze_engine/product/censored_rank_metrics.py
             tests/unit/test_censored_rank_metrics.py
             docs/censored_rank_metrics.md
+            betelgeuze_product/comparison_receipts.py
+            betelgeuze_product/prepared_cross_numeric_reference.py
+            tests/unit/test_installed_comparison_receipts.py
+            tests/unit/test_installed_comparison_contract.py
+            docs/engine_v2_installed_synthetic_receipt.md
             candidate-comparison-source.json
             candidate-comparison-junit.xml
             tools/product/compare_prepared_candidate_policies.py
