@@ -10,6 +10,10 @@ on:
       - 'tools/product/train_public*selector.py'
       - 'tools/product/public_assay*.py'
       - 'tools/product/verify_prepared_cross_numerics.py'
+      - 'betelgeuze_product/installed_synthetic_comparison.py'
+      - 'tests/unit/test_installed_synthetic_comparison.py'
+      - 'tests/unit/test_installed_synthetic_execution_contract.py'
+      - 'docs/engine_v2_installed_synthetic_run.md'
       - 'betelgeuze_product/comparison_receipts.py'
       - 'betelgeuze_product/prepared_cross_numeric_reference.py'
       - 'tests/unit/test_installed_comparison_receipts.py'
@@ -42,6 +46,10 @@ on:
       - 'tools/product/train_public*selector.py'
       - 'tools/product/public_assay*.py'
       - 'tools/product/verify_prepared_cross_numerics.py'
+      - 'betelgeuze_product/installed_synthetic_comparison.py'
+      - 'tests/unit/test_installed_synthetic_comparison.py'
+      - 'tests/unit/test_installed_synthetic_execution_contract.py'
+      - 'docs/engine_v2_installed_synthetic_run.md'
       - 'betelgeuze_product/comparison_receipts.py'
       - 'betelgeuze_product/prepared_cross_numeric_reference.py'
       - 'tests/unit/test_installed_comparison_receipts.py'
@@ -99,7 +107,7 @@ jobs:
           python - <<'PY'
           import hashlib, json, pathlib, subprocess, sys
           root = pathlib.Path.cwd()
-          files = sorted(list(root.glob('tools/product/*.py')) + list(root.glob('tests/unit/test_prepared*py')) + [root / 'betelgeuze_engine/product/censored_rank_metrics.py', root / 'tests/unit/test_censored_rank_metrics.py', root / 'tests/unit/test_candidate_report_serialization.py', root / 'tests/unit/test_candidate_execution_receipts.py', root / 'betelgeuze_product/comparison_receipts.py', root / 'betelgeuze_product/prepared_cross_numeric_reference.py', root / 'tests/unit/test_installed_comparison_receipts.py', root / 'tests/unit/test_installed_comparison_contract.py'])
+          files = sorted(list(root.glob('tools/product/*.py')) + list(root.glob('tests/unit/test_prepared*py')) + [root / 'betelgeuze_engine/product/censored_rank_metrics.py', root / 'tests/unit/test_censored_rank_metrics.py', root / 'tests/unit/test_candidate_report_serialization.py', root / 'tests/unit/test_candidate_execution_receipts.py', root / 'betelgeuze_product/comparison_receipts.py', root / 'betelgeuze_product/prepared_cross_numeric_reference.py', root / 'tests/unit/test_installed_comparison_receipts.py', root / 'tests/unit/test_installed_comparison_contract.py', root / 'betelgeuze_product/installed_synthetic_comparison.py', root / 'tests/unit/test_installed_synthetic_comparison.py', root / 'tests/unit/test_installed_synthetic_execution_contract.py'])
           data = {'head': subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
                   'python':sys.version, 'source_sha256':{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
                   'scope':'synthetic CPU arithmetic and policy contracts; no public downloads or scientific qualification'}
@@ -107,8 +115,8 @@ jobs:
           PY
       - name: Lint and test
         run: |
-          python -m ruff check --isolated --no-cache tools/product/comparison_morgan_features.py betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_prepared_cross_force_diagnostic.py betelgeuze_product/comparison_receipts.py betelgeuze_product/prepared_cross_numeric_reference.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_comparison_contract.py
-          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_comparison_contract.py --junitxml=candidate-comparison-junit.xml
+          python -m ruff check --isolated --no-cache tools/product/comparison_morgan_features.py betelgeuze_engine/product/censored_rank_metrics.py tests/unit/test_censored_rank_metrics.py tools/product/compare_prepared_candidate_policies.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_prepared_cross_force_diagnostic.py betelgeuze_product/comparison_receipts.py betelgeuze_product/prepared_cross_numeric_reference.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_comparison_contract.py betelgeuze_product/installed_synthetic_comparison.py tests/unit/test_installed_synthetic_comparison.py tests/unit/test_installed_synthetic_execution_contract.py
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_censored_rank_metrics.py tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_report_serialization.py tests/unit/test_candidate_execution_receipts.py tests/unit/test_github_workflow_trust_boundaries.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py tests/unit/test_public_chembl_staged_intake.py tests/unit/test_installed_comparison_receipts.py tests/unit/test_installed_comparison_contract.py tests/unit/test_installed_synthetic_execution_contract.py --junitxml=candidate-comparison-junit.xml
       - name: Build wheel and verify synthetic receipt outside checkout
         run: |
           python -m pip install setuptools==75.8.2 wheel==0.46.3
@@ -129,6 +137,15 @@ jobs:
           rm -rf "$RUNNER_TEMP/installed-comparison-fixture/inputs" "$RUNNER_TEMP/installed-comparison-fixture/legacy"
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -m betelgeuze_product.comparison_receipts verify-run --run-dir "$RUNNER_TEMP/installed-comparison-fixture/portable"
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -c 'import sys, betelgeuze_product.comparison_receipts as c; assert "site-packages" in c.__file__; assert not any(x == "tools" or x.startswith("tools.") for x in sys.modules)'
+      - name: Run isolated installed synthetic run, verify, resume and tamper contracts
+        run: |
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip install pytest==8.3.5 scipy==1.15.3 scikit-learn==1.7.2 rdkit==2026.3.6
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/comparison-installed/bin/python" -m pip check
+          cp tests/unit/test_installed_synthetic_comparison.py "$RUNNER_TEMP/test_installed_synthetic_comparison.py"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -m pytest --import-mode=importlib --rootdir="$RUNNER_TEMP" -c /dev/null --noconftest -p no:cacheprovider -W error -q "$RUNNER_TEMP/test_installed_synthetic_comparison.py" --junitxml="$RUNNER_TEMP/installed-synthetic-junit.xml"
+          "$RUNNER_TEMP/comparison-installed/bin/python" -I -c 'import importlib.util, sys, betelgeuze_product.installed_synthetic_comparison as c; assert "site-packages" in c.__file__; assert importlib.util.find_spec("tools") is None; assert not any(x == "tools" or x.startswith("tools.") for x in sys.modules)'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -137,6 +154,11 @@ jobs:
             betelgeuze_engine/product/censored_rank_metrics.py
             tests/unit/test_censored_rank_metrics.py
             docs/censored_rank_metrics.md
+            betelgeuze_product/installed_synthetic_comparison.py
+            tests/unit/test_installed_synthetic_comparison.py
+            tests/unit/test_installed_synthetic_execution_contract.py
+            docs/engine_v2_installed_synthetic_run.md
+            ${{ runner.temp }}/installed-synthetic-junit.xml
             betelgeuze_product/comparison_receipts.py
             betelgeuze_product/prepared_cross_numeric_reference.py
             tests/unit/test_installed_comparison_receipts.py
