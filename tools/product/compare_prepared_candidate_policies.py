@@ -29,6 +29,7 @@ ARMS = ("similarity", "engine", "ai_engine", "similarity_engine")
 SCHEMA = "prepared_candidate_comparison_protocol_v1"
 ORDERED_SCHEMA = "prepared_candidate_comparison_protocol_v2"
 D3_SCHEMA = "prepared_candidate_comparison_protocol_v3"
+RECEIPT_VERSION = "prepared_candidate_execution_receipt_v1"
 MAX_BYTES = 32 * 1024 * 1024
 
 
@@ -359,6 +360,7 @@ def freeze(protocol):
     }
     runtime["comparison_selector_dependencies"] = _selector_dependency_versions()
     result = {
+        "execution_receipt_version": RECEIPT_VERSION,
         "protocol": copy.deepcopy(protocol),
         "rows": rows,
         "pool": pool,
@@ -381,6 +383,7 @@ def freeze(protocol):
         if (
             sha(previous) != prior_envelope["sha256"]
             or prior["binding"] != prior_envelope["sha256"]
+            or prior.get("execution_receipt_version") != previous.get("execution_receipt_version")
             or previous["protocol"]
             != {k: v for k, v in protocol.items() if k != "reuse_ai_from"}
             or any(
@@ -557,10 +560,41 @@ def worker(run_dir, arm, deadline):
     frozen, binding = envelope["payload"], envelope["sha256"]
     if sha(frozen) != binding:
         raise ValueError("frozen_comparison_binding_mismatch")
+    if frozen.get("execution_receipt_version") != RECEIPT_VERSION:
+        raise ValueError("unsupported_execution_receipt_version")
+    attempt = read(directory / "attempt.json")
+    _validate_attempt(attempt, frozen, binding, arm)
+    if deadline != attempt["deadline"]:
+        raise ValueError("worker_deadline_reservation_mismatch")
+    called = 0
+    committed = 0
+
+    def finish(reason):
+        publish(
+            directory / "worker-complete.json",
+            {
+                "receipt_version": RECEIPT_VERSION,
+                "arm": arm,
+                "binding": binding,
+                "stop_reason": reason,
+                "stopped_monotonic": time.monotonic(),
+                "committed_rows": committed,
+                "engine_calls": called,
+                "process_cpu_seconds": time.process_time(),
+                "process_peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+            },
+        )
+
+    if time.monotonic() >= deadline:
+        finish("deadline")
+        return
     if arm != "similarity":
         import torch
 
         torch.set_num_threads(1)
+    if time.monotonic() >= deadline:
+        finish("deadline")
+        return
     order, predictions, setup = _priority(frozen, arm, directory)
     publish(
         directory / "priority.json",
@@ -579,14 +613,20 @@ def worker(run_dir, arm, deadline):
         )
         from tools.product.verify_prepared_cross_numerics import check_report
 
-    called = 0
+    stop_reason = "order_exhausted"
+    # A deadline reached in setup takes precedence even for an empty order.
+    if time.monotonic() >= deadline:
+        finish("deadline")
+        return
     for rid in order:
         if time.monotonic() >= deadline:
+            stop_reason = "deadline"
             break
         if (
             arm != "similarity"
             and called >= frozen["protocol"]["max_engine_calls_per_arm"]
         ):
+            stop_reason = "engine_call_cap"
             break
         tick, cpu = time.perf_counter(), time.process_time()
         result = {
@@ -602,8 +642,8 @@ def worker(run_dir, arm, deadline):
             if arm == "similarity":
                 result.update(status="evaluated", score=predictions[rid], reason=None)
             elif frozen["requests"][rid] is not None and frozen["protocol"]["schema_version"] == D3_SCHEMA:
-                from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
                 called += 1
+                from betelgeuze_product.cpu_refinement_v1_2 import policy_adapter
                 report = policy_adapter.evaluate(frozen["requests"][rid])
                 summary = policy_adapter.summarize(report, request=frozen["requests"][rid])
                 file = directory / (sha(rid) + ".d3.json")
@@ -651,16 +691,10 @@ def worker(run_dir, arm, deadline):
             {"payload": result, "sha256": sha(result)},
             deadline=deadline,
         ):
+            stop_reason = "deadline"
             break
-    publish(
-        directory / "worker-complete.json",
-        {
-            "binding": binding,
-            "engine_calls": called,
-            "process_cpu_seconds": time.process_time(),
-            "process_peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-        },
-    )
+        committed += 1
+    finish(stop_reason)
 
 
 def _replayed_priority_predictions(frozen, arm, priority):
@@ -809,7 +843,107 @@ def _replayed_priority_predictions(frozen, arm, priority):
     return {rid: _number(float(value)) for rid, value in zip(valid, values)}
 
 
+def _validate_attempt(attempt, frozen, binding, arm):
+    budget = frozen["protocol"]["budget_seconds_per_arm"]
+    if (attempt.get("receipt_version") != RECEIPT_VERSION
+            or attempt.get("arm") != arm
+            or attempt.get("binding") != binding
+            or _number(attempt.get("deadline")) != (
+                _number(attempt.get("started_monotonic")) + budget)):
+        raise ValueError("invalid_attempt_receipt")
+
+
+def _validate_execution_receipts(directory, frozen, binding, completion, observations, rows):
+    """Check observed termination, never reconstruct an absent historical reason."""
+    attempt = read(directory / "attempt.json")
+    _validate_attempt(attempt, frozen, binding, directory.name)
+    budget = frozen["protocol"]["budget_seconds_per_arm"]
+    status = completion.get("status")
+    elapsed = completion.get("measured_process_wall_seconds")
+    overhead = completion.get("termination_overhead_seconds")
+    if (completion.get("receipt_version") != RECEIPT_VERSION
+            or completion.get("arm") != directory.name
+            or completion.get("binding") != binding
+            or completion.get("deadline") != attempt["deadline"]
+            or completion.get("budget_seconds") != budget
+            or status not in {"complete", "worker_failed", "budget_exhausted",
+                              "interrupted_budget_forfeited"}):
+        raise ValueError("invalid_completion_receipt")
+    if status == "interrupted_budget_forfeited":
+        if elapsed is not None or overhead is not None:
+            raise ValueError("invalid_interrupted_completion_receipt")
+    elif (_number(elapsed) < 0 or _number(overhead) != max(0.0, elapsed - budget)
+          or (status == "budget_exhausted") != (elapsed >= budget)):
+        raise ValueError("invalid_completion_timing")
+    committed = [row for row in rows if "completed_monotonic" in row]
+    if any(not attempt["started_monotonic"] <= row["completed_monotonic"] <= attempt["deadline"]
+           for row in committed):
+        raise ValueError("row_outside_reserved_budget")
+    if elapsed is not None and any(
+            row["completed_monotonic"] > attempt["started_monotonic"] + elapsed
+            for row in committed):
+        raise ValueError("row_after_process_completion")
+    cap = frozen["protocol"]["max_engine_calls_per_arm"]
+    engine_arm = directory.name != "similarity"
+    committed_calls = (sum(frozen["requests"][row["record_id"]] is not None
+                           for row in committed) if engine_arm else 0)
+    if committed_calls > cap:
+        raise ValueError("worker_engine_call_accounting_mismatch")
+    priority = observations.get("priority.json")
+    order = [] if priority is None else priority["order"]
+    processed = {row["record_id"] for row in committed}
+    if processed != set(order[:len(committed)]):
+        raise ValueError("worker_committed_prefix_mismatch")
+    if (engine_arm and committed_calls == cap and committed
+            and frozen["requests"][order[len(committed) - 1]] is None):
+        raise ValueError("committed_row_after_engine_call_cap")
+    worker = observations.get("worker-complete.json")
+    if worker is None:
+        if status == "complete":
+            raise ValueError("complete_without_worker_receipt")
+        return  # A killed/crashed worker makes no invented terminal observation.
+    reason, calls = worker.get("stop_reason"), worker.get("engine_calls")
+    stopped = _number(worker.get("stopped_monotonic"))
+    if (worker.get("receipt_version") != RECEIPT_VERSION
+            or worker.get("arm") != directory.name
+            or reason not in {"order_exhausted", "engine_call_cap", "deadline"}
+            or type(calls) is not int or not 0 <= calls <= cap
+            or type(worker.get("committed_rows")) is not int
+            or worker["committed_rows"] != len(committed)
+            or _number(worker.get("process_cpu_seconds")) < 0
+            or type(worker.get("process_peak_rss_kib")) is not int
+            or worker["process_peak_rss_kib"] < 0
+            or stopped < attempt["started_monotonic"]
+            or any(row["completed_monotonic"] > stopped for row in committed)
+            or (elapsed is not None and stopped > attempt["started_monotonic"] + elapsed)):
+        raise ValueError("invalid_worker_completion_receipt")
+    if priority is None and (reason != "deadline" or calls or committed):
+        raise ValueError("worker_completion_without_priority")
+    # A deadline can leave exactly one started calculation without a published row.
+    uncommitted_call = (engine_arm and len(committed) < len(order)
+                        and frozen["requests"][order[len(committed)]] is not None)
+    if (calls < committed_calls
+            or calls > committed_calls + int(reason == "deadline" and uncommitted_call)):
+        raise ValueError("worker_engine_call_accounting_mismatch")
+    if reason == "order_exhausted" and (priority is None or processed != set(order)):
+        raise ValueError("completed_worker_missing_ordered_row")
+    if reason == "engine_call_cap" and (
+            not engine_arm or calls != cap or len(committed) >= len(order)):
+        raise ValueError("invalid_engine_call_cap")
+    if reason == "deadline" and (
+            stopped < attempt["deadline"] or status == "complete"
+            or (order and len(committed) == len(order))):
+        raise ValueError("invalid_worker_deadline")
+
+
 def _arm_summary(directory, frozen, binding, completion):
+    version = frozen.get("execution_receipt_version")
+    if version not in (None, RECEIPT_VERSION):
+        raise ValueError("unsupported_execution_receipt_version")
+    if version is None and frozen.get("runtime", {}).get("comparison_tools", {}).get(
+            "tools/product/compare_prepared_candidate_policies.py") == hashlib.sha256(
+                Path(__file__).read_bytes()).hexdigest():
+        raise ValueError("missing_execution_receipt_version")
     observations = {}
     for name in ("priority.json", "worker-complete.json"):
         if (directory / name).exists():
@@ -870,7 +1004,9 @@ def _arm_summary(directory, frozen, binding, completion):
             "record_id": rid,
             "status": "not_processed",
             "score": None,
-            "reason": completion["status"],
+            "reason": (observations.get("worker-complete.json", {}).get("stop_reason", completion["status"])
+                       if version == RECEIPT_VERSION and completion["status"] == "complete"
+                       else completion["status"]),
         }
         if path.exists():
             wrapped = read(path)
@@ -887,6 +1023,8 @@ def _arm_summary(directory, frozen, binding, completion):
             if item.get("prediction") != priority["predictions"].get(rid):
                 raise ValueError("committed_row_prediction_mismatch")
             committed_order.append((_number(item["completed_monotonic"]), rid))
+            if version == RECEIPT_VERSION and item["completed_monotonic"] > completion["deadline"]:
+                raise ValueError("row_outside_reserved_budget")
             if item["completed_monotonic"] <= completion["deadline"]:
                 value = item
             else:
@@ -939,9 +1077,18 @@ def _arm_summary(directory, frozen, binding, completion):
             raise ValueError("D3_evaluated_row_missing_report")
         rows.append(value)
     if priority is not None:
-        observed_order = [rid for _, rid in sorted(committed_order)]
-        if observed_order != priority["order"][:len(observed_order)]:
-            raise ValueError("committed_row_priority_sequence_mismatch")
+        if version == RECEIPT_VERSION:
+            observed = {rid: tick for tick, rid in committed_order}
+            prefix = priority["order"][:len(observed)]
+            if (set(observed) != set(prefix)
+                    or [observed[rid] for rid in prefix] != sorted(observed.values())):
+                raise ValueError("committed_row_priority_sequence_mismatch")
+        else:
+            observed_order = [rid for _, rid in sorted(committed_order)]
+            if observed_order != priority["order"][:len(observed_order)]:
+                raise ValueError("committed_row_priority_sequence_mismatch")
+    if version == RECEIPT_VERSION:
+        _validate_execution_receipts(directory, frozen, binding, completion, observations, rows)
     direction = -1 if directory.name == "similarity" else 1
     ranked = sorted(
         (r for r in rows if r["status"] == "evaluated"),
@@ -983,6 +1130,8 @@ def run(protocol, output_dir, *, resume=False):
                 result = read(output_dir / "comparison.json")
                 if result["binding"] != binding:
                     raise ValueError("comparison_binding_mismatch")
+                if result.get("execution_receipt_version") != RECEIPT_VERSION:
+                    raise ValueError("unsupported_execution_receipt_version")
                 for arm in ARMS:
                     actual = _arm_summary(
                         output_dir / arm,
@@ -1007,6 +1156,8 @@ def run(protocol, output_dir, *, resume=False):
                 publish(
                     attempt,
                     {
+                        "receipt_version": RECEIPT_VERSION,
+                        "arm": arm,
                         "binding": binding,
                         "started_monotonic": tick,
                         "deadline": deadline,
@@ -1060,9 +1211,11 @@ def run(protocol, output_dir, *, resume=False):
                         _stop_child(child)
                         raise
                 elapsed = time.monotonic() - tick
-                if elapsed > protocol["budget_seconds_per_arm"]:
+                if elapsed >= protocol["budget_seconds_per_arm"]:
                     status = "budget_exhausted"
                 complete = {
+                    "receipt_version": RECEIPT_VERSION,
+                    "arm": arm,
                     "binding": binding,
                     "status": status,
                     "deadline": deadline,
@@ -1080,12 +1233,13 @@ def run(protocol, output_dir, *, resume=False):
                     except BlockingIOError as exc:
                         raise ValueError("comparison_worker_still_running") from exc
                 prior = read(attempt)
-                if prior["binding"] != binding:
-                    raise ValueError("attempt_binding_mismatch")
+                _validate_attempt(prior, frozen, binding, arm)
                 # A lost parent leaves uncertain work/cost: do not obtain a free retry.
                 publish(
                     directory / "completion.json",
                     {
+                        "receipt_version": RECEIPT_VERSION,
+                        "arm": arm,
                         "binding": binding,
                         "status": "interrupted_budget_forfeited",
                         "deadline": prior["deadline"],
@@ -1108,6 +1262,7 @@ def run(protocol, output_dir, *, resume=False):
             raise ValueError("inputs_changed_during_comparison")
         result = {
             "schema_version": "prepared_candidate_comparison_result_v1",
+            "execution_receipt_version": RECEIPT_VERSION,
             "binding": binding,
             "pool": frozen["pool"],
             "arms": arms,
@@ -1174,6 +1329,7 @@ def evaluate_synthetic(result_ref, frozen_ref, labels_ref, output):
     if (
         sha(frozen) != envelope["sha256"]
         or result["binding"] != envelope["sha256"]
+        or result.get("execution_receipt_version") != frozen.get("execution_receipt_version")
         or frozen["protocol"]["source"]["kind"] != "synthetic_constants"
     ):
         raise ValueError("synthetic_evaluation_freeze_mismatch")
@@ -1208,6 +1364,7 @@ def evaluate_native(result_ref, frozen_ref, evaluation_dir, summary_sha256, outp
     if (
         sha(frozen) != envelope["sha256"]
         or result["binding"] != envelope["sha256"]
+        or result.get("execution_receipt_version") != frozen.get("execution_receipt_version")
         or frozen["protocol"]["source"]["kind"] != "chembl_fit_intake"
         or result["pool"] != frozen["pool"]
         or set(result["arms"]) != set(ARMS)

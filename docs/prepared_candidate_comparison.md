@@ -129,3 +129,62 @@ V2 calculations on synthetic prepared inputs, a synthetic native ChEMBL intake
 through the existing trainer, pre-label role rejection, hard time/call limits,
 complete failure denominators, input mutation, live-worker leases, resume and
 post-freeze metrics. No public assay source is downloaded by these tests.
+
+
+## Versioned execution receipts and termination
+
+New frozen payloads and results bind
+`execution_receipt_version: prepared_candidate_execution_receipt_v1`.
+`attempt.json`, `completion.json`, and `worker-complete.json` carry the matching
+`receipt_version`, arm, and frozen binding. The reservation's start and deadline
+must match the frozen budget; a worker cannot replace its reserved deadline with
+a command-line value. Protocol versions, positive engine-call caps, arm order,
+score meanings, selectors, and scientific gates are unchanged. A zero call cap
+is still invalid.
+
+A worker that reaches a terminal decision records `stop_reason`,
+`stopped_monotonic`, `committed_rows`, and `engine_calls`:
+
+- `order_exhausted`: every candidate in the committed priority order has a
+  published row. Empty predictor orders are exhausted after successful setup.
+  Predictor abstentions remain in the common pool denominator
+- `engine_call_cap`: an engine arm used the cap with ordered candidates still
+  remaining. The cap is checked before examining the next prepared input, so
+  even a trailing missing-input candidate can remain unprocessed
+- `deadline`: the worker observed the reserved deadline before/during setup,
+  before a candidate, or while publishing a candidate row. A calculation may
+  consume one call without publishing its row. Its output is not promoted to an
+  evaluated candidate
+
+At each next-candidate boundary, deadline takes precedence over call cap.
+Successfully publishing the last ordered row exhausts the order even if that
+row used the final allowed call. A deadline reached during setup takes
+precedence over an empty order. Terminal-receipt publication and process
+shutdown may subsequently cross the deadline: worker reason and parent status
+are distinct observations.
+
+Parent `complete` means the worker exited within its reserved wall budget and
+left a valid terminal receipt; it does not mean every pool candidate was scored.
+`budget_exhausted` accounts for the full measured process time and termination
+overhead. A killed/crashed worker can leave no terminal receipt; neither
+`worker_failed` nor `budget_exhausted` invents its stop reason. An interrupted
+reservation keeps `interrupted_budget_forfeited` with unknown measured cost and
+no retry, even if a terminal receipt survived. All candidates and failed,
+unsupported, and not-processed rows remain visible.
+
+Summary and resume verification check the reserved budget, arm/version bindings,
+committed prefix and timestamps, call counts, terminal reason, and parent timing.
+Missing or resealed inconsistent terminal records are rejected even if the
+committed comparison summary was also rewritten. Existing selector replay,
+pose/numeric evidence checks, and source/runtime bindings still apply. Equal
+monotonic timestamps do not substitute a record-ID order for the frozen order.
+
+Historical unversioned receipts are a legacy read-only format: absent historical
+stop reasons stay absent and are never reconstructed from row counts. They are
+not silently upgraded or resealed. Executable resume still requires an exact
+fresh frozen payload including source/runtime fingerprints; this source change
+therefore does not promise resume of runs made by older code. Removing the
+version from a run bound to the current runner is rejected. These checks prove
+local consistency only, not authenticity against someone able to fabricate and
+reseal the entire input, runtime, and receipt bundle. Portable installed receipts
+and installed execution/resume remain separate work.
