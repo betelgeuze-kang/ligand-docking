@@ -58,110 +58,122 @@ class FourierInternalEvaluator:
         return digest(self.identity())
 
     def evaluate(self, system, neighbors):
-        require_system(system, 256)
-        blockers = _applicability_blockers(system, neighbors, self.parameters)
-        if blockers:
-            raise ReferencePhysicsApplicabilityError(
-                "Fourier base applicability failed: " + ",".join(blockers)
-            )
-        bonds = {tuple(sorted((r.atom_i, r.atom_j))) for r in system.bonds}
-        for row in self.parameters.periodic_impropers:
-            indices = (row.atom_i, row.atom_j, row.atom_k, row.atom_l)
-            if max(indices) >= system.atom_count or any(
-                tuple(sorted((row.star_center, i))) not in bonds
-                for i in indices
-                if i != row.star_center
-            ):
-                raise ReferencePhysicsApplicabilityError(
-                    "ordered periodic improper lacks declared bonded star"
-                )
-        base = _evaluate_validated_reference_terms(system, neighbors, self.parameters)
-        xyz = system.coordinates.detach().clone().requires_grad_(True)
-        improper = xyz.sum(dim=(1, 2)) * 0.0
-        for row in self.parameters.periodic_impropers:
-            phi = _torsion_angle(
-                xyz, system, row.atom_i, row.atom_j, row.atom_k, row.atom_l
-            )
-            improper = improper + row.amplitude_kcal_per_mol * (
-                1.0 + torch.cos(row.periodicity * phi - row.phase_radians)
-            )
-        listed_lj = xyz.sum(dim=(1, 2)) * 0.0
-        listed_qq = xyz.sum(dim=(1, 2)) * 0.0
-        for row in self.parameters.listed_pairs:
-            if max(row.atom_i, row.atom_j) >= system.atom_count:
-                raise ReferencePhysicsApplicabilityError(
-                    "listed pair index outside ligand"
-                )
-            distance = torch.linalg.vector_norm(
-                xyz[:, row.atom_i] - xyz[:, row.atom_j], dim=-1
-            )
-            if bool(
-                (
-                    distance
-                    < self.parameters.applicability_domain.minimum_pair_distance_angstrom
-                ).any()
-            ):
-                raise ReferencePhysicsApplicabilityError(
-                    "listed pair distance outside applicability"
-                )
-            ratio6 = (row.sigma_angstrom / distance).pow(6)
-            listed_lj = listed_lj + 4.0 * row.epsilon_kcal_per_mol * (
-                ratio6.square() - ratio6
-            )
-            qi = self.parameters.atom_parameters[row.atom_i].charge_e
-            qj = self.parameters.atom_parameters[row.atom_j].charge_e
-            listed_qq = (
-                listed_qq
-                + COULOMB_KCAL_ANGSTROM_PER_MOL_E2
-                * row.electrostatic_scale
-                * qi
-                * qj
-                / distance
-            )
-        extra = improper + listed_lj + listed_qq
-        extra_force = -torch.autograd.grad(extra.sum(), xyz)[0]
-        energy = base.term.energy + extra.detach()
-        forces = base.term.forces + extra_force.detach()
-        if not bool(torch.isfinite(energy).all()) or not bool(
-            torch.isfinite(forces).all()
+        _require_fourier_topology(system, neighbors, self.parameters)
+        return _evaluate_validated_fourier_terms(
+            system, neighbors, self.parameters, self.identity()
+        )
+
+
+def _require_fourier_topology(system, neighbors, parameters):
+    """Owning profiles supply the complete parameter view before arithmetic."""
+    require_system(system, 256)
+    blockers = _applicability_blockers(system, neighbors, parameters)
+    if blockers:
+        raise ReferencePhysicsApplicabilityError(
+            "Fourier base applicability failed: " + ",".join(blockers)
+        )
+    bonds = {tuple(sorted((r.atom_i, r.atom_j))) for r in system.bonds}
+    for row in parameters.periodic_impropers:
+        indices = (row.atom_i, row.atom_j, row.atom_k, row.atom_l)
+        if max(indices) >= system.atom_count or any(
+            tuple(sorted((row.star_center, i))) not in bonds
+            for i in indices
+            if i != row.star_center
         ):
-            raise ReferencePhysicsApplicabilityError("nonfinite Fourier result")
-        term = replace(
-            base.term,
-            name=INTERNAL_ID,
-            energy=energy,
-            forces=forces,
-            energy_descriptor=QuantityDescriptor(
-                name="prepared_fourier_internal_energy",
-                unit="kcal/mol",
-                semantics="declared_signed_periodic_proper_and_ordered_periodic_improper_model",
-                physical_quantity=True,
-                calibrated=False,
-                reference_method=None,
-            ),
-            provenance_sha256=digest(
-                {
-                    "evaluator": self.identity(),
-                    "system": canonical_system_sha256(system),
-                }
-            ),
+            raise ReferencePhysicsApplicabilityError(
+                "ordered periodic improper lacks declared bonded star"
+            )
+
+
+def _evaluate_validated_fourier_terms(system, neighbors, parameters, identity):
+    """Private arithmetic seam. Caller must admit the complete owning model."""
+    base = _evaluate_validated_reference_terms(system, neighbors, parameters)
+    xyz = system.coordinates.detach().clone().requires_grad_(True)
+    improper = xyz.sum(dim=(1, 2)) * 0.0
+    for row in parameters.periodic_impropers:
+        phi = _torsion_angle(
+            xyz, system, row.atom_i, row.atom_j, row.atom_k, row.atom_l
         )
-        components = {
-            **base.component_energies,
-            "ordered_periodic_improper": improper.detach(),
-            "listed_pair_lennard_jones": listed_lj.detach(),
-            "listed_pair_coulomb": listed_qq.detach(),
-        }
-        return ExtendedEvaluation(
-            term,
-            MappingProxyType(components),
-            (),
-            self.fingerprint_sha256,
+        improper = improper + row.amplitude_kcal_per_mol * (
+            1.0 + torch.cos(row.periodicity * phi - row.phase_radians)
+        )
+    listed_lj = xyz.sum(dim=(1, 2)) * 0.0
+    listed_qq = xyz.sum(dim=(1, 2)) * 0.0
+    for row in parameters.listed_pairs:
+        if max(row.atom_i, row.atom_j) >= system.atom_count:
+            raise ReferencePhysicsApplicabilityError(
+                "listed pair index outside ligand"
+            )
+        distance = torch.linalg.vector_norm(
+            xyz[:, row.atom_i] - xyz[:, row.atom_j], dim=-1
+        )
+        if bool(
             (
-                *base.scientific_blockers,
-                "prepared_fourier_model_not_scientifically_validated",
-            ),
+                distance
+                < parameters.applicability_domain.minimum_pair_distance_angstrom
+            ).any()
+        ):
+            raise ReferencePhysicsApplicabilityError(
+                "listed pair distance outside applicability"
+            )
+        ratio6 = (row.sigma_angstrom / distance).pow(6)
+        listed_lj = listed_lj + 4.0 * row.epsilon_kcal_per_mol * (
+            ratio6.square() - ratio6
         )
+        qi = parameters.atom_parameters[row.atom_i].charge_e
+        qj = parameters.atom_parameters[row.atom_j].charge_e
+        listed_qq = (
+            listed_qq
+            + COULOMB_KCAL_ANGSTROM_PER_MOL_E2
+            * row.electrostatic_scale
+            * qi
+            * qj
+            / distance
+        )
+    extra = improper + listed_lj + listed_qq
+    extra_force = -torch.autograd.grad(extra.sum(), xyz)[0]
+    energy = base.term.energy + extra.detach()
+    forces = base.term.forces + extra_force.detach()
+    if not bool(torch.isfinite(energy).all()) or not bool(
+        torch.isfinite(forces).all()
+    ):
+        raise ReferencePhysicsApplicabilityError("nonfinite Fourier result")
+    term = replace(
+        base.term,
+        name=INTERNAL_ID,
+        energy=energy,
+        forces=forces,
+        energy_descriptor=QuantityDescriptor(
+            name="prepared_fourier_internal_energy",
+            unit="kcal/mol",
+            semantics="declared_signed_periodic_proper_and_ordered_periodic_improper_model",
+            physical_quantity=True,
+            calibrated=False,
+            reference_method=None,
+        ),
+        provenance_sha256=digest(
+            {
+                "evaluator": identity,
+                "system": canonical_system_sha256(system),
+            }
+        ),
+    )
+    components = {
+        **base.component_energies,
+        "ordered_periodic_improper": improper.detach(),
+        "listed_pair_lennard_jones": listed_lj.detach(),
+        "listed_pair_coulomb": listed_qq.detach(),
+    }
+    return ExtendedEvaluation(
+        term,
+        MappingProxyType(components),
+        (),
+        digest(identity),
+        (
+            *base.scientific_blockers,
+            "prepared_fourier_model_not_scientifically_validated",
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -373,3 +385,4 @@ class FourierFixedEvaluator:
             self.fingerprint_sha256,
             base.scientific_blockers,
         )
+
