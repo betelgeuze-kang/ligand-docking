@@ -13,6 +13,7 @@ on:
       - 'tools/verify_cpu_candidate_resume_install.py'
       - 'tools/verify_prepared_fourier_install.py'
       - 'tools/verify_linear_angle_install.py'
+      - 'tools/verify_parent_shape_install.py'
       - 'tools/build_linear_angle_independent_oracle.py'
       - 'tests/fixtures/linear_angle_independent_oracle.json'
       - 'tools/verify_prepared_fourier_cartesian_install.py'
@@ -72,9 +73,11 @@ jobs:
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
             betelgeuze_product/cpu_refinement_fourier_v1 \
             betelgeuze_product/cpu_refinement_linear_angle_v1 \
+            betelgeuze_product/cpu_refinement_shape_v1 \
             betelgeuze_product/cpu_refinement_v1_3 \
             tools/verify_prepared_fourier_install.py \
             tools/verify_linear_angle_install.py \
+            tools/verify_parent_shape_install.py \
             tools/build_linear_angle_independent_oracle.py \
             tools/verify_prepared_fourier_cartesian_install.py \
             tests/unit/test_cpu_*.py \
@@ -146,6 +149,13 @@ jobs:
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output "$RUNNER_TEMP/linear-angle-installed"
           cp "$RUNNER_TEMP/linear-angle-installed/summary.json" verification-artifacts/linear-angle-installed.json
+      - name: Verify installed opt-in parent shape profile
+        run: |
+          trap 'if [ -d "$RUNNER_TEMP/parent-shape-installed" ]; then cp -a "$RUNNER_TEMP/parent-shape-installed" verification-artifacts/parent-shape-installed; fi' EXIT
+          python tools/verify_parent_shape_install.py \
+            --python "$RUNNER_TEMP/corrected-installed/bin/python" \
+            --output "$RUNNER_TEMP/parent-shape-installed"
+          cp "$RUNNER_TEMP/parent-shape-installed/summary.json" verification-artifacts/parent-shape-installed.json
       - name: Verify installed candidate resume and portable reports
         run: |
           trap 'if [ -d "$RUNNER_TEMP/candidate-resume-installed" ]; then cp -a "$RUNNER_TEMP/candidate-resume-installed" verification-artifacts/candidate-resume-installed; fi' EXIT

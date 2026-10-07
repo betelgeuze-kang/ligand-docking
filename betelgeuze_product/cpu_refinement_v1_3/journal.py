@@ -161,12 +161,14 @@ class TrialJournal:
     in hot loops instead of repeatedly copying all prior payloads.
     """
 
-    def __init__(self, directory: Path, binding: dict, create: bool):
+    def __init__(self, directory: Path, binding: dict, create: bool, profile=None):
         _require(type(create) is bool, "explicit journal create flag required")
         self.directory = Path(directory)
         self._binding = _copy_dict(binding)
         self._binding_sha256 = digest(self._binding)
         self._create = create
+        self._journal_schema = 'cartesian_trial_journal/1.0.0' if profile is None else profile.journal_schema
+        self._checkpoint_schema = None if profile is None else profile.checkpoint_schema
         self._fds = []
         self._chain = []
         self._lock_fd = self._journal_fd = self._root_fd = self._checkpoints_fd = None
@@ -235,7 +237,7 @@ class TrialJournal:
             fcntl.flock(self._lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             if self._create:
                 os.fsync(self._lock_fd)
-                _publish(self._root_fd, "meta.json", {"schema_id": "cartesian_trial_journal/1.0.0",
+                _publish(self._root_fd, "meta.json", {"schema_id": self._journal_schema,
                     "binding": self._binding, "binding_sha256": self._binding_sha256})
                 os.mkdir("checkpoints", mode=0o700, dir_fd=self._root_fd)
             self._checkpoints_fd = os.open("checkpoints", _DIRECTORY, dir_fd=self._root_fd)
@@ -261,7 +263,7 @@ class TrialJournal:
         _require(names <= {".journal.lock", "meta.json", "checkpoints", "events.jsonl", "result.json"},
                  "unexpected or partial journal files")
         meta, self._meta_stat = _read_file(self._root_fd, "meta.json")
-        _require(canonical(meta) == canonical({"schema_id": "cartesian_trial_journal/1.0.0",
+        _require(canonical(meta) == canonical({"schema_id": self._journal_schema,
                  "binding": self._binding, "binding_sha256": self._binding_sha256}), "journal binding changed")
         before = _regular(self._journal_fd, MAX_JOURNAL_BYTES)
         total = 0
@@ -317,8 +319,12 @@ class TrialJournal:
                  and value["journal_sha256"] == self._head(count), "checkpoint or result journal prefix mismatch")
 
     def _validate_checkpoint(self, value):
-        _require(type(value) is dict and set(value) == {
-            "journal_count", "journal_sha256", "state", "checkpoint_sha256"}, "invalid journal checkpoint fields")
+        fields = {"journal_count", "journal_sha256", "state", "checkpoint_sha256"}
+        if self._checkpoint_schema is not None:
+            fields.add('schema_id')
+        _require(type(value) is dict and set(value) == fields, "invalid journal checkpoint fields")
+        if self._checkpoint_schema is not None:
+            _require(value['schema_id'] == self._checkpoint_schema, "journal checkpoint schema changed")
         self._validate_prefix(value)
         _require(type(value["state"]) is dict and value["checkpoint_sha256"] ==
                  digest({k: v for k, v in value.items() if k != "checkpoint_sha256"}), "checkpoint digest mismatch")
@@ -379,6 +385,8 @@ class TrialJournal:
         _require(self._result is None, "journal already finalized")
         value = {"journal_count": len(self._events), "journal_sha256": self._head(len(self._events)),
                  "state": _copy_dict(state)}
+        if self._checkpoint_schema is not None:
+            value['schema_id'] = self._checkpoint_schema
         checkpoint = {**value, "checkpoint_sha256": digest(value)}
         count = len(self._events)
         if count in self._checkpoints:
