@@ -61,6 +61,11 @@ def evaluate_reference_force_field(
         raise ReferencePhysicsApplicabilityError(
             "reference parameter applicability failed: " + ", ".join(blockers)
         )
+    return _evaluate_validated_reference_terms(system, neighbors, parameters)
+
+
+def _evaluate_validated_reference_terms(system, neighbors, parameters):
+    """Shared arithmetic only; callers must apply their owning complete admission."""
     coordinates = system.coordinates.detach().clone().requires_grad_(True)
     zero = coordinates.sum(dim=(1, 2)) * 0.0
     bond_energy = zero.clone()

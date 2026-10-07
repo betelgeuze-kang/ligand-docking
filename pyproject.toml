@@ -21,6 +21,7 @@ betelgeuze-dock = "betelgeuze_engine_v2.standalone_cli:main"
 
 betelgeuze-comparison-receipt = "betelgeuze_product.comparison_receipts:main"
 betelgeuze-comparison = "betelgeuze_product.installed_synthetic_comparison:main"
+betelgeuze-prepared-fourier = "betelgeuze_product.cpu_refinement_fourier_v1.workflow:main"
 
 [tool.setuptools.packages.find]
 include = [

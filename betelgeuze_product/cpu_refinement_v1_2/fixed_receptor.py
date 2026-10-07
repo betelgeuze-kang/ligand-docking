@@ -164,47 +164,52 @@ class FixedReceptorEnvironment:
     def evaluate_cross(self, ligand: AllAtomSystem, base_parameters) -> tuple[dict, torch.Tensor, int]:
         """Bounded peak pair memory; O(N_ligand*N_receptor) work, not an O(N) claim."""
         params = self.validate_ligand(ligand, base_parameters)
-        xyz = ligand.coordinates[0].detach().clone().requires_grad_(True)
-        receptor_xyz = self.receptor.coordinates[0].detach().clone()
-        lj_sum = torch.zeros((), dtype=torch.float64)
-        q_sum = torch.zeros((), dtype=torch.float64)
-        force = torch.zeros_like(xyz)
-        lp = torch.tensor([[a.sigma_angstrom, a.epsilon_kcal_per_mol, a.charge_e] for a in params], dtype=torch.float64)
-        count = 0
-        # Block size is part of the checkpoint identity; different sums need not be bit-identical.
-        for start in range(0, self.receptor.atom_count, self.cross.receptor_block_size):
-            end = min(start + self.cross.receptor_block_size, self.receptor.atom_count)
-            distances = torch.linalg.vector_norm(xyz[:, None, :] - receptor_xyz[None, start:end, :], dim=-1)
-            if not bool(torch.isfinite(distances).all()):
-                raise ReferencePhysicsApplicabilityError("nonfinite receptor-ligand distance")
-            if bool((distances < self.cross.minimum_distance_angstrom).any()):
-                raise ReferencePhysicsApplicabilityError("cross pair below explicit minimum distance")
-            active = distances < self.cross.cutoff_angstrom
-            left, right = torch.nonzero(active, as_tuple=True)
-            count += int(left.numel())
-            if not left.numel():
-                continue
-            r = distances[left, right]
-            rp = torch.tensor([[a.sigma_angstrom, a.epsilon_kcal_per_mol, a.charge_e]
-                               for a in self.cross.receptor_atoms[start:end]], dtype=torch.float64)
-            sigma = .5 * (lp[left, 0] + rp[right, 0])
-            epsilon = torch.sqrt(lp[left, 1] * rp[right, 1])
-            ratio6 = (sigma / r).pow(6)
-            pair_lj = 4 * epsilon * (ratio6.pow(2) - ratio6)
-            pair_q = (COULOMB_KCAL_ANGSTROM_PER_MOL_E2 * lp[left, 2] * rp[right, 2]
-                      * torch.exp(-self.cross.screening_kappa_per_angstrom * r) / (self.cross.dielectric * r))
-            t = ((r - self.cross.switch_start_angstrom) /
-                 (self.cross.cutoff_angstrom - self.cross.switch_start_angstrom)).clamp(0., 1.)
-            switch = 1 - 10*t.pow(3) + 15*t.pow(4) - 6*t.pow(5)
-            lj, electro = (pair_lj * switch).sum(), (pair_q * switch).sum()
-            gradient = torch.autograd.grad(lj + electro, xyz)[0]
-            if not (bool(torch.isfinite(lj)) and bool(torch.isfinite(electro)) and bool(torch.isfinite(gradient).all())):
-                raise FloatingPointError("nonfinite fixed receptor energy or gradient")
-            force -= gradient.detach()
-            lj_sum += lj.detach()
-            q_sum += electro.detach()
-        self.assert_intact()
-        return {"cross_lennard_jones": lj_sum.reshape(1), "cross_screened_coulomb": q_sum.reshape(1)}, force.unsqueeze(0), count
+        return _evaluate_validated_cross_terms(self, ligand, params)
+
+
+def _evaluate_validated_cross_terms(self, ligand, params):
+    """Shared cross arithmetic after complete owning parameter admission."""
+    xyz = ligand.coordinates[0].detach().clone().requires_grad_(True)
+    receptor_xyz = self.receptor.coordinates[0].detach().clone()
+    lj_sum = torch.zeros((), dtype=torch.float64)
+    q_sum = torch.zeros((), dtype=torch.float64)
+    force = torch.zeros_like(xyz)
+    lp = torch.tensor([[a.sigma_angstrom, a.epsilon_kcal_per_mol, a.charge_e] for a in params], dtype=torch.float64)
+    count = 0
+    # Block size is part of the checkpoint identity; different sums need not be bit-identical.
+    for start in range(0, self.receptor.atom_count, self.cross.receptor_block_size):
+        end = min(start + self.cross.receptor_block_size, self.receptor.atom_count)
+        distances = torch.linalg.vector_norm(xyz[:, None, :] - receptor_xyz[None, start:end, :], dim=-1)
+        if not bool(torch.isfinite(distances).all()):
+            raise ReferencePhysicsApplicabilityError("nonfinite receptor-ligand distance")
+        if bool((distances < self.cross.minimum_distance_angstrom).any()):
+            raise ReferencePhysicsApplicabilityError("cross pair below explicit minimum distance")
+        active = distances < self.cross.cutoff_angstrom
+        left, right = torch.nonzero(active, as_tuple=True)
+        count += int(left.numel())
+        if not left.numel():
+            continue
+        r = distances[left, right]
+        rp = torch.tensor([[a.sigma_angstrom, a.epsilon_kcal_per_mol, a.charge_e]
+                           for a in self.cross.receptor_atoms[start:end]], dtype=torch.float64)
+        sigma = .5 * (lp[left, 0] + rp[right, 0])
+        epsilon = torch.sqrt(lp[left, 1] * rp[right, 1])
+        ratio6 = (sigma / r).pow(6)
+        pair_lj = 4 * epsilon * (ratio6.pow(2) - ratio6)
+        pair_q = (COULOMB_KCAL_ANGSTROM_PER_MOL_E2 * lp[left, 2] * rp[right, 2]
+                  * torch.exp(-self.cross.screening_kappa_per_angstrom * r) / (self.cross.dielectric * r))
+        t = ((r - self.cross.switch_start_angstrom) /
+             (self.cross.cutoff_angstrom - self.cross.switch_start_angstrom)).clamp(0., 1.)
+        switch = 1 - 10*t.pow(3) + 15*t.pow(4) - 6*t.pow(5)
+        lj, electro = (pair_lj * switch).sum(), (pair_q * switch).sum()
+        gradient = torch.autograd.grad(lj + electro, xyz)[0]
+        if not (bool(torch.isfinite(lj)) and bool(torch.isfinite(electro)) and bool(torch.isfinite(gradient).all())):
+            raise FloatingPointError("nonfinite fixed receptor energy or gradient")
+        force -= gradient.detach()
+        lj_sum += lj.detach()
+        q_sum += electro.detach()
+    self.assert_intact()
+    return {"cross_lennard_jones": lj_sum.reshape(1), "cross_screened_coulomb": q_sum.reshape(1)}, force.unsqueeze(0), count
 
 
 @dataclass(frozen=True)
