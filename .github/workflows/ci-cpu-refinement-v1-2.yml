@@ -12,6 +12,9 @@ on:
       - 'tools/verify_cpu_refinement_v1_2_install.py'
       - 'tools/verify_cpu_candidate_resume_install.py'
       - 'tools/verify_prepared_fourier_install.py'
+      - 'tools/verify_linear_angle_install.py'
+      - 'tools/build_linear_angle_independent_oracle.py'
+      - 'tests/fixtures/linear_angle_independent_oracle.json'
       - 'tools/verify_prepared_fourier_cartesian_install.py'
       - 'tools/benchmark_cpu_refinement_v1_2_verification.py'
       - 'tools/benchmark_cpu_tangent_projection.py'
@@ -68,8 +71,11 @@ jobs:
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
             betelgeuze_product/cpu_refinement_fourier_v1 \
+            betelgeuze_product/cpu_refinement_linear_angle_v1 \
             betelgeuze_product/cpu_refinement_v1_3 \
             tools/verify_prepared_fourier_install.py \
+            tools/verify_linear_angle_install.py \
+            tools/build_linear_angle_independent_oracle.py \
             tools/verify_prepared_fourier_cartesian_install.py \
             tests/unit/test_cpu_*.py \
             tests/unit/test_cartesian_*.py \
@@ -133,6 +139,13 @@ jobs:
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output "$RUNNER_TEMP/fourier-cartesian-installed"
           cp "$RUNNER_TEMP/fourier-cartesian-installed/summary.json" verification-artifacts/fourier-cartesian-installed.json
+      - name: Verify installed opt-in linear harmonic endpoint
+        run: |
+          trap 'if [ -d "$RUNNER_TEMP/linear-angle-installed" ]; then cp -a "$RUNNER_TEMP/linear-angle-installed" verification-artifacts/linear-angle-installed; fi' EXIT
+          python tools/verify_linear_angle_install.py \
+            --python "$RUNNER_TEMP/corrected-installed/bin/python" \
+            --output "$RUNNER_TEMP/linear-angle-installed"
+          cp "$RUNNER_TEMP/linear-angle-installed/summary.json" verification-artifacts/linear-angle-installed.json
       - name: Verify installed candidate resume and portable reports
         run: |
           trap 'if [ -d "$RUNNER_TEMP/candidate-resume-installed" ]; then cp -a "$RUNNER_TEMP/candidate-resume-installed" verification-artifacts/candidate-resume-installed; fi' EXIT
@@ -146,4 +159,5 @@ jobs:
           path: verification-artifacts/
           if-no-files-found: error
           retention-days: 7
+
 
