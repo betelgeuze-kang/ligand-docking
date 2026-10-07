@@ -69,8 +69,8 @@ def _intact(system, evaluator, identity, implementation_sources=None, model_guar
     _same(environment(), identity['environment'], 'Cartesian runtime changed')
 
 
-def _work(config):
-    return {'optimizer_objective_attempts': 0, 'optimizer_graph_calls': 0,
+def _work(config, profile=None):
+    work = {'optimizer_objective_attempts': 0, 'optimizer_graph_calls': 0,
             'optimizer_force_calls': 0, 'failed_optimizer_force_calls': 0,
             'restart_verification_attempts': 0, 'restart_graph_calls': 0,
             'restart_force_calls': 0, 'failed_restart_force_calls': 0,
@@ -79,6 +79,12 @@ def _work(config):
             'max_restart_verifications': config.max_restart_verifications,
             'max_total_force_calls': config.max_total_force_calls,
             'known_completed_force_calls': 0, 'actual_force_calls': 0}
+    if profile is not None:
+        extra = profile.work(config)
+        if type(extra) is not dict or set(extra) & set(work):
+            raise ResearchError('profile work must add separate counters')
+        work.update(extra)
+    return work
 
 
 def _timings():
@@ -86,7 +92,7 @@ def _timings():
             'restart_graph_ns': 0, 'restart_force_ns': 0, 'restart_objective_ns': 0}
 
 
-def _completed_work(payload, work, timings, prefix):
+def _completed_work(payload, work, timings, prefix, profile=None):
     recorded = payload['work']
     exact_fields(recorded, {'graph_calls', 'force_calls', 'failed_force_calls'})
     graph, force, failed = [integer(recorded[key], 0, 1)
@@ -113,10 +119,14 @@ def _completed_work(payload, work, timings, prefix):
     work['failed_' + prefix + '_force_calls'] += failed
     work['actual_force_calls'] += force
     work['known_completed_force_calls'] += force
+    if profile is not None:
+        profile.completed_work(payload, work, prefix)
 
 
-def _checkpoint(machine, count, head):
+def _checkpoint(machine, count, head, profile=None):
     value = {'journal_count': count, 'journal_sha256': head, 'state': machine.snapshot()}
+    if profile is not None:
+        value['schema_id'] = profile.checkpoint_schema
     return {**value, 'checkpoint_sha256': digest(value)}
 
 
@@ -126,16 +136,16 @@ def _restart_intent(machine, verification):
             'coordinates': current['coordinates']}
 
 
-def _replay(journal, system, config):
-    machine = CartesianMachine(system.coordinates, config)
-    work, timings = _work(config), _timings()
+def _replay(journal, system, config, profile=None):
+    machine = CartesianMachine(system.coordinates, config, profile=profile)
+    work, timings = _work(config, profile), _timings()
     checkpoints = journal.checkpoint_digests
     events = journal.events
     pending, restart_failed = None, False
 
     def verify_checkpoint(count, head):
         if count in checkpoints:
-            _same(_checkpoint(machine, count, head)['checkpoint_sha256'], checkpoints[count],
+            _same(_checkpoint(machine, count, head, profile)['checkpoint_sha256'], checkpoints[count],
                   'checkpoint differs from replayed coordinate/force/history transitions')
 
     verify_checkpoint(0, events[0]['previous_sha256'] if events else journal.head_sha256)
@@ -159,22 +169,25 @@ def _replay(journal, system, config):
             if pending is None or kind != pending[0].replace('_started', '_finished'):
                 raise ResearchError('finished objective/restart has no matching intent')
             common = {'observation', 'failure', 'error_type', 'work', 'timings_ns', 'state_sha256'}
+            if profile is not None:
+                common.add('shape_work')
             if kind == 'objective_finished':
                 exact_fields(payload, common | {'attempt', 'decision'})
                 _same(payload['attempt'], pending[1]['attempt'], 'objective finish attempt changed')
                 decision = machine.commit(pending[1], payload['observation'], failure=payload['failure'])
                 _same(payload['decision'], decision, 'replayed objective decision changed')
-                _completed_work(payload, work, timings, 'optimizer')
+                _completed_work(payload, work, timings, 'optimizer', profile)
             else:
                 exact_fields(payload, common | {'verification', 'matched'})
                 _same(payload['verification'], pending[1]['verification'], 'restart finish index changed')
                 observed = payload['observation']
                 if observed is not None:
-                    observed = validate_observation(observed, state['atom_count'])
+                    validator = validate_observation if profile is None else profile.validate_observation
+                    observed = validator(observed, state['atom_count'])
                 matched = observed is not None and canonical(observed) == canonical(state['current'])
                 _same(payload['matched'], matched, 'restart full energy/force comparison changed')
                 restart_failed = not matched
-                _completed_work(payload, work, timings, 'restart')
+                _completed_work(payload, work, timings, 'restart', profile)
             _same(payload['state_sha256'], digest(machine.snapshot()), 'replayed solver state digest changed')
             pending = None
         verify_checkpoint(event['index'] + 1, event['event_sha256'])
@@ -226,15 +239,20 @@ def _invoke(system, evaluator, config, intent):
             'work': work, 'timings_ns': timings}
 
 
-def _result(journal, machine, work, timings, binding, result_schema=RESULT_SCHEMA):
+def _result(journal, machine, work, timings, binding, result_schema=RESULT_SCHEMA, profile=None):
     state = machine.snapshot()
     value = {'schema_id': result_schema,
              'status': 'checkpointed' if state['status'] == 'running' else state['status'],
              'converged': state['status'] == 'force_converged', 'binding_sha256': digest(binding),
-             'checkpoint': _checkpoint(machine, journal.event_count, journal.head_sha256),
+             'checkpoint': _checkpoint(machine, journal.event_count, journal.head_sha256, profile),
              'work': dict(work), 'timings_ns': dict(timings),
              'durations_are_nested_do_not_sum': True,
              'scientifically_validated': False, 'claim_safe': False, 'customer_execution_allowed': False}
+    if profile is not None:
+        fields = profile.result_fields(state, machine.config)
+        if type(fields) is not dict or type(fields.get('converged')) is not bool:
+            raise ResearchError('profile must explicitly qualify result convergence')
+        value.update(fields)
     return {**value, 'result_sha256': digest(value)}
 
 
@@ -247,11 +265,11 @@ def verify_run(system, parameters, config, *, fixed_environment, run_dir, bindin
 
 
 def _verify_profile(system, config, *, evaluator, identity, run_dir,
-                    implementation_sources, result_schema, model_guard=None):
+                    implementation_sources, result_schema, model_guard=None, profile=None):
     """Shared replay; public profiles own strict model admission and identity."""
-    with TrialJournal(Path(run_dir), identity, create=False) as journal:
-        machine, work, timings = _replay(journal, system, config)
-        result = _result(journal, machine, work, timings, identity, result_schema)
+    with TrialJournal(Path(run_dir), identity, create=False, profile=profile) as journal:
+        machine, work, timings = _replay(journal, system, config, profile)
+        result = _result(journal, machine, work, timings, identity, result_schema, profile)
         saved = journal.result()
         if saved is not None:
             if result['status'] == 'checkpointed':
@@ -276,20 +294,21 @@ def minimize(system, parameters, config, *, fixed_environment, run_dir, binding,
 
 def _minimize_profile(system, config, *, evaluator, identity, run_dir,
                       implementation_sources, result_schema,
-                      pause_after_objective_attempts=None, resume=False, model_guard=None):
+                      pause_after_objective_attempts=None, resume=False, model_guard=None,
+                      profile=None):
     """One durable execution loop shared by strictly admitted model profiles."""
     if type(resume) is not bool:
         raise ResearchError('explicit resume flag required')
     pause = None if pause_after_objective_attempts is None else integer(
         pause_after_objective_attempts, 1, config.max_objective_attempts)
-    with TrialJournal(Path(run_dir), identity, create=not resume) as journal:
-        machine, work, timings = _replay(journal, system, config)
+    with TrialJournal(Path(run_dir), identity, create=not resume, profile=profile) as journal:
+        machine, work, timings = _replay(journal, system, config, profile)
         state = machine.snapshot()
         if pause is not None and pause < state['attempts']:
             raise ResearchError('pause precedes saved objective progress')
         saved = journal.result()
         if saved is not None:
-            result = _result(journal, machine, work, timings, identity, result_schema)
+            result = _result(journal, machine, work, timings, identity, result_schema, profile)
             if result['status'] == 'checkpointed':
                 raise ResearchError('running state published as a terminal result')
             _same(saved, result, 'cached Cartesian result does not reproduce')
@@ -303,12 +322,13 @@ def _minimize_profile(system, config, *, evaluator, identity, run_dir,
             intent = _restart_intent(machine, verification)
             journal.append('restart_started', intent)
             work['restart_verification_attempts'] += 1
-            receipt = _invoke(system, evaluator, config, {'attempt': state['current']['attempt'],
-                                                         'coordinates': intent['coordinates']})
+            invoke = _invoke if profile is None else profile.invoke
+            receipt = invoke(system, evaluator, config, {'attempt': state['current']['attempt'],
+                                                        'coordinates': intent['coordinates']})
             matched = canonical(receipt['observation']) == canonical(state['current'])
             receipt.update(verification=verification, matched=matched, state_sha256=digest(machine.snapshot()))
             journal.append('restart_finished', receipt)
-            _completed_work(receipt, work, timings, 'restart')
+            _completed_work(receipt, work, timings, 'restart', profile)
             journal.save_checkpoint(machine.snapshot())
             if not matched:
                 error = ResearchError('restart full energy/force verification failed; continuation forbidden')
@@ -320,14 +340,15 @@ def _minimize_profile(system, config, *, evaluator, identity, run_dir,
             intent = machine.next_intent()
             journal.append('objective_started', intent)
             work['optimizer_objective_attempts'] += 1
-            receipt = _invoke(system, evaluator, config, intent)
+            invoke = _invoke if profile is None else profile.invoke
+            receipt = invoke(system, evaluator, config, intent)
             decision = machine.commit(intent, receipt['observation'], failure=receipt['failure'])
             receipt.update(attempt=intent['attempt'], decision=decision, state_sha256=digest(machine.snapshot()))
             journal.append('objective_finished', receipt)
-            _completed_work(receipt, work, timings, 'optimizer')
+            _completed_work(receipt, work, timings, 'optimizer', profile)
             journal.save_checkpoint(machine.snapshot())
         _intact(system, evaluator, identity, implementation_sources, model_guard)
-        result = _result(journal, machine, work, timings, identity, result_schema)
+        result = _result(journal, machine, work, timings, identity, result_schema, profile)
         if result['status'] != 'checkpointed':
             journal.publish_result(result)
         return result

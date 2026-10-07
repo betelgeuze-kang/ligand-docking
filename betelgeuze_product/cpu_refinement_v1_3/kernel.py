@@ -92,12 +92,14 @@ def _two_loop(gradient, history, initial_scale):
 class CartesianMachine:
     """Only validated completed observations advance the logical solver state."""
 
-    def __init__(self, coordinates, config):
+    def __init__(self, coordinates, config, profile=None):
         if type(config) is not SolverConfig:
             raise ResearchError('explicit Cartesian solver configuration required')
         xyz = require_array(coordinates)
         self.config = config
-        self._state = {'schema_id': STATE_SCHEMA, 'config': config.to_dict(),
+        self.profile = profile
+        self._state = {'schema_id': STATE_SCHEMA if profile is None else profile.state_schema,
+                       'config': config.to_dict(),
                        'atom_count': xyz.shape[1], 'original_coordinates': coordinates_hex(xyz),
                        'attempts': 0, 'accepted': 0, 'status': 'running',
                        'initial': None, 'current': None, 'history': [], 'line_search': None,
@@ -162,7 +164,8 @@ class CartesianMachine:
             raise ResearchError('an objective must have exactly one observation or failure')
         state, config = self._state, self.config
         if observation is not None:
-            observation = validate_observation(observation, state['atom_count'])
+            validator = validate_observation if self.profile is None else self.profile.validate_observation
+            observation = validator(observation, state['atom_count'])
             if (observation['attempt'] != intent['attempt']
                     or observation['coordinates'] != intent['coordinates']):
                 raise ResearchError('returned observation belongs to another objective intent')
