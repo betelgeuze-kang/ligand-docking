@@ -5,7 +5,6 @@ campaign driver. The original parent must be supplied and bound for every run.
 """
 from dataclasses import asdict
 import hashlib
-import importlib
 import json
 from pathlib import Path
 
@@ -18,14 +17,16 @@ from .profile import ShapeProfile
 
 RESULT_SCHEMA = 'cpu_parent_shape_cartesian_result/1.0.0'
 BINDING_SCHEMA = 'cpu_parent_shape_cartesian_binding/1.0.0'
-BASE_MODULES = {'fourier': 'betelgeuze_product.cpu_refinement_fourier_v1.cartesian',
-                'linear_angle': 'betelgeuze_product.cpu_refinement_linear_angle_v1.cartesian'}
 
 
 def _base(profile):
-    if type(profile) is not str or profile not in BASE_MODULES:
+    if type(profile) is not str or profile not in ('fourier', 'linear_angle'):
         raise ResearchError('explicit fourier or linear_angle base required')
-    return importlib.import_module(BASE_MODULES[profile])
+    if profile == 'fourier':
+        from betelgeuze_product.cpu_refinement_fourier_v1 import cartesian as selected
+    else:
+        from betelgeuze_product.cpu_refinement_linear_angle_v1 import cartesian as selected
+    return selected
 
 
 def implementation_sources(base_profile):

@@ -642,3 +642,26 @@ def test_product_image_mode_does_not_require_repository_only_files(
 def test_checker_cli_is_executable_source() -> None:
     assert CHECKER_PATH.is_file()
     assert shutil.which("python3") is not None
+
+
+def test_parent_shape_dispatcher_import_targets_are_statically_provable(tmp_path: Path) -> None:
+    """The real opt-in dispatcher must remain visible to the unchanged scanner."""
+    relative = Path('betelgeuze_product/cpu_refinement_shape_v1/cartesian.py')
+    accepted = tmp_path / 'accepted'
+    _write(accepted / relative, (ROOT / relative).read_text(encoding='utf-8'))
+    assert architecture.inspect_product_import_boundary(accepted) == []
+
+    # Retain the failed runtime-indexed form as a mutation control. This proves
+    # the test has not passed merely because the boundary stopped checking it.
+    rejected = tmp_path / 'rejected'
+    _write(rejected / relative, '''import importlib
+BASE_MODULES = {
+    'fourier': 'betelgeuze_product.cpu_refinement_fourier_v1.cartesian',
+    'linear_angle': 'betelgeuze_product.cpu_refinement_linear_angle_v1.cartesian',
+}
+def _base(profile):
+    return importlib.import_module(BASE_MODULES[profile])
+''')
+    assert 'product_dynamic_import_unresolved' in _codes(
+        architecture.inspect_product_import_boundary(rejected)
+    )
