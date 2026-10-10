@@ -77,6 +77,7 @@ jobs:
             betelgeuze_product/cpu_refinement_shape_v1 \
             betelgeuze_product/cpu_refinement_v1_3 \
             betelgeuze_product/cpu_prepared_cartesian_budget_v3 \
+            betelgeuze_product/cpu_refinement_diagnostics_v1 \
             tools/verify_prepared_cartesian_budget_install.py \
             tools/verify_prepared_fourier_install.py \
             tools/verify_linear_angle_install.py \
@@ -126,6 +127,13 @@ jobs:
           "$RUNNER_TEMP/corrected-installed/bin/python" -m pip install --no-deps --force-reinstall "$RUNNER_TEMP"/corrected-wheels/*.whl
           "$RUNNER_TEMP/corrected-installed/bin/python" -m pip check
           sha256sum "$RUNNER_TEMP"/corrected-wheels/*.whl > verification-artifacts/wheel-sha256.txt
+      - name: Verify installed diagnostics CLI without molecular execution
+        run: |
+          (
+            cd "$RUNNER_TEMP"
+            env -u PYTHONPATH "$RUNNER_TEMP/corrected-installed/bin/python" -I \
+              -m betelgeuze_product.cpu_refinement_diagnostics_v1.workflow --help
+          ) > verification-artifacts/diagnostics-installed-help.txt
       - name: Verify installed CLI outside checkout with isolated Python and no PYTHONPATH
         run: |
           python tools/verify_cpu_refinement_v1_2_install.py \
