@@ -14,6 +14,7 @@ on:
       - 'tools/verify_prepared_fourier_install.py'
       - 'tools/verify_linear_angle_install.py'
       - 'tools/verify_parent_shape_install.py'
+      - 'tools/verify_prepared_cartesian_budget_install.py'
       - 'tools/build_linear_angle_independent_oracle.py'
       - 'tests/fixtures/linear_angle_independent_oracle.json'
       - 'tools/verify_prepared_fourier_cartesian_install.py'
@@ -75,6 +76,8 @@ jobs:
             betelgeuze_product/cpu_refinement_linear_angle_v1 \
             betelgeuze_product/cpu_refinement_shape_v1 \
             betelgeuze_product/cpu_refinement_v1_3 \
+            betelgeuze_product/cpu_prepared_cartesian_budget_v3 \
+            tools/verify_prepared_cartesian_budget_install.py \
             tools/verify_prepared_fourier_install.py \
             tools/verify_linear_angle_install.py \
             tools/verify_parent_shape_install.py \
@@ -156,6 +159,12 @@ jobs:
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output "$RUNNER_TEMP/parent-shape-installed"
           cp "$RUNNER_TEMP/parent-shape-installed/summary.json" verification-artifacts/parent-shape-installed.json
+      - name: Verify installed opt-in long-budget Cartesian route
+        run: |
+          trap 'if [ -d "$RUNNER_TEMP/cartesian-budget-installed" ]; then cp -a "$RUNNER_TEMP/cartesian-budget-installed" verification-artifacts/cartesian-budget-installed; fi' EXIT
+          python tools/verify_prepared_cartesian_budget_install.py \
+            --python "$RUNNER_TEMP/corrected-installed/bin/python" \
+            --output "$RUNNER_TEMP/cartesian-budget-installed"
       - name: Verify installed candidate resume and portable reports
         run: |
           trap 'if [ -d "$RUNNER_TEMP/candidate-resume-installed" ]; then cp -a "$RUNNER_TEMP/candidate-resume-installed" verification-artifacts/candidate-resume-installed; fi' EXIT
@@ -169,5 +178,6 @@ jobs:
           path: verification-artifacts/
           if-no-files-found: error
           retention-days: 7
+
 
 
