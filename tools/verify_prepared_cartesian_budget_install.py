@@ -96,7 +96,7 @@ print(json.dumps(summary))
 '''
 
 
-def main(argv=None):
+def main(argv=None, *, probe_source=PROBE):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--python', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
@@ -114,7 +114,7 @@ def main(argv=None):
     fixture = protocol(inputs)
     (output/'fixture.json').write_text(json.dumps({name: fixture[name] for name in REFS}))
     probe = output/'probe.py'
-    probe.write_text(PROBE)
+    probe.write_text(probe_source)
     env = dict(os.environ)
     env.pop('PYTHONPATH', None)
     child = subprocess.Popen(
