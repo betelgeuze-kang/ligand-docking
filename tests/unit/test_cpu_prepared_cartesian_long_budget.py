@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-import torch
 
 from betelgeuze_product import cpu_prepared_cartesian_long_budget as workflow
 from betelgeuze_product.cpu_prepared_cartesian_budget_v3 import workflow as legacy
@@ -13,7 +12,7 @@ from betelgeuze_product.cpu_refinement_v1_2.provenance import ResearchError
 from betelgeuze_product.cpu_refinement_v1_3 import minimization as execution
 from tests.unit.test_cpu_prepared_cartesian_budget_v3 import (
     _arguments as legacy_arguments, _files, _forbid_numerical_work, _write_json,
-    single_cpu_thread,
+    single_cpu_thread as single_cpu_thread,
 )
 
 
@@ -166,12 +165,18 @@ def test_synthetic_direct_and_resumed_endpoints_and_zero_work_replay(tmp_path, m
 def test_rehashed_protocol_mutation_rejected(tmp_path, monkeypatch, mutation):
     sealed, selection = _prepared(tmp_path)
     document = json.loads(Path(sealed["protocol_path"]).read_bytes())
-    if mutation == "profile": document["profile_id"] = legacy.PROFILE_ID
-    elif mutation == "model": document["model"] = "linear_angle"
-    elif mutation == "source": document["implementation_sha256"] = "0" * 64
-    elif mutation == "solver": document["solver"]["max_objective_attempts"] = 2401
-    elif mutation == "boundary": document["boundary"]["scientifically_validated"] = True
-    else: document["shape"] = True
+    if mutation == "profile":
+        document["profile_id"] = legacy.PROFILE_ID
+    elif mutation == "model":
+        document["model"] = "linear_angle"
+    elif mutation == "source":
+        document["implementation_sha256"] = "0" * 64
+    elif mutation == "solver":
+        document["solver"]["max_objective_attempts"] = 2401
+    elif mutation == "boundary":
+        document["boundary"]["scientifically_validated"] = True
+    else:
+        document["shape"] = True
     sealed["protocol_sha256"] = _write_json(sealed["protocol_path"], document)
     _forbid_numerical_work(monkeypatch)
     with pytest.raises(ResearchError):
