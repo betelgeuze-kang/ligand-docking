@@ -111,7 +111,7 @@ jobs:
           "$RUNNER_TEMP/research-env/bin/python" -I -m pip install "$RUNNER_TEMP/research-wheels/betelgeuze_md_product-0.1.0-py3-none-any.whl[research]"
           "$RUNNER_TEMP/research-env/bin/python" -I -m pip check
           "$RUNNER_TEMP/research-env/bin/python" -I -B tools/product/verify_installed_local_research.py --request "$RUNNER_TEMP/installed-research-fixture/request.json" --evidence "$RUNNER_TEMP/installed-research-evidence"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: local-research-${{ github.run_id }}-${{ github.run_attempt }}
