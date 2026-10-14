@@ -7,6 +7,7 @@ Budget exhaustion is not convergence or scientific qualification.
 """
 
 import argparse
+from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
@@ -42,19 +43,44 @@ MODELS = ("fourier", "linear_angle")
 ACCEPTED_STEP_BUDGETS = (40, 80, 160)
 
 
+@dataclass(frozen=True)
+class _BudgetProfile:
+    """Internal immutable adapter definition; never loaded from user JSON."""
+    profile_id: str = PROFILE_ID
+    protocol: str = PROTOCOL
+    binding_schema: str = BINDING_SCHEMA
+    result_schema: str = RESULT_SCHEMA
+    preflight_schema: str = "prepared_cartesian_step_budget_preflight/3.0.0"
+    accepted_steps: tuple = ACCEPTED_STEP_BUDGETS
+    objective_attempts: int | None = None
+    adapter_source: str | None = None
+
+
+_DEFAULT_PROFILE = _BudgetProfile()
+
+
+def _profile_sources(profile):
+    result = implementation_sources()
+    if profile.adapter_source is not None:
+        path = Path(profile.adapter_source).resolve(strict=True)
+        result["betelgeuze_product/" + path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return result
+
+
 def _require(condition, message):
     if not condition:
         raise ResearchError(message)
 
 
-def budget_config(algorithm, accepted_steps, *, restart_verifications):
+def budget_config(algorithm, accepted_steps, *, restart_verifications, _profile=_DEFAULT_PROFILE):
     """Frozen comparison controls; one initial plus four trials per step."""
-    _require(type(accepted_steps) is int and accepted_steps in ACCEPTED_STEP_BUDGETS,
-             "explicit 40/80/160 accepted-step budget required")
+    _require(type(accepted_steps) is int and accepted_steps in _profile.accepted_steps,
+             "explicit supported accepted-step budget required")
     _require(type(restart_verifications) is int and restart_verifications in (0, 1),
              "explicit zero/one restart-verification allowance required")
     return SolverConfig(algorithm=algorithm, max_accepted_steps=accepted_steps,
-                        max_objective_attempts=1 + 4 * accepted_steps,
+                        max_objective_attempts=(_profile.objective_attempts if _profile.objective_attempts is not None
+                                                else 1 + 4 * accepted_steps),
                         max_backtracks=3, max_restart_verifications=restart_verifications,
                         initial_step_size=.001, maximum_atom_displacement=.05,
                         force_tolerance=.001, armijo_constant=.0001,
@@ -72,15 +98,15 @@ def implementation_sources():
     return result
 
 
-def _context(ligand, parameters, config, fixed, binding):
+def _context(ligand, parameters, config, fixed, binding, _profile=_DEFAULT_PROFILE):
     require_system(ligand, 256)
     _require(type(binding) is dict, "explicit step-budget input identity required")
     exact_fields(binding, {"profile_id", "model", "accepted_step_budget", "restart_verifications", "candidate_id",
                            "prepared_protocol_sha256", "initial_coordinates_sha256"})
-    _require(binding["profile_id"] == PROFILE_ID, "step-budget profile identity mismatch")
+    _require(binding["profile_id"] == _profile.profile_id, "step-budget profile identity mismatch")
     _require(type(config) is SolverConfig, "explicit Cartesian solver required")
     expected = budget_config(config.algorithm, binding["accepted_step_budget"],
-                             restart_verifications=binding["restart_verifications"])
+                             restart_verifications=binding["restart_verifications"], _profile=_profile)
     _require(canonical(config.to_dict()) == canonical(expected.to_dict()),
              "frozen step-budget solver controls differ")
     model = binding["model"]
@@ -104,25 +130,25 @@ def _context(ligand, parameters, config, fixed, binding):
              "exact initial coordinates changed")
     fixed.validate_ligand(ligand, parameters)
     identity = {
-        "schema_id": BINDING_SCHEMA, "source_system_sha256": canonical_system_sha256(ligand),
+        "schema_id": _profile.binding_schema, "source_system_sha256": canonical_system_sha256(ligand),
         "evaluator": evaluator.identity(), "config": config.to_dict(),
-        "implementation_sha256": digest(implementation_sources()),
+        "implementation_sha256": digest(_profile_sources(_profile)),
         "environment": environment(), "external_binding": binding,
     }
     return evaluator, json.loads(canonical(identity))
 
 
-def _load(protocol, protocol_sha256, model, accepted_steps, restart_verifications):
+def _load(protocol, protocol_sha256, model, accepted_steps, restart_verifications, _profile=_DEFAULT_PROFILE):
     exact_fields(protocol, {
         "schema_version", "profile_id", "model", "accepted_step_budget", "restart_verifications", "candidate_id",
         "evidence_kind", *REFS, "solver", "initial_coordinates_sha256",
         "implementation_sha256", "boundary",
     })
-    _require(protocol["schema_version"] == PROTOCOL and protocol["profile_id"] == PROFILE_ID,
+    _require(protocol["schema_version"] == _profile.protocol and protocol["profile_id"] == _profile.profile_id,
              "explicit step-budget protocol required")
     _require(type(model) is str and model in MODELS and protocol["model"] == model,
              "explicit model selection differs from protocol")
-    _require(type(accepted_steps) is int and accepted_steps in ACCEPTED_STEP_BUDGETS
+    _require(type(accepted_steps) is int and accepted_steps in _profile.accepted_steps
              and type(protocol["accepted_step_budget"]) is int
              and protocol["accepted_step_budget"] == accepted_steps,
              "explicit accepted-step budget differs from protocol")
@@ -135,7 +161,7 @@ def _load(protocol, protocol_sha256, model, accepted_steps, restart_verification
     _require(canonical(protocol["boundary"]) == canonical(BOUNDARY), "authority promotion forbidden")
     require_digest(protocol_sha256)
     require_digest(protocol["implementation_sha256"])
-    _require(protocol["implementation_sha256"] == digest(implementation_sources()),
+    _require(protocol["implementation_sha256"] == digest(_profile_sources(_profile)),
              "step-budget implementation changed")
     raw = {name: _bound(protocol[name]) for name in REFS}
     prepared_helpers._source_evidence(raw["source_evidence"], protocol["evidence_kind"])
@@ -153,23 +179,23 @@ def _load(protocol, protocol_sha256, model, accepted_steps, restart_verification
                ("profile_id", "model", "accepted_step_budget", "restart_verifications", "candidate_id",
                 "initial_coordinates_sha256")}
     binding["prepared_protocol_sha256"] = protocol_sha256
-    evaluator, identity = _context(ligand, parameters, config, fixed, binding)
+    evaluator, identity = _context(ligand, parameters, config, fixed, binding, _profile)
     return ligand, parameters, config, fixed, evaluator, identity
 
 
-def _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications):
+def _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications, _profile=_DEFAULT_PROFILE):
     require_digest(expected_sha256)
     raw = _regular_file(Path(protocol_path), MAX_JSON_BYTES)
     _require(hashlib.sha256(raw).hexdigest() == expected_sha256, "protocol bytes changed")
     protocol = _json(raw)
-    return protocol, _load(protocol, expected_sha256, model, accepted_steps, restart_verifications)
+    return protocol, _load(protocol, expected_sha256, model, accepted_steps, restart_verifications, _profile)
 
 
-def _preflight(protocol, protocol_sha256, loaded):
+def _preflight(protocol, protocol_sha256, loaded, _profile=_DEFAULT_PROFILE):
     ligand, parameters, config, fixed, _, _ = loaded
     return {
-        "schema_id": "prepared_cartesian_step_budget_preflight/3.0.0",
-        "profile_id": PROFILE_ID, "status": "admitted_for_bounded_development_execution",
+        "schema_id": _profile.preflight_schema,
+        "profile_id": _profile.profile_id, "status": "admitted_for_bounded_development_execution",
         "prepared_protocol_sha256": protocol_sha256, "candidate_id": protocol["candidate_id"],
         "model": protocol["model"], "accepted_step_budget": protocol["accepted_step_budget"],
         "restart_verifications": protocol["restart_verifications"],
@@ -187,14 +213,15 @@ def _preflight(protocol, protocol_sha256, loaded):
     }
 
 
-def preflight(protocol_path, expected_sha256, *, model, accepted_steps, restart_verifications):
+def preflight(protocol_path, expected_sha256, *, model, accepted_steps, restart_verifications,
+              _profile=_DEFAULT_PROFILE):
     """Validate prepared sources/topology/geometry without energy or force work."""
-    protocol, loaded = _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications)
-    return _preflight(protocol, expected_sha256, loaded)
+    protocol, loaded = _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications, _profile)
+    return _preflight(protocol, expected_sha256, loaded, _profile)
 
 
 def prepare(*, model, accepted_steps, restart_verifications, candidate_id, evidence_kind, ligand, receptor,
-            parameters, cross, source_evidence, solver, output):
+            parameters, cross, source_evidence, solver, output, _profile=_DEFAULT_PROFILE):
     """Seal a new independent start under a predeclared model and step budget."""
     _require(type(model) is str and model in MODELS, "explicit prepared model required")
     files = dict(ligand=ligand, receptor=receptor, parameters=parameters,
@@ -206,17 +233,17 @@ def prepare(*, model, accepted_steps, restart_verifications, candidate_id, evide
             _regular_file(path, MAX_JSON_BYTES)).hexdigest()}
     system = all_atom_system_from_canonical_json(_bound(refs["ligand"]))
     document = {
-        "schema_version": PROTOCOL, "profile_id": PROFILE_ID, "model": model,
+        "schema_version": _profile.protocol, "profile_id": _profile.profile_id, "model": model,
         "accepted_step_budget": accepted_steps, "restart_verifications": restart_verifications,
         "candidate_id": candidate_id,
         "evidence_kind": evidence_kind, **refs,
         "solver": solver.to_dict() if type(solver) is SolverConfig else solver,
         "initial_coordinates_sha256": digest(coordinates_hex(system.coordinates)),
-        "implementation_sha256": digest(implementation_sources()), "boundary": dict(BOUNDARY),
+        "implementation_sha256": digest(_profile_sources(_profile)), "boundary": dict(BOUNDARY),
     }
     raw = (canonical(document) + "\n").encode()
     sha256 = hashlib.sha256(raw).hexdigest()
-    receipt = _preflight(document, sha256, _load(document, sha256, model, accepted_steps, restart_verifications))
+    receipt = _preflight(document, sha256, _load(document, sha256, model, accepted_steps, restart_verifications, _profile), _profile)
     path = Path(output).absolute()
     with path.open("xb") as stream:
         stream.write(raw)
@@ -224,27 +251,28 @@ def prepare(*, model, accepted_steps, restart_verifications, candidate_id, evide
 
 
 def run(protocol_path, expected_sha256, run_dir, *, model, accepted_steps, restart_verifications,
-        resume=False, pause_after_objective_attempts=None):
+        resume=False, pause_after_objective_attempts=None, _profile=_DEFAULT_PROFILE):
     """Run or safely resume this exact profile; pending unknown work is rejected."""
-    _, loaded = _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications)
+    _, loaded = _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications, _profile)
     ligand, _, config, fixed, evaluator, identity = loaded
     result = execution._minimize_profile(
         ligand, config, evaluator=evaluator, identity=identity, run_dir=run_dir,
-        implementation_sources=implementation_sources, result_schema=RESULT_SCHEMA,
+        implementation_sources=lambda: _profile_sources(_profile), result_schema=_profile.result_schema,
         model_guard=fixed.assert_intact, resume=resume,
         pause_after_objective_attempts=pause_after_objective_attempts,
     )
-    _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications)
+    _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications, _profile)
     return result
 
 
-def verify(protocol_path, expected_sha256, run_dir, *, model, accepted_steps, restart_verifications):
+def verify(protocol_path, expected_sha256, run_dir, *, model, accepted_steps, restart_verifications,
+           _profile=_DEFAULT_PROFILE):
     """Replay retained observations, without graph/energy/force work or mutation."""
-    _, loaded = _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications)
+    _, loaded = _read(protocol_path, expected_sha256, model, accepted_steps, restart_verifications, _profile)
     ligand, _, config, fixed, evaluator, identity = loaded
     return execution._verify_profile(
         ligand, config, evaluator=evaluator, identity=identity, run_dir=run_dir,
-        implementation_sources=implementation_sources, result_schema=RESULT_SCHEMA,
+        implementation_sources=lambda: _profile_sources(_profile), result_schema=_profile.result_schema,
         model_guard=fixed.assert_intact,
     )
 
