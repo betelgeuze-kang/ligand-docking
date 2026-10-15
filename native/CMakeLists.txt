@@ -75,6 +75,7 @@ add_custom_command(
         "${PROJECT_SOURCE_DIR}/rust/Cargo.lock"
         "${PROJECT_SOURCE_DIR}/rust/cpu-kernel/Cargo.toml"
         "${PROJECT_SOURCE_DIR}/rust/betelgeuze-docking-search/Cargo.toml"
+        "${PROJECT_SOURCE_DIR}/rust/betelgeuze-docking-search/tests/fixtures/sampling_funnel_selected_indices_v1.txt"
         ${BG_RUST_CPU_SOURCES}
     COMMENT "Building deterministic Rust CPU provider"
     VERBATIM
