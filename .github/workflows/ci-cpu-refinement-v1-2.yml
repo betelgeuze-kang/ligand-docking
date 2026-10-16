@@ -196,7 +196,7 @@ jobs:
           python tools/verify_cpu_candidate_resume_install.py \
             --python "$RUNNER_TEMP/corrected-installed/bin/python" \
             --output "$RUNNER_TEMP/candidate-resume-installed"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: cpu-refinement-v1-2-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.run_attempt }}

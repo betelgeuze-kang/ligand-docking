@@ -146,7 +146,7 @@ jobs:
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -m pytest --import-mode=importlib --rootdir="$RUNNER_TEMP" -c /dev/null --noconftest -p no:cacheprovider -W error -q "$RUNNER_TEMP/test_installed_synthetic_comparison.py" --junitxml="$RUNNER_TEMP/installed-synthetic-junit.xml"
           "$RUNNER_TEMP/comparison-installed/bin/python" -I -c 'import importlib.util, sys, betelgeuze_product.installed_synthetic_comparison as c; assert "site-packages" in c.__file__; assert importlib.util.find_spec("tools") is None; assert not any(x == "tools" or x.startswith("tools.") for x in sys.modules)'
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: candidate-comparison-cpu-${{ github.run_id }}-${{ github.run_attempt }}

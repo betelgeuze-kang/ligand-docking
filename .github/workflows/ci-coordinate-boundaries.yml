@@ -47,7 +47,7 @@ jobs:
           sha256sum betelgeuze_engine/product/prepared_coordinate_export.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_coordinate_boundary_followup.py > boundary-sources.sha256
           python -m ruff check --isolated --no-cache betelgeuze_engine/product/prepared_coordinate_export.py tools/product/diagnose_prepared_cross_numerics.py tests/unit/test_coordinate_boundary_followup.py
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_coordinate_boundary_followup.py tests/unit/test_prepared_coordinate_export.py tests/unit/test_prepared_coordinate_array.py tests/unit/test_prepared_cross_force_diagnostic.py tests/unit/test_prepared_cross_numeric_check.py --junitxml=boundary-junit.xml 2>&1 | tee boundary-tests.log
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: coordinate-boundaries-${{ github.run_id }}-${{ github.run_attempt }}

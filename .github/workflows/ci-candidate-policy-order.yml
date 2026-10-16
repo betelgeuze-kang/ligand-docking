@@ -45,7 +45,7 @@ jobs:
           sha256sum tools/product/compare_prepared_candidate_policies.py tests/unit/test_candidate_policy_order_v2.py > policy-sources.sha256
           python -m ruff check --isolated --no-cache tools/product/compare_prepared_candidate_policies.py tests/unit/test_candidate_policy_order_v2.py
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -W error -q tests/unit/test_prepared_candidate_comparison.py tests/unit/test_candidate_policy_order_v2.py --junitxml=policy-junit.xml 2>&1 | tee policy-tests.log
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: candidate-order-${{ github.run_id }}-${{ github.run_attempt }}
