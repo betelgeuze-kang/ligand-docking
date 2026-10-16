@@ -1551,6 +1551,91 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/rigid-water-large-step-results/torque-distribution.json",
       "sha256": "e2cb39523cd0401ca8e3421b0ffe073e1e63ce7639fe83e75ebc865d6d6eeaa9"
+    },
+    {
+      "record": "PFK-water-adaptive-one-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-adaptive-block-run/runs/descent/summary.json",
+      "sha256": "5a49cde60e7ba04551309a9a8d2d35ed1d93474eafe56421e69758c28022d230"
+    },
+    {
+      "record": "PFK-partial-water-static-matrix",
+      "external_source_id": "external-evidence/pfk-partial-water-force-sensitivity-results-20261016/compact-results.json",
+      "sha256": "432f9d8df578bcd21e1098c1ce4c8a870dba05a8b5dd7211abe5f69fbb54f0f3"
+    },
+    {
+      "record": "PFK-water-matrix-reporting-failure",
+      "external_source_id": "external-evidence/pfk-partial-water-force-sensitivity-results-20261016/read-only-terminal-reconciliation.json",
+      "sha256": "935d909ffe5fd91bfe83b31112139573ed63eca726dcba96df5ebed1a0b62211"
+    },
+    {
+      "record": "PFK-water-adaptive-one-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-adaptive-results/torque-distribution.json",
+      "sha256": "a1999696647dff8c9025f758259c6d00a80c19c5394cdbc448bf6c8affecdf71"
+    },
+    {
+      "record": "PFK-water-adaptive-one-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-adaptive-results/local-versus-final-torques.json",
+      "sha256": "812ab28df077c1ae57b34a0297fa5f44b7dc85de976116f4ff471b39eca681cd"
+    },
+    {
+      "record": "PFK-water-three-sweep-admission-failure",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-adaptive-three-sweep-run/runs/descent/summary.json",
+      "sha256": "5be92493f66556ffccc5d8e83b43bf3b3b31997aa63891443376b4eb3b641c58"
+    },
+    {
+      "record": "PFK-water-adaptive-three-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-adaptive-three-sweep-runtime1-run/runs/descent/summary.json",
+      "sha256": "901165f35f21b94af37ac2980b447864c72b40d786c51a39c2bd7dea6a06d7c3"
+    },
+    {
+      "record": "PFK-water-adaptive-three-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-three-sweep-results/REPORT-KO.md",
+      "sha256": "6b19872b35a21f970ed08eaf8144511ce763f00026f10e845fe6f2ccefdd88c9"
+    },
+    {
+      "record": "PFK-water-adaptive-three-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-three-sweep-results/three-sweep-analysis.json",
+      "sha256": "c53ace23e686c8a26404a8c3e4ebdb10690eeae5e4d37207675f651fcc8d3226"
+    },
+    {
+      "record": "PFK-water-adaptive-three-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-three-sweep-results/per-water-and-visit-details.json",
+      "sha256": "3f96538b23d76cf8cfef21794a8b6f195d8baadbdcdcfae78bdd9ba19d61ffee"
+    },
+    {
+      "record": "PFK-water-adaptive-three-sweep",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-three-sweep-results/result-receipt.json",
+      "sha256": "44ff163f3fdb7562a047932808b08f2afeb55e60ae036a1c73686b68d34a5777"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-2133/normalized-ledger.json",
+      "sha256": "5e26f1363b6f50358d5d9dcfea304c90240ee63585cb3f06325ff70721fffcb0"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-2133/source-manifest.json",
+      "sha256": "5e610206410edea6352d7bbd903913ff1971d67b4dcd0fb13b6fb97d29f49da2"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-adaptive-results/REPORT-KO.md",
+      "sha256": "7527a2b210bf8f4d2112a6d355e7952256f163b871b4545ce90ca06c62f23d18"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-partial-water-force-sensitivity-results-20261016/REPORT-KO.md",
+      "sha256": "0c1746a153633b07a9a0fa0ed194320b650088e2adf197065b6a0061707cb606"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-partial-water-force-sensitivity-results-20261016/read-only-terminal-reconciliation.json",
+      "sha256": "935d909ffe5fd91bfe83b31112139573ed63eca726dcba96df5ebed1a0b62211"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-three-sweep-results/REPORT-KO.md",
+      "sha256": "6b19872b35a21f970ed08eaf8144511ce763f00026f10e845fe6f2ccefdd88c9"
     }
   ]
 }
