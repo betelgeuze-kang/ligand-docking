@@ -1411,6 +1411,86 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/rigid-water-force-taper-results/result-receipt.json",
       "sha256": "cf4c6e78b8f270b9e7820c9c92bb732125f3481abfb6ee701601df8fd288bfd1"
+    },
+    {
+      "record": "PFK-8DOF-admission-failure",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "sha256": "0e73428bfd8f6f03f75a52020a1ea637a52fd430f44b204b757e4a082d21f595"
+    },
+    {
+      "record": "PFK-8DOF-FD",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "sha256": "0e73428bfd8f6f03f75a52020a1ea637a52fd430f44b204b757e4a082d21f595"
+    },
+    {
+      "record": "PFK-8DOF-P0",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "sha256": "0e73428bfd8f6f03f75a52020a1ea637a52fd430f44b204b757e4a082d21f595"
+    },
+    {
+      "record": "PFK-8DOF-P1",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "sha256": "0e73428bfd8f6f03f75a52020a1ea637a52fd430f44b204b757e4a082d21f595"
+    },
+    {
+      "record": "PFK-8DOF-report-failure",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "sha256": "0e73428bfd8f6f03f75a52020a1ea637a52fd430f44b204b757e4a082d21f595"
+    },
+    {
+      "record": "PFK-water-mechanics-pilot",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-force-taper-pilot/runs/mechanics/summary.json",
+      "sha256": "118f51071a019631827cd54599a23f8f7c134a95a884b1b9c605d33ff7e69bed"
+    },
+    {
+      "record": "PFK-water-descent-admission-failure",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-descent-run/pre-admission-failure-01/failure.json",
+      "sha256": "991582c49b5349abee5c4280dde9b9871a56c6a0de5b916271e8597a69903181"
+    },
+    {
+      "record": "PFK-water-descent-two-sweeps",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-descent-run/runs/descent/summary.json",
+      "sha256": "3e0e5a68672dd3fa4654f29c094abb05a89e5b40db8757008eacd710f221c1a7"
+    },
+    {
+      "record": "latest-scientific-report",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-new-model-results-20261016/REPORT-KO.md",
+      "sha256": "260bca05edce14c360e5bdb1a8a3536a2b66221159e0d9e8b5ccb62a8a4047bd"
+    },
+    {
+      "record": "latest-scientific-report",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-force-taper-results/REPORT-KO.md",
+      "sha256": "cae0b1b26d14e66854cfe57c99ce6b09561181ce1204335bbf9a74a21ab82cb9"
+    },
+    {
+      "record": "PFK-water-descent-two-sweeps",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-descent-results/REPORT-KO.md",
+      "sha256": "00b7914b687b3668313ce7a4caf9e2d9a1b8ae0fd9bc1b4031cbd64385ed7d1e"
+    },
+    {
+      "record": "PFK-water-descent-two-sweeps",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-descent-run/runs/descent/supervisor-exit.json",
+      "sha256": "c6ac22734b23e23256405a96d6b3f518d4bc3c104c36a202f4bf56b512d008ef"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1855/normalized-ledger.json",
+      "sha256": "9be2f9a297db67a11c421ded188f75a3a328344e54d99e5408952727d0bb48ba"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1855/source-manifest.json",
+      "sha256": "1314eaed638f202c7e9593b3709af817463e23e0447966f3e2d0bdaeed0da892"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-rigid-torsion-new-model-results-20261016/REPORT-KO.md",
+      "sha256": "260bca05edce14c360e5bdb1a8a3536a2b66221159e0d9e8b5ccb62a8a4047bd"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-descent-results/REPORT-KO.md",
+      "sha256": "00b7914b687b3668313ce7a4caf9e2d9a1b8ae0fd9bc1b4031cbd64385ed7d1e"
     }
   ]
 }
