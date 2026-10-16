@@ -1,6 +1,8 @@
 # 분자 최적화·도킹 연구 실험 현황 (2026-10-16)
 
-최신 갱신: **2026-10-16 17:02 UTC / 2026-10-17 02:02 KST**. 교차 Coulomb force-taper 대조를 추가했다. 최신132행, full E/F6,731확인+과거미상1(PFK5,456/JNK1,275), 신규 correction1,072 별도. 두 표적의 새 모델 수치 공동 기준은 통과했으며 포즈 정확도·기존 모델 정지성과 구분한다. 아래 이전 시점 기록은 보존한다.
+최신 갱신: **2026-10-16 18:23 UTC / 2026-10-17 03:23 KST**. 내부 Coulomb uncut와 별도 물 mechanics pilot까지137행을 반영했다. source full E/F7,629확인+과거미상1, cross correction1,970/internal correction898. 물10objective/2,916kernel은 별도다. 아래 과거 시점 기록은 보존한다.
+
+이전 갱신: **2026-10-16 17:02 UTC / 2026-10-17 02:02 KST**. 교차 Coulomb force-taper 대조를 추가했다. 최신132행, full E/F6,731확인+과거미상1(PFK5,456/JNK1,275), 신규 correction1,072 별도. 두 표적의 새 모델 수치 공동 기준은 통과했으며 포즈 정확도·기존 모델 정지성과 구분한다. 아래 이전 시점 기록은 보존한다.
 
 이전 갱신: **2026-10-16 14:42 UTC / 23:42 KST**. JNK1 성분·고립·proper 분해·국소 평면 실험과 PFKFB3 물 준비 검토를 추가했다. 최신123행, full E/F 장부합5,659확인+과거미상1(PFK4,838/JNK821). 내부 전용·backward·energy-only는 별도이며 아래 이전 기록은 보존한다.
 
@@ -23,7 +25,7 @@
 
 ## 읽을 파일과 증거 수준
 
-- [최신 132행 기계 판독 원장](molecular-experiments-20261016.json): 목적·힘 단위·임계치·수렴 상태·비용·검증 범위·출처 신뢰 수준
+- [최신 137행 기계 판독 원장](molecular-experiments-20261016.json): 목적·힘 단위·임계치·수렴 상태·비용·검증 범위·출처 신뢰 수준
 - [외부 근거 SHA-256 목록](molecular-experiments-20261016-sources.json): 보고서 및 원시 원장 식별값
 
 원장은 외부에 보존된 실험 자료에서 추출했다. `external_source_id`와 `source_display`는 **외부 자료 식별자이며 저장소 상대 파일 링크가 아니다**. 이 PR에는 대용량 좌표, 체크포인트, 저널 및 원시 아카이브가 포함되지 않는다. 해시가 있다는 것만으로 다운로드 가능하거나 독립 재현됐다는 뜻은 아니다. `source_status`가 미감사인 localA88·6T88은 확인된 실험 성과에 포함하지 않는다.
@@ -406,3 +408,55 @@ JNK1 내부 에너지는−134.772986010 kcal/mol이고 이전 고립 국소 끝
 ### 최신 비용 집계
 
 두 표적 full E/F 장부합은 **6,731확인+과거 미상1**이다. 신규 correction1,072는 같은 횟수의 추가 계산 항으로 별도 기록하며 이를 full E/F와 더해 독립 전체계 평가2,144회라고 표시하지 않는다. 기존 shape1,378·plane1,163, JNK internal-only1,163·backward3,489·proper energy-only4, PFK internal-only2·instrumented-cross2도 기존 범위대로 보존한다. 모델 간 full 호출 수는 실제 실행시간 동등성을 뜻하지 않는다.
+
+## 후속: 일반 내부 Coulomb cutoff 제거
+
+이 기록 전 main은 `a82f393cb07ee6fb40dbec9c621f9578674becce`([PR #596](https://github.com/betelgeuze-kang/ligand-docking/pull/596))다. 이전132행을 보존하고 완료된 고정/FD·두 표적 최적화를 추가했다.
+
+교차 Coulomb force taper는 고정하고 일반 비제외 내부 Coulomb만 unswitched/untruncated1/r로 바꿨다. listed1–4·exclusions·전하·LJ·결합항은 그대로다. 원본에서 새 이력으로 PFKFB3 다음 JNK1을 실행했고 구속·참조 fitting·성과에 따른 조건 선택은 없었다. 기본 제품 모델 변경을 뜻하지 않는다.
+
+| 지표 | PFKFB3 | JNK1 |
+|---|---:|---:|
+| NEW 원시 최대 힘 kcal/mol/Å | 0.000927012124 | 0.000956299792 |
+| 같은 NEW 내부 모델의 원본 대비 Δ kcal/mol | −8.023820052 | −4.295506642 |
+| 별도 LEGACY 내부 모델의 원본 대비 Δ kcal/mol | −14.829229 | −4.628338 |
+| source / cross / internal 평가 | 360 / 360 / 360 | 510 / 510 / 510 |
+| 수락 단계 | 353 | 488 |
+| 감독기 elapsed 초 | 1328.93 | 1656.67 |
+| 방향족 최대 평면 이탈 Å | 0.017013 | 0.011630 |
+
+새 모델 힘≤0.001·같은 새 내부 모델의 원본 대비 증가≤0 공동 기준은 두 표적 모두 통과했다. **내부 Hamiltonian도 바뀌었으므로 이전 strain 숫자와 서로 바꾸어 쓰거나 기존 고립 끝점을 새 strain 기준으로 사용하면 안 된다.** LEGACY 값은 별도 표기했다.
+
+PFK 정확6HVI/GV5 RMSD는0.624314Å다. 기존 건조0.884736Å보다는 작지만 cross-only0.563730Å 및 원래0.290392Å보다 나쁘다. 고리 평면성은 cross-only0.026558Å에서 개선됐으나 정확 포즈가 함께 좋아진 것은 아니다. JNK 평면성은0.018867→0.011630Å로 개선됐고 정확 native 참조는 여전히 없다. 두 표적의 부분 거리기하·고리 screen 위반0, vdW 거리비<0.9 접촉은 각각1개다.
+
+이번에는 이미 예산에 포함된 끝점 관측의 source/cross/new 단계를 보존했다. 같은 새 끝점에서 cross-only 최대 힘은 PFK36.241399791/JNK4.722961713, source 모델은69.176157814/54.559010575 kcal/mol/Å다. 새 모델 수렴을 다른 모델의 정지성으로 확대하지 않는다. 이를 얻기 위한 추가 끝점/재생 E/F는0이다.
+
+### 검증·비용
+
+- 앞선 gate:4고정+24FD=28회씩 source/cross/internal.12개 사전 FD 성분 통과, 최대차PFK2.0003e−8/JNK7.4977e−9
+- 최적화870회씩 source/cross/internal,841수락. 전체 단계 **898 source full E/F+898 cross correction+898 internal correction**
+- 단계 backward:source19,348+cross898+internal898. 외부 graph898+source admission rebuild898 별도
+- 두 최적화의486개 동결 해시·최초 triple parity·저널·종료코드0·cleanup 확인, 실패·미처리·미상0
+- 수치·원장 독립 감사 PASS이며 포즈/물리 타당성 인증은 아니다. 기하·참조 분석의 추가 E/F0
+
+## 별도 완료: 실제 분자 물 회전 mechanics pilot
+
+기존136행 원장 발행 뒤 완료한 물 pilot을 별도137번째 행으로 추가했다. 일반 리간드 full E/F 합계에 물 호출을 섞지 않는다.
+
+원래 리간드·단백질·362개 물 산소를 고정하고 사전 지정 source water0/residue701의 수소만 회전시켰다. WP/WL/WW에는 같은 보존적 force-taper Coulomb과 기존 LJ를 사용한다. 서로 다른 물의 전역 에너지는 한 번만, 힘은 양방향으로 계산하고 동일 물 내부 pair는 제외했다.
+
+- 회전 FD 최대오차4.4375907393e−9 kcal/mol/rad
+- 원래 및 +0.01rad x 회전에서 water0의 전역/로컬 Cartesian 힘·torque가 저장값 기준 정확히 일치
+- 로컬 ΔE+0.05092480873485172, 전역 ΔE+0.05092480873486238 kcal/mol, 차이1.0658141036e−14
+- 정한 회전은 에너지를 높였다. 방향·물을 바꾸어 유리한 결과를 고르지 않았다
+- 전체 초기 최대 torque33.8202019931 kcal/mol/rad: 선언 모델의 초기 물 방향은 회전 정지점이 아니다
+
+선택 water0에는10Å cutoff 내 리간드 pair가 없어 로컬 WL항이0이었다. 전체 census에는 WL을 포함했고 WL 회전 산술은 별도 합성 검사로 확인했다. 이번 water0 FD를 모든 실제 물–리간드 성분 검증으로 확대하지 않는다.
+
+전역 census2회+local8회=**물 objective10회, kernel2,916회**, directional candidate traversals17,311,068. 일반 리간드 full E/F0, wall193.302684초/CPU193.098175초, peak RSS297,312,256bytes. 종료코드0·실패0·미처리/새미상0·잔여child0, 독립 감사 통과. 합성40개·runner guard61개 검사는 실제 물 최적화 횟수가 아니다.
+
+리간드 포즈와362개 물 방향을 최적화하지 않았고 새 포즈 개선·평형 수화 결과가 없다. 결정 유래 고정 산소·원래 리간드에 조건부 준비·authored H방향·짧은 환경 접촉·POP 누락·파라미터 동시대성 한계가 남는다. 계획 SHA256 `fd62d3a3e563d44475960667f69ca12b55e6f617f249bb53f4a1edde97bc2bb9`.
+
+### 최신 집계와 경계
+
+source full E/F **7,629확인+과거미상1**, cross correction1,970, internal correction898을 각각 기록한다. 기존 shape1,378·plane1,163 및 부분 계산 계수는 보존한다. 물 pilot10objective/2,916kernel은 별도이며 full E/F에 더하지 않는다. 다음 제한자유도·물 descent 계획은 이 문서의 실행 완료 결과에 포함하지 않는다.
