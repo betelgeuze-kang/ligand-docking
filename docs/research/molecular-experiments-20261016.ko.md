@@ -1,6 +1,8 @@
 # 분자 최적화·도킹 연구 실험 현황 (2026-10-16)
 
-최신 갱신: **2026-10-16 18:55 UTC / 2026-10-17 03:55 KST 자료 기준**.8DOF P0/P1와 물2순회까지144행을 반영했다. source full7,739확인+과거미상1,cross2,080/internal1,008. 물1,461objective/11,598kernel은 별도다. 이전137행을 보존하며 pilot 중복 별칭은 연결만 했다.
+최신 갱신: **2026-10-16 19:37 UTC / 2026-10-17 04:37 KST 자료 기준**. 사전 dry Q± 국소 회복과 큰 물 회전폭 추가2순회까지148행이다. source full8,004확인+과거미상1, cross2,345/internal1,273; 물2,997objective/20,535kernel은 별도다. 이전144행을 그대로 보존한다.
+
+이전 갱신: **2026-10-16 18:55 UTC / 2026-10-17 03:55 KST 자료 기준**.8DOF P0/P1와 물2순회까지144행을 반영했다. source full7,739확인+과거미상1,cross2,080/internal1,008. 물1,461objective/11,598kernel은 별도다. 이전137행을 보존하며 pilot 중복 별칭은 연결만 했다.
 
 이전 갱신: **2026-10-16 18:23 UTC / 2026-10-17 03:23 KST**. 내부 Coulomb uncut와 별도 물 mechanics pilot까지137행을 반영했다. source full E/F7,629확인+과거미상1, cross correction1,970/internal correction898. 물10objective/2,916kernel은 별도다. 아래 과거 시점 기록은 보존한다.
 
@@ -27,7 +29,7 @@
 
 ## 읽을 파일과 증거 수준
 
-- [최신 144행 기계 판독 원장](molecular-experiments-20261016.json): 목적·힘 단위·임계치·수렴 상태·비용·검증 범위·출처 신뢰 수준
+- [최신 148행 기계 판독 원장](molecular-experiments-20261016.json): 목적·힘 단위·임계치·수렴 상태·비용·검증 범위·출처 신뢰 수준
 - [외부 근거 SHA-256 목록](molecular-experiments-20261016-sources.json): 보고서 및 원시 원장 식별값
 
 원장은 외부에 보존된 실험 자료에서 추출했다. `external_source_id`와 `source_display`는 **외부 자료 식별자이며 저장소 상대 파일 링크가 아니다**. 이 PR에는 대용량 좌표, 체크포인트, 저널 및 원시 아카이브가 포함되지 않는다. 해시가 있다는 것만으로 다운로드 가능하거나 독립 재현됐다는 뜻은 아니다. `source_status`가 미감사인 localA88·6T88은 확인된 실험 성과에 포함하지 않는다.
@@ -523,3 +525,48 @@ source full E/F **7,629확인+과거미상1**, cross correction1,970, internal c
 ### 최신 비용
 
 리간드 source full **7,739확인+과거미상1**, cross correction2,080, internal correction1,008. 기존 shape1,378·plane1,163·부분 계산계수는 보존하며 물1,461objective/11,598kernel은 따로 기록한다. 현재 진행 중인 held-out Q± 또는 더 큰 물 step 실험의 결과는 미포함이다.
+
+## 후속: 사전 등록한 더 큰 dry 교란 Q±의 국소 회복
+
+직전 문서 main은 `99ff6b08033ba751300d7c5024b83ad257ffb9ab`([PR #598](https://github.com/betelgeuze-kang/ligand-docking/pull/598))다. 같은 51원자 리간드·6,749 site dry 환경, cross force taper+ordinary internal Coulomb uncut, 강체6+torsion2의 8자유도 모델을 유지했다. 앞선 물 회전 결과를 입력하지 않았다.
+
+| 지표 | Q+ | Q− |
+|---|---:|---:|
+| 사전 교란 | z축 +20°·x +1Å | z축 −20°·x −1Å |
+| 시작 exact6HVI heavy RMSD Å | 1.7245312953 | 1.7683463638 |
+| 종료 exact6HVI heavy RMSD Å | 0.4984244874 | 0.4984694420 |
+| 허용 접선 최대 원자힘 kcal/mol/Å | 0.000426511 | 0.000192759 |
+| 전체 Cartesian 최대 원자힘 kcal/mol/Å | 79.425281 | 79.425207 |
+| 원래P0 대비 동일 NEW 내부 증가 kcal/mol | +0.992764 | +0.992273 |
+| 수락 단계 / full E/F | 167 / 168 | 96 / 97 |
+
+두 사전 국소 회복 기준은 통과했다. 원래P0의0.2903923981Å보다 정확해진 것은 아니며, 전체 raw 힘·내부 비증가·공동 기준은 실패했다. 원래P0 종료점과의 정렬 없는 all-atom RMSD는 각각0.000419631/0.000329014Å로 거의 같은 제한된 정지점 부근에 도달했다. 국소 최소점임을 별도로 인증한 것은 아니다. 그 미세한 차이를 의미 있는 포즈 우위로 해석하지 않는다.
+
+정확한 receptor frame·대칭 고려 heavy RMSD를 쓰고 ligand fitting은 하지 않았다. 교란은 reference 결과를 보기 전에 고정했다. 동일 표적의 두 초기조건이지 독립 표적 두 개나 blind docking 검증이 아니다. 앞선 작은P1은0.479471→0.498471Å로 악화됐고 P0 no-harm도 실패했으므로, 이번 더 먼 시작점의 회복이 그 실패를 지우지 않는다. 기하 보존 잔차는 최대약2.28e−13이며 원본 내부 변형·제한 반력은 남는다.
+
+새 비용은265 source full+265 cross+265 internal correction이다. source backward6,093/cross265/internal265, external/source admission graph각265다. 기존17-call FD·P0 control은 재사용했고 새 비용으로 더하지 않았다. 감독기 시간861.94/505.67초, 종료·보고·replay 추가 E/F0, 두 경로 모두 미처리 없이 종료·독립 감사 통과다.
+
+최초 freeze manifest가 중첩 plan을 누락한 실패는 물리 호출 전 guard가 검출했다. 실패 기록을 보존하고 root 파일만 제외하도록 고친 뒤587해시·77검사를 확인했다. 계획 SHA256 `425fe908f58b9196e55344feafc5af1aaa080e8fdf7889361d0fd58e8614202c`. 최종 보고서는 `REPORT-KO-v2.md`이며 이전 보고서와 수정 기록도 보존했다.
+
+## 별도 후속: 더 큰 회전폭의 물 방향 두 순회
+
+직전 소회전 종료 상태에서 이어서, 모델·전하·TIP3P·고정 산소·단백질·원래P0 리간드를 유지하고 trial ladder만0.5/0.25/0.125/0.0625rad로 사전 지정했다. 첫 global 관측은 저장된 직전 끝점과 정확히 일치했다.
+
+724회 회전 수락·85회 trial 거절 후 backtracking, blocked/skip/partial0이다. 분기 에너지는−1015.5922855230→−3655.1736157108 kcal/mol(Δ−2639.5813301878), 원래 projected 물 대비 누적Δ−3393.1421534664다. WP Coulomb−2284.9370851514, WW−356.8148742326, WL+2.1706291962이며 세 LJ항은 불변이다. 에너지 감소를 더 유리한 ligand–water 결합으로 해석하지 않는다.
+
+| current-state torque kcal/mol/rad | 원래 projected | 소회전2순회 | 큰회전2순회 |
+|---|---:|---:|---:|
+| 최대 | 33.8202 | 30.4787 | 24.9362 |
+| 중앙값 | 9.5355 | 9.1505 | 4.4201 |
+| p90 (선형 보간) | 18.2421 | 17.8506 | 11.6188 |
+| 기준0.001 초과 물 | 362 | 362 | 362 |
+
+전반적인 torque 분포는 개선됐지만 **모든362개 물이 미수렴**이다. 이번 분기에서283개 감소·79개 증가했다. 매 회전의 에너지 감소가 개별 torque norm의 단조 감소를 보장하지 않는다. 최악 site는 water229/res935에서 water12/res713으로 바뀌었다. 최종 두 site는 리간드에서 각각33Å 이상/18Å 이상으로10Å cutoff 밖이다. 전체 최대 torque만으로 pocket 물의 품질을 판단하지 않는다. water12의 물H–단백질 최단거리는1.2021→2.1676Å지만 원인별 힘 분해는 새로 수행하지 않았고 접촉거리만으로 잔여 torque의 원인을 확정하지 않는다.
+
+비용은1,536 water objectives(local1,533/global3),8,937 kernels,61,936,731 candidate traversals다. wall851.241973초/CPU850.801333초/peak RSS343,691,264bytes, exit0·새 실패/미처리/미상0·cleanup 완료다. 물46해시·초기 parity·고정 기하·최종 census·원장을 독립 확인했다. 계획 SHA256 `ef5bc2f4b451f58434bf510d2b00c8e442dec0d8b885efd60c5b9aa9e2c5fca5`.
+
+물 pilot와 두 descent 분기 누적은2,997 objectives(local2,989/global8),20,535 kernels이며 일반 리간드 full E/F와 별도다. 물 방향은 원래P0에 조건부이고 산소 이동·bulk solvent·온도·POP·완전한 환경 준비를 복원하지 않았다. 리간드 좌표는 고정됐으며 수렴한 수화 환경·포즈 개선·결합 자유에너지의 근거가 아니다. 다음 물 최적화 제안은 실행 결과에 포함하지 않는다.
+
+### 최신 비용
+
+확인된 source full E/F는8,004+과거미상1, cross correction2,345/internal correction1,273이다. 기존 shape1,378·plane1,163·부분 계산계수를 보존하고, 물2,997objective/20,535kernel은 별도로 둔다.
