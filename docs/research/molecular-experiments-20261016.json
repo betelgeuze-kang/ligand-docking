@@ -1,16 +1,18 @@
 {
   "schema": "research-experiment-ledger/1",
-  "as_of_utc": "2026-10-16T08:45:00Z",
+  "as_of_utc": "2026-10-16T09:43:00Z",
   "scope": "External research observations, not latest-main reruns or product qualification",
-  "record_count": 110,
+  "record_count": 112,
   "count_warning": "Rows include branches, snapshots, failures, diagnostics and unaudited reports; not independent molecules. Do not sum heterogeneous campaign or cumulative counts.",
   "pfkfb3_costs": {
-    "confirmed_full_energy_force_calls": 4084,
+    "confirmed_full_energy_force_calls": 4517,
     "historical_unknown_calls": 1,
     "analytic_all_pair_shape_calls": 1378,
-    "analytic_plane_calls": 352,
+    "analytic_plane_calls": 785,
     "internal_only_calls": 2,
-    "instrumented_cross_calls": 2
+    "instrumented_cross_calls": 2,
+    "analytic_individual_ring_plane_calls": 352,
+    "analytic_fused_system_plane_calls": 433
   },
   "records": [
     {
@@ -2637,6 +2639,53 @@
       "notes": "332수락/339optimizerEF+13FD=352fullEF 및352analytic plane. 개별ring max0.09387019Å. fused10원자 union max0.21841928Å는 보충 연속진단이며 새 사전정의 합격/불합격 기준으로 취급하지 않음. 전체 평면성 통과·물리수렴·실험포즈 개선으로 해석하지 않음.",
       "source_status": "최종 원장·독립 감사 확인",
       "source_display": "independent-docking/stage4-planarity-run/runs/optimizer/summary.json"
+    },
+    {
+      "id": "PFKFB3-stage5-fused-plane-final",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3 / lig_38 / 6HVI GV5",
+      "experiment": "stage5 fused aromatic-system plane 증강 목적",
+      "kind": "최적화",
+      "status": "증강 목적 수렴",
+      "model": "자체 dry-receptor 물리 목적 +fused-system plane regularizer",
+      "metric": "증강(plane+물리) 최대 원자 힘",
+      "unit": "kcal/mol/Å",
+      "threshold": 0.001,
+      "force": 0.0008764437675385569,
+      "raw_force": 13.83767108561209,
+      "augmented_force": 0.0008764437675385569,
+      "restraint_force": 13.8374649850237,
+      "strain_delta_kcal_mol": 7.703124174352837,
+      "strain_gate_pass": false,
+      "physical_force_converged": false,
+      "accepted_steps": 412,
+      "new_ef_calls": 433,
+      "optimizer_ef_calls": 420,
+      "diagnostic_ef_calls": 13,
+      "analytic_shape_calls": 0,
+      "analytic_plane_calls": 433,
+      "crystal_heavy_RMSD_A": 0.8561873064590191,
+      "plane_failures": 0,
+      "plane_metric_scope": "4 individual aromatic rings only, not fused-system coplanarity",
+      "fused_union_max_plane_A": 0.13837464985024428,
+      "validation": "479hash·replay·원장 독립 감사 통과. 증강수렴; 원시힘·내부증가 gate실패. 전체평면성/실험포즈 개선 확립 아님.",
+      "notes": "412수락/420optimizer+13FD=433fullEF 및433fused-plane. fused max0.13837465Å/RMS0.07219486Å는 보충 연속진단. stage4보다 감소했지만 전체 평면성 통과로 판단하지 않음. 원래 준비 부모 결정RMSD0.290392Å가 여전히 가장 작음.",
+      "source_display": "independent-docking/stage5-fused-planarity-run/runs/optimizer/summary.json",
+      "source_status": "최종 원장·독립 감사 확인",
+      "fused_union_RMS_plane_A": 0.07219486020652728
+    },
+    {
+      "id": "PFKFB3-forcefield-environment-review",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3 / lig_38 /6HVI GV5",
+      "experiment": "힘장 출처·결정 환경 읽기 전용 검토",
+      "kind": "검산",
+      "status": "진단 완료",
+      "new_ef_calls": 0,
+      "accepted_steps": 0,
+      "notes": "이번 범위에서 새 파라미터 변환 버그 미발견; 전면 독립엔진 검증 완료 아님. 가까운 POP2.747Å 및 결정물 누락 확인. 누락환경이 포즈 이동의 원인인지는 미확정. 기존 에너지 이득은 주로 cross Coulomb 감소.",
+      "validation": "새EF0; 공개1차출처·저장좌표·파라미터 대수검토",
+      "source_display": "independent-docking/campaignforcefield-environment-review/REPORT-KO.md"
     }
   ],
   "aggregation_rule": "For each row use new_ef_calls if non-null; otherwise use new_ef_calls_confirmed_lower_bound, never both. Null is not zero. The interrupted PFKFB3 row contributes85 confirmed calls plus1 unknown."
