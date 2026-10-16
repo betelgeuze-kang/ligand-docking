@@ -1341,6 +1341,76 @@
       "record": "report-source",
       "external_source_id": "coulomb-taper-optimizer-results-20261016/JNK1-REPORT.md",
       "sha256": "dd52d7154b30804393c62cd404be1a2b2d01c33997da00ffa83362cf27d2dd77"
+    },
+    {
+      "record": "PFKFB3-internal-uncut-gates",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-gates-preflight-20261016/runs/fixed_then_original_fd/summary.json",
+      "sha256": "447ed49e54fdc59dc0c03edd30eacd910fb10321c806ae988214612a88f31d9f"
+    },
+    {
+      "record": "PFKFB3-internal-uncut-final",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-optimizer-preflight-20261016/runs/PFKFB3/summary.json",
+      "sha256": "c7d9e9e666a951b7a1013c0aedb953403f81ac84d6fb6568e0816ad0005839fd"
+    },
+    {
+      "record": "JNK1-internal-uncut-gates",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-gates-preflight-20261016/runs/fixed_then_original_fd/summary.json",
+      "sha256": "447ed49e54fdc59dc0c03edd30eacd910fb10321c806ae988214612a88f31d9f"
+    },
+    {
+      "record": "JNK1-internal-uncut-final",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-optimizer-preflight-20261016/runs/JNK1/summary.json",
+      "sha256": "23341a127a9a3ca16b7d00d72ef87c6b3f9c280cd53b0cb38d341a502df02ebb"
+    },
+    {
+      "record": "PFKFB3-internal-uncut-final",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-optimizer-results-20261016/PFKFB3/summary.json",
+      "sha256": "73c5c3bb19f52c295b9c232f3ba7d414fa470328e6c05d6d26ac125da26394f0"
+    },
+    {
+      "record": "PFKFB3-internal-uncut-final",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-optimizer-results-20261016/PFKFB3/provenance.json",
+      "sha256": "b34076a58bde4d87a86f1f8a71bae09d2f49bcd58e6eefd32ecca8590a53bc11"
+    },
+    {
+      "record": "JNK1-internal-uncut-final",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-optimizer-results-20261016/JNK1/summary.json",
+      "sha256": "5a809c2fe8a9442023593f6794e82f56c6f83262decbaac060c1a447145a4b0b"
+    },
+    {
+      "record": "JNK1-internal-uncut-final",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-optimizer-results-20261016/JNK1/provenance.json",
+      "sha256": "c6e90d82f7386192b320561ebe13a8bd097f69e7a44e75174436d4ec90489b3a"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1815/normalized-ledger.json",
+      "sha256": "fcba8b6cb70d1704ce78d5549e9c6f84bc01e5788b1b34ea2aa2ba201795d68a"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1815/source-manifest.json",
+      "sha256": "1b1055ce0bf5534d4bafa3303ed4933790f7a83ace6574acda5f77027f416e53"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "internal-coulomb-untruncated-optimizer-results-20261016/REPORT.md",
+      "sha256": "3627d450cf4459b12b4656f8a20f26440f1b095ba3bcdfc5ba467503a5c39900"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "internal-coulomb-untruncated-milestone-delivery-20261016/MACHINE-SUMMARY.json",
+      "sha256": "90ee604ce251dcd0fe916c54aa87e33878c1a8c929e235476234962d071a66a1"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-force-taper-results/REPORT-KO.md",
+      "sha256": "cae0b1b26d14e66854cfe57c99ce6b09561181ce1204335bbf9a74a21ab82cb9"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-force-taper-results/result-receipt.json",
+      "sha256": "cf4c6e78b8f270b9e7820c9c92bb732125f3481abfb6ee701601df8fd288bfd1"
     }
   ]
 }
