@@ -1,11 +1,11 @@
 {
   "schema": "research-experiment-ledger/1",
-  "as_of_utc": "2026-10-16T18:23:00Z",
+  "as_of_utc": "2026-10-16T18:55:00Z",
   "scope": "External research observations, not latest-main reruns or product qualification",
-  "record_count": 137,
+  "record_count": 144,
   "count_warning": "Rows include branches, snapshots, failures, diagnostics and unaudited reports; not independent molecules. Do not sum heterogeneous campaign or cumulative counts.",
   "pfkfb3_costs": {
-    "confirmed_full_energy_force_calls": 5830,
+    "confirmed_full_energy_force_calls": 5940,
     "historical_unknown_calls": 1,
     "analytic_all_pair_shape_calls": 1378,
     "analytic_plane_calls": 785,
@@ -13,8 +13,8 @@
     "instrumented_cross_calls": 2,
     "analytic_individual_ring_plane_calls": 352,
     "analytic_fused_system_plane_calls": 433,
-    "cross_taper_correction_ef_calls": 992,
-    "internal_uncut_correction_ef_calls": 374
+    "cross_taper_correction_ef_calls": 1102,
+    "internal_uncut_correction_ef_calls": 484
   },
   "records": [
     {
@@ -3160,6 +3160,122 @@
       "notes": "일반 ligandfullEF0. local WL cutoff pair0; census WL포함. +.01rad고정회전은에너지증가. 물/리간드최적화없음, 초기방향비정지. 전체실제WL회전검증/평형수화 아님.",
       "source_display": "independent-docking-20261016/rigid-water-force-taper-results/REPORT-KO.md",
       "source_status": "독립 종료 감사 확인"
+    },
+    {
+      "id": "PFK-8DOF-admission-failure",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "8DOF 초기 thread identity 불일치",
+      "status": "실행 실패",
+      "kind": "운영 검증",
+      "new_ef_calls": 0,
+      "source_display": "pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "notes": "준비 torch interop 9 / worker 1 불일치. 분자 EF·graph 0; 수정 후 별도 감사. 실패 기록 보존."
+    },
+    {
+      "id": "PFK-8DOF-FD",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "새 모델 8DOF 방향미분 검산",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 17,
+      "source_display": "pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "cross_correction_ef_calls": 17,
+      "internal_correction_ef_calls": 17,
+      "notes": "17 source full +17 cross +17 internal. 전체 cycle base backward2571/cross110/internal110; 최종·replay 추가EF0."
+    },
+    {
+      "id": "PFK-8DOF-P0",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "새 모델 강체6 + torsion2 P0",
+      "status": "제한공간 수렴",
+      "kind": "최적화",
+      "new_ef_calls": 38,
+      "source_display": "pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "cross_correction_ef_calls": 38,
+      "internal_correction_ef_calls": 38,
+      "accepted_steps": 37,
+      "force": 0.0009515649235673152,
+      "raw_force": 79.42396712845866,
+      "metric": "8DOF 허용접선 최대원자힘",
+      "unit": "kcal/mol/Å",
+      "threshold": 0.001,
+      "strain_delta_kcal_mol": 0.9908815222893281,
+      "strain_reference": "동일 새 internal 모델 원래 P0",
+      "model": "cross force-taper + ordinary internal Coulomb uncut; 8DOF 제한",
+      "validation": "제한힘 수렴; 원시힘·내부 비증가 joint 실패. P0 no-harm 실패",
+      "notes": "exact6HVI RMSD 0.290392398→0.498593087 Å. 같은모델 Cartesian .62431448보다 작지만 사전 포즈 기준 실패. 38 source/cross/internal 각각; constraint residual ≤2e-13. 독립종료감사 PASS.",
+      "crystal_rmsd_A": 0.49859308734506025
+    },
+    {
+      "id": "PFK-8DOF-P1",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "새 모델 강체6 + torsion2 P1",
+      "status": "제한공간 수렴",
+      "kind": "최적화",
+      "new_ef_calls": 55,
+      "source_display": "pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "cross_correction_ef_calls": 55,
+      "internal_correction_ef_calls": 55,
+      "accepted_steps": 53,
+      "force": 0.000598042144928394,
+      "raw_force": 79.42621328243727,
+      "metric": "8DOF 허용접선 최대원자힘",
+      "unit": "kcal/mol/Å",
+      "threshold": 0.001,
+      "strain_delta_kcal_mol": 0.9925590159684248,
+      "strain_reference": "동일 새 internal 모델 원래 P0",
+      "model": "cross force-taper + ordinary internal Coulomb uncut; 8DOF 제한",
+      "validation": "제한힘 수렴; 원시힘·내부 비증가 joint 실패. P1 local recovery 실패",
+      "notes": "exact6HVI RMSD 0.479471128→0.498470943 Å. 같은모델 Cartesian .62431448보다 작지만 사전 포즈 기준 실패. 55 source/cross/internal 각각; constraint residual ≤2e-13. 독립종료감사 PASS.",
+      "crystal_rmsd_A": 0.49847094340218673
+    },
+    {
+      "id": "PFK-8DOF-report-failure",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "8DOF geometry 보고 label 불일치",
+      "status": "사후검사 실패",
+      "kind": "운영 검증",
+      "new_ef_calls": 0,
+      "source_display": "pfk-rigid-torsion-new-model-results-20261016/compact-results.json",
+      "notes": "original_P0 label과 geometry core original key 불일치. 실패 artifact 보존; 보고 수정에 추가EF0; 최종 과학결과는 양팔 모두 보고."
+    },
+    {
+      "id": "PFK-water-descent-admission-failure",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "물 descent handoff metadata 누락",
+      "status": "실행 실패",
+      "kind": "운영 검증",
+      "new_ef_calls": 0,
+      "source_display": "independent-docking-20261016/rigid-water-descent-run/pre-admission-failure-01/failure.json",
+      "water_objective_calls": 0,
+      "water_kernel_calls": 0,
+      "notes": "summary_sha256 KeyError, supervisor dispatch 전. objective/kernel/ligand EF0. 동결 code·plan 불변으로 증거 보완 후 실행."
+    },
+    {
+      "id": "PFK-water-descent-two-sweeps",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "362개 물 고정 O 회전: 2 sweeps",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "source_display": "independent-docking-20261016/rigid-water-descent-run/runs/descent/summary.json",
+      "water_objective_calls": 1451,
+      "water_kernel_calls": 8682,
+      "accepted_steps": 724,
+      "force": 30.478670580368412,
+      "threshold": 0.001,
+      "metric": "전체 current-state 최대 물 torque",
+      "unit": "kcal/mol/rad",
+      "model": "고정 단백질·리간드·물 O; WP/WL/WW force-taper Coulomb",
+      "validation": "2 sweeps 정상 완료·독립감사 PASS; angular threshold 미달. hydration 평형/포즈 개선 증거 없음.",
+      "notes": "1451 water objectives(local1448/global3),8682 kernels; ligand fullEF0.724회전 수락; ΔE=-753.560823279 kcal/mol. torque33.820201993→30.478670580. 물 O·ligand 불변, ligand pose 평가0. 실행 summary wall797.895s; supervisor 시간 별도."
     }
   ],
   "aggregation_rule": "For each row use new_ef_calls if non-null; otherwise use new_ef_calls_confirmed_lower_bound, never both. Null is not zero. The interrupted PFKFB3 row contributes85 confirmed calls plus1 unknown.",
@@ -3176,13 +3292,13 @@
     "internal_uncut_correction_ef_calls": 524
   },
   "two_target_bookkeeping": {
-    "confirmed_full_energy_force_calls": 7629,
+    "confirmed_full_energy_force_calls": 7739,
     "historical_unknown_calls": 1,
     "notice": "Accounting sum only; not model equivalence, pooled performance or equal computational cost.",
     "analytic_plane_calls": 1163,
     "analytic_all_pair_shape_calls": 1378,
-    "cross_taper_correction_ef_calls": 1970,
-    "internal_uncut_correction_ef_calls": 898
+    "cross_taper_correction_ef_calls": 2080,
+    "internal_uncut_correction_ef_calls": 1008
   },
   "cross_taper_stage_costs": {
     "full_base_ef_calls": 1072,
@@ -3208,5 +3324,24 @@
     "kernel_calls": 2916,
     "directional_candidate_traversals": 17311068,
     "optimization_steps": 0
+  },
+  "source_record_aliases": {
+    "PFK-water-mechanics-pilot": "PFKFB3-rigid-water-mechanics-pilot"
+  },
+  "rigid_8dof_stage_costs": {
+    "source_full_ef_calls": 110,
+    "cross_correction_ef_calls": 110,
+    "internal_correction_ef_calls": 110,
+    "source_backward_calls": 2571,
+    "cross_backward_calls": 110,
+    "internal_backward_calls": 110
+  },
+  "water_combined_costs": {
+    "ligand_full_ef_calls": 0,
+    "water_objectives": 1461,
+    "water_local_calls": 1456,
+    "water_global_calls": 5,
+    "kernel_calls": 11598,
+    "notice": "Pilot plus two-sweep descent, not a single run or ligand full E/F equivalent."
   }
 }
