@@ -1001,6 +1001,46 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/stage3-comparison/audit-summary.json",
       "sha256": "dcd7f829b63b0493648768c4a7883bf7440037edb4394904030fabbaf028df15"
+    },
+    {
+      "record": "PFKFB3-stage5-fused-plane-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/stage5-fused-planarity-run/runs/optimizer/summary.json",
+      "sha256": "d0396b9a28a28a21057377619ceb155ed2f2df5a930c9d6d25bdc38aa4c41d12"
+    },
+    {
+      "record": "PFKFB3-stage5-fused-plane-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/stage5-fused-planarity-run/runs/diagnostic/summary.json",
+      "sha256": "c7bea854c53968532fed8b245dbfc1da85738ac08597a4c49d0df8ff11db59dc"
+    },
+    {
+      "record": "PFKFB3-stage5-fused-plane-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/stage5-readonly-analysis/terminal-coordinate-evaluation.json",
+      "sha256": "00ca46dc7c41b8535a322a70d31e9ed71d6c977d079aee582e38613adbd42504"
+    },
+    {
+      "record": "PFKFB3-stage5-fused-plane-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/stage5-readonly-analysis/final-geometry-outputs/terminal-stage5/final-summary.json",
+      "sha256": "5b516ade60377a56c85974f85d846416e34a9fb78e028f29f49d1c365473fd92"
+    },
+    {
+      "record": "PFKFB3-forcefield-environment-review",
+      "external_source_id": "external-evidence/independent-docking-20261016/campaignforcefield-environment-review/REPORT-KO.md",
+      "sha256": "80427d65c4ebbf7468983212548febd5d1c4fa986340ada4dfe8215504a62bc0"
+    },
+    {
+      "record": "stage5-report-source",
+      "external_source_id": "external-evidence/outputs/experiment-status-final-20261016-0943/normalized-ledger.json",
+      "sha256": "386e5d9c228f7779996c10a6d876dbefd0f8eefba080f66bb0ebe8ad909b28b9"
+    },
+    {
+      "record": "stage5-report-source",
+      "external_source_id": "external-evidence/independent-docking-20261016/stage5-results/REPORT-KO.md",
+      "sha256": "1a086e12c5494b0cc35e241bfc27f59e1b17daaf3b44427bd768ade59f384b27"
+    },
+    {
+      "record": "stage5-report-source",
+      "external_source_id": "external-evidence/independent-docking-20261016/stage5-results/independent-audit-summary.json",
+      "sha256": "4747f284fb0706cf44faf7139ccca88f7ea6bb6a18c8bcb666d78a5a2c550ff0"
     }
   ]
 }
