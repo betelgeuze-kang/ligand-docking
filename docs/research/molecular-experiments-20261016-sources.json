@@ -1166,6 +1166,91 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/water-orientation-results/independent-audit-summary.json",
       "sha256": "5f4b3dd350d290eefc4d8f33d3aad1007bb08845260329c6373b5e0b2927b71e"
+    },
+    {
+      "record": "JNK1-component-cause",
+      "external_source_id": "external-evidence/jnk1-cause-diagnostics-20261016/runs/components/summary.json",
+      "sha256": "dabbd2d0bc9e9140456ef165e48524cdded9f51ee1ffdf03e50a0bc92791b586"
+    },
+    {
+      "record": "JNK1-isolated-original",
+      "external_source_id": "external-evidence/jnk1-isolated-controls-20261016/runs/original/summary.json",
+      "sha256": "5b02b338a1cf14c80b73a5b8ec048ae571219912dea03de7305568c7b5245869"
+    },
+    {
+      "record": "JNK1-isolated-bound_endpoint",
+      "external_source_id": "external-evidence/jnk1-isolated-controls-20261016/runs/bound_endpoint/summary.json",
+      "sha256": "c13b62249d088b63e567a234717150ecfa3421d9c54095c0c3b0e203e46cd783"
+    },
+    {
+      "record": "JNK1-proper-attribution-first-failed",
+      "external_source_id": "external-evidence/jnk1-proper-attribution-20261016/runs/components/summary.json",
+      "sha256": "82150e51755b6606d6e8853076ec5e7df483a6baf09f2843d934d10ff808cbfd"
+    },
+    {
+      "record": "JNK1-proper-attribution-continuation",
+      "external_source_id": "external-evidence/jnk1-proper-attribution-continuation-20261016/runs/components/summary.json",
+      "sha256": "e3c4157c353d30f9b04524d89268ebcc4978e274446b887b32c2232373b8fae6"
+    },
+    {
+      "record": "JNK1-local-amino-plane-final",
+      "external_source_id": "external-evidence/jnk1-local-amino-plane-20261016/runs/optimizer/summary.json",
+      "sha256": "bdf5c3a136d94122b6b7e4156c877ce11dc138dd60bbfebd2a9c1d75087d0919"
+    },
+    {
+      "record": "PFKFB3-water-preparation-feasibility",
+      "external_source_id": "external-evidence/independent-docking-20261016/water-preparation-feasibility/REPORT-KO.md",
+      "sha256": "d6cc9b3db7bc12e25725e1fac4463433ecea6e55a88f271c6347ebc4c9c85268"
+    },
+    {
+      "record": "JNK1-cause-cycle",
+      "external_source_id": "external-evidence/jnk1-local-amino-plane-readonly-20261016/terminal-comparison.json",
+      "sha256": "78d083480acca69e3cdf89fb7b4ed71b0e722e3f6613889b561afe1ebff77423"
+    },
+    {
+      "record": "JNK1-cause-cycle",
+      "external_source_id": "external-evidence/jnk1-local-amino-plane-readonly-20261016/amino-geometry.json",
+      "sha256": "5620fcab6661ddb47bb8e6ec2a0ce4a4be56cb76fda0aa37e94132ee496dcab2"
+    },
+    {
+      "record": "JNK1-cause-cycle",
+      "external_source_id": "external-evidence/jnk1-cause-results-20261016/summary.json",
+      "sha256": "7639062f80df8c30698fc03c45e108cf22faee512e6e0fb535c7ced8a65a293e"
+    },
+    {
+      "record": "JNK1-cause-cycle",
+      "external_source_id": "external-evidence/jnk1-isolated-readonly-20261016/terminal-summary.json",
+      "sha256": "3f119716cfd8bf104656cf586cac224a5cfc1757a5e2516ddfc706dda9e47297"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1442/normalized-ledger.json",
+      "sha256": "76a789c2ce506365203750db26dca21b16e5d5654bded7b4b88fe2c2127bb98a"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1442/source-manifest.json",
+      "sha256": "1965aa178b7c3a8aefe30e5d6b84d4877479203d0f475bc2bad38e0e16fd03a4"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "jnk1-cause-results-20261016/FINAL-REPORT-KO.md",
+      "sha256": "f370a35708cbd46b419ff01f811162e8c8f58b34260be3515a59acaadf6934ce"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/water-preparation-feasibility/source-and-cost.json",
+      "sha256": "27e8c26a3929600d64d72b8eff2ddfb41e8e8bde1d2806fded67a27eff45033b"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "jnk1-cause-results-20261016/final-results-compact.json",
+      "sha256": "d51660f7f2630c24589d302e1c267373a5f08e3451f6dd9f62e5a12f1dc729fc"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "jnk1-cause-results-20261016/terminal-audit.json",
+      "sha256": "886fb7dd2e7a03029979f9850ad06b66132ca42e16031385d9b7bf40d33cf762"
     }
   ]
 }
