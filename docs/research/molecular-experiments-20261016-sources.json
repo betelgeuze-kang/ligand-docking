@@ -1111,6 +1111,61 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/environment-restoration-results/independent-audit-summary.json",
       "sha256": "23f068ec61c4bc30c6b620bfd7df8e2417c7c4c66c657e2b1ce7ab679edc2c68"
+    },
+    {
+      "record": "JNK1-linear-angle-final",
+      "external_source_id": "external-evidence/jnk1-results-20261016/final-summary.json",
+      "sha256": "84fb39bdb161100e3e8645efd7aca42dccc81253ff1504da9dda0291365efb16"
+    },
+    {
+      "record": "JNK1-linear-angle-final",
+      "external_source_id": "external-evidence/jnk1-results-20261016/independent-audit-summary.json",
+      "sha256": "d09f4484525347bfa6a39ebbab6d311e0f77a18356fff0170ac0a5808c5990d8"
+    },
+    {
+      "record": "PFKFB3-water-orientation-fixed-diagnostic",
+      "external_source_id": "external-evidence/independent-docking-20261016/water-orientation-results/comparison.json",
+      "sha256": "608570cc4c7cf7cfc941f05da166c4694a260b8ece70b1c28defe49acc48540d"
+    },
+    {
+      "record": "PFKFB3-water-orientation-fixed-diagnostic",
+      "external_source_id": "external-evidence/independent-docking-20261016/water-orientation-run/runs/diagnostic/summary.json",
+      "sha256": "a30465b12a9a3d72a0aa7e1f3890709ebb170424a34381e6325cf219d91b8e1f"
+    },
+    {
+      "record": "PFKFB3-water-orientation-fixed-diagnostic",
+      "external_source_id": "external-evidence/independent-docking-20261016/water-orientation-run/runs/diagnostic/supervisor-exit.json",
+      "sha256": "66b8060e66d4ec548ded534e26d0fdbaea27c7ea26a7730765f0544e2bb18dcb"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1311/normalized-ledger.json",
+      "sha256": "a2e198c1b58e8d38edd8934d1449cdbbfbb4526b00ef00ba3ae16331615c84f2"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1311/source-manifest.json",
+      "sha256": "17369a8844cc1fc7346f8b571f7ce294d535298e59b18731c9a81bc42988771b"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "jnk1-results-20261016/REPORT-KO.md",
+      "sha256": "b47cd207fd9e395cddfded03c0d5c9c6a027c8a82a413b0358cac6c4b8a11375"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "jnk1-results-20261016/independent-audit-summary.json",
+      "sha256": "d09f4484525347bfa6a39ebbab6d311e0f77a18356fff0170ac0a5808c5990d8"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/water-orientation-results/REPORT-KO.md",
+      "sha256": "b1b3f1989e9f0fb1624f80464557a66216ffd9fabbd5b0e923c73085e6cc4692"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/water-orientation-results/independent-audit-summary.json",
+      "sha256": "5f4b3dd350d290eefc4d8f33d3aad1007bb08845260329c6373b5e0b2927b71e"
     }
   ]
 }
