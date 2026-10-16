@@ -1,11 +1,11 @@
 {
   "schema": "research-experiment-ledger/1",
-  "as_of_utc": "2026-10-16T19:37:00Z",
+  "as_of_utc": "2026-10-16T21:33:00Z",
   "scope": "External research observations, not latest-main reruns or product qualification",
-  "record_count": 148,
+  "record_count": 153,
   "count_warning": "Rows include branches, snapshots, failures, diagnostics and unaudited reports; not independent molecules. Do not sum heterogeneous campaign or cumulative counts.",
   "pfkfb3_costs": {
-    "confirmed_full_energy_force_calls": 6205,
+    "confirmed_full_energy_force_calls": 6213,
     "historical_unknown_calls": 1,
     "analytic_all_pair_shape_calls": 1378,
     "analytic_plane_calls": 785,
@@ -13,8 +13,8 @@
     "instrumented_cross_calls": 2,
     "analytic_individual_ring_plane_calls": 352,
     "analytic_fused_system_plane_calls": 433,
-    "cross_taper_correction_ef_calls": 1367,
-    "internal_uncut_correction_ef_calls": 749
+    "cross_taper_correction_ef_calls": 1375,
+    "internal_uncut_correction_ef_calls": 757
   },
   "records": [
     {
@@ -3362,6 +3362,91 @@
       "model": "이전 물 종료점; 동일 WP/WL/WW모델; trial .5/.25/.125/.0625rad",
       "validation": "정상 종료·독립감사 PASS. 모든362물 angular 기준 실패; 평형수화/포즈 검증 없음.",
       "notes": "1536 objectives(local1533/global3),8937 kernels; ligand fullEF0.724수락85거절, wall851.241973초. max24.93621677/median4.42005/p90 11.61882.283개 개선79개 악화. ΔE−2639.581330188; WL Coulomb+2.170629196(덜유리),ligand·O 고정."
+    },
+    {
+      "id": "PFK-water-adaptive-one-sweep",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "고정 O 물 adaptive block 1순회",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "source_display": "independent-docking-20261016/rigid-water-adaptive-block-run/runs/descent/summary.json",
+      "water_objective_calls": 1929,
+      "water_kernel_calls": 8673,
+      "accepted_steps": 1448,
+      "rejected_trials": 117,
+      "force": 16.235221651193246,
+      "threshold": 0.001,
+      "metric": "전체 current-state 최대 물 torque",
+      "unit": "kcal/mol/rad",
+      "model": "동일 고정 O WP/WL/WW; 각 물4수락 이내 adaptive block",
+      "validation": "362/362 각4수락·독립감사 PASS; 모든362물 angular 기준 FAIL.",
+      "notes": "1929 water objectives(local1927/global2),8673 kernels; ligand fullEF0.1448수락117거절,950.103초. max16.23522165/median1.68739462/p90 4.76669287.314개 개선48개 악화. 마지막 local max8.99253이나 final16.23522; 이웃갱신 후267증가66감소29동일. 수화평형/pose 주장 없음."
+    },
+    {
+      "id": "PFK-partial-water-static-matrix",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "4물 상태 ×2고정 ligand 힘 민감도",
+      "status": "관측 완료·운영 실패",
+      "kind": "진단",
+      "new_ef_calls": 8,
+      "source_display": "pfk-partial-water-force-sensitivity-results-20261016/compact-results.json",
+      "cross_correction_ef_calls": 8,
+      "internal_correction_ef_calls": 8,
+      "base_backward_calls": 264,
+      "cross_backward_calls": 8,
+      "internal_backward_calls": 8,
+      "accepted_steps": 0,
+      "model": "cross force-taper + ordinary internal uncut; receptor7835 incl362waters",
+      "validation": "8/8 관측·dispatch 완료; 독립감사/읽기전용 조정 PASS. 원래 failed_reporting exit1 유지.",
+      "notes": "dry Cartesian 종점 wet raw F9.727337/10.889941/12.830497/11.603344 kcal/mol/Å. 고정4물×P0/Cartesian, 최적화·FD·추가RMSD0. P0 WL 에너지차 저장값 대조오차2.4069635e-13. 모든물상태미수렴; 단조 ligand 이득 없음.8source/8cross/8internal;264+8+8backward; 추가재실행0."
+    },
+    {
+      "id": "PFK-water-matrix-reporting-failure",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "고정 matrix 종료 parser KeyError·읽기전용 조정",
+      "status": "사후검사 실패",
+      "kind": "운영 검증",
+      "new_ef_calls": 0,
+      "source_display": "pfk-partial-water-force-sensitivity-results-20261016/read-only-terminal-reconciliation.json",
+      "notes": "원본 objective_finished attempt 위치 parser 오류, exit1/failed_reporting 보존. 별도 observation.attempt로8관측·dispatch·551hash 검증; 새 EF0, pending/unknown0. 비용8은 matrix행에만 계상, 재실행 없음."
+    },
+    {
+      "id": "PFK-water-three-sweep-admission-failure",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "물3순회 최초 provenance 순서 admission 실패",
+      "status": "실행 실패",
+      "kind": "운영 검증",
+      "new_ef_calls": 0,
+      "source_display": "independent-docking-20261016/rigid-water-adaptive-three-sweep-run/runs/descent/summary.json",
+      "water_objective_calls": 0,
+      "water_kernel_calls": 0,
+      "notes": "geometry contract changed guard로 whole_job_abort. supervisor/journal 예약0, pending0; 물/ligand 계산0. wall4.527858초 CPU3.697232초. 원본실패 보존, 남은 예산 감액 후 별도 수정계획 재감사."
+    },
+    {
+      "id": "PFK-water-adaptive-three-sweep",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "고정 O adaptive block 추가3순회",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "source_display": "independent-docking-20261016/rigid-water-adaptive-three-sweep-runtime1-run/runs/descent/summary.json",
+      "water_objective_calls": 6265,
+      "water_kernel_calls": 24567,
+      "accepted_steps": 4335,
+      "rejected_trials": 840,
+      "force": 6.335540623896021,
+      "threshold": 0.001,
+      "metric": "전체 current-state 최대 물 torque",
+      "unit": "kcal/mol/rad",
+      "model": "동일 fixed-O WP/WL/WW; source-order adaptive block 재방문",
+      "validation": "1086방문·3전체순회 완료, 독립종료감사 PASS; 최종4/362만 각도기준 통과, 전체 미수렴.",
+      "notes": "6265 objectives(local6261/global4),24567 kernels; ligand fullEF0.4335수락840거절.1058방문4수락cap/28local작은torque종료. global max6.335540624/median.14075214/p90 1.09913991; local28≠final4. supervisor wall2994.643초. 초기정확parity·고정좌표·에너지reconcile≤5.12e-13.85hash검증."
     }
   ],
   "aggregation_rule": "For each row use new_ef_calls if non-null; otherwise use new_ef_calls_confirmed_lower_bound, never both. Null is not zero. The interrupted PFKFB3 row contributes85 confirmed calls plus1 unknown.",
@@ -3378,13 +3463,13 @@
     "internal_uncut_correction_ef_calls": 524
   },
   "two_target_bookkeeping": {
-    "confirmed_full_energy_force_calls": 8004,
+    "confirmed_full_energy_force_calls": 8012,
     "historical_unknown_calls": 1,
     "notice": "Accounting sum only; not model equivalence, pooled performance or equal computational cost.",
     "analytic_plane_calls": 1163,
     "analytic_all_pair_shape_calls": 1378,
-    "cross_taper_correction_ef_calls": 2345,
-    "internal_uncut_correction_ef_calls": 1273
+    "cross_taper_correction_ef_calls": 2353,
+    "internal_uncut_correction_ef_calls": 1281
   },
   "cross_taper_stage_costs": {
     "full_base_ef_calls": 1072,
@@ -3424,11 +3509,11 @@
   },
   "water_combined_costs": {
     "ligand_full_ef_calls": 0,
-    "water_objectives": 2997,
-    "water_local_calls": 2989,
-    "water_global_calls": 8,
-    "kernel_calls": 20535,
-    "notice": "Pilot plus two descent branches; not ligand full E/F equivalent."
+    "water_objectives": 11191,
+    "water_local_calls": 11177,
+    "water_global_calls": 14,
+    "kernel_calls": 53775,
+    "notice": "Pilot plus completed water branches; not ligand full E/F equivalent."
   },
   "heldout_dry_stage_costs": {
     "source_full_ef_calls": 265,
@@ -3437,5 +3522,16 @@
     "source_backward_calls": 6093,
     "cross_backward_calls": 265,
     "internal_backward_calls": 265
+  },
+  "partial_water_matrix_costs": {
+    "source_full_ef_calls": 8,
+    "cross_correction_ef_calls": 8,
+    "internal_correction_ef_calls": 8,
+    "source_backward_calls": 264,
+    "cross_backward_calls": 8,
+    "internal_backward_calls": 8,
+    "original_exit_code": 1,
+    "reporting_failure_readonly_reconciled": true,
+    "rerun_ef_calls": 0
   }
 }
