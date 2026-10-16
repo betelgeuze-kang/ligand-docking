@@ -98,7 +98,7 @@ v2_ao_native_cpu_scorer_contract_rc5
 
 먼저 읽을 문서:
 
-- [2026-10-16 분자 실험 결과: 수렴·실패·기하·결정 포즈·비용](docs/research/molecular-experiments-20261016.ko.md) — 외부 연구 기록 132행·교차 Coulomb 대조·새 모델 수치 공동 기준, 제품 승격 없음
+- [2026-10-16 분자 실험 결과: 수렴·실패·기하·결정 포즈·비용](docs/research/molecular-experiments-20261016.ko.md) — 외부 연구 기록 137행·내부 Coulomb 대조·물 회전 검산, 제품 승격 없음
 - `docs/engine_v2_status.md`
 - `docs/engine_v2_public_api.md`
 - `config/independent_engine_v2_capabilities.yaml`
