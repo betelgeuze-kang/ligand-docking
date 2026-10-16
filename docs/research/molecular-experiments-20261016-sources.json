@@ -1251,6 +1251,96 @@
       "record": "report-source",
       "external_source_id": "jnk1-cause-results-20261016/terminal-audit.json",
       "sha256": "886fb7dd2e7a03029979f9850ad06b66132ca42e16031385d9b7bf40d33cf762"
+    },
+    {
+      "record": "PFKFB3-cross-taper-fixed",
+      "external_source_id": "external-evidence/coulomb-force-taper-results-20261016/terminal-audit.json",
+      "sha256": "c48ba9a959ce4df34abd3ce816acc92441b8a4c909a66fcd4ab93dd22a181312"
+    },
+    {
+      "record": "PFKFB3-cross-taper-FD",
+      "external_source_id": "external-evidence/coulomb-taper-fd-20261016/runs/finite_difference/summary.json",
+      "sha256": "ef5f067576bc006893a0f005fc6fe8ee8c1da292dfd1eff37f27b29494992860"
+    },
+    {
+      "record": "PFKFB3-cross-only-taper-final",
+      "external_source_id": "external-evidence/coulomb-taper-optimizer-preflight-20261016/runs/PFKFB3/summary.json",
+      "sha256": "572356c0ef9d7cdd160fbaf5d0be44d0d5b2e33fa9a62fd6313ab26b22d0489a"
+    },
+    {
+      "record": "JNK1-cross-taper-fixed",
+      "external_source_id": "external-evidence/coulomb-force-taper-results-20261016/terminal-audit.json",
+      "sha256": "c48ba9a959ce4df34abd3ce816acc92441b8a4c909a66fcd4ab93dd22a181312"
+    },
+    {
+      "record": "JNK1-cross-taper-FD",
+      "external_source_id": "external-evidence/coulomb-taper-fd-20261016/runs/finite_difference/summary.json",
+      "sha256": "ef5f067576bc006893a0f005fc6fe8ee8c1da292dfd1eff37f27b29494992860"
+    },
+    {
+      "record": "JNK1-cross-only-taper-final",
+      "external_source_id": "external-evidence/coulomb-taper-optimizer-preflight-20261016/runs/JNK1/summary.json",
+      "sha256": "455bc7d700b0f557608b1cb0e6938b39724a0576ce2dbff4d8c8f506ce908c20"
+    },
+    {
+      "record": "PREP-rigid-water-adapter",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-adapter-dev/REPORT-KO.md",
+      "sha256": "819698a2b491797225e66069b1fd039a927a65f16843a323ea054f2735e96d94"
+    },
+    {
+      "record": "PREP-PFK-rigid-torsion",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-run-20261016/README.md",
+      "sha256": "5cc62f63c4d9b5c421760885d590bcdcef0129e8aaa888446797a287ee2dc69d"
+    },
+    {
+      "record": "PREP-internal-Coulomb-uncut",
+      "external_source_id": "external-evidence/internal-coulomb-untruncated-preflight-20261016/README.md",
+      "sha256": "390182f56e1384acbb1bfa1b7a9abc335057dbc0f4d02e21fd4f91088290ffc5"
+    },
+    {
+      "record": "PFKFB3-cross-only-taper-final",
+      "external_source_id": "external-evidence/coulomb-taper-optimizer-results-20261016/PFKFB3/summary.json",
+      "sha256": "ff0d02817c0c5193d0cef6f00aab89c1b81e196c1a18f55a25e4f771c300f972"
+    },
+    {
+      "record": "JNK1-cross-only-taper-final",
+      "external_source_id": "external-evidence/coulomb-taper-optimizer-results-20261016/JNK1/summary.json",
+      "sha256": "63349abf21cdcff54822aede38752bdea12c9069c18dac58dc6dbe108f5fc949"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1702/normalized-ledger.json",
+      "sha256": "da921b52be41c3963f4d60ef11ac85144b80e5aaa0d547b5658f69e05144a71d"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1702/source-manifest.json",
+      "sha256": "d977ea2c364cb93e82d8f90ffb67c3e4c6f7b918cf8e14edef3812da87af971c"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "coulomb-force-taper-results-20261016/REPORT.md",
+      "sha256": "406c9710d5aeeeca69af16c899eb15b9e81307e9530c00fe45da4a0b1a93f319"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "coulomb-taper-fd-results-20261016/REPORT.md",
+      "sha256": "405cf8332a3c633e307d86deb8ae43d16c1592ad35770005d471a9a5887b29cd"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "coulomb-taper-optimizer-results-20261016/REPORT.md",
+      "sha256": "12cf6d1a510036d59a99240265af29026155214ce2010daf61c3e31f22bbc75f"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "coulomb-taper-optimizer-results-20261016/PFKFB3-REPORT.md",
+      "sha256": "68b3376ec46affc70e4969015300fbdf144ace0e0933dfcb6d255452f53278ed"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "coulomb-taper-optimizer-results-20261016/JNK1-REPORT.md",
+      "sha256": "dd52d7154b30804393c62cd404be1a2b2d01c33997da00ffa83362cf27d2dd77"
     }
   ]
 }
