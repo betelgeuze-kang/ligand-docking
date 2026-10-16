@@ -4,742 +4,742 @@
   "sources": [
     {
       "record": "BNC-rigid-relaxation",
-      "external_source_id": "handoff/evidence/benchbnc-rigid-relaxation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-rigid-relaxation-20261015/summary.json",
       "sha256": "9fbb2eedcdf4b72b369aefb0781554085b8ca12c773878e439add73f24c0c344"
     },
     {
       "record": "BNC-torsion-relaxation",
-      "external_source_id": "handoff/evidence/benchbnc-torsion-relaxation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-torsion-relaxation-20261015/summary.json",
       "sha256": "a8b722d59c39c715f921b70a7d16663ea5db372949f227f9cf7d0d8688024ece"
     },
     {
       "record": "BNC-constrained-relaxation",
-      "external_source_id": "handoff/evidence/benchbnc-constrained-relaxation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-constrained-relaxation-20261015/summary.json",
       "sha256": "2519d43ee30a488f68992c37c71d75220ef6ac6b5439bb5ce85dd51e9ea0362e"
     },
     {
       "record": "BNC-chart-lbfgs",
-      "external_source_id": "handoff/evidence/benchbnc-chart-lbfgs-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-chart-lbfgs-20261015/summary.json",
       "sha256": "8b3bb18993ade5eedfe9b0090132db1439ba1adb3d81a7c1f41b5dc4542c0c2b"
     },
     {
       "record": "BNC-chart-lbfgs-continuation",
-      "external_source_id": "handoff/evidence/benchbnc-chart-lbfgs-continuation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-chart-lbfgs-continuation-20261015/summary.json",
       "sha256": "6fe0a4efca9fffbbe6d389b0e6d1a0300f0f948572dd459c7d8a21e2885c6d32"
     },
     {
       "record": "BNC-chart-lbfgs-long",
-      "external_source_id": "handoff/evidence/benchbnc-chart-lbfgs-long-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-chart-lbfgs-long-20261015/summary.json",
       "sha256": "30031a69918935cf2370830643d2e3650b6397413addb9356aca63251fc1ed5e"
     },
     {
       "record": "BNC-memory10-comparison",
-      "external_source_id": "handoff/evidence/benchbnc-memory10-comparison-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-memory10-comparison-20261015/summary.json",
       "sha256": "01245a3c20c7ebac8bb71b461603d249bf00f33e331844a742c769d0e5ed7de0"
     },
     {
       "record": "BNC-memory30-comparison",
-      "external_source_id": "handoff/evidence/benchbnc-memory30-comparison-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-memory30-comparison-20261015/summary.json",
       "sha256": "27de41a38c021c9ee30703edde82f022df8c86cc5d760a93150afb8a2ee72743"
     },
     {
       "record": "BNC-linesearch-armijo",
-      "external_source_id": "handoff/evidence/benchbnc-linesearch-armijo-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-linesearch-armijo-20261015/summary.json",
       "sha256": "ee4455179e4919c59a7062d22945f51508473f1c455099f1b9a77cce4f4d3590"
     },
     {
       "record": "BNC-linesearch-wolfe",
-      "external_source_id": "handoff/evidence/benchbnc-linesearch-wolfe-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-linesearch-wolfe-20261015/summary.json",
       "sha256": "042e9c3876f6c62287c27ea43a16ed9dc844db61505c6a041337aaede301ef7c"
     },
     {
       "record": "BNC-near-threshold-continuation",
-      "external_source_id": "handoff/evidence/benchbnc-near-threshold-continuation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-near-threshold-continuation-20261015/summary.json",
       "sha256": "3c1034060720a188fb0468cced9e7a7b5de8b491b55c07d86ff5287173118f06"
     },
     {
       "record": "BNC-newton-polish",
-      "external_source_id": "handoff/evidence/benchbnc-newton-polish-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-newton-polish-20261015/summary.json",
       "sha256": "fcae05aa59096bd3384ba33faadbeec9c67742f4d4a00faaaa8d252d3f100bfe"
     },
     {
       "record": "BNC-recovery-minus1",
-      "external_source_id": "handoff/evidence/benchbnc-recovery-minus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-recovery-minus1-20261015/summary.json",
       "sha256": "6361853bf0f270b7d889854cbee705be97e8f00e0bf44207204fccb4d7909b1d"
     },
     {
       "record": "BNC-recovery-plus1",
-      "external_source_id": "handoff/evidence/benchbnc-recovery-plus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-recovery-plus1-20261015/summary.json",
       "sha256": "27f92bda52a76c77dbe79a219907226c88a8a9b80df1ef03b88bbd6d8eb3c7e2"
     },
     {
       "record": "BNC-fixedH-recovery-minus1",
-      "external_source_id": "handoff/evidence/benchbnc-fixedH-recovery-minus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-fixedH-recovery-minus1-20261015/summary.json",
       "sha256": "be79aa67c5ab08bd97515e1778a99f03956b0e9adab84d32cd9bba3b4d3d3a94"
     },
     {
       "record": "BNC-fixedH-recovery-plus1",
-      "external_source_id": "handoff/evidence/benchbnc-fixedH-recovery-plus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-fixedH-recovery-plus1-20261015/summary.json",
       "sha256": "c74159489cd9d9abeaf55d62c304ff356d5efd72dc0422ae39bb39e6bec29401"
     },
     {
       "record": "BNC-bonded-recovery-minus1",
-      "external_source_id": "handoff/evidence/benchbnc-bonded-recovery-minus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-bonded-recovery-minus1-20261015/summary.json",
       "sha256": "4baba901b12e208880a435be76b68338d1a95aa5ca855d1d2f4415c2984dab2e"
     },
     {
       "record": "BNC-bonded-recovery-plus1",
-      "external_source_id": "handoff/evidence/benchbnc-bonded-recovery-plus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-bonded-recovery-plus1-20261015/summary.json",
       "sha256": "79a8e07b95f1c76e7327f11ffae36595d1633031859c084e936d6dbb81da66ff"
     },
     {
       "record": "BNC-adaptiveB-recovery-minus1",
-      "external_source_id": "handoff/evidence/benchbnc-adaptiveB-recovery-minus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-adaptiveB-recovery-minus1-20261015/summary.json",
       "sha256": "419734a57cd3ce11660ecc5f3cff46a7da5ce8db1b5942347649d5a8bbbd42fb"
     },
     {
       "record": "BNC-adaptiveB-recovery-plus1",
-      "external_source_id": "handoff/evidence/benchbnc-adaptiveB-recovery-plus1-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-adaptiveB-recovery-plus1-20261015/summary.json",
       "sha256": "149f792ba06d5f1e90f58f970eceb0335ccafc4e91f9f42e1474404177932ed7"
     },
     {
       "record": "BNC-rigid-reference",
-      "external_source_id": "handoff/evidence/benchbnc-rigid-reference-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-rigid-reference-20261015/summary.json",
       "sha256": "9c5928cbe4917337e0d7e2584ab8f267985f7b288b07241ff7e019f50281d8f9"
     },
     {
       "record": "BNC-torsion-reference",
-      "external_source_id": "handoff/evidence/benchbnc-torsion-reference-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-torsion-reference-20261015/summary.json",
       "sha256": "f79696a12e27409466fdf438cdffa5491626861b43656b5dc5e63c3ff230dd3c"
     },
     {
       "record": "BNC-chart-validation",
-      "external_source_id": "handoff/evidence/benchbnc-chart-validation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-chart-validation-20261015/summary.json",
       "sha256": "8475ad5598e8d06a4db0a9a6c81ab409fdceb923aec0ca2d392c0e26b2783975"
     },
     {
       "record": "BNC-chart-fine-validation",
-      "external_source_id": "handoff/evidence/benchbnc-chart-fine-validation-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-chart-fine-validation-20261015/summary.json",
       "sha256": "60354330dcce3ccc0285172dc22e9b29ccf1a200106bc81c4459185beeed99e9"
     },
     {
       "record": "BNC-terminal-gradient",
-      "external_source_id": "handoff/evidence/benchbnc-terminal-gradient-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-terminal-gradient-20261015/summary.json",
       "sha256": "6850d4133cce86128d568476318ac9062509fc35b33e627861d52884c8b13173"
     },
     {
       "record": "BNC-final-full-gradient",
-      "external_source_id": "handoff/evidence/benchbnc-final-full-gradient-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-final-full-gradient-20261015/summary.json",
       "sha256": "69ee659262a4ce3037e4bd6815905fc763a1c7c565cf8ec7d4903b51d487474a"
     },
     {
       "record": "BNC-final-fine-full-gradient",
-      "external_source_id": "handoff/evidence/benchbnc-final-fine-full-gradient-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-final-fine-full-gradient-20261015/summary.json",
       "sha256": "e3af037f4c9a0ad84a11d5f91deab7b9c34f7e907dfe0bfc80628dc5b4405aaf"
     },
     {
       "record": "BNC-ref-initial",
-      "external_source_id": "handoff/HANDOFF.md",
+      "external_source_id": "external-evidence/handoff/HANDOFF.md",
       "sha256": "b094109998b9e1c81928516c39c150babf97a5ae0e04047da4104e892093b3ff"
     },
     {
       "record": "BNC-ref-double-fd",
-      "external_source_id": "handoff/evidence/benchbnc-reference-20261015/double-validation/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-reference-20261015/double-validation/summary.json",
       "sha256": "49ebc6b90526d2be71c5678a52af3c1921d62680ea27bf4aeac302230c8ef058"
     },
     {
       "record": "BNC-ref-plain-controls",
-      "external_source_id": "handoff/evidence/benchbnc-reference-20261015/plain-kernel-controls/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-reference-20261015/plain-kernel-controls/summary.json",
       "sha256": "74871cea24fa8c07f17ff92da8516763af5191d4793cc2402cf6f43324cf15bd"
     },
     {
       "record": "BNC-ref-accumulation",
-      "external_source_id": "handoff/evidence/benchbnc-reference-20261015/accumulation-diagnostic/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-reference-20261015/accumulation-diagnostic/summary.json",
       "sha256": "614e63c932b030b351d050d13ff34c4dd3f399317cfc6e0790346d57c4ffd60e"
     },
     {
       "record": "BNC-offline-cutoff-diagnosis",
-      "external_source_id": "handoff/evidence/benchbnc-cutoff-diagnosis-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-cutoff-diagnosis-20261015/summary.json",
       "sha256": "b98dd5b843ba839ee8b04352154da8b6d625d14e07ad32a36422c9394ecf5979"
     },
     {
       "record": "BNC-offline-chart-lbfgs-resume-audit",
-      "external_source_id": "handoff/evidence/benchbnc-chart-lbfgs-resume-audit-20261015/summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-chart-lbfgs-resume-audit-20261015/summary.json",
       "sha256": "e885f5a7f50b265a807c1bae7c196db33674255bb3ac580298407ce312d65279"
     },
     {
       "record": "BNC-offline-memory-comparison-preflight",
-      "external_source_id": "handoff/evidence/benchbnc-memory-comparison-preflight-20261015/comparison-summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/benchbnc-memory-comparison-preflight-20261015/comparison-summary.json",
       "sha256": "a495ce442b4a0069b1d4444fe5a3b3778e2b8f172d9abf9edb944daa6c5c5c5f"
     },
     {
       "record": "PROTO-chart",
-      "external_source_id": "handoff/HANDOFF.md",
+      "external_source_id": "external-evidence/handoff/HANDOFF.md",
       "sha256": "b094109998b9e1c81928516c39c150babf97a5ae0e04047da4104e892093b3ff"
     },
     {
       "record": "PROTO-optimizer",
-      "external_source_id": "handoff/HANDOFF.md",
+      "external_source_id": "external-evidence/handoff/HANDOFF.md",
       "sha256": "b094109998b9e1c81928516c39c150babf97a5ae0e04047da4104e892093b3ff"
     },
     {
       "record": "PFKFB3-initial-format-failure",
-      "external_source_id": "independent-docking/physical-run/summary.json; independent-docking/physical-run/process.log; independent-docking/physical-run/diagnostic-calls.jsonl; independent-docking/physical-run-attempt2/campaign-summary.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run/summary.json",
       "sha256": "d819c084613f85fa40706468120b43e13a32e58f23687aea1b42fbe9b7857725"
     },
     {
       "record": "PFKFB3-initial-format-failure",
-      "external_source_id": "independent-docking/physical-run/summary.json; independent-docking/physical-run/process.log; independent-docking/physical-run/diagnostic-calls.jsonl; independent-docking/physical-run-attempt2/campaign-summary.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run/process.log",
       "sha256": "cc845e4d2be2b8325c012bd78faf8fa525b06cad1964184062a6d0e1563d6b9f"
     },
     {
       "record": "PFKFB3-initial-format-failure",
-      "external_source_id": "independent-docking/physical-run/summary.json; independent-docking/physical-run/process.log; independent-docking/physical-run/diagnostic-calls.jsonl; independent-docking/physical-run-attempt2/campaign-summary.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run/diagnostic-calls.jsonl",
       "sha256": "d2925bfb99b1b5f1b35a5d2f6b1095f8ddfa769a2d76775d3ce54f6bd66daf20"
     },
     {
       "record": "PFKFB3-initial-format-failure",
-      "external_source_id": "independent-docking/physical-run/summary.json; independent-docking/physical-run/process.log; independent-docking/physical-run/diagnostic-calls.jsonl; independent-docking/physical-run-attempt2/campaign-summary.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/campaign-summary.json",
       "sha256": "c9a3c773b7eeacf9c58a69f8464f65a0d787b2ef5d8f88232216fb5d7c7996d6"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/campaign-summary.json",
       "sha256": "c9a3c773b7eeacf9c58a69f8464f65a0d787b2ef5d8f88232216fb5d7c7996d6"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/result.json",
       "sha256": "dc29f32668e21049f2c96e4ee4a00adf39fc7aa3168a989398b3b19135d9ae1c"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/protocol.json",
       "sha256": "2cd7995433971d34d99f0a2a61f2d738d607ee672776d6481045850b5371b7bf"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/finite-difference.json",
       "sha256": "46df21988d27f6cad1a7cc679bb14f016e9506f353280ec77bf5953c547b10d9"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/retained-geometry.json",
       "sha256": "4b59fe7b8732e9248135b3df6d6a3f1c33bcb4d54f553a1146334fab9876ecbd"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/verification.json",
       "sha256": "4ff9e46690264475901857a2c8ae1fadad08816cca0262db8e0710a8010b7cd1"
     },
     {
       "record": "PFKFB3-B1-40",
-      "external_source_id": "independent-docking/physical-run-attempt2/campaign-summary.json; independent-docking/physical-run-attempt2/result.json; independent-docking/physical-run-attempt2/protocol.json; independent-docking/physical-run-attempt2/finite-difference.json; independent-docking/physical-run-attempt2/retained-geometry.json; independent-docking/physical-run-attempt2/verification.json; independent-docking/physical-run-attempt2/optimizer/events.jsonl",
+      "external_source_id": "external-evidence/independent-docking-20261016/physical-run-attempt2/optimizer/events.jsonl",
       "sha256": "7abfc8f5289517815df66d0922132a4d01462ac21a76842f35f01f4f292b7019"
     },
     {
       "record": "PFKFB3-B2-40",
-      "external_source_id": "independent-docking/shape-run/B2/arm-report.json; independent-docking/shape-run/B2/result.json; independent-docking/shape-run/B2/verification.json; independent-docking/shape-run/B2/optimizer/events.jsonl; independent-docking/shape-plan/B2-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B2/arm-report.json",
       "sha256": "d01f5cd2432e0e356ad23f79e973d2da17b2f1df8f0b14f5b7ac914b0c724f55"
     },
     {
       "record": "PFKFB3-B2-40",
-      "external_source_id": "independent-docking/shape-run/B2/arm-report.json; independent-docking/shape-run/B2/result.json; independent-docking/shape-run/B2/verification.json; independent-docking/shape-run/B2/optimizer/events.jsonl; independent-docking/shape-plan/B2-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B2/result.json",
       "sha256": "51ed37f8424756cd71ee3921b716879c584df6783ae2d30bd37ee715d518d2f8"
     },
     {
       "record": "PFKFB3-B2-40",
-      "external_source_id": "independent-docking/shape-run/B2/arm-report.json; independent-docking/shape-run/B2/result.json; independent-docking/shape-run/B2/verification.json; independent-docking/shape-run/B2/optimizer/events.jsonl; independent-docking/shape-plan/B2-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B2/verification.json",
       "sha256": "8e78489b77f0e79e08f76265ad32a16ac8591e492e9ed4e32d225bd66d7c2174"
     },
     {
       "record": "PFKFB3-B2-40",
-      "external_source_id": "independent-docking/shape-run/B2/arm-report.json; independent-docking/shape-run/B2/result.json; independent-docking/shape-run/B2/verification.json; independent-docking/shape-run/B2/optimizer/events.jsonl; independent-docking/shape-plan/B2-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B2/optimizer/events.jsonl",
       "sha256": "1eed014bbef673d554ddaea55b0097e6ba376de537f1e528cf748427e6b6e075"
     },
     {
       "record": "PFKFB3-B2-40",
-      "external_source_id": "independent-docking/shape-run/B2/arm-report.json; independent-docking/shape-run/B2/result.json; independent-docking/shape-run/B2/verification.json; independent-docking/shape-run/B2/optimizer/events.jsonl; independent-docking/shape-plan/B2-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-plan/B2-binding.json",
       "sha256": "7b9120f081fc2a0cc641a4af1bcc3b5193a62a4cbbb9c7a7ffa1bb4b78504331"
     },
     {
       "record": "PFKFB3-B2-40",
-      "external_source_id": "independent-docking/shape-run/B2/arm-report.json; independent-docking/shape-run/B2/result.json; independent-docking/shape-run/B2/verification.json; independent-docking/shape-run/B2/optimizer/events.jsonl; independent-docking/shape-plan/B2-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-plan/plan.json",
       "sha256": "913e8e7d45687eda08f7ce4196a17ef005d6f36aad33777a2060ef0f2468872b"
     },
     {
       "record": "PFKFB3-B3-40",
-      "external_source_id": "independent-docking/shape-run/B3/arm-report.json; independent-docking/shape-run/B3/result.json; independent-docking/shape-run/B3/verification.json; independent-docking/shape-run/B3/optimizer/events.jsonl; independent-docking/shape-plan/B3-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B3/arm-report.json",
       "sha256": "fda63a6c4fcbd50136061cd9f1d9e6dcc7c5539d97076a05ed8cba86ebe78b66"
     },
     {
       "record": "PFKFB3-B3-40",
-      "external_source_id": "independent-docking/shape-run/B3/arm-report.json; independent-docking/shape-run/B3/result.json; independent-docking/shape-run/B3/verification.json; independent-docking/shape-run/B3/optimizer/events.jsonl; independent-docking/shape-plan/B3-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B3/result.json",
       "sha256": "5ec73139ea5f384bdfee86144dc6b28d96239748ae5696ddca07c61d5b5124ad"
     },
     {
       "record": "PFKFB3-B3-40",
-      "external_source_id": "independent-docking/shape-run/B3/arm-report.json; independent-docking/shape-run/B3/result.json; independent-docking/shape-run/B3/verification.json; independent-docking/shape-run/B3/optimizer/events.jsonl; independent-docking/shape-plan/B3-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B3/verification.json",
       "sha256": "8e78489b77f0e79e08f76265ad32a16ac8591e492e9ed4e32d225bd66d7c2174"
     },
     {
       "record": "PFKFB3-B3-40",
-      "external_source_id": "independent-docking/shape-run/B3/arm-report.json; independent-docking/shape-run/B3/result.json; independent-docking/shape-run/B3/verification.json; independent-docking/shape-run/B3/optimizer/events.jsonl; independent-docking/shape-plan/B3-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-run/B3/optimizer/events.jsonl",
       "sha256": "792647c71b3da053fe2a5cefc276af5a4daa1139253f5a8377df4123e0b5f6d0"
     },
     {
       "record": "PFKFB3-B3-40",
-      "external_source_id": "independent-docking/shape-run/B3/arm-report.json; independent-docking/shape-run/B3/result.json; independent-docking/shape-run/B3/verification.json; independent-docking/shape-run/B3/optimizer/events.jsonl; independent-docking/shape-plan/B3-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-plan/B3-binding.json",
       "sha256": "fcb46e5f4f15f6912fca3373f6353099eca60ac942ce7b54a921c18310318b85"
     },
     {
       "record": "PFKFB3-B3-40",
-      "external_source_id": "independent-docking/shape-run/B3/arm-report.json; independent-docking/shape-run/B3/result.json; independent-docking/shape-run/B3/verification.json; independent-docking/shape-run/B3/optimizer/events.jsonl; independent-docking/shape-plan/B3-binding.json; independent-docking/shape-plan/plan.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/shape-plan/plan.json",
       "sha256": "913e8e7d45687eda08f7ce4196a17ef005d6f36aad33777a2060ef0f2468872b"
     },
     {
       "record": "PFKFB3-long-interrupted84",
-      "external_source_id": "independent-docking/long-baseline/interruption-report.json; independent-docking/long-baseline/interrupted-verification.json; independent-docking/long-baseline/geometry-last-completed.json; independent-docking/long-baseline/optimizer/events.jsonl; independent-docking/long-baseline/plan.json; independent-docking/long-baseline/prefix-parity.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/long-baseline/interruption-report.json",
       "sha256": "680fda53670cee527dedcdd0a0bbe9e3c2df5f933425894d8da8f2fcc619bb33"
     },
     {
       "record": "PFKFB3-long-interrupted84",
-      "external_source_id": "independent-docking/long-baseline/interruption-report.json; independent-docking/long-baseline/interrupted-verification.json; independent-docking/long-baseline/geometry-last-completed.json; independent-docking/long-baseline/optimizer/events.jsonl; independent-docking/long-baseline/plan.json; independent-docking/long-baseline/prefix-parity.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/long-baseline/interrupted-verification.json",
       "sha256": "810eab6a39debc3ab1f54fc77968876a2af0de858d9d6e34a2ef77ab57ea5599"
     },
     {
       "record": "PFKFB3-long-interrupted84",
-      "external_source_id": "independent-docking/long-baseline/interruption-report.json; independent-docking/long-baseline/interrupted-verification.json; independent-docking/long-baseline/geometry-last-completed.json; independent-docking/long-baseline/optimizer/events.jsonl; independent-docking/long-baseline/plan.json; independent-docking/long-baseline/prefix-parity.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/long-baseline/geometry-last-completed.json",
       "sha256": "67302182eb02fa5327d65deb93060c4d9bdc34a9877eff46a74e7dcebf71a9b9"
     },
     {
       "record": "PFKFB3-long-interrupted84",
-      "external_source_id": "independent-docking/long-baseline/interruption-report.json; independent-docking/long-baseline/interrupted-verification.json; independent-docking/long-baseline/geometry-last-completed.json; independent-docking/long-baseline/optimizer/events.jsonl; independent-docking/long-baseline/plan.json; independent-docking/long-baseline/prefix-parity.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/long-baseline/optimizer/events.jsonl",
       "sha256": "ba0431ce39b7e63db735c1845908d91a0795c856fba067ad08dcbd5ecae4f608"
     },
     {
       "record": "PFKFB3-long-interrupted84",
-      "external_source_id": "independent-docking/long-baseline/interruption-report.json; independent-docking/long-baseline/interrupted-verification.json; independent-docking/long-baseline/geometry-last-completed.json; independent-docking/long-baseline/optimizer/events.jsonl; independent-docking/long-baseline/plan.json; independent-docking/long-baseline/prefix-parity.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/long-baseline/plan.json",
       "sha256": "14b40b1189af775a018cc3e9280e168bee1835530fd05d9e238f523aebef9ace"
     },
     {
       "record": "PFKFB3-long-interrupted84",
-      "external_source_id": "independent-docking/long-baseline/interruption-report.json; independent-docking/long-baseline/interrupted-verification.json; independent-docking/long-baseline/geometry-last-completed.json; independent-docking/long-baseline/optimizer/events.jsonl; independent-docking/long-baseline/plan.json; independent-docking/long-baseline/prefix-parity.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/long-baseline/prefix-parity.json",
       "sha256": "61fd9d48cde7ae440cbe5238eceba5d8b5d05219118a95c9cddb712335b901e7"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/final-report.json",
       "sha256": "8cb508127056bdff18234f1a4eb40696e8a59c861a04f055a39576e71597ead2"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/verification.json",
       "sha256": "a5161dc91f87e14945e35f7855fb2d1c13d93faafbbf861fd88998b1d4976cb5"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/geometry-terminal.json",
       "sha256": "0c2c839eec269116975dfb4e72ac5805502e34a8296fd712611c9857a3a2a541"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/snapshot/lineage.json",
       "sha256": "dd341dd6e24196411215c942e79e92cac9e170c54b2c9d2443025a0525bf6d0f"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/snapshot/protocol.json",
       "sha256": "c2a9363052d7e8e647f8e220065e7956f0d7cc3ccc56b155026ede38c5eae042"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/optimizer/events.jsonl",
       "sha256": "76bdf1b332ab26ea1d59e5d098561b561e6014a8cdc70c52a6a6ffe2d5d1793e"
     },
     {
       "record": "PFKFB3-cold84-converged219",
-      "external_source_id": "independent-docking/cold-start-84/final-report.json; independent-docking/cold-start-84/verification.json; independent-docking/cold-start-84/geometry-terminal.json; independent-docking/cold-start-84/snapshot/lineage.json; independent-docking/cold-start-84/snapshot/protocol.json; independent-docking/cold-start-84/optimizer/events.jsonl; independent-docking/cold-start-84/supervisor-exit.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/cold-start-84/supervisor-exit.json",
       "sha256": "a81ecb6aa90372134819bc1184c82d14b404d9fc6c13f924990865bcadbb581a"
     },
     {
       "record": "5SAK-preflight-5SAK-01",
-      "external_source_id": "independent-docking/runner/preflight-5SAK-01/report.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/preflight-5SAK-01/report.json",
       "sha256": "78c9ce5fc563485116f29a51370b502c253117301684232b2976418dc9ee6327"
     },
     {
       "record": "5SAK-preflight-5SAK-02",
-      "external_source_id": "independent-docking/runner/preflight-5SAK-02/report.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/preflight-5SAK-02/report.json",
       "sha256": "7ffd3b2f894e9bdd91343227ce2ff71ef7d9a1aaac8daba4f2f1796b9eca1b4d"
     },
     {
       "record": "5SAK-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/experiment-5SAK-01/report.json",
       "sha256": "621daf7434f0446c37966fd7a7ad513e69b767763e0a5a6fd81bdbead0514726"
     },
     {
       "record": "5SAK-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/verification.json",
       "sha256": "414792d7a51cbe7f260857689f08ba645f562c3be5ef6bf18b104982da7934d5"
     },
     {
       "record": "5SAK-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/accounting-qualification.json",
       "sha256": "be00fd22f33657cd91ae39b1d6efd34319063c0571a505c12a14fea8553e0a7a"
     },
     {
       "record": "5SAK-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/frozen-plan.json",
       "sha256": "394e5491106fb700e77cf5bce1dd793be77dabfe2032dbbd3f9e94e3ae368405"
     },
     {
       "record": "5SAK-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/run_contact.py",
       "sha256": "3115c1d828f9dfa670e29e84a87cd1ad5c1a90c0110e515f831861a5ca8b50a1"
     },
     {
       "record": "5SAK-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/data/PROVENANCE.md",
       "sha256": "d0682517d2fe022356118d79d057b3ff49ddfefea0905b8fa54d84c32d28ce97"
     },
     {
       "record": "5SAK-independent-conformer-not-run",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/RESULTS.md; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/experiment-5SAK-01/report.json",
       "sha256": "621daf7434f0446c37966fd7a7ad513e69b767763e0a5a6fd81bdbead0514726"
     },
     {
       "record": "5SAK-independent-conformer-not-run",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/RESULTS.md; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/RESULTS.md",
       "sha256": "66d1994ddaa5997e6a06e2aa92644bf1a61a39d4535e893f5a79431a493771cc"
     },
     {
       "record": "5SAK-independent-conformer-not-run",
-      "external_source_id": "independent-docking/runner/experiment-5SAK-01/report.json; independent-docking/runner/RESULTS.md; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/data/PROVENANCE.md",
       "sha256": "d0682517d2fe022356118d79d057b3ff49ddfefea0905b8fa54d84c32d28ce97"
     },
     {
       "record": "5SB2-preflight-5SB2-01",
-      "external_source_id": "independent-docking/runner/preflight-5SB2-01/report.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/preflight-5SB2-01/report.json",
       "sha256": "1dd90802514e416731e0717e0a949c91f5d70c0fcde99865df1628f85cd5507f"
     },
     {
       "record": "5SB2-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/experiment-5SB2-01/report.json",
       "sha256": "7154e8798a8aadb8e9adc8f0bc05bb3ce974269e887e8d0fc09601c42683725c"
     },
     {
       "record": "5SB2-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/verification.json",
       "sha256": "414792d7a51cbe7f260857689f08ba645f562c3be5ef6bf18b104982da7934d5"
     },
     {
       "record": "5SB2-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/accounting-qualification.json",
       "sha256": "be00fd22f33657cd91ae39b1d6efd34319063c0571a505c12a14fea8553e0a7a"
     },
     {
       "record": "5SB2-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/frozen-plan.json",
       "sha256": "394e5491106fb700e77cf5bce1dd793be77dabfe2032dbbd3f9e94e3ae368405"
     },
     {
       "record": "5SB2-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/run_contact.py",
       "sha256": "3115c1d828f9dfa670e29e84a87cd1ad5c1a90c0110e515f831861a5ca8b50a1"
     },
     {
       "record": "5SB2-geometric-experiment",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/verification.json; independent-docking/runner/accounting-qualification.json; independent-docking/runner/frozen-plan.json; independent-docking/runner/run_contact.py; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/data/PROVENANCE.md",
       "sha256": "d0682517d2fe022356118d79d057b3ff49ddfefea0905b8fa54d84c32d28ce97"
     },
     {
       "record": "5SB2-independent-conformer-not-run",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/RESULTS.md; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/experiment-5SB2-01/report.json",
       "sha256": "7154e8798a8aadb8e9adc8f0bc05bb3ce974269e887e8d0fc09601c42683725c"
     },
     {
       "record": "5SB2-independent-conformer-not-run",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/RESULTS.md; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/runner/RESULTS.md",
       "sha256": "66d1994ddaa5997e6a06e2aa92644bf1a61a39d4535e893f5a79431a493771cc"
     },
     {
       "record": "5SB2-independent-conformer-not-run",
-      "external_source_id": "independent-docking/runner/experiment-5SB2-01/report.json; independent-docking/runner/RESULTS.md; independent-docking/data/PROVENANCE.md",
+      "external_source_id": "external-evidence/independent-docking-20261016/data/PROVENANCE.md",
       "sha256": "d0682517d2fe022356118d79d057b3ff49ddfefea0905b8fa54d84c32d28ce97"
     },
     {
       "record": "PFKFB3-components",
-      "external_source_id": "independent-docking/component-diagnostics/summary.json",
+      "external_source_id": "external-evidence/independent-docking-20261016/component-diagnostics/summary.json",
       "sha256": "8427bf876dd0f068bfad9e0ad08164bb466e3fc0ef64f189473d684d1b9ad650"
     },
     {
       "record": "thrombin_main40",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_scipy41",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_main160",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_scipy_long",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_main_long",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json; handoff/evidence/docking-cloud-20261014/main-extended-research/fresh-verification/result.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_main_long",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json; handoff/evidence/docking-cloud-20261014/main-extended-research/fresh-verification/result.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/main-extended-research/fresh-verification/result.json",
       "sha256": "604aff7306d41e4299ce4bf18528d2d8cd0f8e2ad46e038ea8c0dadafe247c12"
     },
     {
       "record": "thrombin_scipy_long_prefix_41",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_scipy_long_prefix_81",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_scipy_long_prefix_163",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_scipy_long_prefix_321",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_global_shape_B0",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_global_shape_B1",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_global_shape_B2",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "thrombin_global_shape_B3",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/results-analysis.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/results-analysis.json",
       "sha256": "bdeaeb1f055c1ebe4a1d8cbe910e301cbabd0084d83ff8bbb0faab35f5c8e04f"
     },
     {
       "record": "bace_global_shape_B0",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
       "sha256": "c9c3aca8a630bac7686521181a8f521e9e00981abb10c70adcf74091963987a5"
     },
     {
       "record": "bace_global_shape_B1",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
       "sha256": "c9c3aca8a630bac7686521181a8f521e9e00981abb10c70adcf74091963987a5"
     },
     {
       "record": "bace_global_shape_B2",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
       "sha256": "c9c3aca8a630bac7686521181a8f521e9e00981abb10c70adcf74091963987a5"
     },
     {
       "record": "bace_global_shape_B3",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/report/BACE-shape-comparison-summary.json",
       "sha256": "c9c3aca8a630bac7686521181a8f521e9e00981abb10c70adcf74091963987a5"
     },
     {
       "record": "bace_main40",
-      "external_source_id": "handoff/evidence/docking-next-20261014/local-restraint/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/local-restraint/comparison.json",
       "sha256": "94598f08390b1e5d3a0f9359bcc9a19259ffecadac2ff9de51f52eb9698b5923"
     },
     {
       "record": "bace_local_zero40",
-      "external_source_id": "handoff/evidence/docking-next-20261014/local-restraint/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/local-restraint/comparison.json",
       "sha256": "94598f08390b1e5d3a0f9359bcc9a19259ffecadac2ff9de51f52eb9698b5923"
     },
     {
       "record": "bace_local100_40",
-      "external_source_id": "handoff/evidence/docking-next-20261014/local-restraint/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/local-restraint/comparison.json",
       "sha256": "94598f08390b1e5d3a0f9359bcc9a19259ffecadac2ff9de51f52eb9698b5923"
     },
     {
       "record": "bace_main160",
-      "external_source_id": "handoff/evidence/docking-next-20261014/local-restraint/comparison160.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/local-restraint/comparison160.json",
       "sha256": "f5d173bfdeb32ae6c062f071109db14b5c2da4634c3aaabeea725a7837858621"
     },
     {
       "record": "bace_local100_160",
-      "external_source_id": "handoff/evidence/docking-next-20261014/local-restraint/comparison160.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/local-restraint/comparison160.json",
       "sha256": "f5d173bfdeb32ae6c062f071109db14b5c2da4634c3aaabeea725a7837858621"
     },
     {
       "record": "bace_raw_long",
-      "external_source_id": "handoff/evidence/docking-bace-20261015/comparison.json; handoff/evidence/docking-bace-20261015/REPORT-KO.md",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-20261015/comparison.json",
       "sha256": "da0d5c97792e81fa87b0a242ee39f92179752ef789ae688ca93c2fe8ce88fb3d"
     },
     {
       "record": "bace_raw_long",
-      "external_source_id": "handoff/evidence/docking-bace-20261015/comparison.json; handoff/evidence/docking-bace-20261015/REPORT-KO.md",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-20261015/REPORT-KO.md",
       "sha256": "5dd8a73caf21e8437e694262dcbf69a99dc2d0349eedf8cd926d484a239c4831"
     },
     {
       "record": "bace_local100_long",
-      "external_source_id": "handoff/evidence/docking-bace-20261015/comparison.json; handoff/evidence/docking-bace-20261015/REPORT-KO.md",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-20261015/comparison.json",
       "sha256": "da0d5c97792e81fa87b0a242ee39f92179752ef789ae688ca93c2fe8ce88fb3d"
     },
     {
       "record": "bace_local100_long",
-      "external_source_id": "handoff/evidence/docking-bace-20261015/comparison.json; handoff/evidence/docking-bace-20261015/REPORT-KO.md",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-20261015/REPORT-KO.md",
       "sha256": "5dd8a73caf21e8437e694262dcbf69a99dc2d0349eedf8cd926d484a239c4831"
     },
     {
       "record": "thrombin_product_real-direct",
-      "external_source_id": "handoff/evidence/docking-next-20261014/long-budget/real-comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/long-budget/real-comparison.json",
       "sha256": "776050d7242059120e1a50835ae70f44dbb09342afa8cde2d36dc2b879c750d0"
     },
     {
       "record": "thrombin_product_real-resumed",
-      "external_source_id": "handoff/evidence/docking-next-20261014/long-budget/real-comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-next-20261014/long-budget/real-comparison.json",
       "sha256": "776050d7242059120e1a50835ae70f44dbb09342afa8cde2d36dc2b879c750d0"
     },
     {
       "record": "bace_rigid",
-      "external_source_id": "handoff/evidence/docking-bace-rigid-20261015/comparison.json; handoff/evidence/docking-bace-rigid-20261015/result.json; handoff/evidence/docking-bace-rigid-20261015/geometry-recheck.json; handoff/evidence/docking-bace-rigid-20261015/independent-posthoc-verification.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-rigid-20261015/comparison.json",
       "sha256": "f5b0ab844f49aacc45831f97c0bd251e1b82a2d9179849d8d20712e2d70a2b02"
     },
     {
       "record": "bace_rigid",
-      "external_source_id": "handoff/evidence/docking-bace-rigid-20261015/comparison.json; handoff/evidence/docking-bace-rigid-20261015/result.json; handoff/evidence/docking-bace-rigid-20261015/geometry-recheck.json; handoff/evidence/docking-bace-rigid-20261015/independent-posthoc-verification.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-rigid-20261015/result.json",
       "sha256": "8e3867032ac34bc0b8f3008098e2e89a1c8d9ae8f74c4eac39460f31226089ef"
     },
     {
       "record": "bace_rigid",
-      "external_source_id": "handoff/evidence/docking-bace-rigid-20261015/comparison.json; handoff/evidence/docking-bace-rigid-20261015/result.json; handoff/evidence/docking-bace-rigid-20261015/geometry-recheck.json; handoff/evidence/docking-bace-rigid-20261015/independent-posthoc-verification.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-rigid-20261015/geometry-recheck.json",
       "sha256": "f96c6381cac62e1a82de7c8cf76c6b22bb8de87866eb432f9ef3182869c91255"
     },
     {
       "record": "bace_rigid",
-      "external_source_id": "handoff/evidence/docking-bace-rigid-20261015/comparison.json; handoff/evidence/docking-bace-rigid-20261015/result.json; handoff/evidence/docking-bace-rigid-20261015/geometry-recheck.json; handoff/evidence/docking-bace-rigid-20261015/independent-posthoc-verification.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-rigid-20261015/independent-posthoc-verification.json",
       "sha256": "43b3a8ed4e2a26387ea4bd2df38a212135d2a97a6e4caef71d79df21af6a2958"
     },
     {
       "record": "bace_torsion",
-      "external_source_id": "handoff/evidence/docking-bace-torsion-20261015/comparison.json; handoff/evidence/docking-bace-torsion-20261015/result.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-torsion-20261015/comparison.json",
       "sha256": "e71efe6776abeed15cfb966e2d883328d118542c77cde35ba30026f94fd09816"
     },
     {
       "record": "bace_torsion",
-      "external_source_id": "handoff/evidence/docking-bace-torsion-20261015/comparison.json; handoff/evidence/docking-bace-torsion-20261015/result.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-torsion-20261015/result.json",
       "sha256": "a0caf13e6e0e52950a87237cb2410ce356bef63e8de304eb6f494029ffed9535"
     },
     {
       "record": "thrombin_rigid",
-      "external_source_id": "handoff/evidence/docking-thrombin-flex-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-thrombin-flex-20261015/comparison.json",
       "sha256": "5f1197d93d923e4637c0ebcbee9a3f385dfcdab7febcb6e5d70df46f28bb7b26"
     },
     {
       "record": "thrombin_flex",
-      "external_source_id": "handoff/evidence/docking-thrombin-flex-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-thrombin-flex-20261015/comparison.json",
       "sha256": "5f1197d93d923e4637c0ebcbee9a3f385dfcdab7febcb6e5d70df46f28bb7b26"
     },
     {
       "record": "thrombin_residual_ammonium",
-      "external_source_id": "handoff/evidence/docking-thrombin-residual-arms-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-thrombin-residual-arms-20261015/comparison.json",
       "sha256": "a6da05e00220e935299f372094c2078fcd6ba7b842ec6a2ad67c173861ce3b19"
     },
     {
       "record": "thrombin_residual_phenyl",
-      "external_source_id": "handoff/evidence/docking-thrombin-residual-arms-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-thrombin-residual-arms-20261015/comparison.json",
       "sha256": "a6da05e00220e935299f372094c2078fcd6ba7b842ec6a2ad67c173861ce3b19"
     },
     {
       "record": "bace_multistart_minus60",
-      "external_source_id": "handoff/evidence/docking-bace-multistart-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-multistart-20261015/comparison.json",
       "sha256": "307e8c97de291a0fb24b2bb941cfb1a60417e015f2bfbb124cd8cb679a9760ec"
     },
     {
       "record": "bace_multistart_minus30",
-      "external_source_id": "handoff/evidence/docking-bace-multistart-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-multistart-20261015/comparison.json",
       "sha256": "307e8c97de291a0fb24b2bb941cfb1a60417e015f2bfbb124cd8cb679a9760ec"
     },
     {
       "record": "bace_multistart_plus30",
-      "external_source_id": "handoff/evidence/docking-bace-multistart-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-multistart-20261015/comparison.json",
       "sha256": "307e8c97de291a0fb24b2bb941cfb1a60417e015f2bfbb124cd8cb679a9760ec"
     },
     {
       "record": "bace_multistart_plus60",
-      "external_source_id": "handoff/evidence/docking-bace-multistart-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-bace-multistart-20261015/comparison.json",
       "sha256": "307e8c97de291a0fb24b2bb941cfb1a60417e015f2bfbb124cd8cb679a9760ec"
     },
     {
       "record": "thrombin_isolated_B0",
-      "external_source_id": "handoff/evidence/docking-isolated-reference-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-isolated-reference-20261015/comparison.json",
       "sha256": "1803587c56cf82c28975c6f5130a0b3ebf62f4c1a1b2a9779b1da6716b65063b"
     },
     {
       "record": "thrombin_isolated_baseline8D",
-      "external_source_id": "handoff/evidence/docking-isolated-reference-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-isolated-reference-20261015/comparison.json",
       "sha256": "1803587c56cf82c28975c6f5130a0b3ebf62f4c1a1b2a9779b1da6716b65063b"
     },
     {
       "record": "thrombin_isolated_phenyl9D",
-      "external_source_id": "handoff/evidence/docking-isolated-reference-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-isolated-reference-20261015/comparison.json",
       "sha256": "1803587c56cf82c28975c6f5130a0b3ebf62f4c1a1b2a9779b1da6716b65063b"
     },
     {
       "record": "thrombin_isolated_NH3_9D",
-      "external_source_id": "handoff/evidence/docking-isolated-reference-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-isolated-reference-20261015/comparison.json",
       "sha256": "1803587c56cf82c28975c6f5130a0b3ebf62f4c1a1b2a9779b1da6716b65063b"
     },
     {
       "record": "thrombin_isolated_NH3_failed_anchor",
-      "external_source_id": "handoff/evidence/docking-isolated-reference-20261015/comparison.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-isolated-reference-20261015/comparison.json",
       "sha256": "1803587c56cf82c28975c6f5130a0b3ebf62f4c1a1b2a9779b1da6716b65063b"
     },
     {
       "record": "pilot_thrombin_full_B0_B3",
-      "external_source_id": "handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md",
+      "external_source_id": "external-evidence/handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md",
       "sha256": "6e1a14f324d776a034eb64011d8d63ae8c18d18616420cc64009672c97af96c2"
     },
     {
       "record": "pilot_thrombin_D3_zero_LJ",
-      "external_source_id": "handoff/evidence/real-docking-pilot/real-cross-admission-failure.json; handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md",
+      "external_source_id": "external-evidence/handoff/evidence/real-docking-pilot/real-cross-admission-failure.json",
       "sha256": "8d8fe18c261708e2243ada9584df20bc44c24cd3b9b85ec92e28ffce75819ac2"
     },
     {
       "record": "pilot_thrombin_D3_zero_LJ",
-      "external_source_id": "handoff/evidence/real-docking-pilot/real-cross-admission-failure.json; handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md",
+      "external_source_id": "external-evidence/handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md",
       "sha256": "6e1a14f324d776a034eb64011d8d63ae8c18d18616420cc64009672c97af96c2"
     },
     {
       "record": "pilot_thrombin_cross_only",
-      "external_source_id": "handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md; handoff/evidence/real-docking-pilot/existing-cross-finite-differences.json",
+      "external_source_id": "external-evidence/handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md",
       "sha256": "6e1a14f324d776a034eb64011d8d63ae8c18d18616420cc64009672c97af96c2"
     },
     {
       "record": "pilot_thrombin_cross_only",
-      "external_source_id": "handoff/evidence/real-docking-pilot/NUMERICAL_REPORT.md; handoff/evidence/real-docking-pilot/existing-cross-finite-differences.json",
+      "external_source_id": "external-evidence/handoff/evidence/real-docking-pilot/existing-cross-finite-differences.json",
       "sha256": "b6eb390b3391585e0e8f08cd9ac2fa27f49e85df616d64bf7d73f8b18ca20f42"
     },
     {
       "record": "thrombin_main_long_prefix_382",
-      "external_source_id": "handoff/evidence/docking-cloud-20261014/main-extended-research/prefix382-summary.json",
+      "external_source_id": "external-evidence/handoff/evidence/docking-cloud-20261014/main-extended-research/prefix382-summary.json",
       "sha256": "69d43aa28b2227d89f3d4a7d0a7ae715aad152b254148638b87fec844698a698"
     },
     {
