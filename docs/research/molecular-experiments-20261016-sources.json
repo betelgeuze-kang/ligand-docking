@@ -1491,6 +1491,66 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/rigid-water-descent-results/REPORT-KO.md",
       "sha256": "00b7914b687b3668313ce7a4caf9e2d9a1b8ae0fd9bc1b4031cbd64385ed7d1e"
+    },
+    {
+      "record": "PFK-heldout-source-freeze-failure",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-heldout-dry-results-20261016/compact-results.json",
+      "sha256": "cec9d622ed68972896bf793f9cf85e3a47253fb60fbd9627df8e2919012a0ddd"
+    },
+    {
+      "record": "PFK-8DOF-Qplus",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-heldout-dry-results-20261016/compact-results.json",
+      "sha256": "cec9d622ed68972896bf793f9cf85e3a47253fb60fbd9627df8e2919012a0ddd"
+    },
+    {
+      "record": "PFK-8DOF-Qminus",
+      "external_source_id": "external-evidence/pfk-rigid-torsion-heldout-dry-results-20261016/compact-results.json",
+      "sha256": "cec9d622ed68972896bf793f9cf85e3a47253fb60fbd9627df8e2919012a0ddd"
+    },
+    {
+      "record": "PFK-water-large-step-two-sweeps",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-descent-large-step-run/runs/descent/summary.json",
+      "sha256": "65df819e2a25bf0f000dc69ad04b1e495987c14a1b672835a8116c570a5902f7"
+    },
+    {
+      "record": "PFK-water-large-step-two-sweeps",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-large-step-results/torque-distribution.json",
+      "sha256": "e2cb39523cd0401ca8e3421b0ffe073e1e63ce7639fe83e75ebc865d6d6eeaa9"
+    },
+    {
+      "record": "PFK-water-large-step-two-sweeps",
+      "external_source_id": "external-evidence/independent-docking-20261016/rigid-water-descent-large-step-run/runs/descent/supervisor-exit.json",
+      "sha256": "9b89c4612b783077d517a0e5792ae482ebb33e445bbec4f9dfd5fff04dc3585b"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1937/normalized-ledger.json",
+      "sha256": "826c9b96d1eddcf05908974e89b730a893a23dc34f0dfda30e1a8a71bccf295e"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261016-1937/source-manifest.json",
+      "sha256": "ad399bf5151b07a9fc1f0aa9811e05b820467ee4711378540ffc492efc4c288a"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-rigid-torsion-heldout-dry-results-20261016/REPORT-KO-v2.md",
+      "sha256": "5638fe8f3ab60282dea363f35a1d35dd3103a4aa41cbc811c7bfcbb9cecf890b"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-rigid-torsion-heldout-dry-results-20261016/REPORT-CORRECTION.json",
+      "sha256": "3f6782890cf460eacf1433a43492b12848b4b2254d753ae3a27567b75149d675"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-large-step-results/REPORT-KO.md",
+      "sha256": "78cea05c7687d22d6239dbf1055ec2e405fcc2c2b8106213af24cb17c9d2abef"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/rigid-water-large-step-results/torque-distribution.json",
+      "sha256": "e2cb39523cd0401ca8e3421b0ffe073e1e63ce7639fe83e75ebc865d6d6eeaa9"
     }
   ]
 }
