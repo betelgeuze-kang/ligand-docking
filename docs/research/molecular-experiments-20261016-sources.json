@@ -1041,6 +1041,76 @@
       "record": "stage5-report-source",
       "external_source_id": "external-evidence/independent-docking-20261016/stage5-results/independent-audit-summary.json",
       "sha256": "4747f284fb0706cf44faf7139ccca88f7ea6bb6a18c8bcb666d78a5a2c550ff0"
+    },
+    {
+      "record": "PFKFB3-stage6-fixed-water-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/environment-restoration-run/runs/optimizer/summary.json",
+      "sha256": "17b5a56d8dd1ba2fb4ca919e0fecfdc0d99b3a508a885d874ddc3570a48ca252"
+    },
+    {
+      "record": "PFKFB3-stage6-fixed-water-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/environment-restoration-run/runs/diagnostic/summary.json",
+      "sha256": "4835e2d2b66604d0ae1332b58020e0aefdb0a1ccef59112341781b1e902ce5dd"
+    },
+    {
+      "record": "PFKFB3-stage6-fixed-water-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/environment-restoration-run/runs/diagnostic/paired-contrasts.json",
+      "sha256": "472d91179d60b465d3d109ecf879ec2a3f0809c12dd949066148b63de27e3007"
+    },
+    {
+      "record": "PFKFB3-stage6-fixed-water-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/environment-restoration-analysis/terminal-coordinate-evaluation.json",
+      "sha256": "d2e22b5052ab0b417a18e3eca8d9569151680c6ee4955db0f967b958ebd4a132"
+    },
+    {
+      "record": "PFKFB3-stage6-fixed-water-final",
+      "external_source_id": "external-evidence/independent-docking-20261016/environment-restoration-analysis/final-geometry-outputs/terminal-fixed-water/final-summary.json",
+      "sha256": "50bf63134be11e7f1e8a694323fc17b3b8a8545a86835d4f44f2fbd61e40091a"
+    },
+    {
+      "record": "JNK1-official-input-preparation",
+      "external_source_id": "external-evidence/second-official-benchmark-20261016/README.md",
+      "sha256": "59ed767f54178193933f8f2a090eeab70f4834c34e98692b3ca5a453c499e899"
+    },
+    {
+      "record": "JNK1-official-input-preparation",
+      "external_source_id": "external-evidence/second-official-benchmark-20261016/readiness.json",
+      "sha256": "ff6cd72e3b0ceb97ec0fa2f95f8065ab7f49addaa8f12698b1b48066beb0dabe"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "external-evidence/outputs/experiment-status-final-20261016-1226/normalized-ledger.json",
+      "sha256": "6fe1c78131e85bce5190b87e474c23f0256c9e382438bf00e7328e319da5c9ef"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "external-evidence/outputs/experiment-status-final-20261016-1226/source-manifest.json",
+      "sha256": "7c893bad4ae20861f5662cdc494dd43e1f97755e31118cf52cfd518ad33319ac"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "external-evidence/outputs/experiment-status-final-20261016-1226/분자실험-전체현황-최종-20261016-1226.md",
+      "sha256": "45f87400c5041f6bd1a8e87be1793db8c9d51839045ff28bf9ee0dacd5c94574"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "external-evidence/independent-docking-20261016/environment-restoration-preflight/projected-water-preparation/projection-summary.json",
+      "sha256": "5330d7ccca7f3ad7d7586c681590b8d66ec467b70fbd0fd9face62f5c609fc6a"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "external-evidence/second-official-benchmark-20261016/audit.json",
+      "sha256": "bc63cf6054c41efd72bda8cf14d3c07e2e37bca52d2261e2c8b7901c7ec62907"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/environment-restoration-results/REPORT-KO.md",
+      "sha256": "bb998f5ea4bb150370b3debd4bc896518716da6b7aba6417ba14aaef42b29ac7"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "independent-docking-20261016/environment-restoration-results/independent-audit-summary.json",
+      "sha256": "23f068ec61c4bc30c6b620bfd7df8e2417c7c4c66c657e2b1ce7ab679edc2c68"
     }
   ]
 }
