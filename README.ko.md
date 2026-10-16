@@ -98,7 +98,7 @@ v2_ao_native_cpu_scorer_contract_rc5
 
 먼저 읽을 문서:
 
-- [2026-10-16 분자 실험 결과: 수렴·실패·기하·결정 포즈·비용](docs/research/molecular-experiments-20261016.ko.md) — 외부 연구 기록 144행·8자유도 포즈 대조·물2순회 미수렴, 제품 승격 없음
+- [2026-10-16 분자 실험 결과: 수렴·실패·기하·결정 포즈·비용](docs/research/molecular-experiments-20261016.ko.md) — 외부 연구 기록 148행·사전 교란 국소 회복·물4순회 미수렴, 제품 승격 없음
 - `docs/engine_v2_status.md`
 - `docs/engine_v2_public_api.md`
 - `config/independent_engine_v2_capabilities.yaml`
