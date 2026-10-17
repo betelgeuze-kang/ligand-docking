@@ -1636,6 +1636,151 @@
       "record": "report-source",
       "external_source_id": "independent-docking-20261016/rigid-water-three-sweep-results/REPORT-KO.md",
       "sha256": "6b19872b35a21f970ed08eaf8144511ce763f00026f10e845fe6f2ccefdd88c9"
+    },
+    {
+      "record": "PFK-water-return-chart-converged",
+      "external_source_id": "external-evidence/water-global-fixed-chart-return-optimizer-terminal-audit-20261017/audit.json",
+      "sha256": "5baad329e7bd3704ce713ccc6469e3e98648382722c261385778cbe65a5d03b4"
+    },
+    {
+      "record": "PFK-stationary-water-ligand-utility",
+      "external_source_id": "external-evidence/pfk-stationary-water-ligand-utility-preflight-20261017/runs/matrix/summary.json",
+      "sha256": "4400cd93102c3408b857f3a1467ca4542b54dad1e7aec5361f727c40f7a22785"
+    },
+    {
+      "record": "PFK-stationary-water-ligand-utility",
+      "external_source_id": "external-evidence/pfk-stationary-water-ligand-utility-preflight-20261017/runs/matrix/comparison.json",
+      "sha256": "62b51606852edc707202a3a62ef6a4d2055c832df8aff082b8970f458d4421ce"
+    },
+    {
+      "record": "PFK-stationary-water-ligand-utility",
+      "external_source_id": "external-evidence/pfk-stationary-water-ligand-utility-preflight-20261017/runs/matrix/supervisor-exit.json",
+      "sha256": "dbbdfa241e828a7f8d3bfd74f2a6cf24553c11646e3c7ce7b82c7a8f643ee0fb"
+    },
+    {
+      "record": "PFK-stationary-water-ligand-utility",
+      "external_source_id": "external-evidence/pfk-stationary-water-ligand-utility-preflight-20261017/runs/matrix/matrix-bindings.json",
+      "sha256": "5a42572f1a629e91d501a2e166f1eed768ccc2cf1fa5b946140cd55b2865da62"
+    },
+    {
+      "record": "PFK-stationary-water-ligand-utility",
+      "external_source_id": "external-evidence/pfk-stationary-water-ligand-utility-terminal-audit-20261017/audit.json",
+      "sha256": "87ee4f75226825e36b2fbaaa432110ee8ad4b8c81e8f3c0bdd4004870ffa4ee9"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261017-0356/normalized-ledger.json",
+      "sha256": "d4a7268bfbccbdb80ec459ca37f9d74475d5247924b15733521c13610aece9e6"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "outputs/experiment-status-final-20261017-0356/source-manifest.json",
+      "sha256": "1498ed166f21d85153732d4fb9c94eb8c365377965be90bfc3a312db0ec298ea"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "water-global-fixed-chart-return-results-20261017/REPORT-KO.md",
+      "sha256": "ca9332965a2eb23dbc91dd816075e336fe9acf5c8a2a8c01e93473a5d84fd32b"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "water-global-fixed-chart-return-results-20261017/compact-results.json",
+      "sha256": "36a33ef504eb74ad85dc929eae162c9db533396ae6e6d8d2dcd1b3f6d0ec05bc"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-stationary-water-ligand-utility-results-20261017/REPORT-KO.md",
+      "sha256": "c465bf6046fc2be9b0eb8b71b0fdd3e0db758c4fb6cbb0433b22e2012048d53c"
+    },
+    {
+      "record": "report-source",
+      "external_source_id": "pfk-stationary-water-ligand-utility-results-20261017/compact-results.json",
+      "sha256": "e5ed674a4d1545e94a94558fd33a1281865f5cd87ac310f8b5e4875ff1829447"
+    },
+    {
+      "record": "PFK-water-real-global-paired",
+      "external_source_id": "water-global-real-parity-results-20261016/MACHINE-SUMMARY.json",
+      "sha256": "21ce90e03ab7d03c420aafc1dcb3294cc8045c394ed14917e7ff104aeeda92e1"
+    },
+    {
+      "record": "PFK-water-global-chart-FD",
+      "external_source_id": "water-global-chart-gradient-runtime1-20261016/runs/diagnostic/summary.json",
+      "sha256": "600f813c09391de87004c69676985329e2e83d029e0a8f44a6f31d7b59135848"
+    },
+    {
+      "record": "PFK-water-global-cycle1",
+      "external_source_id": "water-global-coupled-optimizer-runtime1-20261016/runs/optimization/summary.json",
+      "sha256": "5f730dace9e1aa83ad8d0a4980c17213cb290d9692868deff692ce7c4fd07041"
+    },
+    {
+      "record": "PFK-water-global-recenter-gate",
+      "external_source_id": "water-global-recenter-gradient-preflight-20261016/runs/diagnostic/summary.json",
+      "sha256": "d56074a15c0656afa527c2438de7dcb71a0471c612a613b451bfb287bbcfff8b"
+    },
+    {
+      "record": "PFK-water-global-cycle2",
+      "external_source_id": "water-global-recenter-optimizer-preflight-20261016/runs/optimization/summary.json",
+      "sha256": "ac014e5f5a536341fb2ec20f817707b95bf57b8234ee64dd3e881051fe474bbb"
+    },
+    {
+      "record": "PFK-water-global-recenter2-gate",
+      "external_source_id": "water-global-recenter2-gradient-preflight-20261016/runs/diagnostic/summary.json",
+      "sha256": "25a97000920970f92a7b218c1b0c8ec34787e7b80a0760a025f51defef024b69"
+    },
+    {
+      "record": "PFK-water-global-cycle3",
+      "external_source_id": "water-global-recenter2-optimizer-preflight-20261016/runs/optimization/summary.json",
+      "sha256": "ac4bcdef4349866db87ce563fd338d46304db03b90ddfbea2171546fe27e83cb"
+    },
+    {
+      "record": "PFK-water-three-global-trajectories",
+      "external_source_id": "water-global-trajectory-analysis-20261016/REPORT-KO.md",
+      "sha256": "d1da5bc2c623b72fc260164aa18a3998dd3f33e502bc484df38fd8d3b840a39d"
+    },
+    {
+      "record": "PFK-water-retraction-gate",
+      "external_source_id": "water-global-retraction-real-gradient-preflight-20261016/runs/diagnostic/summary.json",
+      "sha256": "7cc4d6e830c399a6e8c03b949531aa1f5ea07572d63cb870099a7f97a323db3e"
+    },
+    {
+      "record": "PFK-water-retraction-fixed",
+      "external_source_id": "water-global-retraction-optimizer-preflight-20261016/runs/optimization/summary.json",
+      "sha256": "b7606b3bf613b52cbef95f0804bcc6c45a58cd9cd0ef19a9a2b67ed183751450"
+    },
+    {
+      "record": "PFK-water-retraction-adaptive-interrupted",
+      "external_source_id": "water-global-retraction-adaptive-interruption-audit-20261017/audit.json",
+      "sha256": "ccfeb16e99e068270eeea606d42223573a06782bf074d712c5af20e6dcd487b7"
+    },
+    {
+      "record": "PFK-water-retraction-cold",
+      "external_source_id": "water-global-retraction-adaptive-coldstart-preflight-20261017/runs/optimization/summary.json",
+      "sha256": "d919a64edbd28759968161caf9afd5f0e818fa6c17ab7ea6ffbd1de9e975c7c0"
+    },
+    {
+      "record": "PFK-water-fixed-block",
+      "external_source_id": "water-global-fixed-block-optimizer-preflight-20261017/runs/optimization/summary.json",
+      "sha256": "a127bed1019790d1163ffe87bc5b6ba4217b4069f32e0f4e45bf174c66dfb128"
+    },
+    {
+      "record": "PFK-water-return-chart-gate",
+      "external_source_id": "water-global-fixed-chart-return-gradient-preflight-20261017/runs/diagnostic/summary.json",
+      "sha256": "22f0bef7c98c9c760bca0b70ba35c2f61c332579f7a008750703d865d32b2e89"
+    },
+    {
+      "record": "PFK-water-return-chart-converged",
+      "external_source_id": "water-global-fixed-chart-return-optimizer-preflight-20261017/runs/optimization/summary.json",
+      "sha256": "1dcc05e38be87e995175d3360c3cd7a56a63460080a8a9bd9cc76a3fe53b217a"
+    },
+    {
+      "record": "independent-terminal-audit",
+      "external_source_id": "water-global-fixed-chart-return-optimizer-terminal-audit-20261017/audit.json",
+      "sha256": "5baad329e7bd3704ce713ccc6469e3e98648382722c261385778cbe65a5d03b4"
+    },
+    {
+      "record": "independent-terminal-audit",
+      "external_source_id": "pfk-stationary-water-ligand-utility-terminal-audit-20261017/audit.json",
+      "sha256": "87ee4f75226825e36b2fbaaa432110ee8ad4b8c81e8f3c0bdd4004870ffa4ee9"
     }
   ]
 }
