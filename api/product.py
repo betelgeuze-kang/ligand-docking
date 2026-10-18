@@ -88,8 +88,10 @@ from api.product_evidence_goal import (
     get_product_goal_completion_audit,
     get_product_scope_breadth_evidence_receipt,
 )
+from api.product_prepared import router as prepared_jobs_router
 
 router = APIRouter(prefix="/product", tags=["product"])
+router.include_router(prepared_jobs_router)
 __all__ = [
     "DockingJobRequest",
     "JobActionRequest",
