@@ -29,11 +29,13 @@ def add_arguments(parser):
 
 def _report_sources():
     from betelgeuze_engine_v2 import standalone_cli
+    from betelgeuze_product import docking_cli
 
     return {
         name: hashlib.sha256(path.read_bytes()).hexdigest()
         for name, path in (
             ("betelgeuze_product/prepared_refinement_cli.py", Path(__file__)),
+            ("betelgeuze_product/docking_cli.py", Path(docking_cli.__file__)),
             ("betelgeuze_engine_v2/standalone_cli.py", Path(standalone_cli.__file__)),
         )
     }

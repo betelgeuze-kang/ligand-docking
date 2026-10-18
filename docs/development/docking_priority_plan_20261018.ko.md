@@ -19,9 +19,12 @@ Fresh-128·Stage0는 독립 평가로 보존한다. 개발 결과를 보고 기�
 
 ## P1의 작은 통합 경로
 
-`betelgeuze-dock prepared-refine`는 기존
+제품 배포의 `betelgeuze-dock`는 `betelgeuze_product.docking_cli`에 진입한다.
+`prepared-refine`는 기존
 `cpu_refinement_fourier_v1.workflow`의 수치·저널·체크포인트 코드를 호출한다.
-기존 fixed64 합성 `dock/verify/report` 계약은 별도다. 준비·양성자화·포켓 탐색을
+기존 명령은 독립 엔진 CLI에 위임한다. 독립 엔진 wheel의 진입점과 소스는
+유지하며 제품 모듈을 import하지 않는다. 기존 fixed64 합성 `dock/verify/report`
+계약은 별도다. 준비·양성자화·포켓 탐색을
 추가하지 않으며, 이미 준비된 단일 리간드와 고정 수용체 모델만 받는다.
 
 ```bash
@@ -65,13 +68,17 @@ CLI 자체는 wall-clock 제한을 시행하지 않으므로 실제 계산은 �
 미분이며, kcal/mol/angstrom 단위를 명시한다. verify/report의 새 E/F는 0이다.
 시간은 저장된 수치 invocation 범위이며 설치·준비·보고의 전체 시간과 다르다.
 
-새 standalone CLI 소스도 기존 수치 source manifest에 들어간다. 따라서 기존
-실행의 현재 코드 재검증은 source drift로 거절될 수 있다. 과거 실행은
-이관·재봉인하지 않고 새 설치 패키지의 결과를 별도로 남긴다.
+수치 소스 결박과 보고 진입점 소스 결박을 구분한다. 보고서는 제품 CLI,
+보고 helper, 독립 엔진 CLI를 별도로 해시한다. 최초 15c01c8bd 구현은 엔진에서
+제품을 import해 hosted architecture 검사에 실패했다. 이후 제품 쪽 wrapper로
+옮기고 독립 엔진을 기준 main과 동일하게 복원했다. 기존 golden 검사는
+완화하지 않았다. 최초 실행은 해당 패키지의 역사 기록으로 보존하며, 현재 코드에
+맞춰 이관·재봉인하지 않는다. 수정 패키지의 검증은 별도로 남긴다.
 
-현재 P1의 제한된 설치·실제 입력 완주 결과는
+최초 패키지의 제한된 설치·실제 입력 완주 결과는
 [실행 기록](docking_priority_p1_installed_20261018.ko.md)에 정리했다.
-수치 수렴은 미달이며 P2~P5와 고객·과학 승인은 미완료다.
+이 기록의 수치 수렴은 미달이다. 수정 패키지의 설치·실제 입력 검증과
+P2~P5 및 고객·과학 승인은 아직 미완료다.
 
 ## 다음 단계의 현재 입력 요건
 

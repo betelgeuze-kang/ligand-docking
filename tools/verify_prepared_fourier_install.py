@@ -15,6 +15,7 @@ root=pathlib.Path(sys.argv[1]).resolve();protocol=root/'inputs/protocol.json'
 sha=hashlib.sha256(protocol.read_bytes()).hexdigest()
 entries=importlib.metadata.distribution('betelgeuze-md-product').entry_points
 assert any(e.name=='betelgeuze-prepared-fourier' and e.value=='betelgeuze_product.cpu_refinement_fourier_v1.workflow:main' for e in entries)
+assert any(e.name=='betelgeuze-dock' and e.value=='betelgeuze_product.docking_cli:main' for e in entries)
 import betelgeuze_product.cpu_refinement_fourier_v1.workflow as workflow
 assert pathlib.Path(workflow.__file__).resolve().is_relative_to(pathlib.Path(sys.prefix).resolve())
 assert importlib.util.find_spec('tools') is None

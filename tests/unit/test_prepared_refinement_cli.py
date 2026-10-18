@@ -7,12 +7,14 @@ Read-only operations are guarded against graph, force and minimizer dispatch.
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 import torch
 
 from betelgeuze_engine_v2 import standalone_cli
-from betelgeuze_product import prepared_refinement_cli as bridge
+from betelgeuze_product import docking_cli, prepared_refinement_cli as bridge
 from betelgeuze_product.cpu_refinement_fourier_v1 import workflow
 from betelgeuze_product.cpu_refinement_v1_2 import minimization as kernel
 from betelgeuze_product.cpu_refinement_v1_2.provenance import canonical
@@ -198,7 +200,7 @@ def test_cli_verify_and_report_are_read_only(tmp_path, monkeypatch, action):
     before = _tree(directory)
     _forbid_numerical(monkeypatch)
 
-    assert standalone_cli.main(_command(action, path, sha256, output, directory)) == 0
+    assert docking_cli.main(_command(action, path, sha256, output, directory)) == 0
     document = json.loads(output.read_bytes())
     assert document["pose_selection_admitted"] is False
     assert _tree(directory) == before
@@ -210,7 +212,7 @@ def test_cli_preflight_has_no_force_work_or_run_state(tmp_path, monkeypatch):
     output = tmp_path / "preflight.json"
     _forbid_numerical(monkeypatch)
 
-    assert standalone_cli.main(_command("preflight", path, sha256, output)) == 0
+    assert docking_cli.main(_command("preflight", path, sha256, output)) == 0
     document = json.loads(output.read_bytes())
     assert document["status"] == "prepared"
     assert document["force_calls"] == 0
@@ -225,7 +227,7 @@ def test_cli_protocol_hash_mismatch_does_not_create_run_state(tmp_path, monkeypa
     output = tmp_path / "result.json"
     _forbid_numerical(monkeypatch)
 
-    assert standalone_cli.main(_command("run", path, "0" * 64, output, directory)) == 2
+    assert docking_cli.main(_command("run", path, "0" * 64, output, directory)) == 2
     assert not directory.exists()
     assert not output.exists()
 
@@ -240,7 +242,7 @@ def test_cli_run_source_output_conflict_is_rejected_before_numerical_work(
     before = _tree(tmp_path)
     _forbid_numerical(monkeypatch)
 
-    assert standalone_cli.main(
+    assert docking_cli.main(
         _command("run", path, sha256, output, directory)
     ) == 2
     assert not directory.exists()
@@ -255,7 +257,7 @@ def test_cli_new_output_inside_run_directory_rejected_before_work(tmp_path, monk
     before = _tree(tmp_path)
     _forbid_numerical(monkeypatch)
 
-    assert standalone_cli.main(_command("run", path, sha256, output, directory)) == 2
+    assert docking_cli.main(_command("run", path, sha256, output, directory)) == 2
     assert not directory.exists()
     assert _tree(tmp_path) == before
 
@@ -287,7 +289,38 @@ def test_cli_report_output_cannot_overwrite_bound_source_or_journal(
     before = _tree(tmp_path)
     _forbid_numerical(monkeypatch)
 
-    assert standalone_cli.main(
+    assert docking_cli.main(
         _command("report", path, sha256, output, directory)
     ) == 2
     assert _tree(tmp_path) == before
+
+
+def test_engine_standalone_parser_does_not_import_product_or_refinement():
+    # Sparse independent-engine wheels omit betelgeuze_product entirely. Build
+    # its parser in a fresh process so prior product imports cannot hide a leak.
+    script = (
+        "import sys\n"
+        "from betelgeuze_engine_v2 import standalone_cli\n"
+        "standalone_cli._parser()\n"
+        "assert not any(name == 'betelgeuze_product' or "
+        "name.startswith('betelgeuze_product.') for name in sys.modules)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=Path(__file__).resolve().parents[2],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_product_cli_delegates_existing_engine_commands_unchanged(monkeypatch):
+    seen = []
+
+    def engine_main(argv):
+        seen.append(argv)
+        return 2
+
+    monkeypatch.setattr(standalone_cli, "main", engine_main)
+    argv = ["verify", "--result", "retained-engine-result.json", "--output", "verified.json"]
+    assert docking_cli.main(argv) == 2
+    assert seen == [argv]

@@ -2345,30 +2345,13 @@ def _parser() -> argparse.ArgumentParser:
     report.add_argument("--result", type=Path, required=True)
     report.add_argument("--output", type=Path, required=True)
     report.add_argument("--overwrite", action="store_true")
-
-    from betelgeuze_product.prepared_refinement_cli import add_arguments
-
-    prepared = commands.add_parser(
-        "prepared-refine",
-        help="bounded prepared-molecule Fourier refinement and retained-result report",
-    )
-    add_arguments(prepared)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     try:
         arguments = _parser().parse_args(argv)
-        if arguments.command == "prepared-refine":
-            from betelgeuze_product.prepared_refinement_cli import dispatch
-
-            document, exit_code = dispatch(arguments)
-            _write_output(
-                document, arguments.output, overwrite=False,
-                input_paths=(arguments.protocol,),
-            )
-            return exit_code
-        elif arguments.command == "prepare-receptor":
+        if arguments.command == "prepare-receptor":
             prepare_receptor(arguments.input, arguments.output, overwrite=arguments.overwrite)
         elif arguments.command == "prepare-ligands":
             prepare_ligands(

@@ -75,6 +75,7 @@ jobs:
         run: |
           python -m ruff check --isolated --no-cache betelgeuze_product/cpu_refinement_v1_2 \
             betelgeuze_product/prepared_refinement_cli.py \
+            betelgeuze_product/docking_cli.py \
             tests/unit/test_prepared_refinement_cli.py \
             betelgeuze_product/cpu_refinement_fourier_v1 \
             betelgeuze_product/cpu_refinement_linear_angle_v1 \
@@ -207,5 +208,4 @@ jobs:
           path: verification-artifacts/
           if-no-files-found: error
           retention-days: 7
-
 
