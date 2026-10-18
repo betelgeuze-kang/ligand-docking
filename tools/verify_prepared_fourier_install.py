@@ -20,6 +20,7 @@ assert pathlib.Path(workflow.__file__).resolve().is_relative_to(pathlib.Path(sys
 assert importlib.util.find_spec('tools') is None
 assert not any(n=='tools' or n.startswith('tools.') or n=='tests' or n.startswith('tests.') for n in sys.modules)
 entry=pathlib.Path(sys.executable).parent/'betelgeuze-prepared-fourier';assert entry.is_file()
+bridge=pathlib.Path(sys.executable).parent/'betelgeuze-dock';assert bridge.is_file()
 env=dict(os.environ);env.pop('PYTHONPATH',None)
 def call(action,directory=None,pause=None,expected=0):
     cmd=[sys.executable,'-I',str(entry),action,'--protocol',str(protocol),'--expected-protocol-sha256',sha]
@@ -29,28 +30,50 @@ def call(action,directory=None,pause=None,expected=0):
     assert result.returncode==expected,(action,result.returncode,result.stderr)
     return json.loads(result.stdout) if result.stdout else None
 
+bridge_outputs=[]
+def bridge_call(action,directory=None,pause=None,expected=0):
+    output=root/('bridge-%03d.json'%len(bridge_outputs));bridge_outputs.append(output)
+    cmd=[sys.executable,'-I',str(bridge),'prepared-refine',action,'--protocol',str(protocol),
+         '--expected-protocol-sha256',sha,'--output',str(output)]
+    if directory is not None:cmd+=['--run-dir',str(directory)]
+    if pause is not None:cmd+=['--pause-after-accepted-iterations',str(pause)]
+    result=subprocess.run(cmd,cwd=root,env=env,capture_output=True,text=True,timeout=120)
+    assert result.returncode==expected,(action,result.returncode,result.stderr)
+    return json.loads(output.read_bytes())
+
 def files(directory):return {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in directory.iterdir() if p.is_file()}
 assert call('preflight')['force_calls']==0
-run=root/'run';paused=call('run',run,1);assert paused['status']=='paused'
+assert bridge_call('preflight')['force_calls']==0
+run=root/'run';paused=bridge_call('run',run,1);assert paused['status']=='paused'
 before=files(run);assert call('verify',run)==paused;assert files(run)==before
-complete=call('resume',run);assert complete['status']=='complete'
+complete=bridge_call('resume',run);assert complete['status']=='complete'
 assert complete['baseline']['work']['force_evaluation_calls']==1
 assert complete['invocations'][0]['work']['force_evaluation_calls']==2
 assert complete['invocations'][1]['work']['restart_verification_calls']==1
 assert complete['pose_score'] is None and complete['pose_selection_admitted'] is False
 before=files(run);assert call('verify',run)==complete;assert call('resume',run)==complete;assert files(run)==before
+assert bridge_call('verify',run)==complete
+report=bridge_call('report',run)
+assert report['execution_status']=='complete' and report['numerical_convergence'] is False
+assert report['structural_consistency_valid'] is True and report['chemical_validity'] is None
+assert report['pose_selection_admitted'] is False and report['work']['report_force_evaluation_calls']==0
+assert report['work']['total_force_evaluation_calls']==7 and files(run)==before
 unknown=root/'unknown';partial=call('run',unknown,1)
 intent={'binding':partial['binding'],'index':1,'previous_checkpoint_sha256':partial['final_checkpoint_sha256'],'pause_after_accepted_iterations':None}
 (unknown/'invocation-001-intent.json').write_text(json.dumps(intent,sort_keys=True,separators=(',',':'))+'\n')
 before=files(unknown);interrupted=call('resume',unknown,expected=2)
 assert interrupted['status']=='interrupted_unknown' and files(unknown)==before
 assert call('verify',unknown,expected=2)==interrupted
+unknown_report=bridge_call('report',unknown,expected=2)
+assert unknown_report['work']['total_force_evaluation_calls'] is None
+assert unknown_report['work']['total_work_known'] is False and files(unknown)==before
 parameter=pathlib.Path(json.loads(protocol.read_bytes())['parameters']['path']);parameter.write_text('{}')
 failed=subprocess.run([sys.executable,'-I',str(entry),'verify','--protocol',str(protocol),'--expected-protocol-sha256',sha,'--run-dir',str(run)],cwd=root,env=env,capture_output=True,text=True,timeout=120)
 assert failed.returncode!=0
 summary={'status':'passed','evidence_kind':'synthetic_installed_control','entrypoint_verified':True,
          'outside_checkout':True,'isolated_python':True,'known_checkpoint_resume':True,
          'verify_and_completed_resume_no_file_changes':True,'unknown_invocation_not_reissued':True,
+         'bridge_entrypoint_verified':True,'read_only_comparison_report_verified':True,
          'source_tampering_rejected':True,'scientifically_validated':False,
          'installed_module':str(pathlib.Path(workflow.__file__).resolve())}
 (root/'summary.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary))
