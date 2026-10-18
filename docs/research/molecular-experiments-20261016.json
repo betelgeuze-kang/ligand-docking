@@ -1,11 +1,11 @@
 {
   "schema": "research-experiment-ledger/1",
-  "as_of_utc": "2026-10-16T21:33:00Z",
+  "as_of_utc": "2026-10-17T03:56:00Z",
   "scope": "External research observations, not latest-main reruns or product qualification",
-  "record_count": 153,
+  "record_count": 169,
   "count_warning": "Rows include branches, snapshots, failures, diagnostics and unaudited reports; not independent molecules. Do not sum heterogeneous campaign or cumulative counts.",
   "pfkfb3_costs": {
-    "confirmed_full_energy_force_calls": 6213,
+    "confirmed_full_energy_force_calls": 6215,
     "historical_unknown_calls": 1,
     "analytic_all_pair_shape_calls": 1378,
     "analytic_plane_calls": 785,
@@ -13,8 +13,8 @@
     "instrumented_cross_calls": 2,
     "analytic_individual_ring_plane_calls": 352,
     "analytic_fused_system_plane_calls": 433,
-    "cross_taper_correction_ef_calls": 1375,
-    "internal_uncut_correction_ef_calls": 757
+    "cross_taper_correction_ef_calls": 1377,
+    "internal_uncut_correction_ef_calls": 759
   },
   "records": [
     {
@@ -3447,6 +3447,714 @@
       "model": "동일 fixed-O WP/WL/WW; source-order adaptive block 재방문",
       "validation": "1086방문·3전체순회 완료, 독립종료감사 PASS; 최종4/362만 각도기준 통과, 전체 미수렴.",
       "notes": "6265 objectives(local6261/global4),24567 kernels; ligand fullEF0.4335수락840거절.1058방문4수락cap/28local작은torque종료. global max6.335540624/median.14075214/p90 1.09913991; local28≠final4. supervisor wall2994.643초. 초기정확parity·고정좌표·에너지reconcile≤5.12e-13.85hash검증."
+    },
+    {
+      "id": "PFK-water-real-global-paired",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "실제 고정 물 전역 backend paired 검증",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 0,
+      "accepted_steps": 0,
+      "source_display": "water-global-real-parity-results-20261016/MACHINE-SUMMARY.json",
+      "water_objective_calls": 8,
+      "water_kernel_calls": 6192,
+      "model": "동일362물 고정상태·동일물리; reference/tiled opt-in",
+      "validation": "독립감사 PASS; 전체E정확일치,힘최대차1.07e-14,torque7.11e-15. 최적화·pose 개선 없음.",
+      "notes": "reference4+tiled4=8global, warmup각1포함. kernels5784+408=6192; tiled backward2800, reference backward미계측. 측정3쌍11.72–12.80배(동일고정상태/이번container만); reference83.19–86.73s,tiled6.78–7.10s. 전체wall374.292968s. synthetic와구분;default변경없음."
+    },
+    {
+      "id": "PFK-water-global-chart-FD",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 rotation chart 실제좌표 방향미분",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 0,
+      "accepted_steps": 0,
+      "source_display": "water-global-chart-gradient-runtime1-20261016/runs/diagnostic/summary.json",
+      "water_objective_calls": 22,
+      "water_kernel_calls": 2244,
+      "molecular_backward_calls": 15400,
+      "geometry_jvp_calls": 132,
+      "geometry_backward_calls": 286,
+      "geometry_pullback_calls": 22,
+      "model": "tiled global water+rotation chart; q0/nonzero 검산",
+      "validation": "10/10 FD 통과; q0 exact candidate parity·444hash 독립감사 PASS. 최적화0; 수렴/pose 검증 아님.",
+      "notes": "22global/2244kernels;15400분자 backward/132geometryJVP/286geometrybackward/22pullback 별도. FD최대오차5.71052552e-08 kcal/mol/rad. supervisor165.811초,291MiB RSS. exit0,pending0. 새 optimizer 준비만; gate가 실행허가를 뜻하지 않음."
+    },
+    {
+      "id": "PFK-water-global-cycle1",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 결합 물 cycle1",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 43,
+      "water_kernel_calls": 4386,
+      "molecular_backward_calls": 30100,
+      "geometry_jvp_calls": 891,
+      "geometry_backward_calls": 1825,
+      "geometry_pullback_calls": 43,
+      "accepted_steps": 42,
+      "source_display": "water-global-coupled-optimizer-runtime1-20261016/runs/optimization/summary.json",
+      "model": "동일 fixed-O WP/WL/WW; 전역 rotation chart",
+      "validation": "독립감사 PASS; chart_or_rotation_step_limit, 수렴 아님",
+      "notes": "43water objectives/4386kernels. ligand fullEF0; 새 미상/실패/pending0. 최종0/362통과; 에너지-5213.847482556→-5242.618399078. 추가최종EF0; saved replay는물objective/kernel0이며 geometry계산만별도기록. 경계중단은물리적한계/최소점증명아님.",
+      "force": 3.6179537323361504,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 world 최대 물 torque",
+      "final_energy_kcal_mol": -5242.618399078269,
+      "waters_passing": 0,
+      "replay_geometry_counts": {
+        "geometry_JVP": 762,
+        "geometry_backward": 1567,
+        "geometry_pullback": 43
+      }
+    },
+    {
+      "id": "PFK-water-global-recenter-gate",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 결합 물 recenter-gate",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 0,
+      "water_objective_calls": 22,
+      "water_kernel_calls": 2244,
+      "molecular_backward_calls": 15400,
+      "geometry_jvp_calls": 132,
+      "geometry_backward_calls": 286,
+      "geometry_pullback_calls": 22,
+      "accepted_steps": 0,
+      "source_display": "water-global-recenter-gradient-preflight-20261016/runs/diagnostic/summary.json",
+      "model": "동일 fixed-O WP/WL/WW; 전역 rotation chart",
+      "validation": "독립감사 PASS; 선택방향 실제좌표 FD 통과",
+      "notes": "22water objectives/2244kernels. ligand fullEF0; 새 미상/실패/pending0. FD10방향, 최대오차4.71857931e-08. "
+    },
+    {
+      "id": "PFK-water-global-cycle2",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 결합 물 cycle2",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 51,
+      "water_kernel_calls": 5202,
+      "molecular_backward_calls": 35700,
+      "geometry_jvp_calls": 1050,
+      "geometry_backward_calls": 2151,
+      "geometry_pullback_calls": 51,
+      "accepted_steps": 50,
+      "source_display": "water-global-recenter-optimizer-preflight-20261016/runs/optimization/summary.json",
+      "model": "동일 fixed-O WP/WL/WW; 전역 rotation chart",
+      "validation": "독립감사 PASS; chart_or_rotation_step_limit, 수렴 아님",
+      "notes": "51water objectives/5202kernels. ligand fullEF0; 새 미상/실패/pending0. 최종13/362통과; 에너지-5242.618399078→-5258.063656828. 추가최종EF0; saved replay는물objective/kernel0이며 geometry계산만별도기록. 경계중단은물리적한계/최소점증명아님.",
+      "force": 0.8505679874312714,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 world 최대 물 torque",
+      "final_energy_kcal_mol": -5258.063656828159,
+      "waters_passing": 13,
+      "replay_geometry_counts": {
+        "geometry_JVP": 897,
+        "geometry_backward": 1845,
+        "geometry_pullback": 51
+      }
+    },
+    {
+      "id": "PFK-water-global-recenter2-gate",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 결합 물 recenter2-gate",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 0,
+      "water_objective_calls": 10,
+      "water_kernel_calls": 1020,
+      "molecular_backward_calls": 7000,
+      "geometry_jvp_calls": 60,
+      "geometry_backward_calls": 130,
+      "geometry_pullback_calls": 10,
+      "accepted_steps": 0,
+      "source_display": "water-global-recenter2-gradient-preflight-20261016/runs/diagnostic/summary.json",
+      "model": "동일 fixed-O WP/WL/WW; 전역 rotation chart",
+      "validation": "독립감사 PASS; 선택방향 실제좌표 FD 통과",
+      "notes": "10water objectives/1020kernels. ligand fullEF0; 새 미상/실패/pending0. FD4방향, 최대오차1.86414569e-08. 79.18초는 패키징 작업 시간중첩이 있는 관측값만; 공정 성능비교로 사용하지 않음."
+    },
+    {
+      "id": "PFK-water-global-cycle3",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 결합 물 cycle3",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 36,
+      "water_kernel_calls": 3672,
+      "molecular_backward_calls": 25226,
+      "geometry_jvp_calls": 699,
+      "geometry_backward_calls": 1434,
+      "geometry_pullback_calls": 36,
+      "accepted_steps": 35,
+      "source_display": "water-global-recenter2-optimizer-preflight-20261016/runs/optimization/summary.json",
+      "model": "동일 fixed-O WP/WL/WW; 전역 rotation chart",
+      "validation": "독립감사 PASS; chart_or_rotation_step_limit, 수렴 아님",
+      "notes": "36water objectives/3672kernels. ligand fullEF0; 새 미상/실패/pending0. 최종0/362통과; 에너지-5258.063656828→-5261.562646240. 추가최종EF0; saved replay는물objective/kernel0이며 geometry계산만별도기록. 경계중단은물리적한계/최소점증명아님.",
+      "force": 2.841730140052415,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 world 최대 물 torque",
+      "final_energy_kcal_mol": -5261.562646239893,
+      "waters_passing": 0,
+      "replay_geometry_counts": {
+        "geometry_JVP": 591,
+        "geometry_backward": 1218,
+        "geometry_pullback": 36
+      }
+    },
+    {
+      "id": "PFK-water-three-global-trajectories",
+      "family": "PFKFB3",
+      "experiment": "저장 전역 물3궤적 읽기전용 분석",
+      "status": "분석 완료",
+      "kind": "저장 결과 분석",
+      "new_ef_calls": 0,
+      "water_objective_calls": 0,
+      "water_kernel_calls": 0,
+      "source_display": "water-global-trajectory-analysis-20261016/REPORT-KO.md",
+      "notes": "127수락 모두에너지감소; torque비단조. cycle3 50%chart반경 전 상승. 더깊은basin증명없음. 사후최저max.547728/32pass는종점아니며 재시작선택아님. 130관측에는연결부중복초기상태포함; 각step을별도실험으로세지않음."
+    },
+    {
+      "id": "PFK-water-retraction-gate",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 retraction-gate",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 0,
+      "water_objective_calls": 26,
+      "water_kernel_calls": 2652,
+      "molecular_backward_calls": 18226,
+      "accepted_steps": 0,
+      "rejected_trials": 0,
+      "source_display": "water-global-retraction-real-gradient-preflight-20261016/runs/diagnostic/summary.json",
+      "model": "동일 fixed-O·단백질·원래 PFK ligand 조건부 WP/WL/WW",
+      "validation": "독립검토 완료 증거에 따름; 세계좌표 물 torque 기준. ligand pose·평형·최소점 주장 없음.",
+      "geometry_counts": {
+        "geometry_JVP": 0,
+        "geometry_admission": 26,
+        "geometry_backward": 0,
+        "geometry_retraction": 26,
+        "geometry_step_equivalence": 1,
+        "geometry_torque_moments": 26
+      },
+      "replay_geometry_counts": {},
+      "notes": "26water objectives/2652kernels. ligand fullEF0. 초기parity호출·거절 포함; 추가최종objective0. "
+    },
+    {
+      "id": "PFK-water-retraction-fixed",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 retraction-fixed",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 101,
+      "water_kernel_calls": 10302,
+      "molecular_backward_calls": 70734,
+      "accepted_steps": 100,
+      "rejected_trials": 0,
+      "source_display": "water-global-retraction-optimizer-preflight-20261016/runs/optimization/summary.json",
+      "model": "동일 fixed-O·단백질·원래 PFK ligand 조건부 WP/WL/WW",
+      "validation": "독립검토 완료 증거에 따름; 세계좌표 물 torque 기준. ligand pose·평형·최소점 주장 없음.",
+      "geometry_counts": {
+        "geometry_JVP": 0,
+        "geometry_admission": 303,
+        "geometry_backward": 0,
+        "geometry_direction": 100,
+        "geometry_observation_validation": 101,
+        "geometry_retraction": 100,
+        "geometry_terminal_admission": 1
+      },
+      "replay_geometry_counts": {
+        "counts": {
+          "WW_screen": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_JVP": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_admission": {
+            "failed": 0,
+            "pending": 0,
+            "started": 202,
+            "succeeded": 202
+          },
+          "geometry_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_direction": {
+            "failed": 0,
+            "pending": 0,
+            "started": 100,
+            "succeeded": 100
+          },
+          "geometry_observation_validation": {
+            "failed": 0,
+            "pending": 0,
+            "started": 101,
+            "succeeded": 101
+          },
+          "geometry_retraction": {
+            "failed": 0,
+            "pending": 0,
+            "started": 100,
+            "succeeded": 100
+          },
+          "geometry_terminal_admission": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "global_water_objective": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "kernel_dispatch": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "molecular_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          }
+        },
+        "molecular_global_objectives": 0,
+        "ordinary_ligand_full_EF": 0,
+        "partial_tail_bytes": 0,
+        "pending": {},
+        "unknown_pending_dispatches": 0
+      },
+      "notes": "101water objectives/10302kernels. ligand fullEF0. 초기parity호출·거절 포함; 추가최종objective0. accepted_step_cap;173/362통과. ",
+      "force": 0.6482361174581917,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 current-state world 최대 물 torque",
+      "final_energy_kcal_mol": -5265.275745515355,
+      "waters_passing": 173
+    },
+    {
+      "id": "PFK-water-retraction-adaptive-interrupted",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "adaptive retraction 중단·미상 작업 보존",
+      "status": "중단",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 83,
+      "water_kernel_calls": 8552,
+      "water_unknown_objective_calls": 1,
+      "water_unknown_kernel_calls": 1,
+      "molecular_backward_calls": 58785,
+      "accepted_steps": 56,
+      "rejected_trials": 26,
+      "force": 0.022547549597835916,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "마지막 확정 accepted83 world torque",
+      "waters_passing": 330,
+      "source_display": "water-global-retraction-adaptive-interruption-audit-20261017/audit.json",
+      "notes": "objective84/kernel8553 미상. 83완료목적함수8466kernels 외 pending84에서86kernels·685backward 이미완료하여총8552/58785포함. 마지막accepted83 보존; full replay/resume 불가. 종료시각·원인·wall불명; 성공종료로변경하지않음."
+    },
+    {
+      "id": "PFK-water-retraction-cold",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 retraction-cold",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 128,
+      "water_kernel_calls": 13056,
+      "molecular_backward_calls": 89600,
+      "accepted_steps": 82,
+      "rejected_trials": 45,
+      "source_display": "water-global-retraction-adaptive-coldstart-preflight-20261017/runs/optimization/summary.json",
+      "model": "동일 fixed-O·단백질·원래 PFK ligand 조건부 WP/WL/WW",
+      "validation": "독립검토 완료 증거에 따름; 세계좌표 물 torque 기준. ligand pose·평형·최소점 주장 없음.",
+      "geometry_counts": {
+        "geometry_JVP": 0,
+        "geometry_admission": 384,
+        "geometry_backward": 0,
+        "geometry_direction": 83,
+        "geometry_observation_validation": 128,
+        "geometry_representability_check": 127,
+        "geometry_retraction": 127,
+        "geometry_terminal_admission": 1
+      },
+      "replay_geometry_counts": {
+        "counts": {
+          "WW_screen": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_JVP": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_admission": {
+            "failed": 0,
+            "pending": 0,
+            "started": 256,
+            "succeeded": 256
+          },
+          "geometry_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_direction": {
+            "failed": 0,
+            "pending": 0,
+            "started": 83,
+            "succeeded": 83
+          },
+          "geometry_observation_validation": {
+            "failed": 0,
+            "pending": 0,
+            "started": 128,
+            "succeeded": 128
+          },
+          "geometry_representability_check": {
+            "failed": 0,
+            "pending": 0,
+            "started": 127,
+            "succeeded": 127
+          },
+          "geometry_retraction": {
+            "failed": 0,
+            "pending": 0,
+            "started": 127,
+            "succeeded": 127
+          },
+          "geometry_terminal_admission": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "global_water_objective": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "kernel_dispatch": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "molecular_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          }
+        },
+        "molecular_global_objectives": 0,
+        "ordinary_ligand_full_EF": 0,
+        "partial_tail_bytes": 0,
+        "pending": {},
+        "unknown_pending_dispatches": 0
+      },
+      "notes": "128water objectives/13056kernels. ligand fullEF0. 초기parity호출·거절 포함; 추가최종objective0. global_objective_cap;355/362통과. 중단83종료점에서 별도 cold-start/정책초기화; 원래중단의미상비용불변.",
+      "force": 0.017792383882372264,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 current-state world 최대 물 torque",
+      "final_energy_kcal_mol": -5266.7417230938,
+      "waters_passing": 355
+    },
+    {
+      "id": "PFK-water-fixed-block",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 fixed-block",
+      "status": "미수렴",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 128,
+      "water_kernel_calls": 13056,
+      "molecular_backward_calls": 89600,
+      "accepted_steps": 85,
+      "rejected_trials": 42,
+      "source_display": "water-global-fixed-block-optimizer-preflight-20261017/runs/optimization/summary.json",
+      "model": "동일 fixed-O·단백질·원래 PFK ligand 조건부 WP/WL/WW",
+      "validation": "독립검토 완료 증거에 따름; 세계좌표 물 torque 기준. ligand pose·평형·최소점 주장 없음.",
+      "geometry_counts": {
+        "geometry_JVP": 0,
+        "geometry_admission": 384,
+        "geometry_backward": 0,
+        "geometry_direction": 86,
+        "geometry_observation_validation": 128,
+        "geometry_representability_check": 127,
+        "geometry_retraction": 127,
+        "geometry_terminal_admission": 1
+      },
+      "replay_geometry_counts": {
+        "counts": {
+          "WW_screen": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_JVP": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_admission": {
+            "failed": 0,
+            "pending": 0,
+            "started": 256,
+            "succeeded": 256
+          },
+          "geometry_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_direction": {
+            "failed": 0,
+            "pending": 0,
+            "started": 86,
+            "succeeded": 86
+          },
+          "geometry_observation_validation": {
+            "failed": 0,
+            "pending": 0,
+            "started": 128,
+            "succeeded": 128
+          },
+          "geometry_representability_check": {
+            "failed": 0,
+            "pending": 0,
+            "started": 127,
+            "succeeded": 127
+          },
+          "geometry_retraction": {
+            "failed": 0,
+            "pending": 0,
+            "started": 127,
+            "succeeded": 127
+          },
+          "geometry_terminal_admission": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "global_water_objective": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "kernel_dispatch": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "molecular_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          }
+        },
+        "molecular_global_objectives": 0,
+        "ordinary_ligand_full_EF": 0,
+        "partial_tail_bytes": 0,
+        "pending": {},
+        "unknown_pending_dispatches": 0
+      },
+      "notes": "128water objectives/13056kernels. ligand fullEF0. 초기parity호출·거절 포함; 추가최종objective0. global_objective_cap;349/362통과. max torque는이전.01779238→.02822613으로악화,349/362통과. 최종값보존.",
+      "force": 0.028226134099023224,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 current-state world 최대 물 torque",
+      "final_energy_kcal_mol": -5266.742521625593,
+      "waters_passing": 349
+    },
+    {
+      "id": "PFK-water-return-chart-gate",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 return-chart-gate",
+      "status": "검산 통과",
+      "kind": "검산",
+      "new_ef_calls": 0,
+      "water_objective_calls": 14,
+      "water_kernel_calls": 1428,
+      "molecular_backward_calls": 9800,
+      "accepted_steps": 0,
+      "rejected_trials": 0,
+      "source_display": "water-global-fixed-chart-return-gradient-preflight-20261017/runs/diagnostic/summary.json",
+      "model": "동일 fixed-O·단백질·원래 PFK ligand 조건부 WP/WL/WW",
+      "validation": "독립검토 완료 증거에 따름; 세계좌표 물 torque 기준. ligand pose·평형·최소점 주장 없음.",
+      "geometry_counts": {
+        "geometry_JVP": 84,
+        "geometry_backward": 182,
+        "geometry_pullback": 14,
+        "geometry_state_intent": 14
+      },
+      "replay_geometry_counts": {},
+      "notes": "14water objectives/1428kernels. ligand fullEF0. 초기parity호출·거절 포함; 추가최종objective0. "
+    },
+    {
+      "id": "PFK-water-return-chart-converged",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "전역 물 return-chart-converged",
+      "status": "회전 기준 충족",
+      "kind": "최적화",
+      "new_ef_calls": 0,
+      "water_objective_calls": 56,
+      "water_kernel_calls": 5712,
+      "molecular_backward_calls": 39200,
+      "accepted_steps": 54,
+      "rejected_trials": 1,
+      "source_display": "water-global-fixed-chart-return-optimizer-preflight-20261017/runs/optimization/summary.json",
+      "model": "동일 fixed-O·단백질·원래 PFK ligand 조건부 WP/WL/WW",
+      "validation": "독립검토 완료 증거에 따름; 세계좌표 물 torque 기준. ligand pose·평형·최소점 주장 없음.",
+      "geometry_counts": {
+        "geometry_JVP": 891,
+        "geometry_backward": 1838,
+        "geometry_pullback": 56,
+        "geometry_state_intent": 56,
+        "geometry_terminal_state": 1
+      },
+      "replay_geometry_counts": {
+        "counts": {
+          "WW_screen": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_JVP": {
+            "failed": 0,
+            "pending": 0,
+            "started": 723,
+            "succeeded": 723
+          },
+          "geometry_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 1502,
+            "succeeded": 1502
+          },
+          "geometry_pullback": {
+            "failed": 0,
+            "pending": 0,
+            "started": 56,
+            "succeeded": 56
+          },
+          "geometry_state_intent": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "geometry_terminal_state": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "global_water_objective": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "kernel_dispatch": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          },
+          "molecular_backward": {
+            "failed": 0,
+            "pending": 0,
+            "started": 0,
+            "succeeded": 0
+          }
+        },
+        "ordinary_ligand_full_EF": 0,
+        "partial_tail_bytes": 0,
+        "pending": {},
+        "unknown_pending_dispatches": 0
+      },
+      "notes": "56water objectives/5712kernels. ligand fullEF0. 초기parity호출·거절 포함; 추가최종objective0. current_global_world_torque_converged;362/362통과. 가중치없음·빈LBFGS이력;54수락1거절+초기1=56. 362/362pass. 원래ligand고정;pose개선아님.",
+      "force": 0.0005657390909942793,
+      "threshold": 0.001,
+      "unit": "kcal/mol/rad",
+      "metric": "최종 current-state world 최대 물 torque",
+      "final_energy_kcal_mol": -5266.790448427041,
+      "waters_passing": 362
+    },
+    {
+      "id": "PFK-stationary-water-ligand-utility",
+      "family": "PFKFB3",
+      "molecule": "PFKFB3",
+      "experiment": "회전 정지 물의 고정 ligand utility 비교",
+      "status": "관측·검산 완료",
+      "kind": "진단",
+      "new_ef_calls": 2,
+      "cross_correction_ef_calls": 2,
+      "internal_correction_ef_calls": 2,
+      "base_backward_calls": 66,
+      "cross_backward_calls": 2,
+      "internal_backward_calls": 2,
+      "accepted_steps": 0,
+      "water_objective_calls": 0,
+      "water_kernel_calls": 0,
+      "source_display": "pfk-stationary-water-ligand-utility-preflight-20261017/runs/matrix/summary.json",
+      "validation": "독립종료감사 PASS; 고정2ligand×2물상태. 최적화·새FD·추가RMSD0.",
+      "model": "cross force-taper+ordinary internal uncut; P0조건부 정지물",
+      "notes": "새2source/2cross/2internal;66+2+2backwards. 원래물2control 정확재사용 추가EF0. P0 F75.315028971→73.319940494;Cartesian 9.727336978→21.538762920. 에너지gap−25.428669296→−11.160206704;internal/LJ불변. 물정지성은P0에만 인증;Cartesian환경정지미검증. pose개선아님. supervisor33.358664초."
     }
   ],
   "aggregation_rule": "For each row use new_ef_calls if non-null; otherwise use new_ef_calls_confirmed_lower_bound, never both. Null is not zero. The interrupted PFKFB3 row contributes85 confirmed calls plus1 unknown.",
@@ -3463,13 +4171,13 @@
     "internal_uncut_correction_ef_calls": 524
   },
   "two_target_bookkeeping": {
-    "confirmed_full_energy_force_calls": 8012,
+    "confirmed_full_energy_force_calls": 8014,
     "historical_unknown_calls": 1,
     "notice": "Accounting sum only; not model equivalence, pooled performance or equal computational cost.",
     "analytic_plane_calls": 1163,
     "analytic_all_pair_shape_calls": 1378,
-    "cross_taper_correction_ef_calls": 2353,
-    "internal_uncut_correction_ef_calls": 1281
+    "cross_taper_correction_ef_calls": 2355,
+    "internal_uncut_correction_ef_calls": 1283
   },
   "cross_taper_stage_costs": {
     "full_base_ef_calls": 1072,
@@ -3509,11 +4217,13 @@
   },
   "water_combined_costs": {
     "ligand_full_ef_calls": 0,
-    "water_objectives": 11191,
+    "water_objectives": 11919,
     "water_local_calls": 11177,
-    "water_global_calls": 14,
-    "kernel_calls": 53775,
-    "notice": "Pilot plus completed water branches; not ligand full E/F equivalent."
+    "water_global_calls": 742,
+    "kernel_calls": 133493,
+    "notice": "Confirmed completed water objectives include historical local and global paths. Separate historical unknown objective/kernel remain; kernel total includes completed partial work in interrupted objective. Not ligand full E/F equivalent.",
+    "unknown_objective_calls": 1,
+    "unknown_kernel_calls": 1
   },
   "heldout_dry_stage_costs": {
     "source_full_ef_calls": 265,
@@ -3533,5 +4243,15 @@
     "original_exit_code": 1,
     "reporting_failure_readonly_reconciled": true,
     "rerun_ef_calls": 0
+  },
+  "stationary_water_ligand_utility_costs": {
+    "source_full_ef_calls": 2,
+    "cross_correction_ef_calls": 2,
+    "internal_correction_ef_calls": 2,
+    "source_backward_calls": 66,
+    "cross_backward_calls": 2,
+    "internal_backward_calls": 2,
+    "reused_observations": 2,
+    "water_objective_calls": 0
   }
 }

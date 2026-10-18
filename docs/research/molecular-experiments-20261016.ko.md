@@ -1,6 +1,8 @@
 # 분자 최적화·도킹 연구 실험 현황 (2026-10-16)
 
-최신 갱신: **2026-10-16 21:33 UTC / 2026-10-17 06:33 KST 자료 기준**. 적응형 물1+3순회와 고정 좌표8조건 진단까지153행이다. source full8,012확인+과거미상1,cross2,353/internal1,281; 물11,191objective/53,775kernel 별도. 최종 물4/362만 torque 기준 통과, 전체 미수렴이다. 이전148행을 보존한다.
+최신 갱신: **2026-10-17 03:56 UTC / 12:56 KST 자료 기준**. 조건부 고정-O 물362개 회전 정지성과2회 고정 리간드 진단까지169행이다. source full8,014확인+과거미상1, cross2,355/internal1,283. 물11,919objective/133,493kernel 확인 및 미상각1은 별도다. 이전153행을 보존한다.
+
+이전 갱신: **2026-10-16 21:33 UTC / 2026-10-17 06:33 KST 자료 기준**. 적응형 물1+3순회와 고정 좌표8조건 진단까지153행이다. source full8,012확인+과거미상1,cross2,353/internal1,281; 물11,191objective/53,775kernel 별도. 최종 물4/362만 torque 기준 통과, 전체 미수렴이다. 이전148행을 보존한다.
 
 이전 갱신: **2026-10-16 19:37 UTC / 2026-10-17 04:37 KST 자료 기준**. 사전 dry Q± 국소 회복과 큰 물 회전폭 추가2순회까지148행이다. source full8,004확인+과거미상1, cross2,345/internal1,273; 물2,997objective/20,535kernel은 별도다. 이전144행을 그대로 보존한다.
 
@@ -31,7 +33,7 @@
 
 ## 읽을 파일과 증거 수준
 
-- [최신 153행 기계 판독 원장](molecular-experiments-20261016.json): 목적·힘 단위·임계치·수렴 상태·비용·검증 범위·출처 신뢰 수준
+- [최신 169행 기계 판독 원장](molecular-experiments-20261016.json): 목적·힘 단위·임계치·수렴 상태·비용·검증 범위·출처 신뢰 수준
 - [외부 근거 SHA-256 목록](molecular-experiments-20261016-sources.json): 보고서 및 원시 원장 식별값
 
 원장은 외부에 보존된 실험 자료에서 추출했다. `external_source_id`와 `source_display`는 **외부 자료 식별자이며 저장소 상대 파일 링크가 아니다**. 이 PR에는 대용량 좌표, 체크포인트, 저널 및 원시 아카이브가 포함되지 않는다. 해시가 있다는 것만으로 다운로드 가능하거나 독립 재현됐다는 뜻은 아니다. `source_status`가 미감사인 localA88·6T88은 확인된 실험 성과에 포함하지 않는다.
@@ -635,3 +637,71 @@ dry 끝점의 기존 dry raw힘0.000927은 물을 포함하면9.73–12.83이므
 153행 원장: source full8,012확인+과거미상1, cross2,353/internal1,281. 물 누적11,191 objectives/53,775 kernels는 별도이며 ligand full에 더하지 않는다. 기존 shape1,378·plane1,163·부분 계산 계수를 유지한다.
 
 물 산소는 crystal-water 유래이고 최초 H는6개 authored 방향 템플릿이다. 준비·매개변수 동시성 불확실성과 POP 제외는 해결되지 않았다. 원래P0에 조건부인 비주기·고정 산소 배향 연구이며 완전 용매화·평형 수화·결합 친화도 검증이 아니다. 새 global chart·계산 성능 준비의 미측정 가속 효과를 완료 성과로 포함하지 않는다.
+
+## 후속: 고정-O 물 362개 전부의 조건부 회전 정지성
+
+직전 문서 main은 `14c0f76d78b355784262161322e87ce8e959ea15`([PR #600](https://github.com/betelgeuze-kang/ligand-docking/pull/600))다. 원래P0 리간드·단백질·물 산소·강체 물 형상을 고정한 동일 WP/WL/WW 모델에서, 최종362개 모두 current-world torque norm≤0.001 kcal/mol/rad를 만족했다. 최대0.000565739090994, 중앙값2.11389186916e−6이다.
+
+이는 허용오차 내 **조건부 고정-O 강체 물 회전 정지성**이다. 산소 병진 정지성, 최소점·전역 최소점, 평형 수화, 도킹 정확도나 다른 입력의 일반적 수렴을 입증하지 않는다. 리간드 포즈는 움직이지 않았다.
+
+### 중간 실패·미수렴을 포함한 경로
+
+아래 물 목적함수 비용은 해당 optimizer만의 값이다. 별도 gradient gate·backend 대조 비용은 다음 절과 원장에 보존했다. 최대 torque 단위는 kcal/mol/rad다.
+
+| 경로 | 확인된 물 objective | 최종 최대 torque | 기준 통과 물 | 종료/해석 |
+|---|---:|---:|---:|---|
+| global chart cycle1 | 43 | 3.617954 | 0/362 | chart/step 한도 |
+| recenter cycle2 | 51 | 0.850568 | 13/362 | chart/step 한도 |
+| recenter cycle3 | 36 | 2.841730 | 0/362 | chart/step 한도·최대값 악화 |
+| fixed retraction | 101 | 0.648236 | 173/362 | accepted-step 한도 |
+| adaptive retraction 중단 | 83 + 미상1 | 0.022548 | 330/362 | 마지막 확정 accepted83, 성공종료 아님 |
+| 별도 adaptive cold-start | 128 | 0.017792 | 355/362 | objective 한도 |
+| fixed-block heuristic | 128 | 0.028226 | 349/362 | objective 한도·정지성 악화 |
+| 가중치 없는 fixed-chart 복귀 | 56 | 0.000565739 | 362/362 | current-world torque 기준 충족 |
+
+첫 세 경로의130관측은 연결부 초기값 중복을 포함하며 독립 실험130개가 아니다.127수락 모두 에너지는 감소했지만 torque는 비단조였다. 사후 가장 작은 torque 상태를 공식 끝점으로 바꾸지 않았다. 중단된 adaptive 실행은 objective84와 kernel8553 각각1개를 미상으로 남긴다. 그 objective에서 이미 완료된86kernels·685backward까지 포함하여 확인된 kernel8,552·backward58,785를 보존했다. 종료 원인·시각·wall은 불명이며 후속 cold-start가 원래 실행의 완전한 replay/resume을 뜻하지 않는다.
+
+### 최종 gate·optimizer 검증
+
+최종 시작점은 fixed-block의 accepted127이며 rejected128이나 gate의 nonzero 진단점을 선택하지 않았다. 가중치 없는 fixed-chart L-BFGS, 빈 history, chart반경π/2rad·물별 상대 step0.1rad 조건이다.14-point gate의6개 사전 방향 미분은 최대오차2.75770504e−8로 통과했다. q=0에서 pullback와 음의 world torque 최대 성분차2.66453526e−15다. q≠0의 chart 미분과 world torque는 구분하며 종료는 모든 물의 현재 world torque로 판정했다.
+
+54수락+1거절+초기1=56objective, 최종 accepted attempt56을 보존했다. 에너지−5266.742521625593→−5266.790448427041 kcal/mol, 추가 final objective0이다.247개 endpoint torque norm과 중앙값은 증가했고 accepted 경로에서도 최대 torque 증가32구간이 있었으나 최종 전부 기준 이하다. 에너지 감소를 torque의 단조 감소로 설명하지 않는다.
+
+독립 terminal 감사는 저장 좌표·힘으로362개 torque 성분을 재계산하여 오차0을 확인했다. O/reference/H label 정확 보존, 최대 거리 잔차4.2411e−14Å, 직교성 오차1.0658e−14, chart좌표 차이5.6843e−14Å다. 종료0·child정리·pending0·accepted history 일치다. 새 E/F 없는 감사와 보존된 replay를 구분한다.
+
+- gate14objective/1,428kernels/9,800 molecular backward; optimizer56/5,712/39,200
+- 합계70objective/7,140kernels/49,000 backward이며 WW screen70
+- geometry gate JVP84/backward182/pullback14, optimizer891/1,838/56, replay723/1,502/56은 별도
+- replay molecular objective/kernel/backward0이지만 geometry 비용은0이 아니다
+- gate wall108.283초·optimizer457.220초는 해당 실행 관측값이며 다른 알고리즘 대비 공정 속도 비교가 아니다
+- 최종 observation SHA256 `67cbbfd7571c1bf84020ad3bfbaae5f2b6a17805b9671332572fb2e531b6b6a6`
+- 최종 state SHA256 `0900979def2185c3d3713976042bff37ef7ed7d678f7130adb20ce6b9f79a156`
+
+### 실제 입력 backend 검산과 성능 범위
+
+같은 고정 상태의 reference4+tiled4회(각 warmup1포함)를 비교했다. 전체 에너지는 정확 일치, force 최대차1.07e−14·torque7.11e−15였다. 측정3쌍에서 reference83.19–86.73초/tiled6.78–7.10초, 관측비11.72–12.80배다. 이 container의 해당 고정 상태 kernel 경로 측정이며 전체 도킹 서비스 가속·GPU 성능·다른 입력으로 일반화하지 않는다. 총8objective/6,192kernels, tiled backward2,800·reference backward미계측을 보존한다. 제품 기본값은 바꾸지 않았다.
+
+후속 chart·recenter·retraction·return gate는 각각22/22/10/26/14개의 실제 물objective를 사용했다. 각 방향미분·geometry 연산·replay 비용은 원장에 별도 기록한다. 중간10-call gate의 시간은 포장 작업과 겹쳐 공정 성능비교에서 제외한다.
+
+## 후속: 회전 정지 물의 두 고정 리간드 좌표 평가
+
+원래 projected 물의 기존 관측2개를 재사용하고 최종 회전 정지 물에서 P0와 dry Cartesian 끝점만 새로 평가했다. 좌표를 움직이거나 최적화하지 않았다. 같은 리간드 Hamiltonian과 수용체7,835sites를 사용하며 WP/WW처럼 리간드에 무관한 에너지 상수는 제외했다.
+
+| 물 상태 | 고정 좌표 | 리간드 목적함수 kcal/mol | raw 최대 원자힘 kcal/mol/Å |
+|---|---|---:|---:|
+| 원래 projected | P0 | 128.209690843 | 75.315028971 |
+| 회전 정지 물 | P0 | 130.044381864 | 73.319940494 |
+| 원래 projected | dry Cartesian | 102.781021547 | 9.727336978 |
+| 회전 정지 물 | dry Cartesian | 118.884175161 | 21.538762920 |
+
+P0의 최대힘은 조금 감소하지만 dry Cartesian 끝점의 힘은 증가했다. 동일 물 상태 안의 Cartesian−P0 에너지 차이는 −25.428669296에서 −11.160206704 kcal/mol로 증가해 덜 음수가 되었고, 차이의 절댓값은 줄었다. 여전히 Cartesian 쪽이 낮다. 이 결과만으로 포즈가 개선됐거나 원래 좌표를 정확히 회복했다고 판단하지 않는다.
+
+물 정지성은 원래P0에 조건부다. Cartesian 좌표로 교체한 상태의 물 torque를 재계산하지 않았으므로 그 조건에서도 물이 정지한다고 주장하지 않는다. P0 WL 에너지 차이는 보존된 물 census와9.6811e−14 이내로 일치했다. 내부/LJ는 같은 리간드 좌표에서 보존된다. 저장된 force의 대수적 차이는 별도 독립 force oracle이 아니다.
+
+새2 source full+2 cross+2 internal correction, backward66+2+2=70, external/source admission graph각2다. 재사용 관측은 새 비용에 다시 넣지 않았고 추가 final·최적화·RMSD·물objective0이다. 감독기 wall33.358664초/CPU31.521911초/peak595,869,696bytes, 종료0·미처리0이다. force-free 준비의 identity/model_identity 스키마 차이, 의도한 topology metadata 변경의 전체비교 거부, 임시 fixture 경로 축약으로 인한 최초 freeze 실패도 원본과 함께 보존했다. 수정 후249개 합성검사는 실제 분자 호출 수와 구분한다. 종료와 원장·고정좌표·source 무결성은 독립 감사했다. 향후 paired wet8DOF 계획은 이번 완료 결과에 포함하지 않는다.
+
+### 최신 누적 비용과 남은 경계
+
+리간드 source full8,014확인+과거미상1, cross2,355/internal1,283이다. 물 누적11,919확인 objective/133,493확인 kernels에 과거 미상 objective1/kernel1을 별도로 남긴다. 물 누적에는 과거 local과global 경로가 섞여 있으므로 전부global이라고 부르거나 알고리즘 단독비용으로 쓰지 않는다. 이번 문서 추가분은728확인 물objective/79,718확인 kernels와2리간드full이다.
+
+기존 shape1,378·plane1,163·부분 계산계수는 유지한다. 서로 다른 비용 범주를 full E/F로 합산하지 않는다. 고정 crystal-water 유래 산소, authored H초기화, POP제외, 준비·매개변수 동시성 불확실성, 비주기 모델의 범위는 그대로 남는다. 물 회전 정지성 달성이 현실적 수화나 일반 분자의 정확한 도킹 포즈를 보장하지 않는다.
