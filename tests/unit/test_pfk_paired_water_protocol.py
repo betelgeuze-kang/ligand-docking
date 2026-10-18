@@ -22,10 +22,18 @@ def synthetic_plan(tmp_path):
     archive = tmp_path / "archive"
     roots = {"dry": str(archive / "dry"), "heldout": str(archive / "heldout"),
              "water": str(tmp_path / "water")}
+    nested_refs = []
+    for index in range(16):
+        path = Path(roots["dry"]) / "snapshot/evidence/PFKFB3" / (str(index) + "-source.json")
+        checksum = put(path, {"opaque_source": index, "historical_path": "/unavailable/opaque/provenance"})
+        nested_refs.append({"path": "/unavailable/cloud/snapshot/evidence/PFKFB3/" + path.name, "sha256": checksum})
+    source_evidence = {"schema_version": "declared_prepared_source_evidence/1.0.0",
+                       "evidence_kind": "prepared_real_development", "source_authenticated": False,
+                       "original_simulation_hamiltonian_reproduced": False, "source_files": nested_refs}
     inputs = {}
     for name in p.INPUT_NAMES:
         path = Path(roots["dry"]) / "snapshot/inputs/PFKFB3" / (name + ".json")
-        checksum = put(path, {"synthetic": name})
+        checksum = put(path, source_evidence if name == "source_evidence" else {"synthetic": name})
         inputs[name] = {"path": "/unavailable/cloud/" + name + ".json", "sha256": checksum}
     original = {**inputs, "boundary": {key: p.BOUNDARY[key] for key in (
         "independent_measurement_denominator", "source_authenticated", "scientifically_validated",
@@ -65,7 +73,12 @@ def synthetic_plan(tmp_path):
     reference_path = tmp_path / "reference.json"
     reference = {"path": str(reference_path), "sha256": put(reference_path, {"synthetic": True})}
     relocated_path = tmp_path / "relocated.json"
-    protocol = {"path": str(relocated_path), "sha256": put(relocated_path, p._relocated_protocol(roots, files))}
+    evidence_document, original_evidence, nested_records = p._relocated_source_evidence(roots, files)
+    derived_path = tmp_path / "relocated-source-evidence.json"
+    derived_evidence = {"path": str(derived_path), "sha256": put(derived_path, evidence_document)}
+    files[str(derived_path)] = derived_evidence["sha256"]
+    protocol = {"path": str(relocated_path), "sha256": put(
+        relocated_path, p._relocated_protocol(roots, files, source_evidence_binding=derived_evidence))}
     metric_path = tmp_path / "metrics-policy.json"
     metrics = {"path": str(metric_path), "sha256": put(metric_path, {**p.METRICS_POLICY, "reference": reference})}
     structural_path = tmp_path / "structural-policy-inputs.json"
@@ -74,13 +87,14 @@ def synthetic_plan(tmp_path):
         files[binding["path"]] = binding["sha256"]
     plan = {"schema": p.SCHEMA, "run_id": str(uuid.uuid4()), "source_roots": roots,
             "protocol": protocol, "reference": reference, "metrics_policy": metrics, "structural_policy": structural,
+            "source_evidence_relocation": p._relocation_record(original_evidence, derived_evidence, nested_records),
             "water_checkpoint": {"path": str(checkpoint_path), "bytes_sha256": checkpoint_sha, "state_sha256": state_sha},
             "runtime": {"python_executable": "/synthetic/python", "python": "3.10.19", "torch": "2.6.0+cpu",
                         "numpy": "1.26.4", "pip_freeze": [], "import_roots": {},
                         "cpu_affinity": [max(os.sched_getaffinity(0))], "cpu_threads": 1, "interop_threads": 1},
             "receipt_paths": receipts, "source_files": files, "source_roots_closure": closures,
             "own_source": {"root": str(own_root), "git_commit": "d" * 40,
-                           "branch": "codex/docking-paired-water-eight-dof", "files": own_files},
+                           "branch": p.SOURCE_BRANCH, "files": own_files},
             "phase_order": list(p.PHASE_ORDER), "phases": {x: p.phase_spec(x, roots) for x in p.PHASE_ORDER},
             "stage_caps_by_phase": {x: p.stage_caps(x) for x in p.PHASE_ORDER},
             "limits_by_phase": {x: p.phase_limits(x) for x in p.PHASE_ORDER},
@@ -179,7 +193,8 @@ def test_archive_closure_tamper_rejected(synthetic_plan, tmp_path, kind):
 
 def test_resealed_plan_cannot_omit_receipt_file_or_closure(synthetic_plan, tmp_path):
     root = next(iter(synthetic_plan["source_roots_closure"]))
-    relative = next(iter(synthetic_plan["source_roots_closure"][root]))
+    relative = next(name for name in synthetic_plan["source_roots_closure"][root]
+                    if name.endswith("/start/chart-contracts.json"))
     del synthetic_plan["source_roots_closure"][root][relative]
     del synthetic_plan["source_files"][str(Path(root) / relative)]
     path, checksum = seal(tmp_path, synthetic_plan)
@@ -187,14 +202,14 @@ def test_resealed_plan_cannot_omit_receipt_file_or_closure(synthetic_plan, tmp_p
         p.verify_plan(path, checksum)
 
 
-def test_only_five_protocol_paths_may_change(synthetic_plan, tmp_path):
+def test_protocol_only_relocates_four_input_paths_and_rebinds_derived_source_evidence(synthetic_plan, tmp_path):
     binding = synthetic_plan["protocol"]
     document = json.loads(Path(binding["path"]).read_text())
     document["solver"]["force_tolerance"] = .1
     binding["sha256"] = put(Path(binding["path"]), document)
     synthetic_plan["source_files"][binding["path"]] = binding["sha256"]
     path, checksum = seal(tmp_path, synthetic_plan)
-    with pytest.raises(p.PlanError, match="more than five paths"):
+    with pytest.raises(p.PlanError, match="beyond four input paths"):
         p.verify_plan(path, checksum)
 
 
@@ -232,3 +247,114 @@ def test_absent_only_publication_never_overwrites_and_fsyncs(tmp_path, monkeypat
     with pytest.raises(FileExistsError):
         p.write_json_absent(path, {"replacement": True})
     assert path.read_bytes() == before
+
+
+def test_nested_relocation_preserves_original_digests_boundaries_and_physical_inputs(synthetic_plan):
+    relocation = synthetic_plan["source_evidence_relocation"]
+    original_path = Path(relocation["original"]["path"])
+    before = original_path.read_bytes()
+    original = json.loads(before)
+    derived = json.loads(Path(relocation["derived"]["path"]).read_text())
+    protocol = json.loads(Path(synthetic_plan["protocol"]["path"]).read_text())
+    original_protocol = json.loads((Path(synthetic_plan["source_roots"]["dry"]) / "start/protocol.json").read_text())
+    assert len(derived["source_files"]) == 16
+    for old, new, record in zip(original["source_files"], derived["source_files"], relocation["source_files"]):
+        assert old["path"].startswith("/unavailable/cloud/")
+        assert old["sha256"] == new["sha256"] == record["sha256"]
+        assert new["path"] == record["path"] and old["path"] == record["original_path"]
+        assert p.hash_file(new["path"]) == old["sha256"]
+    for name in ("ligand", "receptor", "parameters", "cross"):
+        assert protocol[name]["sha256"] == original_protocol[name]["sha256"]
+    assert protocol["source_evidence"] == relocation["derived"]
+    assert protocol["source_evidence"]["sha256"] != original_protocol["source_evidence"]["sha256"]
+    assert {k: v for k, v in derived.items() if k != "source_files"} == {
+        k: v for k, v in original.items() if k != "source_files"}
+    assert original_path.read_bytes() == before
+
+
+def reseal_derived(synthetic_plan, mutation):
+    binding = synthetic_plan["source_evidence_relocation"]["derived"]
+    derived = json.loads(Path(binding["path"]).read_text())
+    mutation(derived)
+    binding["sha256"] = put(Path(binding["path"]), derived)
+    synthetic_plan["source_files"][binding["path"]] = binding["sha256"]
+    protocol_binding = synthetic_plan["protocol"]
+    protocol = json.loads(Path(protocol_binding["path"]).read_text())
+    protocol["source_evidence"] = dict(binding)
+    protocol_binding["sha256"] = put(Path(protocol_binding["path"]), protocol)
+    synthetic_plan["source_files"][protocol_binding["path"]] = protocol_binding["sha256"]
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda d: d.update(source_authenticated=True),
+    lambda d: d.update(original_simulation_hamiltonian_reproduced=True),
+    lambda d: d.update(evidence_kind="synthetic_control"),
+    lambda d: d.update(extra_metadata="not an authorized change"),
+    lambda d: d["source_files"][0].update(sha256="a" * 64),
+    lambda d: d["source_files"][0].update(path="/unavailable/cloud/snapshot/evidence/PFKFB3/0-source.json"),
+    lambda d: d["source_files"][0].update(extra="not an authorized change"),
+    lambda d: d["source_files"].reverse(),
+    lambda d: d["source_files"].append(dict(d["source_files"][0])),
+    lambda d: d["source_files"].pop(),
+])
+def test_even_resealed_derived_evidence_allows_only_the_sixteen_path_deltas(synthetic_plan, tmp_path, mutation):
+    reseal_derived(synthetic_plan, mutation)
+    path, checksum = seal(tmp_path, synthetic_plan)
+    with pytest.raises(p.PlanError, match="more than sixteen paths"):
+        p.verify_plan(path, checksum)
+
+
+def test_relocation_record_must_match_original_source_paths_not_just_target_hashes(synthetic_plan, tmp_path):
+    row = synthetic_plan["source_evidence_relocation"]["source_files"][0]
+    row["original_path"] = "/different/prefix/snapshot/evidence/PFKFB3/0-source.json"
+    path, checksum = seal(tmp_path, synthetic_plan)
+    with pytest.raises(p.PlanError, match="relocation record changed"):
+        p.verify_plan(path, checksum)
+
+
+def test_nested_targets_must_remain_in_admitted_full_file_closure(synthetic_plan):
+    files = dict(synthetic_plan["source_files"])
+    target = synthetic_plan["source_evidence_relocation"]["source_files"][0]["path"]
+    del files[target]
+    with pytest.raises(p.PlanError, match="not byte-admitted"):
+        p._relocated_source_evidence(synthetic_plan["source_roots"], files)
+
+
+def test_leaf_source_json_is_opaque_and_its_historical_paths_are_not_recursively_followed(synthetic_plan, monkeypatch):
+    original_path = synthetic_plan["source_evidence_relocation"]["original"]["path"]
+    read = p._json_file
+    opened = []
+    def only_evidence_document(path):
+        assert str(path) == original_path, "an evidence leaf was unexpectedly parsed"
+        opened.append(str(path))
+        return read(path)
+    monkeypatch.setattr(p, "_json_file", only_evidence_document)
+    derived, _, records = p._relocated_source_evidence(synthetic_plan["source_roots"], synthetic_plan["source_files"])
+    assert opened == [original_path] and len(records) == 16
+    leaf = json.loads(Path(derived["source_files"][0]["path"]).read_text())
+    assert leaf["historical_path"] == "/unavailable/opaque/provenance"
+
+
+@pytest.mark.parametrize("kind", ["missing", "symlink", "hardlink", "oversized"])
+def test_local_nested_target_satisfies_original_reader_file_requirements(synthetic_plan, tmp_path, kind):
+    target = Path(synthetic_plan["source_evidence_relocation"]["source_files"][0]["path"])
+    if kind == "missing":
+        target.unlink()
+    elif kind == "symlink":
+        target.unlink()
+        target.symlink_to(tmp_path / "reference.json")
+    elif kind == "hardlink":
+        os.link(target, tmp_path / "extra_link_outside_archive")
+    else:
+        # Sparse truncation exercises the size guard without loading 32MiB.
+        with target.open("r+b") as handle:
+            handle.truncate(32 * 1024 ** 2 + 1)
+    with pytest.raises((p.PlanError, OSError)):
+        p._relocated_source_evidence(synthetic_plan["source_roots"], synthetic_plan["source_files"])
+
+
+def test_derived_evidence_cannot_replace_original_evidence_in_place(synthetic_plan):
+    relocation = synthetic_plan["source_evidence_relocation"]
+    relocation["derived"] = dict(relocation["original"])
+    with pytest.raises(p.PlanError, match="fresh sibling"):
+        p.validate_plan(synthetic_plan)

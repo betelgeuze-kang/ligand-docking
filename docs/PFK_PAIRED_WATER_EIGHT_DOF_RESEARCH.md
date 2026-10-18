@@ -11,6 +11,18 @@ implementation commit and bytes, runtime versions, reference policy, and every
 phase's limits. The builder refuses uncommitted implementation files. An old
 approval or completed run is never used to authorize or resume this campaign.
 
+The first local campaign stopped during source-evidence admission because its
+outer path relocation had omitted sixteen nested references to the original
+cloud workspace. Its durable ledger has zero physical starts, no pending work,
+and confirmed process cleanup. That failed campaign and its source checkout
+remain unchanged. The corrected implementation uses another source checkout
+and a new plan. It derives a separate evidence document that changes exactly
+sixteen reference paths to already admitted, byte-identical evidence leaves.
+All original evidence bytes, evidence digests, four physical input digests,
+numerical code, metric policy and budgets are preserved. It does not create a
+cloud-path alias or rewrite historical approval/evidence. A force-free loading
+and context check is required before the corrected diagnostics.
+
 The eight coordinates and optimizer are the unchanged recovered three
 translations, three fixed-axis rotations and two bridge torsions. The model
 retains the original full ligand/internal and protein–ligand calculation plus

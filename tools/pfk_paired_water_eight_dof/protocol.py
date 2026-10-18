@@ -21,6 +21,9 @@ SCHEMA = "pfk_paired_dry_wet_eight_dof/1.0.0"
 PHASE_ORDER = ("diagnostic-dry", "diagnostic-wet", "P0-dry", "P0-wet",
                "Qplus-wet", "Qplus-dry", "Qminus-dry", "Qminus-wet")
 INPUT_NAMES = ("ligand", "receptor", "parameters", "cross", "source_evidence")
+SOURCE_EVIDENCE_REF_COUNT = 16
+SOURCE_EVIDENCE_RELOCATION_SCHEMA = "pfk_source_evidence_path_relocation/1.0.0"
+SOURCE_BRANCH = "codex/docking-paired-source-relocation"
 BOUNDARY = {"independent_measurement_denominator": None,
             "original_simulation_hamiltonian_reproduced": False,
             "product_ranking_enabled": False, "scientifically_validated": False,
@@ -292,6 +295,32 @@ def validate_plan(plan):
         for key, hash_key in (("protocol", "sha256"), ("reference", "sha256"), ("metrics_policy", "sha256"), ("water_checkpoint", "bytes_sha256")):
             if files.get(plan[key]["path"]) != plan[key][hash_key]:
                 raise PlanError("binding omitted from immutable source files")
+        relocation = plan["source_evidence_relocation"]
+        if (set(relocation) != {"schema", "original", "derived", "source_files"}
+                or relocation["schema"] != SOURCE_EVIDENCE_RELOCATION_SCHEMA):
+            raise PlanError("explicit nested source-evidence relocation required")
+        for key in ("original", "derived"):
+            _binding(relocation[key])
+            if set(relocation[key]) != {"path", "sha256"} or files.get(relocation[key]["path"]) != relocation[key]["sha256"]:
+                raise PlanError("original and derived source-evidence byte bindings required")
+        if relocation["original"]["path"] != str(Path(roots["dry"]) / "snapshot/inputs/PFKFB3/source_evidence.json"):
+            raise PlanError("original source-evidence path changed")
+        if relocation["derived"]["path"] != str(Path(plan["protocol"]["path"]).parent / "relocated-source-evidence.json"):
+            raise PlanError("fresh sibling derived source-evidence required")
+        if relocation["derived"]["path"] == relocation["original"]["path"]:
+            raise PlanError("original source-evidence must remain unchanged")
+        if type(relocation["source_files"]) is not list or len(relocation["source_files"]) != SOURCE_EVIDENCE_REF_COUNT:
+            raise PlanError("all sixteen nested source bindings required")
+        nested_targets = set()
+        for row in relocation["source_files"]:
+            if set(row) != {"original_path", "path", "sha256"}:
+                raise PlanError("exact nested source relocation fields required")
+            _absolute(row["original_path"])
+            _binding(row)
+            target = str(Path(roots["dry"]) / "snapshot/evidence/PFKFB3" / Path(row["original_path"]).name)
+            if row["path"] != target or target in nested_targets or files.get(target) != row["sha256"]:
+                raise PlanError("nested evidence target missing, duplicated or outside selected dry evidence")
+            nested_targets.add(target)
         _binding(plan["structural_policy"])
         if files.get(plan["structural_policy"]["path"]) != plan["structural_policy"]["sha256"]:
             raise PlanError("structural policy omitted from immutable files")
@@ -320,7 +349,7 @@ def validate_plan(plan):
         _absolute(own["root"])
         if not re.fullmatch(r"[0-9a-f]{40,64}", own["git_commit"]):
             raise PlanError("source Git commit required")
-        if own["branch"] != "codex/docking-paired-water-eight-dof":
+        if own["branch"] != SOURCE_BRANCH:
             raise PlanError("dedicated source branch required")
         if not own["files"] or any(files.get(path) != checksum for path, checksum in own["files"].items()):
             raise PlanError("own source byte binding required")
@@ -374,7 +403,60 @@ def _verify_closure(files, closures):
             raise PlanError("immutable source SHA256 mismatch: " + path)
 
 
-def _relocated_protocol(roots, files):
+def _relocated_source_evidence(roots, files):
+    """Rebase exactly sixteen opaque evidence refs, preserving every digest.
+
+    Evidence leaves are hash-checked, never parsed or recursively rewritten.
+    The original reader also requires single-link regular files <=32MiB.
+    """
+    source = str(Path(roots["dry"]) / "snapshot/inputs/PFKFB3/source_evidence.json")
+    if files.get(source) != hash_file(source):
+        raise PlanError("original source-evidence bytes not admitted")
+    document = _json_file(source)
+    if (type(document) is not dict or set(document) != {
+            "schema_version", "evidence_kind", "source_files", "source_authenticated",
+            "original_simulation_hamiltonian_reproduced"}
+            or document["schema_version"] != "declared_prepared_source_evidence/1.0.0"
+            or document["evidence_kind"] != "prepared_real_development"
+            or document["source_authenticated"] is not False
+            or document["original_simulation_hamiltonian_reproduced"] is not False
+            or type(document["source_files"]) is not list
+            or len(document["source_files"]) != SOURCE_EVIDENCE_REF_COUNT):
+        raise PlanError("original sixteen-file source-evidence contract changed")
+    derived, records = deepcopy(document), []
+    originals, targets = set(), set()
+    for index, row in enumerate(document["source_files"]):
+        if type(row) is not dict or set(row) != {"path", "sha256"}:
+            raise PlanError("exact source-evidence binding fields required")
+        original = _absolute(row["path"])
+        _sha(row["sha256"])
+        if original.parts[-4:-1] != ("snapshot", "evidence", "PFKFB3"):
+            raise PlanError("original nested evidence suffix changed")
+        target = str(Path(roots["dry"]) / "snapshot/evidence/PFKFB3" / original.name)
+        if str(original) in originals or target in targets or files.get(target) != row["sha256"]:
+            raise PlanError("nested evidence target missing, duplicated or not byte-admitted")
+        fd = _file_fd(target)
+        try:
+            info = os.fstat(fd)
+            if info.st_nlink != 1 or info.st_size > 32 * 1024 ** 2:
+                raise PlanError("nested evidence must be single-link and at most 32MiB")
+        finally:
+            os.close(fd)
+        if hash_file(target) != row["sha256"]:
+            raise PlanError("nested source-evidence target bytes changed")
+        originals.add(str(original))
+        targets.add(target)
+        derived["source_files"][index]["path"] = target
+        records.append({"original_path": str(original), "path": target, "sha256": row["sha256"]})
+    return derived, {"path": source, "sha256": files[source]}, records
+
+
+def _relocation_record(original, derived, records):
+    return {"schema": SOURCE_EVIDENCE_RELOCATION_SCHEMA,
+            "original": original, "derived": derived, "source_files": records}
+
+
+def _relocated_protocol(roots, files, *, source_evidence_binding):
     document = deepcopy(_json_file(Path(roots["dry"]) / "start/protocol.json"))
     for name in INPUT_NAMES:
         binding = document[name]
@@ -382,6 +464,11 @@ def _relocated_protocol(roots, files):
         if set(binding) != {"path", "sha256"} or files.get(new) != binding["sha256"]:
             raise PlanError("original protocol input binding mismatch")
         binding["path"] = new
+    _binding(source_evidence_binding)
+    if (set(source_evidence_binding) != {"path", "sha256"}
+            or files.get(source_evidence_binding["path"]) != source_evidence_binding["sha256"]):
+        raise PlanError("derived source-evidence byte binding missing")
+    document["source_evidence"] = deepcopy(source_evidence_binding)
     if document["boundary"] != {key: BOUNDARY[key] for key in document["boundary"]}:
         raise PlanError("original protocol boundary changed")
     return document
@@ -403,7 +490,15 @@ def verify_plan(plan_path, expectedsha):
     own_paths.add(str(own_root / "tools/run_pfk_paired_water_eight_dof.py"))
     if own_paths != set(plan["own_source"]["files"]):
         raise PlanError("own implementation file closure changed")
-    _check_exact(_json_file(plan["protocol"]["path"]), _relocated_protocol(plan["source_roots"], plan["source_files"]), "relocated protocol changed more than five paths")
+    derived_document, original_binding, nested_records = _relocated_source_evidence(plan["source_roots"], receipt_files)
+    derived_binding = plan["source_evidence_relocation"]["derived"]
+    _check_exact(plan["source_evidence_relocation"], _relocation_record(original_binding, derived_binding, nested_records),
+                 "nested source-evidence relocation record changed")
+    _check_exact(_json_file(derived_binding["path"]), derived_document,
+                 "derived source-evidence changed more than sixteen paths")
+    _check_exact(_json_file(plan["protocol"]["path"]),
+                 _relocated_protocol(plan["source_roots"], plan["source_files"], source_evidence_binding=derived_binding),
+                 "relocated protocol changed beyond four input paths and derived source-evidence binding")
     policy = _json_file(plan["metrics_policy"]["path"])
     _check_exact(policy, {**METRICS_POLICY, "reference": plan["reference"]}, "new metric policy changed")
     checkpoint = _json_file(plan["water_checkpoint"]["path"])
@@ -497,12 +592,19 @@ def build_plan(*, source_roots, reference_path, runtime_python, output_dir, own_
     output = _absolute(output_dir)
     _fresh_directory(output)
     protocol_path, policy_path = output / "relocated-protocol.json", output / "metrics-policy.json"
-    protocol_binding = {"path": str(protocol_path), "sha256": write_json_absent(protocol_path, _relocated_protocol(roots, files))}
+    evidence_document, original_evidence_binding, nested_records = _relocated_source_evidence(roots, files)
+    derived_evidence_path = output / "relocated-source-evidence.json"
+    derived_evidence_binding = {"path": str(derived_evidence_path),
+                                "sha256": write_json_absent(derived_evidence_path, evidence_document)}
+    files[str(derived_evidence_path)] = derived_evidence_binding["sha256"]
+    protocol_binding = {"path": str(protocol_path), "sha256": write_json_absent(
+        protocol_path, _relocated_protocol(roots, files, source_evidence_binding=derived_evidence_binding))}
     policy_binding = {"path": str(policy_path), "sha256": write_json_absent(policy_path, {**METRICS_POLICY, "reference": reference})}
     files[str(protocol_path)], files[str(policy_path)] = protocol_binding["sha256"], policy_binding["sha256"]
     runtime = _runtime(runtime_python, output)
     plan = {"schema": SCHEMA, "run_id": str(uuid.uuid4()), "source_roots": roots,
             "protocol": protocol_binding, "water_checkpoint": checkpoint_binding,
+            "source_evidence_relocation": _relocation_record(original_evidence_binding, derived_evidence_binding, nested_records),
             "runtime": runtime, "own_source": own, "receipt_paths": receipts,
             "source_files": dict(sorted(files.items())), "source_roots_closure": closures,
             "reference": reference, "metrics_policy": policy_binding,
