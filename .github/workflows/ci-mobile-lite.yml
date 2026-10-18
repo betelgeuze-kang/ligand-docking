@@ -73,6 +73,8 @@ jobs:
             core/claim_boundary.py
             tests/__init__.py
             tests/route_compat.py
+            tests/support/__init__.py
+            tests/support/job_store_fixtures.py
             tests/mobile
             tests/unit/test_api_security_middleware.py
             tests/unit/test_api_job_store.py
