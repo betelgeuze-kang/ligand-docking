@@ -190,12 +190,12 @@ def _phase(python, output, name, source, environment, deadline, maximum):
         except subprocess.TimeoutExpired:
             os.killpg(child.pid, signal.SIGKILL)
             child.wait(timeout=5)
-            _write(output / (name + "-result.json"), {
+            _write(output / (name + "-process-result.json"), {
                 "returncode": child.returncode, "deadline_exceeded": True,
                 "automatic_reissue_allowed": False,
             })
             raise RuntimeError("installed read-only regression phase exceeded deadline") from None
-    _write(output / (name + "-result.json"), {
+    _write(output / (name + "-process-result.json"), {
         "returncode": returncode, "deadline_exceeded": False,
         "stdout_sha256": hashlib.sha256((output / (name + "-stdout.log")).read_bytes()).hexdigest(),
         "stderr_sha256": hashlib.sha256((output / (name + "-stderr.log")).read_bytes()).hexdigest(),
