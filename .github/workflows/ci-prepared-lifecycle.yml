@@ -1,0 +1,54 @@
+name: ci-prepared-lifecycle
+
+on:
+  pull_request:
+    paths:
+      - 'betelgeuze_product/**'
+      - 'betelgeuze_engine_v2/**'
+      - 'api/**'
+      - 'tests/unit/test_prepared_lifecycle*.py'
+      - 'tests/unit/test_api_product_prepared.py'
+      - 'pyproject.toml'
+      - 'requirements-package.txt'
+      - '.github/workflows/ci-prepared-lifecycle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-prepared-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  metadata-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    env:
+      PYTHONPATH: .
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install fixed metadata-only dependencies
+        run: |
+          python -m pip install pytest==8.3.5 ruff==0.11.13 fastapi==0.136.3 starlette==1.7.0 httpx==0.28.1 pydantic==2.12.5 pydantic-settings==2.14.1 prometheus-client==0.24.1 PyYAML==6.0.3
+      - name: Lint prepared lifecycle implementation and tests
+        run: |
+          python -m ruff check --isolated --no-cache betelgeuze_product/prepared_lifecycle*.py api/product_prepared.py tests/unit/test_prepared_lifecycle*.py tests/unit/test_api_product_prepared.py
+          git diff --check
+      - name: Check shared authority and retained evidence without molecular execution
+        run: |
+          python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q tests/unit/test_prepared_lifecycle*.py tests/unit/test_api_product_prepared.py
