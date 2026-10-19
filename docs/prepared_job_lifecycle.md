@@ -86,15 +86,23 @@ placement is selected from the available CPUs at submission and does not change
 the plan's numerical work or refresh its budget. Legacy submit and plan-bound
 execute share the same idempotency and owner authority.
 
-Verification and reporting lazily use the owning Fourier verifier and retained
-reporter. They perform no optimization, graph construction or force evaluation.
-Start the trusted CLI/API service process with `OMP_NUM_THREADS=1`,
-`MKL_NUM_THREADS=1` and `OPENBLAS_NUM_THREADS=1` so its read-only Torch verifier
-matches the original one-thread contract. A process that has already initialized
-a different Torch thread pool receives `READ_VERIFICATION_UNAVAILABLE`; an HTTP
-request does not change global thread settings to bypass that requirement.
+Verification and reporting use a fixed isolated child to read the owning
+Fourier verifier and retained reporter. That fresh child initializes both Torch
+thread pools to one before importing the owning verifier, matching the numerical
+worker's frozen environment. Public requests do not change the API process's
+global Torch settings. The read paths perform no optimization, graph
+construction or force evaluation. Source, runtime and retained receipt checks
+remain exact; moving the reader does not relax frozen environment matching.
 Their measured read-only costs are separate from worker execution accounting;
-they do not reset or consume numerical reservations. Active work stays
+they do not reset or consume numerical reservations. Each isolated owning read
+has a 120-second controller wall deadline, 90 CPU seconds, one allowed CPU,
+4 GiB address space and a 1 MiB file-size limit. Its request, stdout and stderr
+are bounded at 1 MiB, 4 MiB and 64 KiB. These are ceilings, not measured cost or
+RAM limits. Registry, artifact and pre/post journal scans run in the parent
+outside that child envelope; there is no aggregate whole-request containment
+claim. The response separates child CPU/RSS observations from parent request
+wall time, and does not attribute process-wide parent CPU to a concurrent
+request. Active work stays
 unresolved. Unknown total work remains null even when an earlier known prefix
 can be checked. A completed process is not evidence of numerical convergence.
 Comparisons retain missing, forbidden, failed and unknown requested entries in

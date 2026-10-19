@@ -165,6 +165,7 @@ def implementation_sources():
     root = Path(__file__).resolve().parent.parent
     names = ("betelgeuze_product/prepared_lifecycle.py",
              "betelgeuze_product/prepared_lifecycle_results.py",
+             "betelgeuze_product/prepared_lifecycle_readonly_worker.py",
              "betelgeuze_product/prepared_lifecycle_cli.py",
              "betelgeuze_product/prepared_lifecycle_owner.py",
              "betelgeuze_product/prepared_lifecycle_worker.py",

@@ -13,12 +13,20 @@ import json
 import math
 import os
 from pathlib import Path
+import secrets
+import selectors
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
 import time
 
 from .prepared_lifecycle import (
     LifecycleError, _HEX32, _identifier, admission_document, digest, json_bytes,
-    regular_bytes, require,
+    regular_bytes, require, implementation_sources, runtime_identity,
 )
+from . import prepared_lifecycle_readonly_worker as read_worker
 
 VERIFY_SCHEMA = "prepared_lifecycle_verification/1.0.0"
 REPORT_SCHEMA = "prepared_lifecycle_report/1.0.0"
@@ -215,31 +223,146 @@ def _count(value):
     return value
 
 
+def _kill_owned_group(process):
+    # No poll/wait has reaped this private Popen child yet. Its PID still pins
+    # the session/process-group identity; never signal a group after reaping.
+    if process.returncode is None:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired as exc:
+        raise LifecycleError("READ_VERIFICATION_UNAVAILABLE", "Read worker cleanup did not confirm exit", 503) from exc
+
+
+def _capture_worker(request, environment):
+    """Bound both directions without preexec_fn or unbounded communicate()."""
+    raw = (json.dumps(request, sort_keys=True, separators=(",", ":"), allow_nan=False)+"\n").encode()
+    require(len(raw) <= read_worker.MAX_REQUEST_BYTES, "READ_VERIFICATION_FAILED", "Read request exceeds bounds", 409)
+    command = [sys.executable, "-I", "-B", "-m", "betelgeuze_product.prepared_lifecycle_readonly_worker"]
+    started, process, reaped = time.monotonic(), None, False
+    output = {"stdout": bytearray(), "stderr": bytearray()}
+    selector = selectors.DefaultSelector()
+    directory = None
+    try:
+        directory = tempfile.mkdtemp(prefix="betelgeuze-readonly-")
+        process = subprocess.Popen(command, cwd=directory, env=environment,
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   start_new_session=True, close_fds=True)
+        for stream, kind, event in ((process.stdin, "stdin", selectors.EVENT_WRITE),
+                                     (process.stdout, "stdout", selectors.EVENT_READ),
+                                     (process.stderr, "stderr", selectors.EVENT_READ)):
+            os.set_blocking(stream.fileno(), False)
+            selector.register(stream, event, kind)
+        offset = 0
+        deadline = started + read_worker.WALL_SECONDS
+        while selector.get_map():
+            remaining = deadline-time.monotonic()
+            require(remaining > 0, "READ_VERIFICATION_UNAVAILABLE", "Read worker exceeded its wall limit", 503)
+            for key, _ in selector.select(min(.05, remaining)):
+                stream, kind = key.fileobj, key.data
+                if kind == "stdin":
+                    try:
+                        offset += os.write(stream.fileno(), raw[offset:offset+65536])
+                    except BrokenPipeError:
+                        offset = len(raw)
+                    except BlockingIOError:
+                        continue
+                    if offset == len(raw):
+                        selector.unregister(stream)
+                        stream.close()
+                else:
+                    limit = read_worker.MAX_RESPONSE_BYTES if kind == "stdout" else read_worker.MAX_STDERR_BYTES
+                    try:
+                        chunk = os.read(stream.fileno(), min(65536, limit-len(output[kind])+1))
+                    except BlockingIOError:
+                        continue
+                    require(len(output[kind])+len(chunk) <= limit,
+                            "READ_VERIFICATION_UNAVAILABLE", "Read worker capture exceeds bounds", 503)
+                    if chunk:
+                        output[kind].extend(chunk)
+                    else:
+                        selector.unregister(stream)
+                        stream.close()
+        try:
+            returncode = process.wait(timeout=max(.001, deadline-time.monotonic()))
+            reaped = True
+        except subprocess.TimeoutExpired as exc:
+            raise LifecycleError("READ_VERIFICATION_UNAVAILABLE", "Read worker exceeded its wall limit", 503) from exc
+        require(returncode == 0, "READ_VERIFICATION_FAILED", "Isolated owning read did not complete successfully", 409)
+        return bytes(output["stdout"]), hashlib.sha256(raw).hexdigest(), time.monotonic()-started
+    except BaseException:
+        if process is not None and not reaped:
+            _kill_owned_group(process)
+        raise
+    finally:
+        selector.close()
+        if process is not None:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is not None and not stream.closed:
+                    stream.close()
+        # Never remove a working directory until our direct child was reaped.
+        # An unconfirmed cleanup leaves this new private directory for diagnosis.
+        if directory is not None and (process is None or process.returncode is not None):
+            shutil.rmtree(directory)
+
+
 def _owning_adapter(protocol, directory, *, with_report):
-    """Fixed owning read-only functions; no public callback/command/model seam."""
-    from .cpu_refinement_fourier_v1 import workflow
-
-    if with_report:
-        from .prepared_refinement_cli import report
-
-        document = report(protocol, directory)  # This calls owning workflow.verify.
-        require(document.get("verification_scope") == OWNING_SCOPE
-                and document.get("work", {}).get("report_force_evaluation_calls") == 0,
-                "READ_VERIFICATION_FAILED", "Owning report verification scope differs", 409)
-        result = {"binding": document["binding"], "status": document["execution_status"],
-                  "known_force_calls": _count(document["work"]["known_force_evaluation_calls"]),
-                  "total_work_known": document["work"]["total_work_known"], "report": document}
-    else:
-        checked = workflow.verify(protocol, directory)
-        require(checked.get("verification_scope") == OWNING_SCOPE,
-                "READ_VERIFICATION_FAILED", "Owning verification scope differs", 409)
-        rows = ([] if checked["baseline"] is None else [checked["baseline"]]) + checked["invocations"]
-        result = {"binding": checked["binding"], "status": checked["status"],
-                  "known_force_calls": sum(_count(r["work"]["force_evaluation_calls"]) for r in rows),
-                  "total_work_known": checked["unknown_stage"] is None, "report": None}
-    frozen = workflow._committed(directory / "frozen.json")
-    result["evaluator"] = frozen["payload"]["evaluator"]
-    return result
+    """Fixed installed isolated child; parent Torch state is never touched."""
+    sources, runtime = implementation_sources(), runtime_identity()
+    root = Path(__file__).resolve().parent.parent
+    available = sorted(os.sched_getaffinity(0))
+    require(bool(available), "READ_VERIFICATION_UNAVAILABLE", "Read worker CPU placement is unavailable", 503)
+    cpu = available[0]
+    request = {"schema_version": read_worker.REQUEST_SCHEMA, "nonce": secrets.token_hex(32),
+               "protocol": protocol, "protocol_sha256": digest(protocol), "directory": str(directory),
+               "implementation_sources": sources, "runtime_identity": runtime, "with_report": with_report}
+    environment = {"PATH": str(Path(sys.executable).parent)+":/usr/bin:/bin",
+                   "PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1",
+                   "OPENBLAS_NUM_THREADS": "1", "NUMEXPR_NUM_THREADS": "1", "LANG": "C.UTF-8",
+                   "BETELGEUZE_READONLY_INSTALLED_ROOT": str(root),
+                   "BETELGEUZE_READONLY_WORKER_SHA256": sources["betelgeuze_product/prepared_lifecycle_readonly_worker.py"],
+                   "BETELGEUZE_READONLY_CORE_SHA256": sources["betelgeuze_product/prepared_lifecycle.py"],
+                   "BETELGEUZE_READONLY_CPU": str(cpu)}
+    try:
+        raw, request_sha, elapsed = _capture_worker(request, environment)
+        response = json.loads(raw, object_pairs_hook=read_worker._pairs, parse_constant=read_worker._reject_constant)
+        require(type(response) is dict and set(response) == {
+            "schema_version", "nonce", "request_sha256", "implementation_sources", "runtime_identity", "result", "read_only_child_cost"}
+                and response["schema_version"] == read_worker.RESPONSE_SCHEMA
+                and response["nonce"] == request["nonce"] and response["request_sha256"] == request_sha
+                and response["implementation_sources"] == sources and response["runtime_identity"] == runtime
+                and implementation_sources() == sources and runtime_identity() == runtime,
+                "READ_VERIFICATION_FAILED", "Read worker source or request binding differs", 409)
+        result, cost = response["result"], response["read_only_child_cost"]
+        require(type(result) is dict and set(result) == {
+            "binding", "status", "known_force_calls", "total_work_known", "report", "evaluator", "read_only_environment"}
+                and type(result["total_work_known"]) is bool and result["read_only_environment"]["torch_threads"] == 1
+                and result["read_only_environment"]["torch_interop_threads"] == 1,
+                "READ_VERIFICATION_FAILED", "Read worker result contract differs", 409)
+        _count(result["known_force_calls"])
+        applied = cost["applied_resources"]
+        require({k: v for k, v in applied.items() if not k.startswith("self_wall_")} == {
+            "RLIMIT_CPU": [read_worker.CPU_SECONDS]*2, "RLIMIT_AS": [read_worker.ADDRESS_SPACE_BYTES]*2,
+            "RLIMIT_FSIZE": [read_worker.FILE_BYTES]*2, "cpu_affinity": [cpu]}
+                and applied["self_wall_limit_seconds"] == read_worker.WALL_SECONDS
+                and type(applied["self_wall_timer_remaining_seconds_at_admission"]) in (int, float)
+                and 0 < applied["self_wall_timer_remaining_seconds_at_admission"] <= read_worker.WALL_SECONDS
+                and cost["new_force_calls"] == 0 and cost["execution_budget_charged"] is False
+                and all(type(cost[key]) in (int, float) and math.isfinite(cost[key]) and cost[key] >= 0
+                        for key in ("CPU_seconds", "worker_module_wall_seconds", "peak_RSS_bytes")),
+                "READ_VERIFICATION_FAILED", "Read worker resource receipt differs", 409)
+        result["read_only_child_cost"] = {**cost, "parent_observed_wall_seconds": elapsed,
+            "wall_limit_seconds": read_worker.WALL_SECONDS, "stdout_limit_bytes": read_worker.MAX_RESPONSE_BYTES,
+            "stderr_limit_bytes": read_worker.MAX_STDERR_BYTES, "request_limit_bytes": read_worker.MAX_REQUEST_BYTES,
+            "cleanup_scope": "waited fixed trusted child; owned session/process-group kill on failure; no namespace or escaped-descendant containment claim"}
+        return result
+    except LifecycleError:
+        raise
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        raise LifecycleError("READ_VERIFICATION_FAILED", "Read worker evidence is invalid or unavailable", 409) from exc
 
 
 def _model(admission, evaluator):
@@ -313,6 +436,16 @@ def _base(snapshot, checksum):
                        "cpu_seconds_charged": row["cpu_spent"], "numerical_invocations": row["invocation_count"]}}
 
 
+def _read_cost(wall, cpu, child=None, environment=None):
+    return {"wall_seconds": time.monotonic()-wall,
+            "CPU_seconds": child.get("CPU_seconds") if child else None,
+            "CPU_scope": "isolated read worker own CPU only; parent request CPU is not separately attributable",
+            "parent_process_CPU_delta_seconds": time.process_time()-cpu,
+            "parent_process_CPU_delta_scope": "whole service process; may include concurrent requests; not this request's CPU cost",
+            "child": child, "read_only_environment": environment, "new_force_calls": 0,
+            "scope": "read-only registry/artifact/owning verification; separate from numerical execution budgets"}
+
+
 def _inspect(service, execution_id, *, with_report):
     wall, cpu = time.monotonic(), time.process_time()
     snapshot, checksum = _snapshot(service, execution_id)
@@ -321,8 +454,7 @@ def _inspect(service, execution_id, *, with_report):
     if row["status"] in INFLIGHT:
         _stable(service, execution_id, checksum)
         return {**result, "verification_status": "inflight_unresolved", "verification_scope": "registry_snapshot_only",
-                "read_only_cost": {"wall_seconds": time.monotonic()-wall, "CPU_seconds": time.process_time()-cpu,
-                                   "new_force_calls": 0, "scope": "read-only registry snapshot; not a numerical invocation"}}
+                "read_only_cost": _read_cost(wall, cpu)}
     try:
         saved = json.loads(row["admission_json"])
         current = admission_document(service.input_root, saved["admission_id"], tenant_id=service.tenant_id)
@@ -337,8 +469,7 @@ def _inspect(service, execution_id, *, with_report):
             _stable(service, execution_id, checksum)
             return {**result, "verification_status": "not_ready", "verification_scope": "registered_bytes_and_artifacts",
                     "artifacts": descriptors,
-                    "read_only_cost": {"wall_seconds": time.monotonic()-wall, "CPU_seconds": time.process_time()-cpu,
-                                       "new_force_calls": 0, "scope": "read-only registered bytes; not a numerical invocation"}}
+                    "read_only_cost": _read_cost(wall, cpu)}
         try:
             owning = _owning_adapter(saved["protocol"], directory, with_report=with_report)
         except LifecycleError:
@@ -389,8 +520,7 @@ def _inspect(service, execution_id, *, with_report):
                 "CONCURRENT_STATE_CHANGE", "Registered inputs changed during verification", 409)
         _artifacts(service, snapshot)  # Recheck exact retained bytes after owning reads.
         _stable(service, execution_id, checksum)
-        result["read_only_cost"] = {"wall_seconds": time.monotonic()-wall, "CPU_seconds": time.process_time()-cpu,
-                                    "new_force_calls": 0, "scope": "read-only verification/report; not a numerical invocation"}
+        result["read_only_cost"] = _read_cost(wall, cpu, owning.get("read_only_child_cost"), owning.get("read_only_environment"))
         return result
     except LifecycleError:
         _stable(service, execution_id, checksum)

@@ -301,6 +301,7 @@ def test_thread_contract_failure_is_typed_without_changing_threads(service, monk
 def test_fixed_lazy_adapter_calls_only_owning_read_functions(monkeypatch, tmp_path):
     calls = []
     fake_workflow = types.ModuleType("betelgeuze_product.cpu_refinement_fourier_v1.workflow")
+    fake_workflow.__file__ = str(Path(results.__file__).parent / "cpu_refinement_fourier_v1/workflow.py")
     fake_workflow.verify = lambda *a: calls.append("verify") or {
         "verification_scope": results.OWNING_SCOPE, "binding": "b"*64, "status": "complete",
         "baseline": None, "invocations": [], "unknown_stage": None}
@@ -308,12 +309,20 @@ def test_fixed_lazy_adapter_calls_only_owning_read_functions(monkeypatch, tmp_pa
     package = types.ModuleType("betelgeuze_product.cpu_refinement_fourier_v1")
     package.workflow = fake_workflow
     fake_report = types.ModuleType("betelgeuze_product.prepared_refinement_cli")
+    fake_report.__file__ = str(Path(results.__file__).parent / "prepared_refinement_cli.py")
     fake_report.report = lambda *a: calls.append("report") or backend_report()
+    fake_provenance = types.ModuleType("betelgeuze_product.cpu_refinement_v1_2.provenance")
+    fake_provenance.__file__ = str(Path(results.__file__).parent / "cpu_refinement_v1_2/provenance.py")
+    fake_provenance.environment = lambda: {"torch_threads": 1, "torch_interop_threads": 1}
+    old_package = types.ModuleType("betelgeuze_product.cpu_refinement_v1_2")
+    old_package.provenance = fake_provenance
     monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_fourier_v1", package)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_fourier_v1.workflow", fake_workflow)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.prepared_refinement_cli", fake_report)
-    results._owning_adapter({}, tmp_path, with_report=False)
-    results._owning_adapter({}, tmp_path, with_report=True)
+    monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_v1_2", old_package)
+    monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_v1_2.provenance", fake_provenance)
+    results.read_worker._read_owning({}, tmp_path, with_report=False)
+    results.read_worker._read_owning({}, tmp_path, with_report=True)
     assert calls == ["verify", "report"]
 
 
