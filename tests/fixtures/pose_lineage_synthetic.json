@@ -1,0 +1,196 @@
+{
+  "schema_id": "betelgeuze.pose_lineage_export/1",
+  "unit": "angstrom",
+  "threshold_angstrom": 2.0,
+  "top_k": [
+    1,
+    5
+  ],
+  "manifest": [
+    {
+      "case_id": "recovery-selection-loss",
+      "candidate_ids": [
+        "seed-A",
+        "seed-B",
+        "failed-C",
+        "unobserved-D"
+      ],
+      "reference_id": "synthetic-reference",
+      "frame_id": "receptor-frame",
+      "mapping_id": "heavy-atom-correspondence-v1",
+      "method_id": "declared-unfitted-rmsd-v1"
+    },
+    {
+      "case_id": "refinement-loss",
+      "candidate_ids": [
+        "seed-A"
+      ],
+      "reference_id": "synthetic-reference",
+      "frame_id": "receptor-frame",
+      "mapping_id": "heavy-atom-correspondence-v1",
+      "method_id": "declared-unfitted-rmsd-v1"
+    },
+    {
+      "case_id": "not-attempted",
+      "candidate_ids": [
+        "seed-A"
+      ],
+      "reference_id": "synthetic-reference",
+      "frame_id": "receptor-frame",
+      "mapping_id": "heavy-atom-correspondence-v1",
+      "method_id": "declared-unfitted-rmsd-v1"
+    },
+    {
+      "case_id": "missing-case",
+      "candidate_ids": [
+        "seed-A"
+      ],
+      "reference_id": "synthetic-reference",
+      "frame_id": "receptor-frame",
+      "mapping_id": "heavy-atom-correspondence-v1",
+      "method_id": "declared-unfitted-rmsd-v1"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "recovery-selection-loss",
+      "candidates": [
+        {
+          "candidate_id": "seed-A",
+          "initial": {
+            "status": "ok",
+            "validity": "valid",
+            "convergence": "not_converged",
+            "metric": {
+              "rmsd_angstrom": 4,
+              "reference_id": "synthetic-reference",
+              "frame_id": "receptor-frame",
+              "mapping_id": "heavy-atom-correspondence-v1",
+              "method_id": "declared-unfitted-rmsd-v1",
+              "source_id": "synthetic-example-not-a-measurement"
+            }
+          },
+          "refined": {
+            "status": "ok",
+            "validity": "valid",
+            "convergence": "not_converged",
+            "metric": {
+              "rmsd_angstrom": 1,
+              "reference_id": "synthetic-reference",
+              "frame_id": "receptor-frame",
+              "mapping_id": "heavy-atom-correspondence-v1",
+              "method_id": "declared-unfitted-rmsd-v1",
+              "source_id": "synthetic-example-not-a-measurement"
+            }
+          }
+        },
+        {
+          "candidate_id": "seed-B",
+          "initial": {
+            "status": "ok",
+            "validity": "valid",
+            "convergence": "not_converged",
+            "metric": {
+              "rmsd_angstrom": 5,
+              "reference_id": "synthetic-reference",
+              "frame_id": "receptor-frame",
+              "mapping_id": "heavy-atom-correspondence-v1",
+              "method_id": "declared-unfitted-rmsd-v1",
+              "source_id": "synthetic-example-not-a-measurement"
+            }
+          },
+          "refined": {
+            "status": "ok",
+            "validity": "valid",
+            "convergence": "not_converged",
+            "metric": {
+              "rmsd_angstrom": 3,
+              "reference_id": "synthetic-reference",
+              "frame_id": "receptor-frame",
+              "mapping_id": "heavy-atom-correspondence-v1",
+              "method_id": "declared-unfitted-rmsd-v1",
+              "source_id": "synthetic-example-not-a-measurement"
+            }
+          }
+        },
+        {
+          "candidate_id": "failed-C",
+          "initial": {
+            "status": "failed",
+            "validity": "unknown",
+            "convergence": "unknown",
+            "metric": null
+          },
+          "refined": {
+            "status": "not_attempted",
+            "validity": "unknown",
+            "convergence": "unknown",
+            "metric": null
+          }
+        }
+      ],
+      "selected_ids": [
+        "seed-B",
+        "seed-A"
+      ]
+    },
+    {
+      "case_id": "refinement-loss",
+      "candidates": [
+        {
+          "candidate_id": "seed-A",
+          "initial": {
+            "status": "ok",
+            "validity": "valid",
+            "convergence": "not_converged",
+            "metric": {
+              "rmsd_angstrom": 1,
+              "reference_id": "synthetic-reference",
+              "frame_id": "receptor-frame",
+              "mapping_id": "heavy-atom-correspondence-v1",
+              "method_id": "declared-unfitted-rmsd-v1",
+              "source_id": "synthetic-example-not-a-measurement"
+            }
+          },
+          "refined": {
+            "status": "ok",
+            "validity": "valid",
+            "convergence": "not_converged",
+            "metric": {
+              "rmsd_angstrom": 4,
+              "reference_id": "synthetic-reference",
+              "frame_id": "receptor-frame",
+              "mapping_id": "heavy-atom-correspondence-v1",
+              "method_id": "declared-unfitted-rmsd-v1",
+              "source_id": "synthetic-example-not-a-measurement"
+            }
+          }
+        }
+      ],
+      "selected_ids": [
+        "seed-A"
+      ]
+    },
+    {
+      "case_id": "not-attempted",
+      "candidates": [
+        {
+          "candidate_id": "seed-A",
+          "initial": {
+            "status": "not_attempted",
+            "validity": "unknown",
+            "convergence": "unknown",
+            "metric": null
+          },
+          "refined": {
+            "status": "not_attempted",
+            "validity": "unknown",
+            "convergence": "unknown",
+            "metric": null
+          }
+        }
+      ],
+      "selected_ids": []
+    }
+  ]
+}
