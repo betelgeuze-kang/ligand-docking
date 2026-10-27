@@ -2,7 +2,7 @@
 
 ## 목적과 현재 상태
 
-`betelgeuze_engine_v2/docking/structure_preserving.py`는 **명시적으로 선택하는
+`betelgeuze_product/structure_preserving.py`는 **명시적으로 선택하는
 연구용 수치 구성요소**다. 전체 원자 Cartesian 좌표를 자유롭게 움직이는 대신
 분자 전체 이동, 강체 회전, 허용된 단일 결합 비틀림으로 같은 목적함수를
 낮추는 bounded local refinement를 제공한다.
@@ -11,6 +11,12 @@
 고정 mixed64 allocation, 기본 CLI/정책은 바꾸지 않는다. 기존 일반 torsion
 기능을 처음 구현한 것이 아니다. 이 추가분은 **외부 E/F 평가기를 사용한
 현재 상태의 일반화 힘과 구조 보존 retraction을 연결**하는 별도 선택 경로다.
+
+이 코드는 기존 Scorer의 동결된 engine source manifest를 변경하지 않는
+**product 소유 source-checkout 확장**이다. 같은 자체 엔진의 기존 계약을
+사용하며 다른 도킹 엔진으로 대체하지 않는다. 기존 manifest를 다시 봉인하거나
+기존 `betelgeuze_product/__init__.py`를 변경하지 않는다. isolated Engine v2
+wheel에 이 product 확장이 포함되거나 설치된 것으로 간주하면 안 된다.
 
 도킹 정확도, 힘장 타당성, CPU/HIP parity, 상용/제품/고객 자격은 승격하지
 않는다. 화학 입력 준비 또는 native 실행에 대한 기존 HOLD/UNKNOWN은 유지한다.
@@ -102,7 +108,7 @@ L-BFGS history 또는 전역 캐시를 갖지 않으므로 새로운 호출에 �
 동일 atom count만으로 chemical identity가 보장되지 않으므로 authority·model·source
 binding은 상위 refiner가 확인해야 한다.
 
-별도 opt-in adapter `structure_preserving_refinement.py`는 기존
+별도 opt-in adapter `betelgeuze_product/structure_preserving_refinement.py`는 기존
 `DockingPoseRefiner` 경계에서 사용할 목적의 연결이다. 기본 경로에 등록하거나
 기존 인증·scoring·pose validity를 생략하지 않는다. 해당 adapter의 실제 합성
 계약 테스트와 아래 stdlib 수학 테스트는 서로 다른 검증 층이다.

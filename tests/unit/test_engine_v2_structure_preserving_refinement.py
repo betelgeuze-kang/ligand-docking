@@ -12,8 +12,8 @@ torch = pytest.importorskip("torch")
 from betelgeuze_engine_v2.docking import DockingBudget, run_authenticated_bounded_docking_search
 from betelgeuze_engine_v2.docking.proposals import generate_bounded_docking_proposals
 from betelgeuze_engine_v2.docking.search import DockingPoseRefiner, _require_refined_lineage
-from betelgeuze_engine_v2.docking.structure_preserving import SearchConfig
-from betelgeuze_engine_v2.docking.structure_preserving_refinement import (
+from betelgeuze_product.structure_preserving import SearchConfig
+from betelgeuze_product.structure_preserving_refinement import (
     BoundEnergyForceResult, StructurePreservingPoseRefiner, StructureRefinementError,
     structure_coordinate_sha256,
 )
@@ -203,7 +203,7 @@ def test_reentrant_same_proposal_does_not_dispatch_recursively():
 
 
 def test_nonzero_torsion_move_updates_source_relative_metadata():
-    from betelgeuze_engine_v2.docking.structure_preserving import StructureTopology, torsion_move
+    from betelgeuze_product.structure_preserving import StructureTopology, torsion_move
     authority, ligand = _authority(), _system(receptor=False)
     proposal = generate_bounded_docking_proposals(authority.search_space,
         DockingBudget(candidate_count=1, top_k=1, max_torsions=1, translation_radius_angstrom=0.),
@@ -248,7 +248,7 @@ def test_mutation_inside_provider_retains_failed_call(mutation):
 def test_mutated_authority_rotor_mask_rejected_before_evaluation():
     authority, _, provider, refiner, proposal = fixture()
     authority.search_space.rotatable_mask[2] = False
-    with pytest.raises((StructureRefinementError, ValueError)):
+    with pytest.raises(StructureRefinementError, match="construction-bound inputs changed"):
         refiner.refine(proposal, max_steps=1)
     assert provider.calls == 0
 
@@ -269,7 +269,7 @@ def test_declared_adapter_source_binds_configuration_and_attempt_receipt():
 
 @pytest.mark.parametrize("field", ["refiner_id", "refiner_version", "core_algorithm_id"])
 def test_implementation_identity_mutation_fails_before_dispatch(field, monkeypatch):
-    from betelgeuze_engine_v2.docking import structure_preserving as core
+    from betelgeuze_product import structure_preserving as core
     _, _, provider, refiner, proposal = fixture()
     if field == "core_algorithm_id":
         monkeypatch.setattr(core, "ALGORITHM_ID", "changed/0")
@@ -278,3 +278,26 @@ def test_implementation_identity_mutation_fails_before_dispatch(field, monkeypat
     with pytest.raises(StructureRefinementError, match="changed"):
         refiner.refine(proposal, max_steps=1)
     assert provider.calls == 0
+
+
+def test_preflight_integrity_exception_is_sanitized(monkeypatch):
+    from betelgeuze_product import structure_preserving_refinement as adapter
+    _, _, provider, refiner, proposal = fixture()
+    def broken_integrity(system):
+        raise RuntimeError("private backend path and source details")
+    monkeypatch.setattr(adapter, "canonical_system_sha256", broken_integrity)
+    with pytest.raises(StructureRefinementError, match="^construction-bound inputs changed$") as error:
+        refiner.refine(proposal, max_steps=1)
+    assert error.value.__suppress_context__
+    assert provider.calls == 0
+    assert not refiner.attempts
+
+
+def test_legacy_engine_import_does_not_load_opt_in_product_extensions():
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, "-c", (
+        "import sys; import betelgeuze_engine_v2.docking; "
+        "assert 'betelgeuze_product.structure_preserving' not in sys.modules; "
+        "assert 'betelgeuze_product.structure_preserving_refinement' not in sys.modules"
+    )], check=True, timeout=60)

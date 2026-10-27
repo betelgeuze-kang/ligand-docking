@@ -7,7 +7,7 @@ import random
 import sys
 import unittest
 
-PATH = Path(__file__).resolve().parents[2] / "betelgeuze_engine_v2/docking/structure_preserving.py"
+PATH = Path(__file__).resolve().parents[2] / "betelgeuze_product/structure_preserving.py"
 SPEC = importlib.util.spec_from_file_location("_structure_preserving_owning_tests", PATH)
 assert SPEC is not None and SPEC.loader is not None
 m = importlib.util.module_from_spec(SPEC)

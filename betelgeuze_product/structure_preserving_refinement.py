@@ -21,9 +21,9 @@ from betelgeuze_engine_v2.molecular import (
     AllAtomSystem, canonical_system_sha256, canonical_topology_sha256,
     require_valid_all_atom_system,
 )
-from .authority import AuthenticatedDockingProblem, DockingAuthorityError
-from .identity import coordinate_fingerprint
-from .proposals import DockingProposal
+from betelgeuze_engine_v2.docking.authority import AuthenticatedDockingProblem, DockingAuthorityError
+from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint
+from betelgeuze_engine_v2.docking.proposals import DockingProposal
 from . import structure_preserving as _core
 from .structure_preserving import (
     Coordinates, Evaluation, SearchConfig, SearchResult, StructureTopology,
@@ -218,17 +218,22 @@ class StructurePreservingPoseRefiner:
         return MappingProxyType(dict(self._attempts))
 
     def assert_ready(self) -> None:
-        if (self._authority.input_receipt_sha256 != self._authority_sha
-                or canonical_system_sha256(self._ligand) != self._authority.ligand_system_sha256
-                or canonical_topology_sha256(self._ligand) != self._topology_sha
-                or self._provider_identity() != self._provider_snapshot
-                or self._source != self._source_snapshot
-                or self._implementation_identity() != self._implementation_snapshot
-                or _hash(asdict(self._topology)) != self._topology_policy_sha
-                or _hash({"config": asdict(self._config), "provider": self._provider_sha,
-                          "authority": self._authority_sha, "max_attempts": self._max_attempts,
-                          "implementation": self._implementation_snapshot}) != self._config_sha):
-            raise StructureRefinementError("construction-bound inputs changed")
+        try:
+            if (self._authority.input_receipt_sha256 != self._authority_sha
+                    or canonical_system_sha256(self._ligand) != self._authority.ligand_system_sha256
+                    or canonical_topology_sha256(self._ligand) != self._topology_sha
+                    or self._provider_identity() != self._provider_snapshot
+                    or self._source != self._source_snapshot
+                    or self._implementation_identity() != self._implementation_snapshot
+                    or _hash(asdict(self._topology)) != self._topology_policy_sha
+                    or _hash({"config": asdict(self._config), "provider": self._provider_sha,
+                              "authority": self._authority_sha, "max_attempts": self._max_attempts,
+                              "implementation": self._implementation_snapshot}) != self._config_sha):
+                raise StructureRefinementError("construction-bound inputs changed")
+        except Exception:
+            # Integrity helpers and identity properties may raise their own
+            # exception types. Keep the public preflight boundary sanitized.
+            raise StructureRefinementError("construction-bound inputs changed") from None
 
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         self.assert_ready()
