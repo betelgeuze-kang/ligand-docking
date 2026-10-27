@@ -1,0 +1,38 @@
+name: Saved force differences offline
+on:
+  pull_request:
+    paths:
+      - 'tools/check_saved_force_differences.py'
+      - 'tests/unit/test_check_saved_force_differences.py'
+      - 'tests/fixtures/saved_force_differences_synthetic.json'
+      - 'docs/saved_force_differences.ko.md'
+      - '.github/workflows/saved-force-differences-offline.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/check_saved_force_differences.py'
+      - 'tests/unit/test_check_saved_force_differences.py'
+      - 'tests/fixtures/saved_force_differences_synthetic.json'
+      - 'docs/saved_force_differences.ko.md'
+      - '.github/workflows/saved-force-differences-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  saved-force-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Synthetic stdlib contract
+        run: python -m unittest discover -s tests/unit -p test_check_saved_force_differences.py -v
+      - name: Optimized isolated-site stdlib contract
+        run: python -O -S -m unittest discover -s tests/unit -p test_check_saved_force_differences.py -v
