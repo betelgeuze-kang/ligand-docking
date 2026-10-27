@@ -15,11 +15,28 @@ Vector = tuple[float, float, float]
 Coordinates = tuple[Vector, ...]
 MAX_ATOMS = 512
 MAX_ROTORS = 128
-ALGORITHM_ID = "structure_preserving_block_retraction/1.0.0"
+ALGORITHM_ID = "structure_preserving_block_retraction/1.1.0"
 
 
 class StructureSearchError(ValueError):
     """Invalid geometry, topology, or numerical policy (never raw backend text)."""
+
+
+RECOVERABLE_TRIAL_REASONS = frozenset({"coordinate_domain_singularity"})
+
+
+class RecoverableTrialRejection(Exception):
+    """Explicit provider geometric-domain rejection, never arbitrary backend text.
+
+    Identity, model and parameter validation must precede this signal. It does
+    not classify generic evaluator exceptions or authorize physical execution.
+    """
+
+    def __init__(self, reason_code: str):
+        if type(reason_code) is not str or reason_code not in RECOVERABLE_TRIAL_REASONS:
+            raise StructureSearchError("invalid recoverable trial reason")
+        self.reason_code = reason_code
+        super().__init__(reason_code)
 
 
 def _number(value: object) -> float:
@@ -319,6 +336,7 @@ class SearchStep:
     backtrack: int
     energy: float | None
     status: str
+    reason_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -334,6 +352,7 @@ class SearchResult:
     failed_evaluations: int
     history: tuple[SearchStep, ...]
     projected_forces: ProjectedForces | None
+    recoverable_rejections: int = 0
 
     @property
     def projected_stationary(self) -> bool:
@@ -355,7 +374,13 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
     These are callback attempts, not a claim about physical backend kernel/E/F
     counts. A callback must evaluate the supplied coordinates without stale
     cache reuse and owns its qualified physical evaluation and work accounting.
-    Exceptions terminate with sanitized failure status and last accepted state.
+    Only exact typed RecoverableTrialRejection with a whitelisted reason retries
+    a trial at half step. Initial rejection has no accepted state. All other
+    exceptions terminate with sanitized failure status and last accepted state.
+    Recoverable rejections are a subset of failed_evaluations; every invocation
+    satisfies evaluation_attempts = successful_evaluations + failed_evaluations.
+    On any rejected trial, exhausted callback budget takes precedence over the
+    backtrack limit. Hard callback failure still terminates as evaluation_failed.
     There is no optimizer history, no hidden final evaluation, and no restart.
     """
     if type(topology) is not StructureTopology or not callable(evaluate):
@@ -370,7 +395,7 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
     # Validate all axes before any backend call.
     project_forces(current, tuple((0., 0., 0.) for _ in current), topology)
     history: list[SearchStep] = []
-    attempted = successful = failed = accepted = 0
+    attempted = successful = failed = accepted = recoverable = 0
     initial_energy: float | None = None
     observation: Evaluation | None = None
     projected: ProjectedForces | None = None
@@ -380,10 +405,10 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
     def finish(status: str) -> SearchResult:
         return SearchResult(current, initial_energy, None if observation is None else observation.energy,
                             None if observation is None else observation.forces, status, accepted,
-                            attempted, successful, failed, tuple(history), projected)
+                            attempted, successful, failed, tuple(history), projected, recoverable)
 
-    def call(points: Coordinates, move: str, backtrack: int) -> Evaluation | None:
-        nonlocal attempted, successful, failed
+    def call(points: Coordinates, move: str, backtrack: int) -> Evaluation | RecoverableTrialRejection | None:
+        nonlocal attempted, successful, failed, recoverable
         attempted += 1
         try:
             result = evaluate(points)
@@ -391,6 +416,18 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
                 raise StructureSearchError("invalid callback evaluation")
             # Revalidate even a frozen object forged through low-level mutation.
             result = Evaluation(result.energy, result.forces)
+        except RecoverableTrialRejection as rejection:
+            failed += 1
+            reason = (getattr(rejection, "reason_code", None)
+                      if type(rejection) is RecoverableTrialRejection else None)
+            if (type(rejection) is RecoverableTrialRejection and type(reason) is str
+                    and reason in RECOVERABLE_TRIAL_REASONS):
+                recoverable += 1
+                history.append(SearchStep(attempted, move, backtrack, None,
+                                          "recoverable_trial_rejection", reason))
+                return rejection
+            history.append(SearchStep(attempted, move, backtrack, None, "evaluation_failed"))
+            return None
         except Exception:
             failed += 1
             history.append(SearchStep(attempted, move, backtrack, None, "evaluation_failed"))
@@ -398,9 +435,10 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
         successful += 1
         return result
 
-    observation = call(current, "initial", 0)
-    if observation is None:
+    initial = call(current, "initial", 0)
+    if type(initial) is not Evaluation:
         return finish("evaluation_failed")
+    observation = initial
     initial_energy = observation.energy
     history.append(SearchStep(attempted, "initial", 0, observation.energy, "initial"))
     while True:
@@ -456,6 +494,10 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
                 tested = call(trial, kind if rotor < 0 else f"torsion:{rotor}", backtrack)
                 if tested is None:
                     return finish("evaluation_failed")
+                if type(tested) is RecoverableTrialRejection:
+                    if attempted >= policy.max_evaluations:
+                        return finish("evaluation_limit")
+                    continue
                 required = policy.armijo * scale * gain
                 decrease = observation.energy - tested.energy
                 if math.isfinite(decrease) and decrease > 0. and decrease >= required:
@@ -472,6 +514,8 @@ def refine_structure(coordinates: Coordinates, topology: StructureTopology,
                     break
                 history.append(SearchStep(attempted, kind if rotor < 0 else f"torsion:{rotor}",
                                           backtrack, tested.energy, "rejected"))
+                if attempted >= policy.max_evaluations:
+                    return finish("evaluation_limit")
             else:
                 return finish("line_search_failed")
         except (StructureSearchError, OverflowError, ValueError):

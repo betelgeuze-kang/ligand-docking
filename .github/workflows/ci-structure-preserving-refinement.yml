@@ -6,6 +6,13 @@ on:
       - 'betelgeuze_engine_v2/**'
       - 'betelgeuze_product/structure_preserving.py'
       - 'betelgeuze_product/structure_preserving_refinement.py'
+      - 'betelgeuze_product/fixed_receptor_structure_refinement.py'
+      - 'betelgeuze_product/cpu_refinement/**'
+      - 'betelgeuze_product/cpu_refinement_v1_2/**'
+      - 'tests/unit/test_fixed_receptor_structure_refinement.py'
+      - 'tests/unit/test_cpu_fixed_receptor.py'
+      - 'tests/unit/test_cpu_refinement_v1_2_physics.py'
+      - 'tests/unit/test_engine_v2_reference_*.py'
       - 'tests/unit/test_cpu_refinement_source_boundaries.py'
       - 'tests/unit/test_engine_v2_global_orientation_development_protocol.py'
       - 'tools/verify_engine_v2_global_orientation_contaminated_development.py'
@@ -19,6 +26,7 @@ on:
       - 'tools/build_engine_v2_wheel.py'
       - 'tools/check_engine_v2_architecture.py'
       - 'docs/structure_preserving_search.ko.md'
+      - 'docs/fixed_receptor_structure_refinement.ko.md'
       - '.github/workflows/ci-structure-preserving-refinement.yml'
   push:
     branches: [main]
@@ -26,6 +34,13 @@ on:
       - 'betelgeuze_engine_v2/**'
       - 'betelgeuze_product/structure_preserving.py'
       - 'betelgeuze_product/structure_preserving_refinement.py'
+      - 'betelgeuze_product/fixed_receptor_structure_refinement.py'
+      - 'betelgeuze_product/cpu_refinement/**'
+      - 'betelgeuze_product/cpu_refinement_v1_2/**'
+      - 'tests/unit/test_fixed_receptor_structure_refinement.py'
+      - 'tests/unit/test_cpu_fixed_receptor.py'
+      - 'tests/unit/test_cpu_refinement_v1_2_physics.py'
+      - 'tests/unit/test_engine_v2_reference_*.py'
       - 'tests/unit/test_cpu_refinement_source_boundaries.py'
       - 'tests/unit/test_engine_v2_global_orientation_development_protocol.py'
       - 'tools/verify_engine_v2_global_orientation_contaminated_development.py'
@@ -39,6 +54,7 @@ on:
       - 'tools/build_engine_v2_wheel.py'
       - 'tools/check_engine_v2_architecture.py'
       - 'docs/structure_preserving_search.ko.md'
+      - 'docs/fixed_receptor_structure_refinement.ko.md'
       - '.github/workflows/ci-structure-preserving-refinement.yml'
   workflow_dispatch:
 
@@ -99,7 +115,7 @@ jobs:
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
       - name: Compile and check independent engine boundaries
         run: |
-          python -m compileall -q betelgeuze_engine_v2 betelgeuze_product/structure_preserving.py betelgeuze_product/structure_preserving_refinement.py
+          python -m compileall -q betelgeuze_engine_v2 betelgeuze_product/structure_preserving.py betelgeuze_product/structure_preserving_refinement.py betelgeuze_product/fixed_receptor_structure_refinement.py
           python tools/check_engine_v2_architecture.py
           git diff --check
       - name: Actual engine types with synthetic analytic objective only
@@ -110,6 +126,12 @@ jobs:
             tests/unit/test_engine_v2_docking_authority_search.py \
             tests/unit/test_engine_v2_docking_authority_contract.py \
             tests/unit/test_engine_v2_energy_local_refinement_stage6.py
+      - name: Own-engine physical energy and forces on authored synthetic fixtures only
+        run: |
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -q \
+            tests/unit/test_fixed_receptor_structure_refinement.py \
+            tests/unit/test_cpu_fixed_receptor.py \
+            tests/unit/test_cpu_refinement_v1_2_physics.py
       - name: Frozen engine source and historical protocol remain unchanged
         run: |
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -q \

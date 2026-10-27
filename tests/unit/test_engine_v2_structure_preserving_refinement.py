@@ -12,7 +12,7 @@ torch = pytest.importorskip("torch")
 from betelgeuze_engine_v2.docking import DockingBudget, run_authenticated_bounded_docking_search
 from betelgeuze_engine_v2.docking.proposals import generate_bounded_docking_proposals
 from betelgeuze_engine_v2.docking.search import DockingPoseRefiner, _require_refined_lineage
-from betelgeuze_product.structure_preserving import SearchConfig
+from betelgeuze_product.structure_preserving import RecoverableTrialRejection, SearchConfig
 from betelgeuze_product.structure_preserving_refinement import (
     BoundEnergyForceResult, StructurePreservingPoseRefiner, StructureRefinementError,
     structure_coordinate_sha256,
@@ -301,3 +301,41 @@ def test_legacy_engine_import_does_not_load_opt_in_product_extensions():
         "assert 'betelgeuze_product.structure_preserving' not in sys.modules; "
         "assert 'betelgeuze_product.structure_preserving_refinement' not in sys.modules"
     )], check=True, timeout=60)
+
+
+@pytest.mark.parametrize("mutation", ["none", "ligand", "provider", "proposal", "authority"])
+def test_typed_rejection_rechecks_bound_inputs_before_retry(mutation):
+    authority, ligand, provider, refiner, proposal = fixture(max_steps=1)
+    original = provider.evaluate
+    def reject_second(points):
+        if provider.calls != 1:
+            return original(points)
+        provider.calls += 1
+        if mutation == "ligand":
+            ligand.coordinates[0, 0, 0] += .01
+        elif mutation == "provider":
+            provider.model_fingerprint_sha256 = "6" * 64
+        elif mutation == "proposal":
+            proposal.coordinates[0, 0] += .01
+        elif mutation == "authority":
+            authority.search_space.rotatable_mask[2] = False
+        raise RecoverableTrialRejection("coordinate_domain_singularity")
+    provider.evaluate = reject_second
+    # Preserve lookup key before deliberate proposal mutation.
+    key = proposal.fingerprint_sha256
+    if mutation == "none":
+        refined = refiner.refine(proposal, max_steps=1)
+        result = refiner.attempts[key].result
+        assert result.accepted_steps == 1
+        assert result.evaluation_attempts == provider.calls == 3
+        assert result.recoverable_rejections == result.failed_evaluations == 1
+        assert result.coordinates == tuple(tuple(float(x) for x in row) for row in refined.coordinates.tolist())
+    else:
+        with pytest.raises(StructureRefinementError):
+            refiner.refine(proposal, max_steps=1)
+        result = refiner.attempts[key].result
+        assert result.status == "evaluation_failed"
+        assert result.evaluation_attempts == provider.calls == 2
+        assert result.recoverable_rejections == 0
+        assert result.failed_evaluations == 1
+    assert result.evaluation_attempts == result.successful_evaluations + result.failed_evaluations

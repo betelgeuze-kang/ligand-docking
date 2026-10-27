@@ -323,5 +323,153 @@ class StructurePreservingTests(unittest.TestCase):
         self.assertIn("max_evaluations",json.loads(json.dumps(asdict(m.SearchConfig()),allow_nan=False)))
 
 
+class RecoverableTrialTests(unittest.TestCase):
+    points = ((0., 0., 0.),)
+    topology = m.StructureTopology(1, (), ())
+
+    def run_case(self, rejection, **config):
+        seen = []
+        def evaluate(points):
+            seen.append(points)
+            if len(seen) > 1:
+                rejection(len(seen), points)
+            return m.Evaluation(-points[0][0], ((1., 0., 0.),))
+        result = m.refine_structure(self.points, self.topology, evaluate,
+                                   m.SearchConfig(max_steps=1, **config))
+        self.assertEqual(result.evaluation_attempts, len(seen))
+        self.assertEqual(result.evaluation_attempts,
+                         result.successful_evaluations + result.failed_evaluations)
+        if result.energy is not None:
+            self.assertEqual(result.energy, -result.coordinates[0][0])
+            self.assertEqual(result.forces, ((1., 0., 0.),))
+        return result, seen
+
+    @staticmethod
+    def soft(*args):
+        raise m.RecoverableTrialRejection("coordinate_domain_singularity")
+
+    def test_full_step_soft_half_step_accepted(self):
+        def reject_once(index, points):
+            if index == 2:
+                self.soft()
+        result, seen = self.run_case(reject_once)
+        self.assertEqual([p[0][0] for p in seen], [0., .1, .05])
+        self.assertEqual(result.status, "step_limit")
+        self.assertEqual(result.coordinates, seen[-1])
+        self.assertEqual(result.recoverable_rejections, 1)
+        self.assertEqual(result.failed_evaluations, 1)
+        self.assertEqual(result.accepted_steps, 1)
+        self.assertEqual(result.history[1].reason_code, "coordinate_domain_singularity")
+        self.assertEqual(result.history[-1].backtrack, 1)
+
+    def test_all_soft_backtrack_limit_preserves_initial(self):
+        result, seen = self.run_case(self.soft, max_backtracks=2)
+        self.assertEqual(len(seen), 4)
+        self.assertEqual(result.status, "line_search_failed")
+        self.assertEqual(result.coordinates, self.points)
+        self.assertEqual(result.recoverable_rejections, 3)
+        self.assertEqual([r.backtrack for r in result.history[1:]], [0, 1, 2])
+
+    def test_soft_budget_wins_simultaneous_backtrack_limit(self):
+        result, seen = self.run_case(self.soft, max_evaluations=3, max_backtracks=1)
+        self.assertEqual(result.status, "evaluation_limit")
+        self.assertEqual(len(seen), 3)
+        self.assertEqual(result.coordinates, self.points)
+        self.assertEqual(result.recoverable_rejections, 2)
+
+    def test_energy_rejection_budget_wins_simultaneous_backtrack_limit(self):
+        seen = []
+        def evaluate(points):
+            seen.append(points)
+            return m.Evaluation(0., ((1., 0., 0.),))
+        result = m.refine_structure(self.points, self.topology, evaluate,
+                                   m.SearchConfig(max_evaluations=3, max_backtracks=1))
+        self.assertEqual(result.status, "evaluation_limit")
+        self.assertEqual(result.coordinates, self.points)
+        self.assertEqual(result.evaluation_attempts, len(seen))
+        self.assertEqual(result.successful_evaluations, 3)
+        self.assertEqual(result.failed_evaluations, 0)
+        self.assertEqual(result.recoverable_rejections, 0)
+        self.assertEqual([step.status for step in result.history],
+                         ["initial", "rejected", "rejected"])
+
+    def test_hard_exception_never_retried_or_leaked(self):
+        def hard(*args):
+            raise RuntimeError("SECRET/private/backend")
+        result, seen = self.run_case(hard)
+        self.assertEqual(result.status, "evaluation_failed")
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(result.recoverable_rejections, 0)
+        self.assertNotIn("SECRET", repr(asdict(result)))
+
+    def test_initial_soft_has_no_valid_observation(self):
+        result = m.refine_structure(self.points, self.topology, self.soft)
+        self.assertEqual(result.status, "evaluation_failed")
+        self.assertEqual(result.evaluation_attempts, 1)
+        self.assertEqual(result.failed_evaluations, 1)
+        self.assertEqual(result.recoverable_rejections, 1)
+        self.assertIsNone(result.energy)
+        self.assertIsNone(result.initial_energy)
+        self.assertIsNone(result.forces)
+        self.assertIsNone(result.projected_forces)
+
+    def test_invalid_code_constructor_is_hard_and_sanitized(self):
+        def invalid(*args):
+            raise m.RecoverableTrialRejection("SECRET/private/backend")
+        result, seen = self.run_case(invalid)
+        self.assertEqual(result.status, "evaluation_failed")
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(result.recoverable_rejections, 0)
+        self.assertNotIn("SECRET", repr(asdict(result)))
+
+    def test_forged_invalid_code_and_subclass_are_hard(self):
+        class Subclass(m.RecoverableTrialRejection):
+            def __getattribute__(self, name):
+                if name == "reason_code":
+                    raise RuntimeError("SECRET subclass accessor must not run")
+                return super().__getattribute__(name)
+        for mode in ("forged", "subclass"):
+            def invalid(*args):
+                error = (Subclass if mode == "subclass" else m.RecoverableTrialRejection)(
+                    "coordinate_domain_singularity")
+                if mode == "forged":
+                    error.reason_code = ["SECRET"]
+                raise error
+            result, seen = self.run_case(invalid)
+            self.assertEqual(result.status, "evaluation_failed")
+            self.assertEqual(len(seen), 2)
+            self.assertEqual(result.recoverable_rejections, 0)
+            self.assertIsNone(result.history[-1].reason_code)
+
+    def test_budget_after_progress_preserves_last_accepted_not_initial(self):
+        seen = []
+        def evaluate(points):
+            seen.append(points)
+            if len(seen) >= 3:
+                self.soft()
+            return m.Evaluation(-points[0][0], ((1., 0., 0.),))
+        result = m.refine_structure(self.points, self.topology, evaluate,
+                                   m.SearchConfig(max_steps=3, max_evaluations=4))
+        self.assertEqual(result.status, "evaluation_limit")
+        self.assertEqual(result.coordinates, seen[1])
+        self.assertNotEqual(result.coordinates, seen[-1])
+        self.assertEqual(result.energy, -.1)
+        self.assertEqual(result.forces, ((1., 0., 0.),))
+        self.assertEqual(result.accepted_steps, 1)
+        self.assertEqual(result.recoverable_rejections, 2)
+        self.assertEqual(result.failed_evaluations, 2)
+        self.assertEqual(result.successful_evaluations, 2)
+        self.assertEqual(result.evaluation_attempts, len(seen))
+
+    def test_soft_exception_free_text_is_not_serialized(self):
+        def noisy(*args):
+            error = m.RecoverableTrialRejection("coordinate_domain_singularity")
+            error.args = ("SECRET/private/backend",)
+            raise error
+        result, _ = self.run_case(noisy, max_evaluations=2)
+        self.assertEqual(result.recoverable_rejections, 1)
+        self.assertNotIn("SECRET", repr(asdict(result)))
+
+
 if __name__ == "__main__":
     unittest.main()
