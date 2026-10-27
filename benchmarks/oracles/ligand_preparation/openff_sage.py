@@ -1,6 +1,9 @@
-"""Opt-in native Sage/AM1-BCC preparation, not a runtime qualification layer.
+"""Opt-in research-only Sage/AM1-BCC preparation, not a product integration.
 
-Call only inside a separately authorized bounded worker. Imports may execute native
+Call only inside a separately authorized bounded research worker.
+This is not the oracle pack's provenance-bearing pinned-child entrypoint and
+does not implement its containment or grant runtime qualification. Product
+code must never import or invoke this module; outputs cross a data boundary. Imports may execute native
 code; AmberTools starts subprocesses. No package installation or receptor repair.
 The output directory must not exist. Failure leaves partial evidence, never success.
 """

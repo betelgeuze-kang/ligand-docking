@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-MODULE = Path(__file__).parents[1] / 'betelgeuze_product/openff_ligand_preparation.py'
+MODULE = Path(__file__).parents[1] / 'benchmarks/oracles/ligand_preparation/openff_sage.py'
 spec = importlib.util.spec_from_file_location('prep_under_test', MODULE)
 prep = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prep)

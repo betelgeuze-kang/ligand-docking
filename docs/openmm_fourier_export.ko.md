@@ -4,9 +4,22 @@
 전하·양성자화 상태·힘장을 생성하지 않으며, 단백질 준비·도킹·실행 자격을
 부여하지 않는다. 기존 `betelgeuze_engine_v2`와 CPU/Fourier 평가 코드는 수정하지 않는다.
 
+## 제품과 연구 도구의 분리
+
+제품 `betelgeuze_product.openmm_fourier_export.export_ligand`는 중립 snapshot
+데이터만 받아 변환하며 표준 라이브러리만 사용한다. 외부 엔진이나 연구
+adapter를 import하거나 호출하지 않는다.
+
+네이티브 관측 함수는
+`benchmarks.oracles.ligand_preparation.openmm_capture.capture_openmm_ligand`에
+분리되어 있다. 별도 승인·제한된 연구 worker에서만 명시적으로 호출하는
+도구이며 제품 기본 CLI나 oracle pack의 pinned-child 자격을 갖춘 실행기가
+아니다. 기존 위치에 호환용 네이티브 wrapper를 남기지 않는다. 아래 실제
+수치 증거는 이전 배치의 기록이며, 이동된 진입점은 별도 재실행으로 검증한다.
+
 ## 사용 경계
 
-- 입력: OpenMM 8.4.0의 실제 `System`과 준비자가 보존한 원자 ID/결합 그래프,
+- 연구 관측 입력: OpenMM 8.4.0의 실제 `System`과 준비자가 보존한 원자 ID/결합 그래프,
   proper/improper 할당 근거. `capture_openmm_ligand`는 실제 API를 읽고
   직렬화 System 해시와 각 Force 행 수를 기록한다. 기대 해시는 원본을 읽어
   다시 직렬화한 정확한 UTF-8 artifact와 일치해야 하며, 원래 XML 파일이
@@ -104,3 +117,26 @@ Sage/AM1-BCC로 매개변수화한 실제 OpenMM 8.4.0 System을 읽었다. 원�
 모든 화학종의 매개변수화, 모든 좌표의 미분 검증, 결합 포즈 정확도,
 도킹 성공률, 전체 단백질 준비나 제품/상용 성능을 입증하지 않는다.
 공식 원본 자료: https://zenodo.org/records/8278563
+
+
+## Relocated-entrypoint validation (2026-10-27)
+
+The actual research-package preparation and capture entry points, followed by the
+stdlib-only product conversion, were rerun successfully using genuine pinned-main
+parent packages. On the same one public 19-atom ligand, 120 direct comparison
+channels passed: maximum energy residual 2.141575805580942e-11 kcal/mol and force
+residual 3.375077994860476e-12 kcal/(mol angstrom). Original/derived E/F deltas
+were zero; one own E/F call, six source queries and two capture/control queries
+were used, without new finite-difference evaluations. Independent recomputation
+confirmed these comparisons. This is not 120 independent molecules.
+
+An initial preparation returned valid artifacts but its harness subsequently
+failed while recording imports; that failed attempt is retained. A harness-only
+recorder correction and clean retry completed successfully: two fresh AM1-BCC
+preparations on the same molecule, not broader chemical coverage. Source code,
+chemistry invariants and tolerances were unchanged. The original PR architecture
+check failure is also retained; this relocation fixes placement rather than
+weakening the unchanged guard. Local architecture checks are sparse, not full-repo
+proof; exact-head hosted CI supplies the full-repository check. Research helpers
+are not production-native integration or qualified contained-oracle execution.
+No receptor, docking, optimization, accuracy or commercial claim is added.

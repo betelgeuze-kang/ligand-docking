@@ -7,9 +7,8 @@ import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 
-p=Path(__file__).resolve().parents[2]/'betelgeuze_product/openmm_fourier_export.py'
-spec=importlib.util.spec_from_file_location('export_under_test',p)
-m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+from betelgeuze_product import openmm_fourier_export as m
+from benchmarks.oracles.ligand_preparation import openmm_capture as capture_adapter
 
 
 def source():
@@ -280,7 +279,7 @@ class CaptureControlFlowTests(unittest.TestCase):
         if assignments is None:
             assignments=[dict(force_index=2,term_index=i,atoms=r['atoms'],kind=r['kind'],star_center=r['star_center']) for i,r in enumerate(s['torsions'])]
         with patch.dict('sys.modules',{'openmm':module}):
-            return m.capture_openmm_ligand(system,atom_ids=s['atom_ids'],bond_graph=s['bond_graph'],torsion_assignments=assignments,
+            return capture_adapter.capture_openmm_ligand(system,atom_ids=s['atom_ids'],bond_graph=s['bond_graph'],torsion_assignments=assignments,
                                            parameterizer='synthetic',parameterizer_version='test',forcefield_sha256='b'*64,
                                            expected_system_xml_sha256=m.hashlib.sha256(module.XmlSerializer.serialize(system).encode()).hexdigest(),
                                            charge_method='synthetic',chemical_state_id='synthetic')
