@@ -9,7 +9,9 @@ on:
       - 'betelgeuze_product/fixed_receptor_structure_refinement.py'
       - 'betelgeuze_product/cpu_refinement/**'
       - 'betelgeuze_product/cpu_refinement_v1_2/**'
+      - 'betelgeuze_product/cpu_refinement_fourier_v1/**'
       - 'tests/unit/test_fixed_receptor_structure_refinement.py'
+      - 'tests/unit/test_prepared_fourier_structure_refinement.py'
       - 'tests/unit/test_cpu_fixed_receptor.py'
       - 'tests/unit/test_cpu_refinement_v1_2_physics.py'
       - 'tests/unit/test_engine_v2_reference_*.py'
@@ -27,6 +29,7 @@ on:
       - 'tools/check_engine_v2_architecture.py'
       - 'docs/structure_preserving_search.ko.md'
       - 'docs/fixed_receptor_structure_refinement.ko.md'
+      - 'docs/prepared_fourier_structure_bridge.md'
       - '.github/workflows/ci-structure-preserving-refinement.yml'
   push:
     branches: [main]
@@ -37,7 +40,9 @@ on:
       - 'betelgeuze_product/fixed_receptor_structure_refinement.py'
       - 'betelgeuze_product/cpu_refinement/**'
       - 'betelgeuze_product/cpu_refinement_v1_2/**'
+      - 'betelgeuze_product/cpu_refinement_fourier_v1/**'
       - 'tests/unit/test_fixed_receptor_structure_refinement.py'
+      - 'tests/unit/test_prepared_fourier_structure_refinement.py'
       - 'tests/unit/test_cpu_fixed_receptor.py'
       - 'tests/unit/test_cpu_refinement_v1_2_physics.py'
       - 'tests/unit/test_engine_v2_reference_*.py'
@@ -55,6 +60,7 @@ on:
       - 'tools/check_engine_v2_architecture.py'
       - 'docs/structure_preserving_search.ko.md'
       - 'docs/fixed_receptor_structure_refinement.ko.md'
+      - 'docs/prepared_fourier_structure_bridge.md'
       - '.github/workflows/ci-structure-preserving-refinement.yml'
   workflow_dispatch:
 
@@ -130,6 +136,7 @@ jobs:
         run: |
           python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -q \
             tests/unit/test_fixed_receptor_structure_refinement.py \
+            tests/unit/test_prepared_fourier_structure_refinement.py \
             tests/unit/test_cpu_fixed_receptor.py \
             tests/unit/test_cpu_refinement_v1_2_physics.py
       - name: Frozen engine source and historical protocol remain unchanged

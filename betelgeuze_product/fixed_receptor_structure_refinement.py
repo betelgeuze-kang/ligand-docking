@@ -26,10 +26,26 @@ from .cpu_refinement_v1_2.fixed_receptor import (
     CrossParameters, FixedReceptorEnvironment, FixedReceptorEvaluator, require_system,
     components_document, validate_components, FIXED_POLICY_ID, ENERGY_BASIS,
 )
+from .cpu_refinement_fourier_v1.parameters import FourierParameters
+from .cpu_refinement_fourier_v1.evaluation import (
+    FourierCrossParameters, FourierEnvironment, FourierFixedEvaluator,
+    ENERGY_BASIS as FOURIER_ENERGY_BASIS, _require_fourier_topology,
+)
 from .structure_preserving_refinement import (
     BoundEnergyForceResult, StructureRefinementError, StructurePreservingPoseRefiner, _digest, _hash,
     structure_coordinate_sha256,
 )
+
+
+@dataclass(frozen=True)
+class FixedReceptorCallback:
+    """One admitted callback; zero-work preflight denials are aggregate-only."""
+    callback: int
+    status: str
+    admitted_attempts: int
+    graph_build_attempts: int
+    physical_evaluation_attempts: int
+    recoverable_rejections: int
 
 
 @dataclass(frozen=True)
@@ -65,9 +81,11 @@ class FixedReceptorEnergyForceProvider:
     def __init__(self, authority, ligand, receptor, parameters, cross, *,
                  implementation_source_sha256: str, max_neighbors: int = 256,
                  max_atoms_per_cell: int = 256, max_evaluations: int = 4096):
-        if (type(authority) is not AuthenticatedDockingProblem
-                or type(parameters) is not ReferenceForceFieldV2Parameters
-                or type(cross) is not CrossParameters):
+        legacy = (type(parameters) is ReferenceForceFieldV2Parameters
+                  and type(cross) is CrossParameters)
+        fourier = (type(parameters) is FourierParameters
+                   and type(cross) is FourierCrossParameters)
+        if type(authority) is not AuthenticatedDockingProblem or not (legacy or fourier):
             raise StructureRefinementError("explicit authority and fixed-receptor parameters required")
         for value in (max_neighbors, max_atoms_per_cell):
             if type(value) is not int or not 1 <= value <= 256:
@@ -80,11 +98,15 @@ class FixedReceptorEnergyForceProvider:
         self._source = _digest(implementation_source_sha256)
         self._graph = RadiusGraphConfig(parameters.base_parameters.cutoff_angstrom,
                                        max_neighbors, max_atoms_per_cell)
-        self._evaluator = FixedReceptorEvaluator(ExtendedEvaluator(parameters),
-                                                FixedReceptorEnvironment(receptor, cross))
+        self._fourier = fourier
+        self._evaluator = (FourierFixedEvaluator(parameters, FourierEnvironment(receptor, cross))
+                           if fourier else FixedReceptorEvaluator(ExtendedEvaluator(parameters),
+                                                FixedReceptorEnvironment(receptor, cross)))
         self._evaluator.fixed.validate_ligand(ligand, parameters.base_parameters)
         self._capacity, self._calls = max_evaluations, 0
         self._observations = []
+        self._callbacks = []
+        self._callback_attempts = self._preflight_denials = 0
         self._graph_builds = self._physical_calls = self._domain_rejections = 0
         self._snapshot = self._identity()
         self._assert_binding()
@@ -106,7 +128,7 @@ class FixedReceptorEnergyForceProvider:
                 "receptor": canonical_system_sha256(self._receptor),
                 "evaluator": self._evaluator.fingerprint_sha256,
                 "graph": asdict(self._graph), "source": self._source,
-                "max_evaluations": self._capacity}
+                "max_evaluations": self._capacity, "fourier_profile": self._fourier}
 
     def assert_ready(self):
         try:
@@ -155,6 +177,18 @@ class FixedReceptorEnergyForceProvider:
         return self._domain_rejections
 
     @property
+    def callback_attempts(self):
+        return self._callback_attempts
+
+    @property
+    def preflight_denials(self):
+        return self._preflight_denials
+
+    @property
+    def callbacks(self):
+        return tuple(self._callbacks)
+
+    @property
     def observations(self):
         return tuple(self._observations)
 
@@ -171,7 +205,8 @@ class FixedReceptorEnergyForceProvider:
             raise StructureRefinementError("fixed-receptor coordinate count mismatch")
         xyz = torch.tensor([coordinates], dtype=torch.float64)
         state = self._ligand.with_coordinates(xyz, operation="fixed_receptor_constraint_admission")
-        _validate_extension_topology(state, self._evaluator.parameters)
+        if not self._fourier:
+            _validate_extension_topology(state, self._evaluator.parameters)
         rows = _constraint_observations(xyz, state, self._evaluator.parameters.constraints)
         self.assert_ready()
         return rows
@@ -191,6 +226,15 @@ class FixedReceptorEnergyForceProvider:
             minimum = self._evaluator.parameters.base_parameters.applicability_domain.minimum_pair_distance_angstrom
             if not bool(torch.isfinite(distances).all()) or bool((distances < minimum).any()):
                 reject()
+        # Listed Fourier exceptions are evaluated without the neighbor cutoff.
+        if self._fourier:
+            minimum = self._evaluator.parameters.applicability_domain.minimum_pair_distance_angstrom
+            for row in self._evaluator.parameters.listed_pairs:
+                if row.atom_j >= self._ligand.atom_count:
+                    raise StructureRefinementError("listed Fourier pair index outside ligand")
+                distance = torch.linalg.vector_norm(xyz[0, row.atom_i] - xyz[0, row.atom_j])
+                if not bool(torch.isfinite(distance)) or float(distance) < minimum:
+                    reject()
         cross = self._evaluator.fixed.cross
         for start in range(0, self._receptor.atom_count, cross.receptor_block_size):
             receptor = self._receptor.coordinates[0, start:start + cross.receptor_block_size]
@@ -200,6 +244,25 @@ class FixedReceptorEnergyForceProvider:
                 reject()
 
     def evaluate(self, coordinates):
+        self._callback_attempts += 1
+        before = (self._calls, self._graph_builds, self._physical_calls, self._domain_rejections)
+        status = "failed"
+        try:
+            result = self._evaluate(coordinates)
+            status = "success"
+            return result
+        except RecoverableTrialRejection:
+            status = "recoverable_rejection"
+            raise
+        finally:
+            after = (self._calls, self._graph_builds, self._physical_calls, self._domain_rejections)
+            if after[0] > before[0]:
+                self._callbacks.append(FixedReceptorCallback(self._callback_attempts, status,
+                    *(a - b for a, b in zip(after, before, strict=True))))
+            else:
+                self._preflight_denials += 1
+
+    def _evaluate(self, coordinates):
         self.assert_ready()
         if self._calls >= self._capacity:
             raise StructureRefinementError("provider evaluation capacity exhausted")
@@ -209,9 +272,12 @@ class FixedReceptorEnergyForceProvider:
             raise StructureRefinementError("fixed-receptor coordinate count mismatch")
         xyz = torch.tensor([coordinates], dtype=torch.float64)
         state = self._ligand.with_coordinates(xyz, operation="structure_preserving_fixed_receptor_evaluation")
-        _validate_extension_topology(state, self._evaluator.parameters)
+        if not self._fourier:
+            _validate_extension_topology(state, self._evaluator.parameters)
         self._graph_builds += 1
         neighbors = build_compact_radius_graph(xyz, self._graph)
+        if self._fourier:
+            _require_fourier_topology(state, neighbors, self._evaluator.parameters)
         if _applicability_blockers(state, neighbors, self._evaluator.parameters.base_parameters):
             raise StructureRefinementError("fixed-receptor model applicability failed")
         self._coordinate_domain_precheck(xyz, neighbors)
@@ -221,6 +287,14 @@ class FixedReceptorEnergyForceProvider:
         energy_descriptor = result.term.energy_descriptor
         force_descriptor = result.term.force_descriptor
         energy, force = result.term.energy, result.term.forces
+        energy_semantics = FOURIER_ENERGY_BASIS if self._fourier else ENERGY_BASIS
+        # Existing Fourier evaluator inherits this generic descriptor. Preserve it
+        # in observations; do not rewrite it as the legacy fixed-receptor label.
+        force_semantics = ("negative_coordinate_gradient_of_reference_force_field_energy"
+                           if self._fourier else
+                           "negative_ligand_coordinate_gradient_of_fixed_receptor_total")
+        blocker = ("prepared_fourier_model_not_scientifically_validated" if self._fourier
+                   else "fixed_receptor_model_not_scientifically_validated")
         if (result.evaluator_fingerprint_sha256 != self._snapshot["evaluator"]
                 or not isinstance(energy, torch.Tensor) or not isinstance(force, torch.Tensor)
                 or tuple(energy.shape) != (1,)
@@ -234,10 +308,10 @@ class FixedReceptorEnergyForceProvider:
                 or force_descriptor.physical_quantity is not True
                 or energy_descriptor.unit != "kcal/mol"
                 or force_descriptor.unit != "kcal/mol/angstrom"
-                or energy_descriptor.semantics != ENERGY_BASIS
-                or force_descriptor.semantics != "negative_ligand_coordinate_gradient_of_fixed_receptor_total"
+                or energy_descriptor.semantics != energy_semantics
+                or force_descriptor.semantics != force_semantics
                 or result.term.validated_for_composition is not False
-                or "fixed_receptor_model_not_scientifically_validated" not in result.scientific_blockers):
+                or blocker not in result.scientific_blockers):
             raise StructureRefinementError("fixed-receptor output contract mismatch")
         expected_constraints = _constraint_observations(xyz, state, self._evaluator.parameters.constraints)
         if tuple(result.constraint_observations) != expected_constraints:
