@@ -27,7 +27,7 @@ from betelgeuze_engine_v2.docking.proposals import DockingProposal
 from . import structure_preserving as _core
 from .structure_preserving import (
     Coordinates, Evaluation, SearchConfig, SearchResult, StructureTopology,
-    refine_structure,
+    RecoverableTrialRejection, refine_structure,
 )
 
 
@@ -262,7 +262,13 @@ class StructurePreservingPoseRefiner:
             self.assert_ready()
             proposal.assert_integrity()
             expected = structure_coordinate_sha256(points)
-            result = self._provider.evaluate(points)
+            try:
+                result = self._provider.evaluate(points)
+            except RecoverableTrialRejection:
+                # A soft geometry signal must never hide changed bound inputs.
+                self.assert_ready()
+                proposal.assert_integrity()
+                raise
             self.assert_ready()
             proposal.assert_integrity()
             if (type(result) is not BoundEnergyForceResult

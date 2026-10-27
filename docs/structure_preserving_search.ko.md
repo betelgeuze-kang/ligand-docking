@@ -137,3 +137,13 @@ python -m pytest -q tests/unit/test_engine_v2_structure_preserving_refinement.py
 승인·자격이 충족된 실제 입력에서 같은 시작점·같은 총예산으로 후보 회복률,
 구조 퇴행, 실패 및 비용을 비교해야 한다. 그 실행이 없는 상태에서 테스트 통과를
 도킹 정확도 개선이나 파일럿 전체 완성으로 보고하지 않는다.
+
+## 후속 연구용 물리 evaluator 연결
+
+위 내용은 PR614 자체의 범위와 당시 검증 근거를 보존한 기록이다. 후속 확장은
+[고정 수용체 구조 보존 정제](fixed_receptor_structure_refinement.ko.md)에서
+기존 자체 CPU `FixedReceptorEvaluator`의 선택적 provider 연결과 구성요소·
+제약·최종 strain 정책, 복구 가능한 좌표 trial 거절을 제공한다. 이는 제품
+기본 활성화, native 실행 승인, HOLD/UNKNOWN 해제 또는 실제 분자 도킹 정확도
+입증을 뜻하지 않는다. 기존 PR614 합성 검증과 후속 실제 CPU 합성 매개변수
+통합 검증의 범위를 구분해야 한다.
