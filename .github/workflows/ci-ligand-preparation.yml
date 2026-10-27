@@ -1,0 +1,66 @@
+name: Ligand preparation and Fourier export contracts
+
+on:
+  pull_request:
+    paths:
+      - 'benchmarks/oracles/ligand_preparation/**'
+      - 'betelgeuze_product/openmm_fourier_export.py'
+      - 'docs/openff_ligand_preparation.md'
+      - 'docs/openmm_fourier_export.ko.md'
+      - 'tests/test_openff_ligand_preparation.py'
+      - 'tests/unit/test_openmm_fourier_export.py'
+      - 'tests/unit/test_ligand_preparation_boundary.py'
+      - '.github/workflows/ci-ligand-preparation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/oracles/ligand_preparation/**'
+      - 'betelgeuze_product/openmm_fourier_export.py'
+      - 'docs/openff_ligand_preparation.md'
+      - 'docs/openmm_fourier_export.ko.md'
+      - 'tests/test_openff_ligand_preparation.py'
+      - 'tests/unit/test_openmm_fourier_export.py'
+      - 'tests/unit/test_ligand_preparation_boundary.py'
+      - '.github/workflows/ci-ligand-preparation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ligand-preparation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stdlib-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    env:
+      PYTHONHASHSEED: '0'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Source-loaded stdlib contracts
+        run: |
+          python -S -m unittest discover -s tests/unit -p test_ligand_preparation_boundary.py -v
+          python -S -m unittest discover -s tests/unit -p test_openmm_fourier_export.py -v
+          python -S -m unittest discover -s tests -p test_openff_ligand_preparation.py -v
+      - name: Optimized isolated-site contracts
+        run: |
+          python -O -S -m unittest discover -s tests/unit -p test_ligand_preparation_boundary.py -v
+          python -O -S -m unittest discover -s tests/unit -p test_openmm_fourier_export.py -v
+          python -O -S -m unittest discover -s tests -p test_openff_ligand_preparation.py -v
+      - name: Compile additive modules and check whitespace
+        run: |
+          python -S -m py_compile betelgeuze_product/openmm_fourier_export.py benchmarks/oracles/ligand_preparation/openff_sage.py benchmarks/oracles/ligand_preparation/openmm_capture.py
+          python -S tools/check_external_oracle_architecture.py --root .
+          git diff --check
