@@ -1,0 +1,120 @@
+name: Structure-preserving refinement contracts
+
+on:
+  pull_request:
+    paths:
+      - 'betelgeuze_engine_v2/**'
+      - 'tests/unit/test_engine_v2_structure_preserving.py'
+      - 'tests/unit/test_engine_v2_structure_preserving_refinement.py'
+      - 'tests/unit/test_engine_v2_docking_authority_search.py'
+      - 'tests/unit/test_engine_v2_docking_authority_contract.py'
+      - 'tests/unit/test_engine_v2_energy_local_refinement_stage6.py'
+      - 'packaging/engine-v2/**'
+      - 'tools/build_engine_v2_wheel.py'
+      - 'tools/check_engine_v2_architecture.py'
+      - 'docs/structure_preserving_search.ko.md'
+      - '.github/workflows/ci-structure-preserving-refinement.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'betelgeuze_engine_v2/**'
+      - 'tests/unit/test_engine_v2_structure_preserving.py'
+      - 'tests/unit/test_engine_v2_structure_preserving_refinement.py'
+      - 'tests/unit/test_engine_v2_docking_authority_search.py'
+      - 'tests/unit/test_engine_v2_docking_authority_contract.py'
+      - 'tests/unit/test_engine_v2_energy_local_refinement_stage6.py'
+      - 'packaging/engine-v2/**'
+      - 'tools/build_engine_v2_wheel.py'
+      - 'tools/check_engine_v2_architecture.py'
+      - 'docs/structure_preserving_search.ko.md'
+      - '.github/workflows/ci-structure-preserving-refinement.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: structure-preserving-refinement-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stdlib-math:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Source-loaded stdlib numerical and failure contracts
+        run: python -m unittest discover -s tests/unit -p test_engine_v2_structure_preserving.py -v
+      - name: Optimized isolated-site stdlib contracts
+        run: python -O -S -m unittest discover -s tests/unit -p test_engine_v2_structure_preserving.py -v
+
+  synthetic-engine-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    env:
+      PYTHONHASHSEED: '0'
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      CUDA_VISIBLE_DEVICES: ''
+      HIP_VISIBLE_DEVICES: ''
+      ROCR_VISIBLE_DEVICES: ''
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pinned hosted CPU contract dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 numpy==1.26.4 cryptography==46.0.5 build==1.2.2.post1 setuptools==75.8.2 wheel==0.45.1
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Compile and check independent engine boundaries
+        run: |
+          python -m compileall -q betelgeuze_engine_v2
+          python tools/check_engine_v2_architecture.py
+          git diff --check
+      - name: Actual engine types with synthetic analytic objective only
+        run: |
+          python -m pytest --rootdir="$PWD" -c /dev/null --noconftest -p no:cacheprovider -q \
+            tests/unit/test_engine_v2_structure_preserving.py \
+            tests/unit/test_engine_v2_structure_preserving_refinement.py \
+            tests/unit/test_engine_v2_docking_authority_search.py \
+            tests/unit/test_engine_v2_docking_authority_contract.py \
+            tests/unit/test_engine_v2_energy_local_refinement_stage6.py
+      - name: Build and inspect installed opt-in modules outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/build_engine_v2_wheel.py --output-dir "$RUNNER_TEMP/structure-preserving-wheel"
+          python -m venv --system-site-packages "$RUNNER_TEMP/structure-preserving-installed"
+          "$RUNNER_TEMP/structure-preserving-installed/bin/python" -m pip install --no-deps --force-reinstall "$RUNNER_TEMP"/structure-preserving-wheel/*.whl
+          "$RUNNER_TEMP/structure-preserving-installed/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          env -u PYTHONPATH "$RUNNER_TEMP/structure-preserving-installed/bin/python" -I - <<'PY'
+          from pathlib import Path
+          import sys
+          import betelgeuze_engine_v2.docking.structure_preserving as core
+          import betelgeuze_engine_v2.docking.structure_preserving_refinement as adapter
+          installed = Path(sys.prefix).resolve()
+          for module in (core, adapter):
+              if not Path(module.__file__).resolve().is_relative_to(installed):
+                  raise RuntimeError("module was not imported from the installed wheel")
+          print("Installed opt-in module imports passed; no molecular evaluation was run.")
+          PY
