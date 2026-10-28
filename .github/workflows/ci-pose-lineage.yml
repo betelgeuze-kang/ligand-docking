@@ -1,0 +1,43 @@
+name: ci-pose-lineage
+
+on:
+  pull_request:
+    paths:
+      - "tools/analyze_pose_lineage.py"
+      - "tests/unit/test_pose_lineage.py"
+      - "tests/fixtures/pose_lineage_synthetic.json"
+      - "docs/pose_lineage.ko.md"
+      - ".github/workflows/ci-pose-lineage.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  stdlib-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Check out only the offline sidecar
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            tools/analyze_pose_lineage.py
+            tests/unit/test_pose_lineage.py
+            tests/fixtures/pose_lineage_synthetic.json
+          sparse-checkout-cone-mode: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run standard-library contracts without site packages
+        run: |
+          python -S tests/unit/test_pose_lineage.py -v
+          python -O -S tests/unit/test_pose_lineage.py -v
+          python -S -m py_compile tools/analyze_pose_lineage.py
