@@ -1,0 +1,403 @@
+{
+  "atom_ids": [
+    "atom-0"
+  ],
+  "baseline": {
+    "coordinates": [
+      [
+        0.5,
+        -0.75,
+        1.25
+      ]
+    ],
+    "energies": {
+      "quadratic": 3.03125
+    },
+    "forces": {
+      "quadratic": [
+        [
+          -0.5,
+          1.5,
+          -3.75
+        ]
+      ]
+    },
+    "geometry_sha256": "7e6cbb1734e3a248d6b709b36888a2d0cf5a6bb921660a4ebbb22ab769bb5d84"
+  },
+  "context": {
+    "chemical_state": "synthetic-chemical_state",
+    "engine": "synthetic-engine",
+    "frame": "synthetic-frame",
+    "frozen_environment": "synthetic-frozen_environment",
+    "model": "synthetic-model"
+  },
+  "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+  "expected_terms": [
+    "quadratic"
+  ],
+  "force_convention": "minus_energy_gradient",
+  "policy": {
+    "domain": "smooth",
+    "energy_resolution": 0.0,
+    "force_atol": 1e-08,
+    "force_rtol": 1e-08,
+    "roundoff_fraction": 0.25,
+    "stability_atol": 0.001,
+    "stability_rtol": 1e-08
+  },
+  "samples": [
+    {
+      "atom_index": 0,
+      "axis": 0,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.499755859375,
+          -0.75,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0311279594898224
+      },
+      "geometry_sha256": "a3b53a96b5ba316e2dc139ca709d142a8fcb355b350c18b1e543d00c88d9bcb0",
+      "h": 0.000244140625,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 0,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.500244140625,
+          -0.75,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0313721001148224
+      },
+      "geometry_sha256": "543d7a4367fe143873afcd91249478d1d2d8936d85cf8e404b033aebd9313bcb",
+      "h": 0.000244140625,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 0,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.4998779296875,
+          -0.75,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0311889722943306
+      },
+      "geometry_sha256": "eab83aa67ba188b856527ba771495d289d32e89d05a83030ebb517eb9cd85484",
+      "h": 0.0001220703125,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 0,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5001220703125,
+          -0.75,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0313110426068306
+      },
+      "geometry_sha256": "c3ba6fd9a5dc0af7f9aaaa8171d4c139f5d69e23f75049fa1d0867d22b24a151",
+      "h": 0.0001220703125,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 0,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.49993896484375,
+          -0.75,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.03121948428452
+      },
+      "geometry_sha256": "925ac047b17d5da2d99e78b549ff144ef694e0a61cf51ff764331534df488336",
+      "h": 6.103515625e-05,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 0,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.50006103515625,
+          -0.75,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.03128051944077
+      },
+      "geometry_sha256": "c235838ac3dd69baa910f252322f2198c89d25fd1a1dfae62a92164a8abf28ef",
+      "h": 6.103515625e-05,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 1,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.750244140625,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0316162705421448
+      },
+      "geometry_sha256": "9b454e496e447aea32ba65870e5277475007c6fd7b0a44d52d7be94768a8d5cb",
+      "h": 0.000244140625,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 1,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.749755859375,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0308838486671448
+      },
+      "geometry_sha256": "87cf91c52da045cb94da3d5abd28758c699d78ef0430d162c44f331f2273a45a",
+      "h": 0.000244140625,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 1,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.7501220703125,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.031433120369911
+      },
+      "geometry_sha256": "894175a582b9eab76bf910de444b886092564ab0b09bcbb2b643caf8c33e6e9a",
+      "h": 0.0001220703125,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 1,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.7498779296875,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.031066909432411
+      },
+      "geometry_sha256": "f25120b233d4b41904dd237aad2d006154cb718148df90555b7a2e3433bb8354",
+      "h": 0.0001220703125,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 1,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75006103515625,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0313415564596653
+      },
+      "geometry_sha256": "fe7bbd417dcfcfc1e65f39c219047ec0de36334fcfacc9029197177d1f15c8cf",
+      "h": 6.103515625e-05,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 1,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.74993896484375,
+          1.25
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.0311584509909153
+      },
+      "geometry_sha256": "1eefdcd268c9f21a89695266abf2645747f0e2de7b3e4084c0d0c1fa3320cf62",
+      "h": 6.103515625e-05,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 2,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75,
+          1.249755859375
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.030334562063217
+      },
+      "geometry_sha256": "6c63930399e69af4727718857f7ad16ffc2a143d84afe0e29db07eb7eb8ec171",
+      "h": 0.000244140625,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 2,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75,
+          1.250244140625
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.032165616750717
+      },
+      "geometry_sha256": "b794f57292ee09a9d1059c3f8718b7a14034976ec67cfa830e53657007028f96",
+      "h": 0.000244140625,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 2,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75,
+          1.2498779296875
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.030792258679867
+      },
+      "geometry_sha256": "b1bf1314038cbc4fd2e44bc852851eb71d211c81a346bf544284e6355e76890f",
+      "h": 0.0001220703125,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 2,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75,
+          1.2501220703125
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.031707786023617
+      },
+      "geometry_sha256": "6d486c9cc5a4e083313a206a69cf2af720f5d883a72da04ea26b5a457cdf66d0",
+      "h": 0.0001220703125,
+      "sign": 1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 2,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75,
+          1.24993896484375
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.031021123751998
+      },
+      "geometry_sha256": "05bf32510a68141092df1a71d66e9c0a9de40e87399aac6143eb583e03e827c5",
+      "h": 6.103515625e-05,
+      "sign": -1,
+      "status": "ok"
+    },
+    {
+      "atom_index": 0,
+      "axis": 2,
+      "context_sha256": "111c1546aec3308aaee51a8a7570d1e710dcee9a456df1e5a3f37fee3fb00462",
+      "coordinates": [
+        [
+          0.5,
+          -0.75,
+          1.25006103515625
+        ]
+      ],
+      "energies": {
+        "quadratic": 3.031478887423873
+      },
+      "geometry_sha256": "0d8686259198eed95333d93f5ac69234dc1d26f8ec91579c1bf8791e7bed8cd1",
+      "h": 6.103515625e-05,
+      "sign": 1,
+      "status": "ok"
+    }
+  ],
+  "schema": "saved_force_differences/1",
+  "steps": [
+    0.000244140625,
+    0.0001220703125,
+    6.103515625e-05
+  ],
+  "units": {
+    "energy": "kcal/mol",
+    "force": "kcal/mol/angstrom",
+    "length": "angstrom"
+  }
+}

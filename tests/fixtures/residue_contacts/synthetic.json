@@ -1,0 +1,25 @@
+{
+  "schema_version": "residue_contacts_input.v1",
+  "coordinate_frame": "synthetic-shared-frame",
+  "units": "angstrom",
+  "settings": {"cutoff": 4, "bin_edges": [2, 4, 8]},
+  "receptor": {
+    "residues": [
+      {"residue_id": "A:7", "chain": "A", "resnum": "7", "icode": "", "name": "GLY"},
+      {"residue_id": "B:7:A", "chain": "B", "resnum": "7", "icode": "A", "name": "ALA"}
+    ],
+    "atoms": [
+      {"atom_id": "r1", "residue_id": "A:7", "element": "C", "xyz": [0, 0, 0]},
+      {"atom_id": "r2", "residue_id": "B:7:A", "element": "N", "xyz": [10, 0, 0]}
+    ]
+  },
+  "poses": [
+    {"pose_id": "initial", "coordinate_frame": "synthetic-shared-frame", "atoms": [{"atom_id": "l1", "element": "H", "xyz": [2, 0, 0]}]},
+    {"pose_id": "final", "coordinate_frame": "synthetic-shared-frame", "atoms": [{"atom_id": "l1", "element": "H", "xyz": [6, 0, 0]}]},
+    {"pose_id": "unavailable", "coordinate_frame": "synthetic-shared-frame", "atoms": null}
+  ],
+  "comparisons": [
+    {"comparison_id": "initial-to-final", "initial_pose_id": "initial", "final_pose_id": "final"},
+    {"comparison_id": "initial-to-unavailable", "initial_pose_id": "initial", "final_pose_id": "unavailable"}
+  ]
+}
