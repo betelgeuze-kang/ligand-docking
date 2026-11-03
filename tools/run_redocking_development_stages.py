@@ -196,6 +196,7 @@ def prepare(input_root, output_root):
         binary = input_root / m["inputs"]["gnina"]["filename"]
         linkage = subprocess.run(["ldd", str(binary)], text=True, capture_output=True, timeout=30)
         record["gnina_ldd"] = {"returncode": linkage.returncode, "stdout": linkage.stdout, "stderr": linkage.stderr}
+        print(json.dumps({"gnina_ldd": record["gnina_ldd"]}), flush=True)
         linked = {}
         for line in linkage.stdout.splitlines():
             tokens = line.split()
@@ -398,6 +399,11 @@ def row_metrics(row):
                                        and x["chemical_valid"] for x in candidates))
         result["candidate_slots"] = len(diag["candidates"])
         result["successful_candidate_count"] = len(candidates)
+        result["geometric_valid_candidate_count"] = sum(bool(x["geometric_valid"]) for x in candidates)
+        result["chemical_valid_candidate_count"] = sum(bool(x["chemical_valid"]) for x in candidates)
+        result["joint_valid_candidate_count"] = sum(bool(x["geometric_valid"] and x["chemical_valid"]) for x in candidates)
+        result["close_candidate_count"] = sum(x["rmsd_angstrom"] <= 2.0 for x in candidates)
+        result["close_valid_candidate_count"] = sum(x["rmsd_angstrom"] <= 2.0 and x["geometric_valid"] and x["chemical_valid"] for x in candidates)
         result["preparation_status"] = diag["preparation_status"]
         result["diagnostic_evaluation_seconds"] = diag["diagnostic_evaluation_seconds"]
         require(result["valid_top5"] <= result["valid_oracle"] <= result["oracle"],
@@ -660,6 +666,12 @@ def main():
                         if candidates:
                             picks = {"score_top1": min(candidates, key=lambda x: (x["score"], x["proposal_index"])),
                                      "rmsd_oracle": min(candidates, key=lambda x: (x["rmsd_angstrom"], x["proposal_index"]))}
+                            valid_candidates = [x for x in candidates if x["geometric_valid"] and x["chemical_valid"]]
+                            close_valid_candidates = [x for x in valid_candidates if x["rmsd_angstrom"] <= 2.0]
+                            if valid_candidates:
+                                picks["valid_rmsd_oracle"] = min(valid_candidates, key=lambda x: (x["rmsd_angstrom"], x["proposal_index"]))
+                            if close_valid_candidates:
+                                picks["best_scored_close_valid"] = min(close_valid_candidates, key=lambda x: (x["score"], x["proposal_index"]))
                             for label, candidate in picks.items():
                                 keys = ("proposal_index", "proposal_mode", "score", "rmsd_angstrom",
                                         "geometric_valid", "chemical_valid", "posebusters_failed_check_ids",
