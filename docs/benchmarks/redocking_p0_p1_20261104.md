@@ -100,9 +100,61 @@ the old shared 900-second case deadline. Any increase in observation coverage mu
 be reported separately from numerical accuracy. Same-node smoke timings are a
 small engineering comparison, not a general performance claim.
 
-## Results
+## Historical protocol compatibility
 
-Implementation and local test evidence are being assembled. Frozen cloud tests
-and the new molecular execution have not yet been claimed in this report. Actual
-run IDs, test counts, paired equivalence, stage costs and remaining failures will
-be recorded after verification.
+The prior global-orientation protocol binds the exact 187-file Engine V2 Python
+source manifest and the original public runner. Those historical identities and
+the original protocol are unchanged. An explicit `--historical-snapshot` verifier
+now checks the original bytes as static evidence and emits a distinct receipt
+with `live_checkout_verified=false` and `execution_authorized=false`. Five changed
+source files are retained as inert text; the other original files must still
+match their frozen size and hash. The default verifier continues to reject the
+old protocol against the newer executable sources. Archival verification never
+imports the retained source or grants current execution authority.
+
+Research-only stage, isolation, runtime and analysis tools are excluded explicitly
+from the product Docker context and its import boundary. Separately, the existing
+source-verification Git timeout now yields a structured verification blocker. Its
+15-second bound, dirty-checkout rejection and refusal to authorize execution remain
+in force.
+
+## Validation results
+
+The first cloud attempt was
+[41692479481](https://github.com/betelgeuze-kang/ligand-docking/actions/runs/41692479481),
+at commit `4e49ac1507c55709c11f4003d59c1ae371b45c1d`. Frozen-runtime tests recorded
+**340 passed, 3 skipped, zero failures**; the three skips concern unavailable
+Rust-native implementations. The required real PoseBusters reuse-equivalence test
+ran successfully. All four paired molecular executions completed, but admission
+failed in offline receipt validation because its relative analysis directory was
+compared with the absolute output path recorded during execution. Development32
+was therefore not started in this attempt.
+
+The correction validates the original command against the separately hash-bound
+worker request, while validating actual input and pose bytes at their retained
+location. It supports both relative local paths and relocated evidence archives
+without rewriting the original receipts. Focused regression tests passed 44/44,
+including path, request, materialization and input tampering cases. Re-analysis of
+the sealed original artifact with the corrected validator passed paired admission;
+that diagnostic result is separate from the original failed workflow/gate.
+
+All six case/engine scientific comparisons were exact, including both complete
+64-candidate Engine V2 rows, every binary64 value and the ten selected SDF record
+hashes. Each P1 Engine V2 run retained 261 coordinate snapshots and reused five
+Top5 evaluation records after one 64-candidate evaluation. No prepared-input cache
+hit occurred in these runs. The single-node environment was unchanged from start
+to end. The sealed artifact verified 1,555 payload files and 1,556 total members,
+with SHA256 `1a43e8de9843023ccfd3b99b9966a9ab4c765cd5ad1455f63b594d6c0e00f7ba`.
+
+| Case | Legacy Engine V2 worker wall | P1 worker wall | Observed change |
+| --- | ---: | ---: | ---: |
+| 5SAK_ZRY | 160.9865 s | 152.2856 s | -8.7009 s (-5.40%) |
+| 5SB2_1K2 | 95.2569 s | 94.1008 s | -1.1561 s (-1.21%) |
+
+These are single paired observations, including observation and journal overhead,
+and do not establish a general speedup. PoseBusters itself still occupied 114.5492 s
+and 40.6016 s respectively. No scoring weights or accuracy outcome changed.
+
+A new cloud attempt on the corrected revision is required before the 32-case
+development stage can be considered validated. Its run identity, full-denominator
+results, environment comparisons and remaining failures will be recorded here.

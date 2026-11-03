@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 from tools.redocking_isolation import (AtomicJournal, CleanupError, IsolationError,
-    Limits, atomic_json, canonical, digest_file, digest_json, read_checkpoint, supervise)
+    Limits, atomic_json, digest_file, digest_json, read_checkpoint, supervise)
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINES = ("engine_v2", "vina", "gnina")
@@ -279,7 +279,18 @@ def worker(request_path, expected_sha):
     return returncode
 
 
-def observe_science(destination, common, cid, index, engine, m, source, *, profile):
+def observe_science(destination, common, cid, index, engine, m, source, *, profile,
+                    recorded_task_root=None):
+    """Verify retained bytes, preserving the original execution path binding.
+
+    The controller validates against its actual task directory. Offline analysis
+    may supply the task root from the separately hash-verified worker request;
+    moving an evidence archive must not rewrite the scientific command receipt.
+    """
+    destination, common = destination.resolve(), common.resolve()
+    execution_root = destination if recorded_task_root is None else Path(recorded_task_root)
+    require(execution_root.is_absolute() and ".." not in execution_root.parts,
+            "recorded task root is not a canonical absolute path")
     receipt_path = destination / "receipt.json"
     if not receipt_path.exists():
         return {"observation_status": "unobserved", "row": None, "receipt_sha256": None,
@@ -311,7 +322,7 @@ def observe_science(destination, common, cid, index, engine, m, source, *, profi
         and int(command[command.index("--seed") + 1]) == m["seed_base"] + index, "receipt seed/command mismatch")
     require(command.count("--cpu") == 1 and command[command.index("--cpu") + 1] == "1", "CPU policy changed")
     require(command.count("--out") == 1 and command[command.index("--out") + 1] ==
-            str(destination / "poses" / engine / (cid + ".sdf")), "receipt output path changed")
+            str(execution_root / "poses" / engine / (cid + ".sdf")), "receipt output path changed")
     if engine == "engine_v2":
         require(command.count("--candidate-count") == 1 and command[command.index("--candidate-count") + 1] == "64"
             and command.count("--scorer-backend") == 1 and command[command.index("--scorer-backend") + 1] == "python_reference",

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import ast
 import copy
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
+from betelgeuze_engine_v2.benchmark import source_paired_clearance_one_shot_binding
 from betelgeuze_engine_v2.benchmark.source_paired_clearance_one_shot_ab import (
     EXPECTED_OUTPUT_ROOT,
     EXPECTED_POLICY_SHA256,
@@ -219,6 +222,73 @@ def test_dirty_checkout_blocks_authorization(tmp_path: Path) -> None:
     )
     assert decision.authorized is False
     assert any("clean Git checkout" in blocker for blocker in decision.blockers)
+
+
+def _time_out_git_operation(
+    monkeypatch: pytest.MonkeyPatch, *, source_commit: str, operation: str
+) -> None:
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert kwargs["timeout"] == 15
+        if command[3] == operation:
+            raise subprocess.TimeoutExpired(
+                command, 15, output=source_commit.encode("ascii"), stderr=b"partial"
+            )
+        assert command[3] == "rev-parse"
+        return subprocess.CompletedProcess(command, 0, source_commit + "\n", "")
+
+    monkeypatch.setattr(source_paired_clearance_one_shot_binding.subprocess, "run", run)
+
+
+@pytest.mark.parametrize("operation", ["rev-parse", "status"])
+def test_git_timeout_blocks_authorization_and_reservation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, operation: str
+) -> None:
+    policy, phase25, activation = _documents()
+    source_commit = _initialize_checkout(tmp_path)
+    _time_out_git_operation(monkeypatch, source_commit=source_commit, operation=operation)
+    decision = authorization_decision(
+        policy,
+        phase25_policy=phase25,
+        activation_policy=activation,
+        repository_root=tmp_path,
+    )
+    assert decision.authorized is False
+    assert decision.blockers == (
+        f"git_source_verification_timeout: command={operation}; "
+        "timeout_seconds=15; checkout_state=unverified",
+    )
+    with pytest.raises(OneShotABAuthorityError, match="git_source_verification_timeout"):
+        reserve_one_shot_execution(
+            policy=policy,
+            phase25_policy=phase25,
+            activation_policy=activation,
+            repository_root=tmp_path,
+            source_commit_git_sha1=source_commit,
+            operator_id="operator",
+            execution_environment_sha256="2" * 64,
+        )
+    assert not (tmp_path / EXPECTED_OUTPUT_ROOT).exists()
+
+
+def test_verifier_reports_git_timeout_as_unverified_blocker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from tools import verify_engine_v2_source_paired_clearance_one_shot_ab as verifier
+
+    source_commit = _initialize_checkout(tmp_path)
+    _time_out_git_operation(monkeypatch, source_commit=source_commit, operation="status")
+    monkeypatch.setattr(sys, "argv", ["verifier", "--repo-root", str(tmp_path)])
+    assert verifier.main() == 0
+    report = ast.literal_eval(capsys.readouterr().out)
+    assert report["authorized_if_reserved_now"] is False
+    assert (
+        "git_source_verification_timeout: command=status; "
+        "timeout_seconds=15; checkout_state=unverified"
+    ) in report["blockers"]
+    assert report["fresh_holdout_execution_authorized"] is False
+    assert report["product_execution_authorized"] is False
+    assert report["public_or_scientific_claim_authorized"] is False
+    assert not (tmp_path / EXPECTED_OUTPUT_ROOT).exists()
 
 
 def test_run_start_rechecks_checkout_head_and_cleanliness(tmp_path: Path) -> None:

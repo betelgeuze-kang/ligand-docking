@@ -113,6 +113,38 @@ def find_receipt(root, case_id, engine):
             worker_status["request_sha256"] == digest_file(request_path),
             "worker request bytes differ",
         )
+        recorded_task_root = Path(request["task_root"])
+        require(
+            recorded_task_root.is_absolute()
+            and ".." not in recorded_task_root.parts
+            and recorded_task_root.parts[-4:]
+            == ("cases", case_id, "engines", engine)
+            and Path(request["materialization_root"])
+            == recorded_task_root.parent.parent / "materialization",
+            "recorded worker execution directories differ",
+        )
+        identity = read_json(destination / "journal/identity.json")
+        summary = read_json(root / "summary.json")
+        cases = [case for case in summary["cases"] if case["case_id"] == case_id]
+        require(len(cases) == 1, "worker has no unique controller case")
+        controller = cases[0]["engines"][engine]
+        require(
+            identity["request_sha256"]
+            == controller["request_sha256"]
+            == worker_status["request_sha256"]
+            and controller["task_root"] == request["task_root"]
+            and controller["worker_status"] == worker_status
+            and worker_status["status"] == "completed"
+            and worker_status["receipt_sha256"] == payload["receipt_sha256"]
+            and identity["source"] == summary["source"] == request["source"]
+            and identity["profile"] == summary["profile"] == request["profile"]
+            and identity["case_id"] == case_id
+            and identity["task"] == engine
+            and cases[0]["global_index"] == manifest["case_ids"].index(case_id)
+            and identity["seed"]
+            == manifest["seed_base"] + cases[0]["global_index"],
+            "worker request journal/controller binding differs",
+        )
         verified = observe_science(
             destination,
             root / "cases" / case_id / "materialization",
@@ -122,6 +154,7 @@ def find_receipt(root, case_id, engine):
             manifest,
             run_manifest["source"],
             profile=run_manifest["profile"],
+            recorded_task_root=recorded_task_root,
         )
         require(
             verified["row"] == row

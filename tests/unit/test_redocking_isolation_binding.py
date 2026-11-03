@@ -198,3 +198,98 @@ def test_receipt_output_cannot_be_rebound_with_recomputed_canonical_hash(bundle)
     atomic_json(bundle.destination / "receipt.json", signed(bundle.payload))
     with pytest.raises(IsolationError, match="output path changed"):
         observe(bundle)
+
+
+def test_current_worker_verification_accepts_relative_local_directory(bundle, monkeypatch):
+    monkeypatch.chdir(bundle.destination.parent)
+    bundle.destination = Path("engine")
+    bundle.common = Path("materialization")
+    assert observe(bundle)["observation_status"] == "observed"
+
+
+def relocated_bundle(bundle, tmp_path):
+    """Preserve an original absolute request while moving its retained evidence."""
+    import shutil
+
+    root = tmp_path / "downloaded"
+    destination = root / "cases" / bundle.cid / "engines" / "engine_v2"
+    common = root / "cases" / bundle.cid / "materialization"
+    shutil.copytree(bundle.destination, destination)
+    shutil.copytree(bundle.common, common)
+    original = Path("/retained/cloud/evidence/paired/0-legacy/cases") / bundle.cid / "engines/engine_v2"
+    payload = deepcopy(bundle.payload)
+    payload["command"][-1] = str(original / "poses/engine_v2" / (bundle.cid + ".sdf"))
+    payload["result"]["execution_command"] = payload["command"]
+    atomic_json(destination / "receipt.json", signed(payload))
+    request = {"source": bundle.source, "profile": "legacy_v7", "case_id": bundle.cid,
+               "task": "engine_v2", "task_root": str(original),
+               "materialization_root": str(original.parent.parent / "materialization")}
+    atomic_json(destination / "request.json", request)
+    request_sha = digest_file(destination / "request.json")
+    status = {"source": bundle.source, "request_sha256": request_sha,
+              "status": "completed", "receipt_sha256": signed(payload)["receipt_sha256"]}
+    atomic_json(destination / "worker-status.json", status)
+    atomic_json(destination / "journal/identity.json", {"source": bundle.source,
+        "request_sha256": request_sha, "profile": "legacy_v7", "case_id": bundle.cid,
+        "task": "engine_v2", "seed": bundle.m["seed_base"]})
+    atomic_json(root / "summary.json", {"source": bundle.source, "profile": "legacy_v7",
+        "cases": [{"case_id": bundle.cid, "global_index": bundle.index,
+                   "engines": {"engine_v2": {"request_sha256": request_sha,
+                       "task_root": str(original), "worker_status": status}}}]})
+    atomic_json(root / "run-manifest.json", {"source": bundle.source, "profile": "legacy_v7"})
+    return root, destination, common, payload, request
+
+
+def test_offline_verification_binds_original_request_after_archive_relocation(bundle, tmp_path, monkeypatch):
+    from tools.analyze_redocking_p0_p1 import find_receipt
+
+    root, destination, _, payload, _ = relocated_bundle(bundle, tmp_path)
+    original_receipt = (destination / "receipt.json").read_bytes()
+    monkeypatch.chdir(tmp_path)
+    result = find_receipt(Path("downloaded"), bundle.cid, "engine_v2")
+    assert result["result"] == payload["result"]
+    assert (destination / "receipt.json").read_bytes() == original_receipt
+
+
+@pytest.mark.parametrize("change", ["request_bytes", "other_case", "traversal", "materialization", "output", "input_bytes"])
+def test_relocated_evidence_cannot_rebind_execution_or_input(bundle, tmp_path, change):
+    from tools.analyze_redocking_p0_p1 import find_receipt
+
+    root, destination, common, payload, request = relocated_bundle(bundle, tmp_path)
+    if change == "output":
+        payload["command"][-1] = "/different/worker/poses/engine_v2/" + bundle.cid + ".sdf"
+        atomic_json(destination / "receipt.json", signed(payload))
+        # Even re-signing the receipt cannot alter its controller/worker binding.
+        error = "worker request journal/controller binding differs"
+    elif change == "input_bytes":
+        (common / "inputs" / bundle.cid / (bundle.cid + "_ligand.sdf")).write_bytes(b"modified")
+        error = "materialized input changed"
+    else:
+        if change == "materialization":
+            request["materialization_root"] = "/other/materialization"
+        elif change == "traversal":
+            request["task_root"] = "/escape/../" + request["task_root"].lstrip("/")
+        else:
+            request["task_root"] = request["task_root"].replace(bundle.cid, "other_case")
+        atomic_json(destination / "request.json", request)
+        error = "worker request bytes differ"
+        if change != "request_bytes":
+            atomic_json(destination / "worker-status.json", {"source": bundle.source,
+                "request_sha256": digest_file(destination / "request.json")})
+            error = "recorded worker execution directories differ"
+    with pytest.raises((IsolationError, RuntimeError), match=error):
+        find_receipt(root, bundle.cid, "engine_v2")
+
+
+@pytest.mark.parametrize("record", ["journal/identity.json", "summary.json"])
+def test_relocated_request_must_match_original_journal_and_controller(bundle, tmp_path, record):
+    from tools.analyze_redocking_p0_p1 import find_receipt
+
+    root, destination, _, _, _ = relocated_bundle(bundle, tmp_path)
+    path = root / record if record == "summary.json" else destination / record
+    value = run.read_json(path)
+    target = value["cases"][0]["engines"]["engine_v2"] if record == "summary.json" else value
+    target["request_sha256"] = "0" * 64
+    atomic_json(path, value)
+    with pytest.raises(RuntimeError, match="worker request journal/controller binding differs"):
+        find_receipt(root, bundle.cid, "engine_v2")
