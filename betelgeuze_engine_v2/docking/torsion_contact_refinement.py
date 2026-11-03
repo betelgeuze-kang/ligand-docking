@@ -24,6 +24,7 @@ from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha25
 from .authority import AuthenticatedDockingProblem
 from .contact_validity import ElementAwarePoseValidityContext, VdwContactPolicy
 from .identity import coordinate_fingerprint
+from .development_lineage import DevelopmentObserver, emit_coordinate_snapshot
 from .guided_placement import (
     SourcePairedTorsionRescueAllocation,
     SourcePairedTorsionRescuePolicy,
@@ -655,7 +656,11 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         v3_config: InteractionAwareRigidConfigV3 | None = None,
         clearance_config: InteractionAwareRigidClearanceConfigV4 | None = None,
         radii_policy: VdwContactPolicy | None = None,
+        development_observer: DevelopmentObserver | None = None,
     ) -> None:
+        if development_observer is not None and not callable(development_observer):
+            raise TypeError("development_observer must be callable")
+        self._development_observer = development_observer
         if not isinstance(authority, AuthenticatedDockingProblem):
             raise TypeError("authority must be AuthenticatedDockingProblem")
         if canonical_system_sha256(receptor_system) != authority.receptor_system_sha256:
@@ -1537,11 +1542,29 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             max_steps,
             self._config.maximum_baseline_v6_steps,
         )
+        if self._development_observer is not None:
+            self._development_observer(
+                "rigid_v6", "start", {"proposal_index": proposal.proposal_index}
+            )
         baseline = self._v6.refine(
             proposal,
             max_steps=baseline_v6_max_steps,
         )
         baseline_receipt = dict(self._v6.receipts[proposal.fingerprint_sha256])
+        if self._development_observer is not None:
+            emit_coordinate_snapshot(
+                self._development_observer,
+                "post_v6",
+                proposal,
+                coordinates=baseline.coordinates,
+                baseline_v6_receipt_sha256=baseline_receipt["receipt_sha256"],
+            )
+            self._development_observer(
+                "rigid_v6", "complete", {"proposal_index": proposal.proposal_index}
+            )
+            self._development_observer(
+                "torsion_v7", "start", {"proposal_index": proposal.proposal_index}
+            )
         self._baseline_states[proposal.fingerprint_sha256] = _TorsionOptimizedState(
             coordinates=baseline.coordinates.clone(),
             torsion_angles=baseline.torsion_angles.clone(),
@@ -1773,6 +1796,25 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             coordinates=optimized_state_coordinates.clone(),
             torsion_angles=optimized_state_torsion_angles.clone(),
         )
+        if self._development_observer is not None:
+            emit_coordinate_snapshot(
+                self._development_observer,
+                "post_v7_optimization",
+                proposal,
+                coordinates=optimized_state_coordinates,
+                objective_id="v7_receptor_plus_internal_quartic_overlap",
+                objective_unit="angstrom^4",
+                objective_semantics="geometric_overlap_proxy_not_physical_energy",
+                receptor_penalty_binary64_hex=optimized_receptor.hex(),
+                internal_penalty_binary64_hex=optimized_internal.hex(),
+                combined_penalty_binary64_hex=optimized_combined.hex(),
+                torsion_evaluated=torsion_evaluated,
+                torsion_trial_evaluation_count=torsion_trial_evaluation_count,
+                torsion_evaluation_skip_reason=torsion_evaluation_skip_reason,
+            )
+            self._development_observer(
+                "torsion_v7", "complete", {"proposal_index": proposal.proposal_index}
+            )
         torsion_selected = bool(
             torsion_variant_available
             and self._config.minimum_selected_final_receptor_penalty
@@ -2080,6 +2122,19 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             self._activation_snapshot_projections[proposal.fingerprint_sha256] = (
                 activation_projection
             )
+        emit_coordinate_snapshot(
+            self._development_observer,
+            "refinement_selected",
+            refined,
+            parent_proposal_fingerprint_sha256=proposal.fingerprint_sha256,
+            refinement_receipt_sha256=receipt_sha256,
+            selection_reason=selection_reason,
+            torsion_selected=torsion_selected,
+            objective_id="v7_receptor_plus_internal_quartic_overlap",
+            objective_unit="angstrom^4",
+            objective_semantics="geometric_overlap_proxy_not_physical_energy",
+            final_penalty_binary64_hex=final_combined.hex(),
+        )
         return refined
 
 

@@ -1,4 +1,4 @@
-"""Preserve the frozen engine scope and bind all opt-in implementation bytes."""
+"""Verify historical source separately and bind all opt-in implementation bytes."""
 from __future__ import annotations
 
 import hashlib
@@ -22,13 +22,24 @@ RESEARCH_FILES = (
 )
 
 
-def test_frozen_engine_source_manifest_is_unchanged():
-    scope = verifier.SCORER_PYTHON_SOURCE_SCOPE
-    rows = verifier._source_manifest(roots=tuple(scope["roots"]), files=tuple(scope["files"]))
-    # Existing frozen identity, not a new seal for the research implementation.
-    assert verifier._sha256(rows) == (
+def test_historical_engine_source_snapshot_preserves_original_manifest():
+    protocol = verifier.load_protocol(
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_global_orientation_contaminated_development.json"
+    )
+    receipt = verifier.verify_historical_protocol(protocol)
+    # The old seal is verified against old bytes; it never validates current code.
+    assert receipt["scorer_python_source_manifest_sha256"] == (
         "7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7"
     )
+    assert receipt["verification_mode"] == "historical_static_source_only"
+    assert receipt["live_checkout_verified"] is False
+    assert receipt["execution_authorized"] is False
+    with pytest.raises(
+        verifier.GlobalOrientationDevelopmentProtocolError,
+        match="pre-import ScorerV1 source manifest",
+    ):
+        verifier.verify_protocol(protocol)
 
 
 def test_legacy_import_does_not_load_opt_in_implementation():

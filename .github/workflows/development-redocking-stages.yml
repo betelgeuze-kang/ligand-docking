@@ -1,0 +1,262 @@
+name: Development redocking stages
+
+on:
+  push:
+    branches: ['codex/redocking-stages-20261103']
+    paths:
+      - '.github/workflows/development-redocking-stages.yml'
+      - 'tools/run_redocking_development_stages.py'
+      - 'config/redocking_development_stages_20261103.json'
+      - 'config/gnina_runtime_cudnn_cu12.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: development-redocking-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONHASHSEED: '0'
+  OMP_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  CUDA_VISIBLE_DEVICES: ''
+  HIP_VISIBLE_DEVICES: ''
+  ROCR_VISIBLE_DEVICES: ''
+
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    outputs:
+      next_stage_ready: ${{ steps.execute.outputs.next_stage_ready }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+          filter: blob:none
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            benchmarks
+            tools
+            config
+            rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
+            .github/workflows/development-redocking-stages.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.10.22'
+      - name: Install exact CPU reference evaluator
+        timeout-minutes: 12
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 rdkit-pypi==2022.9.5
+          python -m pip install --no-deps posebusters==0.3.1
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Compile wrapper and check accounting, RMSD, timeout contracts
+        timeout-minutes: 3
+        run: |
+          python -m py_compile tools/run_redocking_development_stages.py
+          python -m tools.run_redocking_development_stages self-test --output-root evidence
+      - name: Install hash-pinned GNINA loader libraries
+        timeout-minutes: 8
+        run: |
+          python -m pip install --index-url https://pypi.org/simple --only-binary=:all: --require-hashes --no-deps --target "$RUNNER_TEMP/gnina-runtime" -r config/gnina_runtime_cudnn_cu12.txt
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from importlib import metadata
+          root = Path(os.environ['RUNNER_TEMP']) / 'gnina-runtime'
+          required = ('libcudnn.so.9', 'libcudart.so.12', 'libcublas.so.12', 'libcublasLt.so.12',
+                      'libcufft.so.11', 'libcurand.so.10', 'libcusolver.so.11', 'libcusparse.so.12',
+                      'libnvToolsExt.so.1', 'libnvJitLink.so.12')
+          for name in required:
+              if len(list(root.rglob(name))) != 1:
+                  raise RuntimeError('expected exactly one ' + name)
+          libraries = sorted(path for path in root.rglob('*.so*') if path.is_file())
+          library_dirs = sorted({str(path.parent) for path in libraries})
+          value = ':'.join(library_dirs) + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+          with open(os.environ['GITHUB_ENV'], 'a') as stream:
+              stream.write('LD_LIBRARY_PATH=' + value + '\n')
+          rows = []
+          for path in libraries:
+              if path.is_file():
+                  digest = hashlib.sha256()
+                  with path.open('rb') as stream:
+                      for block in iter(lambda: stream.read(1024 * 1024), b''):
+                          digest.update(block)
+                  rows.append({'path': str(path), 'size': path.stat().st_size, 'sha256': digest.hexdigest()})
+          Path('evidence').mkdir(exist_ok=True)
+          distributions = {d.metadata['Name']: d.version for d in metadata.distributions(path=[str(root)])}
+          Path('evidence/gnina-runtime.json').write_text(json.dumps({'distributions': distributions, 'loader_only': True, 'libraries': rows}, indent=2) + '\n')
+          PY
+      - name: Prepare and verify source, evaluator, public inputs and GNINA
+        timeout-minutes: 12
+        run: |
+          python -m tools.run_redocking_development_stages prepare --input-root "$RUNNER_TEMP/redocking-inputs" --output-root evidence
+      - name: Execute two development smoke cases
+        id: execute
+        timeout-minutes: 32
+        run: |
+          python -m tools.run_redocking_development_stages run --stage smoke --start 0 --count 2 --input-root "$RUNNER_TEMP/redocking-inputs" --output-root evidence
+      - name: Inventory retained evidence
+        if: always()
+        run: python -m tools.run_redocking_development_stages inventory --output-root evidence
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: redocking-${{ github.job }}-${{ matrix.start || 'smoke' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            evidence/
+            !evidence/**/private-external-binary/**
+          if-no-files-found: error
+          retention-days: 30
+
+  development:
+    needs: smoke
+    if: needs.smoke.outputs.next_stage_ready == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 155
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        start: [2, 10, 18, 26]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+          filter: blob:none
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            benchmarks
+            tools
+            config
+            rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
+            .github/workflows/development-redocking-stages.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.10.22'
+      - name: Install exact CPU reference evaluator
+        timeout-minutes: 12
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 rdkit-pypi==2022.9.5
+          python -m pip install --no-deps posebusters==0.3.1
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Compile wrapper and check accounting, RMSD, timeout contracts
+        timeout-minutes: 3
+        run: |
+          python -m py_compile tools/run_redocking_development_stages.py
+          python -m tools.run_redocking_development_stages self-test --output-root evidence
+      - name: Install hash-pinned GNINA loader libraries
+        timeout-minutes: 8
+        run: |
+          python -m pip install --index-url https://pypi.org/simple --only-binary=:all: --require-hashes --no-deps --target "$RUNNER_TEMP/gnina-runtime" -r config/gnina_runtime_cudnn_cu12.txt
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from importlib import metadata
+          root = Path(os.environ['RUNNER_TEMP']) / 'gnina-runtime'
+          required = ('libcudnn.so.9', 'libcudart.so.12', 'libcublas.so.12', 'libcublasLt.so.12',
+                      'libcufft.so.11', 'libcurand.so.10', 'libcusolver.so.11', 'libcusparse.so.12',
+                      'libnvToolsExt.so.1', 'libnvJitLink.so.12')
+          for name in required:
+              if len(list(root.rglob(name))) != 1:
+                  raise RuntimeError('expected exactly one ' + name)
+          libraries = sorted(path for path in root.rglob('*.so*') if path.is_file())
+          library_dirs = sorted({str(path.parent) for path in libraries})
+          value = ':'.join(library_dirs) + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+          with open(os.environ['GITHUB_ENV'], 'a') as stream:
+              stream.write('LD_LIBRARY_PATH=' + value + '\n')
+          rows = []
+          for path in libraries:
+              if path.is_file():
+                  digest = hashlib.sha256()
+                  with path.open('rb') as stream:
+                      for block in iter(lambda: stream.read(1024 * 1024), b''):
+                          digest.update(block)
+                  rows.append({'path': str(path), 'size': path.stat().st_size, 'sha256': digest.hexdigest()})
+          Path('evidence').mkdir(exist_ok=True)
+          distributions = {d.metadata['Name']: d.version for d in metadata.distributions(path=[str(root)])}
+          Path('evidence/gnina-runtime.json').write_text(json.dumps({'distributions': distributions, 'loader_only': True, 'libraries': rows}, indent=2) + '\n')
+          PY
+      - name: Prepare and verify source, evaluator, public inputs and GNINA
+        timeout-minutes: 12
+        run: |
+          python -m tools.run_redocking_development_stages prepare --input-root "$RUNNER_TEMP/redocking-inputs" --output-root evidence
+      - name: Execute eight fixed development cases
+        timeout-minutes: 122
+        run: |
+          python -m tools.run_redocking_development_stages run --stage development --start ${{ matrix.start }} --count 8 --input-root "$RUNNER_TEMP/redocking-inputs" --output-root evidence
+      - name: Inventory retained evidence
+        if: always()
+        run: python -m tools.run_redocking_development_stages inventory --output-root evidence
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: redocking-${{ github.job }}-${{ matrix.start || 'smoke' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            evidence/
+            !evidence/**/private-external-binary/**
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    needs: [smoke, development]
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+          filter: blob:none
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            benchmarks
+            tools
+            config
+            rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
+            .github/workflows/development-redocking-stages.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.10.22'
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: redocking-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloaded-evidence
+      - name: Summarize complete denominators and missing observations
+        run: |
+          python -m tools.run_redocking_development_stages aggregate --artifact-root downloaded-evidence --output-root combined-evidence
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: redocking-combined-${{ github.run_id }}-${{ github.run_attempt }}
+          path: combined-evidence/
+          if-no-files-found: error
+          retention-days: 30
