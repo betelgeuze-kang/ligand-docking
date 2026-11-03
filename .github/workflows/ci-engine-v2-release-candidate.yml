@@ -692,8 +692,9 @@ jobs:
             -k 'native or rust_cpu'
           python -m pytest -q tests/unit/test_engine_v2_docking_search_v2_facade.py
 
+      # Keep the upload action bound by the frozen native CPU runtime artifact v1 policy.
       - name: Upload native wheel and SBOM
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: engine-v2-native-0.2.0rc6-${{ matrix.abi }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
