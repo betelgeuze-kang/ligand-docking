@@ -63,7 +63,12 @@ jobs:
           python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q tests/unit/test_prepared_lifecycle*.py tests/unit/test_api_product_prepared.py
 
   native-process-contracts:
-    runs-on: ubuntu-latest
+    # Hosted Ubuntu 24.04 (20261025.353.1) returned uid_map EPERM:
+    # https://github.com/betelgeuze-kang/ligand-docking/actions/runs/41584416967
+    # Temporary compatibility pin; migrate before retirement on 2027-04-17:
+    # https://github.com/actions/runner-images/issues/14254
+    # This image still requires every native control below to pass without skips.
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
