@@ -3,79 +3,113 @@ name: ci-engine-v2-current-state
 on:
   pull_request:
     paths:
-      - "config/engine_v2_current_state_v1.json"
+      - ".github/workflows/ci-engine-v2-current-state.yml"
+      - "config/engine_v2_authority_state_v1.json"
       - "config/independent_engine_v2_capabilities.yaml"
+      - "config/engine_v2_source_paired_clearance_external_reservation_operations_decision.json"
+      - "config/engine_v2_d1_development_profile_v1.json"
+      - "config/engine_v2_d1_manifest_v1.json"
+      - "config/engine_v2_sampling_funnel_v1.json"
       - "docs/engine_v2_current_state_v1.md"
-      - "docs/engine_v2_status.md"
       - "docs/engine_v2_stage0_status.md"
       - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
-      - "tools/verify_engine_v2_current_state_v1.py"
-      - "tools/render_engine_v2_current_state_v1.py"
-      - "tests/unit/test_verify_engine_v2_current_state_v1.py"
-      - ".github/workflows/ci-engine-v2-current-state.yml"
+      - "packaging/engine-v2/pyproject.toml"
+      - "rust_engine_v2/pyproject.toml"
+      - "CMakeLists.txt"
+      - "native/CMakeLists.txt"
+      - "include/**"
+      - ".cargo/**"
+      - "rust/**"
+      - "native/src/**"
+      - "benchmarks/oracles/vina/adapter.py"
+      - "benchmarks/oracles/gnina/adapter.py"
+      - "benchmarks/engine_v2_d1/**"
+      - "tools/materialize_engine_v2_d1_case_results_v1.py"
+      - "tools/run_engine_v2_d1_development_v2.py"
+      - "tools/verify_engine_v2_d1_development_v2.py"
+      - "tools/generate_engine_v2_state_bundle_v1.py"
+      - "tests/unit/test_engine_v2_state_bundle_v1.py"
   push:
     branches:
       - main
-    paths:
-      - "config/engine_v2_current_state_v1.json"
-      - "config/independent_engine_v2_capabilities.yaml"
-      - "docs/engine_v2_current_state_v1.md"
-      - "docs/engine_v2_status.md"
-      - "docs/engine_v2_stage0_status.md"
-      - "docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md"
-      - "tools/verify_engine_v2_current_state_v1.py"
-      - "tools/render_engine_v2_current_state_v1.py"
-      - "tests/unit/test_verify_engine_v2_current_state_v1.py"
-      - ".github/workflows/ci-engine-v2-current-state.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-current-state-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-engine-v2-current-state-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   current-state:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - name: Check out current-state surface
+      - name: Check out exact source state
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          sparse-checkout: |
-            config/engine_v2_current_state_v1.json
-            config/independent_engine_v2_capabilities.yaml
-            docs/engine_v2_current_state_v1.md
-            docs/engine_v2_status.md
-            docs/engine_v2_stage0_status.md
-            docs/engine_v2_native_fixed64_cpu_qualification_v7_result.md
-            tools/verify_engine_v2_current_state_v1.py
-            tools/render_engine_v2_current_state_v1.py
-            tests/unit/test_verify_engine_v2_current_state_v1.py
-          sparse-checkout-cone-mode: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          clean: true
           show-progress: false
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.10
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: "3.12"
+          python-version: "3.10"
 
       - name: Install focused test dependency
-        run: python -m pip install pytest==8.3.5
-
-      - name: Verify current state
-        run: python tools/verify_engine_v2_current_state_v1.py --pretty
-
-      - name: Check generated current-state summary
-        run: python tools/render_engine_v2_current_state_v1.py --check
-
-      - name: Compile current-state tools
         run: >-
-          python -m py_compile
-          tools/verify_engine_v2_current_state_v1.py
-          tools/render_engine_v2_current_state_v1.py
+          python -m pip install pytest==8.3.5
+          "tomli==2.2.1; python_version < '3.11'"
 
-      - name: Run current-state tests
-        run: python -m pytest -q tests/unit/test_verify_engine_v2_current_state_v1.py
+      - name: Bind clean exact source identity
+        id: source
+        run: |
+          test -z "$(git status --porcelain=v1 --untracked-files=normal)"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "tree=$(git rev-parse HEAD^{tree})" >> "$GITHUB_OUTPUT"
+
+      - name: Generate exact-SHA state bundle
+        run: >-
+          python tools/generate_engine_v2_state_bundle_v1.py
+          --source-commit ${{ steps.source.outputs.commit }}
+          --source-tree ${{ steps.source.outputs.tree }}
+          --output-dir "${RUNNER_TEMP}/engine-v2-state-bundle"
+
+      - name: Verify deterministic byte identity
+        run: |
+          python tools/generate_engine_v2_state_bundle_v1.py \
+            --source-commit ${{ steps.source.outputs.commit }} \
+            --source-tree ${{ steps.source.outputs.tree }} \
+            --output-dir "${RUNNER_TEMP}/engine-v2-state-bundle-repeat"
+          cmp \
+            "${RUNNER_TEMP}/engine-v2-state-bundle/engine_v2_implementation_state_v1.json" \
+            "${RUNNER_TEMP}/engine-v2-state-bundle-repeat/engine_v2_implementation_state_v1.json"
+          cmp \
+            "${RUNNER_TEMP}/engine-v2-state-bundle/engine_v2_authority_state_v1.json" \
+            "${RUNNER_TEMP}/engine-v2-state-bundle-repeat/engine_v2_authority_state_v1.json"
+          cmp \
+            "${RUNNER_TEMP}/engine-v2-state-bundle/engine_v2_release_manifest_v1.json" \
+            "${RUNNER_TEMP}/engine-v2-state-bundle-repeat/engine_v2_release_manifest_v1.json"
+
+      - name: Compile state generator
+        run: python -m py_compile tools/generate_engine_v2_state_bundle_v1.py
+
+      - name: Run state-bundle tests
+        run: python -m pytest -q tests/unit/test_engine_v2_state_bundle_v1.py
+
+      - name: Upload exact-SHA state bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: engine-v2-state-bundle-${{ steps.source.outputs.commit }}
+          path: ${{ runner.temp }}/engine-v2-state-bundle
+          if-no-files-found: error
+          compression-level: 9
+          overwrite: false
+          include-hidden-files: false
+          retention-days: 30
