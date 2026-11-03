@@ -520,6 +520,7 @@ def test_validated_runner_fails_before_spawn_without_linux_containment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import api.validated_runner as validated_runner
+    import api.runner_process as runner_process
     from api.linux_runner_supervisor import LinuxRunnerContainmentUnavailable
 
     spawned = False
@@ -533,11 +534,11 @@ def test_validated_runner_fails_before_spawn_without_linux_containment(
         raise AssertionError("runner supervisor must not spawn")
 
     monkeypatch.setattr(
-        validated_runner,
+        runner_process,
         "require_linux_runner_supervisor_support",
         _unsupported,
     )
-    monkeypatch.setattr(validated_runner.subprocess, "Popen", _must_not_spawn)
+    monkeypatch.setattr(runner_process.subprocess, "Popen", _must_not_spawn)
 
     with pytest.raises(
         LinuxRunnerContainmentUnavailable,

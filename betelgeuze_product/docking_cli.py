@@ -4,16 +4,21 @@ from __future__ import annotations
 
 import sys
 
-from betelgeuze_engine_v2 import standalone_cli as engine_cli
-
-
 def main(argv=None):
     arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] == "prepared-jobs":
+        from .prepared_lifecycle_cli import main as prepared_jobs_main
+
+        return prepared_jobs_main(arguments[1:])
+
+    from betelgeuze_engine_v2 import standalone_cli as engine_cli
+
     if arguments in (["--help"], ["-h"]):
         parser = engine_cli._parser()
         parser.epilog = (
             "Installed prepared-molecule research: "
-            "betelgeuze-dock prepared-refine --help"
+            "betelgeuze-dock prepared-refine --help; "
+            "betelgeuze-dock prepared-jobs --help"
         )
         parser.print_help()
         return 0

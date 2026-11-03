@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import errno
 import json
+import math
 import os
 import select
 import shutil
@@ -14,6 +15,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+try:
+    import resource
+except ImportError:  # Windows cannot provide this Linux execution envelope.
+    resource = None
 
 
 _PR_SET_CHILD_SUBREAPER = 36
@@ -32,6 +38,107 @@ _cancel_requested = False
 
 class LinuxRunnerContainmentUnavailable(RuntimeError):
     """Raised before runner spawn when Linux descendant containment is unavailable."""
+
+
+class ResourceContainmentUnavailable(LinuxRunnerContainmentUnavailable):
+    code = "RESOURCE_CONTAINMENT_UNAVAILABLE"
+    runner_start_admitted = False
+
+    def __init__(self, message: str):
+        super().__init__(f"{self.code}: {message}")
+
+
+def validate_resource_limits(limits: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Admit only explicitly supported scopes; AS never substitutes for RAM."""
+    if limits is None:
+        return None
+    allowed = {"wall_seconds", "cpu_seconds", "address_space_bytes", "file_bytes",
+               "cpu_affinity", "capture_bytes", "tree_bytes", "tree_root", "poll_seconds"}
+    if type(limits) is not dict or not limits or set(limits) - allowed:
+        raise ResourceContainmentUnavailable("unsupported or empty resource envelope")
+    result = dict(limits)
+    for key in ("wall_seconds", "cpu_seconds", "address_space_bytes", "file_bytes", "capture_bytes", "tree_bytes"):
+        if key in result and (type(result[key]) is not int or result[key] < 1):
+            raise ValueError(f"positive integer {key} required")
+    if any(key in result for key in ("cpu_seconds", "address_space_bytes", "file_bytes")) and resource is None:
+        raise ResourceContainmentUnavailable("POSIX process resource limits are unavailable")
+    if "cpu_affinity" in result:
+        affinity = result["cpu_affinity"]
+        if not hasattr(os, "sched_setaffinity") or not hasattr(os, "sched_getaffinity"):
+            raise ResourceContainmentUnavailable("kernel CPU affinity is unavailable")
+        if (type(affinity) is not list or len(affinity) != 1 or type(affinity[0]) is not int
+                or affinity[0] not in os.sched_getaffinity(0)):
+            raise ValueError("one admitted available CPU is required")
+        result["cpu_affinity"] = list(affinity)
+    if "poll_seconds" in result and (type(result["poll_seconds"]) not in (int, float)
+            or not math.isfinite(result["poll_seconds"]) or not 0 < result["poll_seconds"] <= 1):
+        raise ValueError("finite polling interval in (0,1] required")
+    if "tree_root" in result:
+        root = result["tree_root"]
+        if ("tree_bytes" not in result or type(root) is not str or not Path(root).is_absolute()
+                or str(Path(root).resolve(strict=True)) != root or not Path(root).is_dir()):
+            raise ValueError("canonical internal tree root and sampled tree budget required")
+    return result
+
+
+def _apply_resource_limits(limits: dict[str, Any]) -> dict[str, Any]:
+    """Apply before fork/exec; the fixed worker inherits these hard ceilings."""
+    applied: dict[str, Any] = {}
+    for name, kind in (("cpu_seconds", "RLIMIT_CPU"), ("address_space_bytes", "RLIMIT_AS"),
+                       ("file_bytes", "RLIMIT_FSIZE")):
+        if name in limits:
+            number = getattr(resource, kind)
+            value = limits[name]
+            resource.setrlimit(number, (value, value))
+            soft, hard = resource.getrlimit(number)
+            if soft != value or hard != value:
+                raise ResourceContainmentUnavailable(f"{kind} did not retain its requested hard limit")
+            applied[name] = {"soft": soft, "hard": hard, "kernel_limit": kind}
+    if "cpu_affinity" in limits:
+        before = sorted(os.sched_getaffinity(0))
+        os.sched_setaffinity(0, set(limits["cpu_affinity"]))
+        affinity = sorted(os.sched_getaffinity(0))
+        if affinity != limits["cpu_affinity"]:
+            raise ResourceContainmentUnavailable("CPU affinity did not retain the admitted core")
+        applied["cpu_affinity"] = affinity
+        applied["cpu_affinity_admission"] = {
+            "requested": limits["cpu_affinity"], "available_before": before,
+            "observed_after": affinity, "source": "trusted internal resource envelope",
+        }
+    applied["requested_limits"] = limits
+    applied["scope"] = {
+        "applied_to": "namespace init and inherited fixed worker/descendants",
+        "cpu_seconds": "hard per process including its threads; not aggregate across descendants",
+        "address_space_bytes": "hard virtual address space; not a resident-memory cap",
+        "file_bytes": "hard per-file size; not cumulative output quota",
+        "tree_bytes": "sampled tree total, with possible overshoot",
+        "capture_bytes": "bounded read per stream, with sampled stop and possible file-size overshoot",
+    }
+    return applied
+
+
+def _sample_tree_bytes(root: str) -> int:
+    total = 0
+    def fail(error):
+        raise error
+    for directory, dirs, files in os.walk(root, followlinks=False, onerror=fail):
+        # Symlink targets never enter the measured tree.
+        dirs[:] = [name for name in dirs if not Path(directory, name).is_symlink()]
+        for name in files:
+            try:
+                total += Path(directory, name).stat(follow_symlinks=False).st_size
+            except FileNotFoundError:
+                pass  # A concurrently removed file contributes no retained bytes.
+    return total
+
+
+def _read_capture(handle, maximum_bytes: int | None) -> tuple[str, bool]:
+    handle.seek(0)
+    raw = handle.read() if maximum_bytes is None else handle.read(maximum_bytes + 1)
+    truncated = maximum_bytes is not None and len(raw) > maximum_bytes
+    if truncated:
+        raw = raw[:maximum_bytes]
+    return raw.decode("utf-8", errors="replace"), truncated
 
 
 @dataclass(frozen=True)
@@ -515,6 +622,12 @@ def _read_config(config_fd: int) -> dict[str, Any]:
     except ValueError as exc:
         raise ValueError("runner supervisor protocol nonce is invalid") from exc
     payload["timeout_seconds"] = max(timeout_seconds, 1)
+    if "resource_limits" in payload:
+        payload["resource_limits"] = validate_resource_limits(payload["resource_limits"])
+        if payload["resource_limits"] is None:
+            raise ValueError("an explicit resource envelope cannot be null")
+        if "wall_seconds" in payload["resource_limits"]:
+            payload["timeout_seconds"] = min(payload["timeout_seconds"], payload["resource_limits"]["wall_seconds"])
     return payload
 
 
@@ -580,6 +693,11 @@ def supervise(config_fd: int, start_fd: int) -> tuple[dict[str, Any], bool]:
     command = config["command"]
     cwd = config["cwd"]
     timeout_seconds = config["timeout_seconds"]
+    limits = config.get("resource_limits")
+    applied_resources = _apply_resource_limits(limits) if limits is not None else None
+    usage_before = resource.getrusage(resource.RUSAGE_CHILDREN) if limits is not None else None
+    resource_errors: list[str] = []
+    sampled_tree_peak = 0
     runner: subprocess.Popen[bytes] | None = None
     with tempfile.TemporaryFile(mode="w+b") as stdout_file, tempfile.TemporaryFile(
         mode="w+b"
@@ -612,13 +730,27 @@ def supervise(config_fd: int, start_fd: int) -> tuple[dict[str, Any], bool]:
             if _cancel_requested:
                 cancelled = True
                 break
+            if limits is not None:
+                try:
+                    if "capture_bytes" in limits and (
+                            os.fstat(stdout_file.fileno()).st_size > limits["capture_bytes"]
+                            or os.fstat(stderr_file.fileno()).st_size > limits["capture_bytes"]):
+                        resource_errors.append("captured stream exceeded sampled byte limit")
+                    if "tree_bytes" in limits:
+                        sampled_tree_peak = max(sampled_tree_peak, _sample_tree_bytes(limits.get("tree_root", cwd)))
+                        if sampled_tree_peak > limits["tree_bytes"]:
+                            resource_errors.append("output tree exceeded sampled byte limit")
+                except OSError as exc:
+                    resource_errors.append(f"resource sampling unavailable: {exc}")
+                if resource_errors:
+                    break
             runner_returncode = runner.poll()
             if runner_returncode is not None:
                 break
             if time.monotonic() >= deadline:
                 timed_out = True
                 break
-            time.sleep(_POLL_INTERVAL_SECONDS)
+            time.sleep(limits.get("poll_seconds", _POLL_INTERVAL_SECONDS) if limits is not None else _POLL_INTERVAL_SECONDS)
 
         contained_returncode, containment_error = _kill_and_reap_descendants(
             os.getpid(),
@@ -633,20 +765,30 @@ def supervise(config_fd: int, start_fd: int) -> tuple[dict[str, Any], bool]:
         cancelled = bool(cancelled or _cancel_requested)
         if runner_returncode is None:
             runner_returncode = contained_returncode
-        stdout_file.seek(0)
-        stderr_file.seek(0)
-        stdout = stdout_file.read().decode("utf-8", errors="replace")
-        stderr = stderr_file.read().decode("utf-8", errors="replace")
+        capture_limit = limits.get("capture_bytes") if limits is not None else None
+        stdout, stdout_truncated = _read_capture(stdout_file, capture_limit)
+        stderr, stderr_truncated = _read_capture(stderr_file, capture_limit)
+        if stdout_truncated or stderr_truncated:
+            resource_errors.append("captured stream exceeded bounded read limit")
+        if limits is not None and "tree_bytes" in limits:
+            try:
+                sampled_tree_peak = max(sampled_tree_peak, _sample_tree_bytes(limits.get("tree_root", cwd)))
+                if sampled_tree_peak > limits["tree_bytes"]:
+                    resource_errors.append("terminal output tree exceeded sampled byte limit")
+            except OSError as exc:
+                resource_errors.append(f"terminal resource sampling unavailable: {exc}")
 
-    if containment_error:
+    resource_error = "; ".join(dict.fromkeys(resource_errors))
+    if containment_error or resource_error:
         stderr = "\n".join(item for item in (stderr, containment_error) if item)
+        if resource_error:
+            stderr = "\n".join(item for item in (stderr, resource_error) if item)
         returncode = 125
     elif timed_out or cancelled:
         returncode = int(runner_returncode) if int(runner_returncode) != 0 else 125
     else:
         returncode = int(runner_returncode)
-    return (
-        {
+    payload = {
             "returncode": returncode,
             "timed_out": timed_out,
             "cancelled": cancelled,
@@ -655,9 +797,27 @@ def supervise(config_fd: int, start_fd: int) -> tuple[dict[str, Any], bool]:
             "containment_error": containment_error,
             "supervisor": _SUPERVISOR_KIND,
             "protocol_nonce": protocol_nonce,
-        },
-        bool(containment_error or timed_out or cancelled),
-    )
+        }
+    if limits is not None:
+        usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
+        measured_cpu = (usage_after.ru_utime + usage_after.ru_stime
+                        - usage_before.ru_utime - usage_before.ru_stime)
+        payload.update(
+            applied_resources=applied_resources,
+            resource_error=resource_error,
+            captured_streams={"stdout_truncated": stdout_truncated, "stderr_truncated": stderr_truncated,
+                              "maximum_read_bytes_per_stream": capture_limit},
+            resource_usage={
+                "child_cpu_seconds": max(0., measured_cpu) if not containment_error else None,
+                "child_peak_rss_bytes": int(usage_after.ru_maxrss) * 1024 if not containment_error else None,
+                "measurement_complete": not bool(containment_error),
+                "cpu_scope": "reaped fixed worker and owned descendants; excludes namespace-init supervisor CPU",
+                "peak_rss_scope": "maximum individual reaped child peak RSS, not aggregate simultaneous RAM",
+                "sampled_tree_peak_bytes": sampled_tree_peak,
+                "sampled_tree_scope": "logical file sizes sampled with possible overshoot; not filesystem quota",
+            },
+        )
+    return payload, bool(containment_error or resource_error or timed_out or cancelled)
 
 
 def main() -> int:

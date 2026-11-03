@@ -1,4 +1,6 @@
 """Fixed mock-arm workers exercise actual launch, limits, receipts and death."""
+import errno
+import io
 import json
 import os
 from pathlib import Path
@@ -58,9 +60,35 @@ def test_failed_worker_preserves_reservation_and_unknown_work(tmp_path, behavior
 def _live(pid):
     try:
         value = Path(f'/proc/{pid}/stat').read_text()
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
         return False
     return value.split(') ', 1)[1][0] != 'Z'
+
+
+def test_live_handles_process_exit_between_stat_open_and_read(monkeypatch):
+    stat_path = Path(f'/proc/{os.getpid()}/stat')
+
+    class DepartedStat(io.StringIO):
+        def read(self, *args, **kwargs):
+            raise ProcessLookupError(errno.ESRCH, 'process exited after stat opened')
+
+    def open_stat(path, *args, **kwargs):
+        assert path == stat_path
+        return DepartedStat()
+
+    monkeypatch.setattr(Path, 'open', open_stat)
+    assert not _live(os.getpid())
+
+
+@pytest.mark.parametrize('error_number', [errno.EACCES, errno.EIO])
+def test_live_preserves_unexpected_proc_read_errors(monkeypatch, error_number):
+    def unreadable(*args, **kwargs):
+        raise OSError(error_number, 'proc read failed')
+
+    monkeypatch.setattr(Path, 'read_text', unreadable)
+    with pytest.raises(OSError) as caught:
+        _live(os.getpid())
+    assert caught.value.errno == error_number
 
 
 def test_parent_death_kills_worker_and_leaves_unknown_reservation(tmp_path):
