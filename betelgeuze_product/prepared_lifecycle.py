@@ -164,8 +164,12 @@ def _identifier(value, pattern=_ID):
 def implementation_sources():
     root = Path(__file__).resolve().parent.parent
     names = ("betelgeuze_product/prepared_lifecycle.py",
+             "betelgeuze_product/prepared_lifecycle_results.py",
+             "betelgeuze_product/prepared_lifecycle_readonly_worker.py",
+             "betelgeuze_product/prepared_lifecycle_cli.py",
              "betelgeuze_product/prepared_lifecycle_owner.py",
              "betelgeuze_product/prepared_lifecycle_worker.py",
+             "api/product_prepared.py",
              "api/runner_process.py", "api/linux_runner_supervisor.py",
              "api/validated_runner_runtime_qualification.py")
     return {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names}
@@ -299,6 +303,11 @@ class PreparedLifecycle:
             CREATE TABLE IF NOT EXISTS prepared_artifacts (
               artifact_id TEXT PRIMARY KEY, execution_id TEXT NOT NULL, relative_path TEXT NOT NULL,
               role TEXT NOT NULL, schema_name TEXT, checksum TEXT NOT NULL, bytes INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS prepared_plans (
+              plan_id TEXT PRIMARY KEY, tenant TEXT NOT NULL, checksum TEXT NOT NULL,
+              document_json TEXT NOT NULL, created REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS prepared_execution_plans (
+              execution_id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, checksum TEXT NOT NULL);
             """)
         os.chmod(self.database, 0o600)
         parent = _directory_fd(self.root)
@@ -361,7 +370,11 @@ class PreparedLifecycle:
     def _snapshot(self, row):
         policy = json.loads(row["policy_json"])
         inflight = row["status"] in ("running", "cancel_requested")
+        with self._connect() as connection:
+            planned = connection.execute("SELECT plan_id,checksum FROM prepared_execution_plans WHERE execution_id=?",
+                                         (row["execution_id"],)).fetchone()
         return {"schema_version": SCHEMA, "execution_id": row["execution_id"], "status": row["status"],
+                "plan": {"plan_id": planned["plan_id"], "plan_sha256": planned["checksum"]} if planned else None,
                 "numerical_state": "running_unresolved" if inflight else row["numerical_state"],
                 "last_verified_numerical_state": row["numerical_state"], "cancel_state": row["cancel_state"],
                 "research_only": True, "qualified": False, "model_id": "prepared_fourier_development/1.0.0",
@@ -378,13 +391,82 @@ class PreparedLifecycle:
                 "error": json.loads(row["error_json"]) if row["error_json"] else None,
                 "artifacts": self.artifacts(row["execution_id"])["artifacts"]}
 
-    def submit(self, admission_id, idempotency_key, budget_policy="local_cpu_research_v1"):
-        _identifier(idempotency_key, _KEY)
+    @staticmethod
+    def _budget(admission, budget_policy):
         require(budget_policy == "local_cpu_research_v1", "INVALID_BUDGET_POLICY", "Unknown bounded budget policy")
+        return {**POLICY, "force_call_ceiling": admission["force_call_ceiling"],
+                "policy_id": budget_policy, "RAM_limit_claimed": False,
+                "output_scope": "publication byte guard plus sampled tree; sampled overshoot possible"}
+
+    def _plan_row(self, connection, plan_id):
+        _identifier(plan_id, _HEX32)
+        row = connection.execute("SELECT * FROM prepared_plans WHERE plan_id=? AND tenant=?",
+                                 (plan_id, self.tenant_id)).fetchone()
+        require(row is not None, "NOT_FOUND_OR_FORBIDDEN", "Plan was not found", 404)
+        row = dict(row)
+        document = json_bytes(row["document_json"].encode())
+        require(digest(document) == row["checksum"] and row["plan_id"] == row["checksum"][:32],
+                "PLAN_INTEGRITY_FAILED", "Stored plan identity changed", 409)
+        return row, document
+
+    @staticmethod
+    def _public_plan(row, document):
+        admission = document["admission"]
+        protocol = admission["protocol"]
+        return {"schema_version": "prepared_lifecycle_plan/1.0.0", "plan_id": row["plan_id"],
+                "plan_sha256": row["checksum"], "admission_id": admission["admission_id"],
+                "backend": "prepared_fourier", "model_id": admission["model_id"],
+                "protocol_sha256": admission["manifest"]["protocol_sha256"],
+                "input_sha256": {name: protocol[name]["sha256"] for name in REFS},
+                "implementation_sources": admission["lifecycle_sources"],
+                "runtime_identity": admission["runtime_identity"],
+                "solver": {"configuration_sha256": digest(protocol["solver"]),
+                           "max_iterations": admission["iterations"], "max_backtracks": admission["backtracks"]},
+                "budget": document["budget"],
+                "initial_pause_after_accepted_iterations": admission["initial_pause"],
+                "units": {"coordinates": "angstrom", "energy": "kcal/mol", "raw_force": "kcal/mol/angstrom"},
+                "force_semantics": "unconstrained_raw_negative_coordinate_gradient_no_restraint_or_augmentation",
+                "preflight": {"numerical_dispatches": 0, "force_calls": 0,
+                              "scope": "registered byte identities and bounded solver admission; full molecular validation precedes worker evaluation"},
+                "cpu_placement": "one available CPU selected at submission; placement does not reset budget or idempotency",
+                "research_only": True, "qualified": False}
+
+    def plan(self, admission_id, budget_policy="local_cpu_research_v1"):
         admission = admission_document(self.input_root, admission_id, tenant_id=self.tenant_id)
-        policy = {**POLICY, "force_call_ceiling": admission["force_call_ceiling"],
-                  "policy_id": budget_policy, "RAM_limit_claimed": False,
-                  "output_scope": "publication byte guard plus sampled tree; sampled overshoot possible"}
+        document = {"schema_version": "prepared_private_plan/1.0.0", "tenant": self.tenant_id,
+                    "admission": admission, "budget": self._budget(admission, budget_policy)}
+        checksum = digest(document)
+        plan_id = checksum[:32]
+        with self._transaction() as connection:
+            connection.execute("INSERT OR IGNORE INTO prepared_plans VALUES(?,?,?,?,?)",
+                               (plan_id, self.tenant_id, checksum, canonical(document), time.time()))
+            row, retained = self._plan_row(connection, plan_id)
+            require(retained == document, "PLAN_INTEGRITY_FAILED", "Stored plan identity collision", 409)
+        return self._public_plan(row, retained)
+
+    def get_plan(self, plan_id):
+        with self._connect() as connection:
+            row, document = self._plan_row(connection, plan_id)
+        return self._public_plan(row, document)
+
+    def execute(self, plan_id, plan_sha256, idempotency_key):
+        _identifier(plan_sha256, _SHA)
+        with self._connect() as connection:
+            row, document = self._plan_row(connection, plan_id)
+        require(row["checksum"] == plan_sha256, "PLAN_INTEGRITY_FAILED", "Requested plan digest changed", 409)
+        admission = document["admission"]
+        current = admission_document(self.input_root, admission["admission_id"], tenant_id=self.tenant_id)
+        require(current == admission and self._budget(current, document["budget"]["policy_id"]) == document["budget"],
+                "STALE_PLAN", "Planned inputs, implementation, runtime or policy changed", 409)
+        return self._enqueue(admission, idempotency_key, document["budget"], plan=(plan_id, plan_sha256))
+
+    def submit(self, admission_id, idempotency_key, budget_policy="local_cpu_research_v1"):
+        admission = admission_document(self.input_root, admission_id, tenant_id=self.tenant_id)
+        return self._enqueue(admission, idempotency_key, self._budget(admission, budget_policy))
+
+    def _enqueue(self, admission, idempotency_key, policy, *, plan=None):
+        _identifier(idempotency_key, _KEY)
+        policy = dict(policy)
         request_hash = digest({"admission": admission, "budget": policy, "tenant": self.tenant_id})
         with self._transaction() as connection:
             row = connection.execute("SELECT * FROM prepared_jobs WHERE tenant=? AND idem=?",
@@ -403,7 +485,27 @@ class PreparedLifecycle:
                     VALUES(?,?,?,?,?,?,'queued','not_started','none',?,?)""",
                     (execution_id, self.tenant_id, idempotency_key, request_hash, canonical(admission), canonical(policy), now, now))
                 self._event(connection, execution_id, "submitted", {"request_sha256": request_hash})
+            if plan is not None:
+                existing = connection.execute("SELECT plan_id,checksum FROM prepared_execution_plans WHERE execution_id=?",
+                                              (execution_id,)).fetchone()
+                require(existing is None or tuple(existing) == plan, "IDEMPOTENCY_CONFLICT",
+                        "Execution is bound to a different immutable plan", 409)
+                if existing is None:
+                    connection.execute("INSERT INTO prepared_execution_plans VALUES(?,?,?)", (execution_id, *plan))
+                    self._event(connection, execution_id, "plan_bound", {"plan_id": plan[0], "plan_sha256": plan[1]})
         return self.status(execution_id)
+
+    def verify(self, execution_id):
+        from .prepared_lifecycle_results import verify_execution
+        return verify_execution(self, execution_id)
+
+    def report(self, execution_id):
+        from .prepared_lifecycle_results import report_execution
+        return report_execution(self, execution_id)
+
+    def compare(self, execution_ids):
+        from .prepared_lifecycle_results import compare_executions
+        return compare_executions(self, execution_ids)
 
     def status(self, execution_id):
         with self._connect() as connection:
@@ -478,6 +580,7 @@ class PreparedLifecycle:
             row = self._row(connection, execution_id)
             require(row["status"] in ("queued", "resume_queued"), "BUSY", "Execution is not queued for a new owner", 409)
             admission, policy = json.loads(row["admission_json"]), json.loads(row["policy_json"])
+            self._bound_plan(connection, row, admission, policy)
             require(admission_document(self.input_root, admission["admission_id"], tenant_id=self.tenant_id) == admission,
                     "SOURCE_OR_MODEL_MISMATCH", "Registered input bytes changed", 409)
             resume = row["status"] == "resume_queued"
@@ -495,6 +598,30 @@ class PreparedLifecycle:
             row.update(generation=generation, owner_token=token, resume=resume, reserved_wall=wall,
                        reserved_cpu=cpu, force_reserved=reserve_force)
             return row
+
+    def _bound_plan(self, connection, row, admission, policy):
+        """Check immutable plan custody again before the sole owner reserves work."""
+        numerical_policy = {key: value for key, value in policy.items() if key != "cpu_affinity"}
+        require(numerical_policy == self._budget(admission, policy["policy_id"]),
+                "STALE_PLAN", "Frozen execution policy changed", 409)
+        bound = connection.execute("SELECT plan_id,checksum FROM prepared_execution_plans WHERE execution_id=?",
+                                   (row["execution_id"],)).fetchone()
+        event = connection.execute("SELECT document_json FROM prepared_events WHERE execution_id=? AND kind='plan_bound' ORDER BY sequence LIMIT 1",
+                                   (row["execution_id"],)).fetchone()
+        if bound is None:
+            require(event is None, "PLAN_INTEGRITY_FAILED", "Execution plan binding is missing", 409)
+            return None  # Legacy submit has the same owner and no retained plan.
+        try:
+            retained, document = self._plan_row(connection, bound["plan_id"])
+        except LifecycleError as exc:
+            raise LifecycleError("PLAN_INTEGRITY_FAILED", "Execution plan custody changed", 409) from exc
+        require(event is not None and json.loads(event["document_json"]) ==
+                {"plan_id": bound["plan_id"], "plan_sha256": bound["checksum"]}
+                and retained["checksum"] == bound["checksum"]
+                and document["admission"] == admission and document["budget"] == numerical_policy
+                and row["request_hash"] == digest({"admission": admission, "budget": numerical_policy, "tenant": self.tenant_id}),
+                "PLAN_INTEGRITY_FAILED", "Execution differs from its immutable plan", 409)
+        return {"plan_id": bound["plan_id"], "plan_sha256": bound["checksum"]}
 
     def _finish(self, claim, *, status, numerical_state, error=None, receipt=None,
                 known_force=None, force_known=True, wall=0., cpu=0., spawned=False, artifacts=()):

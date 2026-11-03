@@ -1,0 +1,174 @@
+name: ci-prepared-lifecycle
+
+on:
+  pull_request:
+    paths:
+      - 'betelgeuze_product/**'
+      - 'betelgeuze_engine_v2/**'
+      - 'api/**'
+      - 'tests/unit/test_prepared_lifecycle*.py'
+      - 'tests/unit/test_api_product_prepared.py'
+      - 'tests/unit/test_api_runner_process.py'
+      - 'tests/unit/test_api_validated_runner_adapter.py'
+      - 'pyproject.toml'
+      - 'requirements-package.txt'
+      - 'requirements-mobile.txt'
+      - '.github/workflows/ci-prepared-lifecycle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-prepared-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  metadata-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+        profile: ['lifecycle', 'mobile']
+    env:
+      PYTHONPATH: .
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install fixed metadata-only dependencies
+        if: matrix.profile == 'lifecycle'
+        run: |
+          python -m pip install pytest==8.3.5 ruff==0.11.13 fastapi==0.136.3 starlette==1.7.0 httpx==0.28.1 pydantic==2.12.5 pydantic-settings==2.14.1 prometheus-client==0.24.1 PyYAML==6.0.3
+      - name: Install current mobile metadata dependencies
+        if: matrix.profile == 'mobile'
+        run: |
+          python -m pip install -r requirements-mobile.txt ruff==0.11.13
+      - name: Lint prepared lifecycle implementation and tests
+        run: |
+          python -m ruff check --isolated --no-cache betelgeuze_product/prepared_lifecycle*.py api/product_prepared.py tests/unit/test_prepared_lifecycle*.py tests/unit/test_api_product_prepared.py
+          git diff --check
+      - name: Check shared authority and retained evidence without molecular execution
+        run: |
+          python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q tests/unit/test_prepared_lifecycle*.py tests/unit/test_api_product_prepared.py
+
+  native-process-contracts:
+    # Hosted Ubuntu 24.04 (20261025.353.1) returned uid_map EPERM:
+    # https://github.com/betelgeuze-kang/ligand-docking/actions/runs/41584416967
+    # Temporary compatibility pin; migrate before retirement on 2027-04-17:
+    # https://github.com/actions/runner-images/issues/14254
+    # This image still requires every native control below to pass without skips.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    env:
+      PYTHONPATH: .
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install process-control test dependencies
+        run: python -m pip install -r requirements-mobile.txt
+      - name: Record source and host identity and check native prerequisites
+        run: |
+          mkdir -p verification-artifacts
+          python -m pip freeze > verification-artifacts/packages.txt
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import subprocess
+          import sys
+
+          from api.linux_runner_supervisor import (
+              linux_pid_namespace_launcher,
+              require_linux_runner_supervisor_support,
+          )
+
+          event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          pull = event.get('pull_request', {})
+          identity = {
+              'checkout_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'checkout_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'checkout_parents': subprocess.check_output(['git', 'rev-list', '--parents', '-n', '1', 'HEAD'], text=True).split()[1:],
+              'pull_request_head': pull.get('head', {}).get('sha'),
+              'pull_request_base': pull.get('base', {}).get('sha'),
+              'github_sha': os.environ.get('GITHUB_SHA'),
+              'run_id': os.environ.get('GITHUB_RUN_ID'),
+              'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+              'runner_os': os.environ.get('RUNNER_OS'),
+              'image_os': os.environ.get('ImageOS'),
+              'image_version': os.environ.get('ImageVersion'),
+              'platform': platform.platform(),
+              'python': sys.version,
+              'cpu_affinity': sorted(os.sched_getaffinity(0)),
+              'evidence_scope': 'synthetic process and resource contracts',
+          }
+          try:
+              require_linux_runner_supervisor_support()
+              identity['namespace_launcher'] = linux_pid_namespace_launcher()
+              identity['prerequisites_available'] = True
+          except Exception as exc:
+              identity['prerequisites_available'] = False
+              identity['prerequisite_error'] = str(exc)
+              raise
+          finally:
+              Path('verification-artifacts/source-and-host.json').write_text(json.dumps(identity, indent=2) + '\n')
+          PY
+      - name: Exercise actual Linux containment with fixed fixture children
+        run: |
+          set -o pipefail
+          python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q -ra \
+            tests/unit/test_api_runner_process.py tests/unit/test_api_validated_runner_adapter.py \
+            --junitxml=verification-artifacts/native-process.xml 2>&1 | tee verification-artifacts/native-process.log
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse('verification-artifacts/native-process.xml').getroot()
+          cases = list(root.iter('testcase'))
+          expected_native = {
+              'test_native_child_inherits_exact_hard_limits_and_admitted_affinity',
+              'test_native_cpu_limit_stops_fixed_busy_child_without_wall_timeout',
+              'test_native_address_space_cap_is_enforced_without_claiming_ram_cap',
+              'test_native_per_file_size_cap_is_enforced_without_claiming_total_quota',
+              'test_native_capture_is_read_bounded_and_truncation_is_failure',
+              'test_native_tree_sampling_reports_overshoot_instead_of_claiming_hard_quota',
+              'test_native_cancellation_still_waits_for_detached_descendant_cleanup',
+          }
+          assert expected_native <= {case.get('name') for case in cases}, 'native controls were not collected'
+          assert not list(root.iter('skipped')), 'process qualification cannot contain skipped controls'
+          assert not list(root.iter('failure')) and not list(root.iter('error'))
+          print(f'{len(cases)} process controls passed with zero skips')
+          PY
+          git diff --exit-code
+      - name: Retain process qualification diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: prepared-native-process-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: verification-artifacts/
+          if-no-files-found: error

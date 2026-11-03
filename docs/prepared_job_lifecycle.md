@@ -41,10 +41,16 @@ host qualification. That receipt covers its explicit namespace properties only.
 ## Commands and HTTP operations
 
 ```text
+betelgeuze-dock prepared-jobs plan ADMISSION
+betelgeuze-dock prepared-jobs get-plan PLAN_ID
+betelgeuze-dock prepared-jobs execute PLAN_ID --plan-sha256 SHA256 --idempotency-key KEY
 betelgeuze-dock prepared-jobs submit ADMISSION --idempotency-key KEY
 betelgeuze-dock prepared-jobs status EXECUTION_ID
 betelgeuze-dock prepared-jobs cancel EXECUTION_ID --reason "operator request"
 betelgeuze-dock prepared-jobs resume EXECUTION_ID
+betelgeuze-dock prepared-jobs verify EXECUTION_ID
+betelgeuze-dock prepared-jobs report EXECUTION_ID
+betelgeuze-dock prepared-jobs compare EXECUTION_ID OTHER_EXECUTION_ID
 betelgeuze-dock prepared-jobs artifacts EXECUTION_ID
 betelgeuze-dock prepared-jobs artifact EXECUTION_ID ARTIFACT_ID
 betelgeuze-dock prepared-jobs owner-once
@@ -52,10 +58,16 @@ betelgeuze-dock prepared-jobs owner-once
 
 | HTTP operation | Purpose |
 | --- | --- |
+| `POST /product/prepared/jobs/plans` | Retain a zero-force plan for an admitted input and bounded budget policy. |
+| `GET /product/prepared/jobs/plans/{plan_id}` | Read the immutable public plan and its SHA256. |
+| `POST /product/prepared/jobs/execute` | Queue `plan_id`, `plan_sha256`, and `idempotency_key` through the existing job authority. |
 | `POST /product/prepared/jobs` | Queue an admitted job with `admission_id`, `idempotency_key`, and optional `budget_policy`. |
 | `GET /product/prepared/jobs/{id}` | Read state, known work, model/units, budgets, and artifact descriptors. |
 | `POST /product/prepared/jobs/{id}/cancel` | Request cancellation; optional bounded `reason`. |
 | `POST /product/prepared/jobs/{id}/resume` | Explicitly queue a verified known pause. |
+| `GET /product/prepared/jobs/{id}/verify` | Check retained generations, artifacts and the owning numerical journal without evaluating forces. |
+| `GET /product/prepared/jobs/{id}/report` | Read a verified baseline/last-observed report, preserving unknown work and nonconvergence. |
+| `POST /product/prepared/jobs/compare` | Compare retained results for every requested `execution_ids` entry; no automatic winner or ranking. |
 | `GET /product/prepared/jobs/{id}/artifacts` | List immutable artifact descriptors. |
 | `GET /product/prepared/jobs/{id}/artifacts/{artifact_id}` | Download hash-checked JSON with its digest as ETag. |
 
@@ -63,6 +75,40 @@ HTTP requires the authenticated principal supplied by ProductSecurityMiddleware.
 A raw tenant header is insufficient. Other tenants receive the same not-found
 response for jobs and admissions. The local owner command is an administrator
 operation and has no public HTTP equivalent.
+
+Plans freeze the registered input bytes, implementation and runtime identities,
+solver bounds, model, force semantics, units and cumulative budget. Planning
+checks registered byte identities and the bounded solver admission; the fixed
+worker performs full molecular validation before its first evaluation. Planning
+does not create an execution, reserve force work or import Torch. A changed
+input, runtime, implementation or policy prevents stale-plan execution. CPU
+placement is selected from the available CPUs at submission and does not change
+the plan's numerical work or refresh its budget. Legacy submit and plan-bound
+execute share the same idempotency and owner authority.
+
+Verification and reporting use a fixed isolated child to read the owning
+Fourier verifier and retained reporter. That fresh child initializes both Torch
+thread pools to one before importing the owning verifier, matching the numerical
+worker's frozen environment. Public requests do not change the API process's
+global Torch settings. The read paths perform no optimization, graph
+construction or force evaluation. Source, runtime and retained receipt checks
+remain exact; moving the reader does not relax frozen environment matching.
+Their measured read-only costs are separate from worker execution accounting;
+they do not reset or consume numerical reservations. Each isolated owning read
+has a 120-second controller wall deadline, 90 CPU seconds, one allowed CPU,
+4 GiB address space and a 1 MiB file-size limit. Its request, stdout and stderr
+are bounded at 1 MiB, 4 MiB and 64 KiB. These are ceilings, not measured cost or
+RAM limits. Registry, artifact and pre/post journal scans run in the parent
+outside that child envelope; there is no aggregate whole-request containment
+claim. The response separates child CPU/RSS observations from parent request
+wall time, and does not attribute process-wide parent CPU to a concurrent
+request. Active work stays
+unresolved. Unknown total work remains null even when an earlier known prefix
+can be checked. A completed process is not evidence of numerical convergence.
+Comparisons retain missing, forbidden, failed and unknown requested entries in
+their denominator and make energy differences unavailable unless the exact
+Hamiltonian and units are compatible. They confer no chemical validity, pose
+selection or scientific qualification.
 
 ## State and recovery contract
 

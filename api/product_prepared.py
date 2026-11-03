@@ -26,6 +26,21 @@ class PreparedCancelRequest(_StrictRequest):
     reason: StrictStr = Field(default="", max_length=512)
 
 
+class PreparedPlanRequest(_StrictRequest):
+    admission_id: StrictStr = Field(min_length=1, max_length=64)
+    budget_policy: StrictStr = Field(default="local_cpu_research_v1", min_length=1, max_length=64)
+
+
+class PreparedExecuteRequest(_StrictRequest):
+    plan_id: StrictStr = Field(min_length=32, max_length=32)
+    plan_sha256: StrictStr = Field(min_length=64, max_length=64)
+    idempotency_key: StrictStr = Field(min_length=1, max_length=128)
+
+
+class PreparedCompareRequest(_StrictRequest):
+    execution_ids: list[StrictStr] = Field(min_length=1, max_length=32)
+
+
 def _service(request: Request):
     # ProductSecurityMiddleware owns this principal. In particular, the legacy
     # unauthenticated local X-Tenant-ID fallback is not an authority here.
@@ -59,9 +74,39 @@ def submit_prepared_job(body: PreparedSubmitRequest, request: Request):
     ), accepted=True)
 
 
+@router.post("/plans")
+def plan_prepared_job(body: PreparedPlanRequest, request: Request):
+    return _call(request, lambda service: service.plan(body.admission_id, budget_policy=body.budget_policy))
+
+
+@router.get("/plans/{plan_id}")
+def prepared_job_plan(plan_id: str, request: Request):
+    return _call(request, lambda service: service.get_plan(plan_id))
+
+
+@router.post("/execute", status_code=202)
+def execute_prepared_plan(body: PreparedExecuteRequest, request: Request):
+    return _call(request, lambda service: service.execute(body.plan_id, body.plan_sha256, body.idempotency_key), accepted=True)
+
+
+@router.post("/compare")
+def compare_prepared_jobs(body: PreparedCompareRequest, request: Request):
+    return _call(request, lambda service: service.compare(body.execution_ids))
+
+
 @router.get("/{execution_id}")
 def prepared_job_status(execution_id: str, request: Request):
     return _call(request, lambda service: service.status(execution_id))
+
+
+@router.get("/{execution_id}/verify")
+def verify_prepared_job(execution_id: str, request: Request):
+    return _call(request, lambda service: service.verify(execution_id))
+
+
+@router.get("/{execution_id}/report")
+def report_prepared_job(execution_id: str, request: Request):
+    return _call(request, lambda service: service.report(execution_id))
 
 
 @router.post("/{execution_id}/cancel", status_code=202)

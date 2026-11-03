@@ -32,7 +32,18 @@ def parser() -> argparse.ArgumentParser:
     submit.add_argument("admission_id")
     submit.add_argument("--idempotency-key", required=True)
     submit.add_argument("--budget-policy", default="local_cpu_research_v1")
-    for name in ("status", "cancel", "resume", "artifacts", "artifact"):
+    plan = actions.add_parser("plan", allow_abbrev=False)
+    plan.add_argument("admission_id")
+    plan.add_argument("--budget-policy", default="local_cpu_research_v1")
+    get_plan = actions.add_parser("get-plan", allow_abbrev=False)
+    get_plan.add_argument("plan_id")
+    execute = actions.add_parser("execute", allow_abbrev=False)
+    execute.add_argument("plan_id")
+    execute.add_argument("--plan-sha256", required=True)
+    execute.add_argument("--idempotency-key", required=True)
+    compare = actions.add_parser("compare", allow_abbrev=False)
+    compare.add_argument("execution_ids", nargs="+")
+    for name in ("status", "cancel", "resume", "artifacts", "artifact", "verify", "report"):
         command = actions.add_parser(name, allow_abbrev=False)
         command.add_argument("execution_id")
         if name == "cancel":
@@ -49,6 +60,18 @@ def dispatch(arguments) -> dict:
 
     service = configured_service()
     action = arguments.action
+    if action == "plan":
+        return service.plan(arguments.admission_id, budget_policy=arguments.budget_policy)
+    if action == "get-plan":
+        return service.get_plan(arguments.plan_id)
+    if action == "execute":
+        return service.execute(arguments.plan_id, arguments.plan_sha256, arguments.idempotency_key)
+    if action == "verify":
+        return service.verify(arguments.execution_id)
+    if action == "report":
+        return service.report(arguments.execution_id)
+    if action == "compare":
+        return service.compare(arguments.execution_ids)
     if action == "submit":
         return service.submit(
             arguments.admission_id,
