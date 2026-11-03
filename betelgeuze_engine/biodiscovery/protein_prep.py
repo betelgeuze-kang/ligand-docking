@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import os
 import hashlib
+import re
 import shlex
 
 import numpy as np
@@ -91,6 +92,8 @@ def parse_mmcif_text(text: str) -> tuple[np.ndarray, str] | None:
     Multiple models/atom_site loops/data blocks and explicit alternate locations
     must be resolved by the caller. No model or conformer is silently selected.
     Each residue with ATOM records must have one CA and a consistent name.
+    ATOM rows must use one complete label or author identity namespace; supplied
+    label sequence numbers must be positive integers.
     This checks observed rows only, not missing residues described by SEQRES.
     """
     lines = [line.strip() for line in str(text).splitlines()]
@@ -99,6 +102,7 @@ def parse_mmcif_text(text: str) -> tuple[np.ndarray, str] | None:
     seq: list[str] = []
     seen_residues: set[tuple[str, str, str]] = set()
     residue_names: dict[tuple[str, str, str], str] = {}
+    identity_namespace: str | None = None
     models: set[int] = set()
     atom_loop_seen = False
     if sum(line.startswith("data_") for line in lines) > 1:
@@ -186,10 +190,26 @@ def parse_mmcif_text(text: str) -> tuple[np.ndarray, str] | None:
             if record == "ATOM":
                 # Do not combine a label chain with an author residue number.
                 chain_id, res_num = value(tokens, "label_asym_id"), value(tokens, "label_seq_id")
+                if res_num:
+                    if re.fullmatch(r"[+]?[0-9]+", res_num) is None:
+                        raise ValueError("invalid_protein_residue_number")
+                    try:
+                        label_seq_id = int(res_num)
+                    except ValueError as exc:
+                        raise ValueError("invalid_protein_residue_number") from exc
+                    if label_seq_id < 1:
+                        raise ValueError("invalid_protein_residue_number")
+                    # Numeric aliases must denote one residue, including non-CA atoms.
+                    res_num = str(label_seq_id)
+                namespace = "label"
                 if not chain_id or not res_num:
                     chain_id, res_num = value(tokens, "auth_asym_id"), value(tokens, "auth_seq_id")
+                    namespace = "auth"
                 if not chain_id or not res_num:
                     raise ValueError("missing_protein_residue_identity")
+                if identity_namespace is not None and identity_namespace != namespace:
+                    raise ValueError("inconsistent_protein_residue_identity")
+                identity_namespace = namespace
                 key = (chain_id, res_num, value(tokens, "pdbx_PDB_ins_code"))
                 _record_residue(residue_names, key, res_name)
                 if atom_name == "CA":
