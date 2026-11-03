@@ -90,7 +90,7 @@ jobs:
             tests/unit/test_engine_v2_docking_authority_search.py \
             tests/unit/test_reference_minimization_workflow.py \
             --junitxml=cpu-refinement-comparison.xml 2>&1 | tee cpu-refinement-comparison.log
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: cpu-refinement-comparison-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.run_attempt }}

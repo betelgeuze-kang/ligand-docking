@@ -86,7 +86,7 @@ jobs:
           python -m venv --system-site-packages "$RUNNER_TEMP/f1f2-installed"
           "$RUNNER_TEMP/f1f2-installed/bin/python" -I -m pip install --no-deps --force-reinstall "$RUNNER_TEMP"/e123-wheels/*.whl
           python tools/verify_policy_d3_install.py --python "$RUNNER_TEMP/f1f2-installed/bin/python" --output-dir e123-evidence/installed-d3
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: assay-rank-e123-${{ matrix.python-version }}-${{ github.run_id }}

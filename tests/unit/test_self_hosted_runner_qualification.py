@@ -28,7 +28,7 @@ TRUSTED_WORKFLOW = (
 )
 CHECKOUT_V4_SHA = "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
 CHECKOUT_V7_SHA = "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-UPLOAD_V7_SHA = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+UPLOAD_V7_SHA = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
 SETUP_PYTHON_V6_SHA = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
 
 
