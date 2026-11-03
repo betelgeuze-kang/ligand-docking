@@ -11,6 +11,7 @@ import types
 
 import pytest
 
+import betelgeuze_product
 from betelgeuze_product import prepared_lifecycle_results as results
 from betelgeuze_product.prepared_lifecycle import (
     LifecycleError, PreparedLifecycle, digest, write_absent,
@@ -298,7 +299,8 @@ def test_thread_contract_failure_is_typed_without_changing_threads(service, monk
     assert error.value.code == "READ_VERIFICATION_UNAVAILABLE"
 
 
-def test_fixed_lazy_adapter_calls_only_owning_read_functions(monkeypatch, tmp_path):
+@pytest.mark.parametrize("report_already_imported", [False, True])
+def test_fixed_lazy_adapter_calls_only_owning_read_functions(monkeypatch, tmp_path, report_already_imported):
     calls = []
     fake_workflow = types.ModuleType("betelgeuze_product.cpu_refinement_fourier_v1.workflow")
     fake_workflow.__file__ = str(Path(results.__file__).parent / "cpu_refinement_fourier_v1/workflow.py")
@@ -316,9 +318,18 @@ def test_fixed_lazy_adapter_calls_only_owning_read_functions(monkeypatch, tmp_pa
     fake_provenance.environment = lambda: {"torch_threads": 1, "torch_interop_threads": 1}
     old_package = types.ModuleType("betelgeuze_product.cpu_refinement_v1_2")
     old_package.provenance = fake_provenance
+    if report_already_imported:
+        cached_report = types.ModuleType(fake_report.__name__)
+        cached_report.__file__ = fake_report.__file__
+        cached_report.report = lambda *a: pytest.fail("cached owning report must be replaced")
+        monkeypatch.setattr(betelgeuze_product, "prepared_refinement_cli", cached_report, raising=False)
+    else:
+        monkeypatch.delattr(betelgeuze_product, "prepared_refinement_cli", raising=False)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_fourier_v1", package)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_fourier_v1.workflow", fake_workflow)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.prepared_refinement_cli", fake_report)
+    # Relative imports can resolve a child already cached on its parent package.
+    monkeypatch.setattr(betelgeuze_product, "prepared_refinement_cli", fake_report, raising=False)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_v1_2", old_package)
     monkeypatch.setitem(sys.modules, "betelgeuze_product.cpu_refinement_v1_2.provenance", fake_provenance)
     results.read_worker._read_owning({}, tmp_path, with_report=False)

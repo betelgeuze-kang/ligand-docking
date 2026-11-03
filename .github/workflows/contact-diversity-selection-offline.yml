@@ -1,0 +1,42 @@
+name: Contact diversity selection offline
+on:
+  pull_request:
+    paths:
+      - 'tools/compare_contact_diversity_selection.py'
+      - 'tools/run_contact_selection_synthetic.py'
+      - 'tests/unit/test_contact_diversity_selection.py'
+      - 'tests/fixtures/contact_selection_synthetic.json'
+      - 'docs/contact_diversity_selection.ko.md'
+      - '.github/workflows/contact-diversity-selection-offline.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/compare_contact_diversity_selection.py'
+      - 'tools/run_contact_selection_synthetic.py'
+      - 'tests/unit/test_contact_diversity_selection.py'
+      - 'tests/fixtures/contact_selection_synthetic.json'
+      - 'docs/contact_diversity_selection.ko.md'
+      - '.github/workflows/contact-diversity-selection-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Synthetic stdlib contracts
+        run: python -m unittest discover -s tests/unit -p test_contact_diversity_selection.py -v
+      - name: Optimized no-site contracts
+        run: python -O -S -m unittest discover -s tests/unit -p test_contact_diversity_selection.py -v
+      - name: Frozen synthetic experiment
+        run: python -I -S tools/run_contact_selection_synthetic.py tests/fixtures/contact_selection_synthetic.json --expected-sha256 5e4174ac18cd21f8fe3da494e7ffab0c2e33631f4c692b532ae273ca0f7e1f03

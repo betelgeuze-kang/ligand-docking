@@ -6,7 +6,7 @@ import json
 import pytest
 
 pytest.importorskip("fastapi")
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.testclient import TestClient
 
 from api import product_prepared
@@ -237,13 +237,42 @@ def test_authenticated_http_defaults_disabled_without_configuration(monkeypatch)
     assert response.json()["qualified"] is False
 
 
+def _assert_no_registered_owner_once(*routers):
+    paths = {
+        route.path
+        for router in routers
+        for route in router.routes
+        if hasattr(route, "path")
+    }
+    assert all("owner-once" not in path for path in paths), "owner-once must not be registered"
+
+
 def test_prepared_router_is_in_existing_product_router():
     from api.product import router
 
-    routes = {(route.path, method) for route in router.routes for method in route.methods}
+    app = FastAPI()
+    app.include_router(router)
+    # Included routers can be lazy; inspect the mounted public API contract.
+    routes = {
+        (path, method.upper())
+        for path, operations in app.openapi()["paths"].items()
+        for method in operations
+    }
     assert ("/product/prepared/jobs", "POST") in routes
     assert ("/product/prepared/jobs/{execution_id}/artifacts/{artifact_id}", "GET") in routes
     assert all("owner-once" not in path for path, _ in routes)
+    # Inspect both owning registrations, including endpoints hidden from OpenAPI.
+    _assert_no_registered_owner_once(router, product_prepared.router)
+
+
+def test_owner_once_registration_guard_includes_schema_hidden_routes():
+    router = APIRouter()
+    router.add_api_route("/owner-once", lambda: None, methods=["POST"], include_in_schema=False)
+    app = FastAPI()
+    app.include_router(router)
+    assert "/owner-once" not in app.openapi()["paths"]
+    with pytest.raises(AssertionError, match="owner-once"):
+        _assert_no_registered_owner_once(router)
 
 
 def test_cli_and_http_share_durable_idempotency_and_tenant_isolation(monkeypatch, tmp_path, capsys):

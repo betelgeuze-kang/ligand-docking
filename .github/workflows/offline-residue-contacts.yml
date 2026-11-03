@@ -1,0 +1,38 @@
+name: Offline residue contacts
+on:
+  pull_request:
+    paths:
+      - 'tools/analyze_residue_contacts.py'
+      - 'tests/unit/test_offline_residue_contacts.py'
+      - 'tests/fixtures/residue_contacts/**'
+      - 'docs/residue_contacts.ko.md'
+      - '.github/workflows/offline-residue-contacts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/analyze_residue_contacts.py'
+      - 'tests/unit/test_offline_residue_contacts.py'
+      - 'tests/fixtures/residue_contacts/**'
+      - 'docs/residue_contacts.ko.md'
+      - '.github/workflows/offline-residue-contacts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stdlib-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run isolated stdlib tests
+        run: |
+          python -I -S -m unittest discover -s tests/unit -p 'test_offline_residue_contacts.py' -v
+          python -I -S -O -m unittest discover -s tests/unit -p 'test_offline_residue_contacts.py' -v
