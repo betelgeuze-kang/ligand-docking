@@ -1,0 +1,262 @@
+name: Redocking P0 P1 isolation and observation
+
+on:
+  push:
+    branches: ['codex/redocking-p0-p1-20261104']
+    paths:
+      - '.github/workflows/redocking_p0_p1.yml'
+      - 'tools/redocking_*.py'
+      - 'tools/run_redocking_isolated_development.py'
+      - 'tools/run_engine_v2_public_redocking_300.py'
+      - 'tools/analyze_redocking_p0_p1.py'
+      - 'betelgeuze_engine_v2/**'
+      - 'config/redocking_p0_p1_20261104.json'
+      - 'tests/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: redocking-p0-p1-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONHASHSEED: '0'
+  OMP_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  CUDA_VISIBLE_DEVICES: ''
+  HIP_VISIBLE_DEVICES: ''
+  ROCR_VISIBLE_DEVICES: ''
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+
+jobs:
+  admission:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 225
+    outputs:
+      paired_ready: ${{ steps.paired.outputs.paired_ready }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+          filter: blob:none
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            benchmarks
+            tools
+            config
+            tests
+            pyproject.toml
+            rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
+            .github/workflows
+          sparse-checkout-cone-mode: false
+          show-progress: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.10.22'
+      - name: Record execution request before environment preparation
+        run: |
+          python - <<'PYTHON'
+          import json, os, platform
+          from pathlib import Path
+          Path('evidence').mkdir(exist_ok=True)
+          fields = ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_JOB', 'RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion')
+          Path('evidence/job-context.json').write_text(json.dumps({'request': {k: os.environ.get(k) for k in fields}, 'bootstrap_python': platform.python_version(), 'analysis_scope': 'contaminated_development', 'claim_safe': False}, indent=2) + '\n')
+          PYTHON
+      - name: Resolve and freeze one evaluator bundle before docking
+        timeout-minutes: 15
+        run: python -m tools.redocking_p0_p1_runtime resolve --bundle-root "$RUNNER_TEMP/p0p1-bundle"
+      - name: Create dedicated CPU evaluator environment
+        run: |
+          python -m venv "$RUNNER_TEMP/p0p1-python"
+          echo "$RUNNER_TEMP/p0p1-python/bin" >> "$GITHUB_PATH"
+      - name: Install only the frozen evaluator wheel set
+        timeout-minutes: 10
+        run: python -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/p0p1-bundle"
+      - name: P0 P1 adversarial contracts and default path regressions
+        timeout-minutes: 16
+        run: python -m tools.redocking_p0_p1_runtime tests --bundle-root "$RUNNER_TEMP/p0p1-bundle" --output-root evidence
+      - name: Install and compare the hash-pinned native loader
+        timeout-minutes: 12
+        run: python -m tools.redocking_p0_p1_runtime native --bundle-root "$RUNNER_TEMP/p0p1-bundle" --native-root "$RUNNER_TEMP/p0p1-native" --output-root evidence --create-reference
+      - name: Attest evaluator, source, public inputs, and native execution
+        timeout-minutes: 15
+        run: python -m tools.redocking_p0_p1_runtime preflight --bundle-root "$RUNNER_TEMP/p0p1-bundle" --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence --create-reference
+      - name: Paired two-case legacy and observation runs
+        timeout-minutes: 126
+        run: |
+          python -m tools.run_redocking_isolated_development run --manifest config/redocking_p0_p1_20261104.json --preflight evidence/preflight.json --stage smoke --start 0 --count 1 --profile legacy_v7 --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence/paired/0-legacy
+          python -m tools.run_redocking_isolated_development run --manifest config/redocking_p0_p1_20261104.json --preflight evidence/preflight.json --stage smoke --start 0 --count 1 --profile development_observation_v1 --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence/paired/0-p1
+          python -m tools.run_redocking_isolated_development run --manifest config/redocking_p0_p1_20261104.json --preflight evidence/preflight.json --stage smoke --start 1 --count 1 --profile development_observation_v1 --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence/paired/1-p1
+          python -m tools.run_redocking_isolated_development run --manifest config/redocking_p0_p1_20261104.json --preflight evidence/preflight.json --stage smoke --start 1 --count 1 --profile legacy_v7 --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence/paired/1-legacy
+      - name: Gate development on exact candidate and Top5 equivalence
+        id: paired
+        run: python -m tools.analyze_redocking_p0_p1 paired --artifact-root evidence --output-root evidence
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: p0p1-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/p0p1-bundle/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Compare environment after execution
+        if: always()
+        run: |
+          if test -f evidence/environment-start.json; then
+            python -m tools.redocking_p0_p1_runtime postflight --bundle-root "$RUNNER_TEMP/p0p1-bundle" --output-root evidence
+          fi
+      - name: Seal retained evidence including hidden inputs
+        if: always()
+        run: |
+          mkdir -p evidence
+          python -m tools.redocking_evidence_support seal --root evidence --output sealed-evidence.zip
+          python -m tools.redocking_evidence_support verify-artifact --archive sealed-evidence.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: p0p1-evidence-${{ github.job }}-${{ matrix.start || 'smoke' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: sealed-evidence.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  development:
+    needs: admission
+    if: needs.admission.outputs.paired_ready == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        start: [2, 10, 18, 26]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+          filter: blob:none
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            benchmarks
+            tools
+            config
+            tests
+            pyproject.toml
+            rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
+            .github/workflows
+          sparse-checkout-cone-mode: false
+          show-progress: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.10.22'
+      - name: Record execution request before environment preparation
+        run: |
+          python - <<'PYTHON'
+          import json, os, platform
+          from pathlib import Path
+          Path('evidence').mkdir(exist_ok=True)
+          fields = ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_JOB', 'RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion')
+          Path('evidence/job-context.json').write_text(json.dumps({'request': {k: os.environ.get(k) for k in fields}, 'bootstrap_python': platform.python_version(), 'analysis_scope': 'contaminated_development', 'claim_safe': False}, indent=2) + '\n')
+          PYTHON
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/p0p1-bundle
+      - name: Create dedicated CPU evaluator environment
+        run: |
+          python -m venv "$RUNNER_TEMP/p0p1-python"
+          echo "$RUNNER_TEMP/p0p1-python/bin" >> "$GITHUB_PATH"
+      - name: Install only the frozen evaluator wheel set
+        timeout-minutes: 10
+        run: python -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/p0p1-bundle"
+      - name: Install and compare the hash-pinned native loader
+        timeout-minutes: 12
+        run: python -m tools.redocking_p0_p1_runtime native --bundle-root "$RUNNER_TEMP/p0p1-bundle" --native-root "$RUNNER_TEMP/p0p1-native" --output-root evidence
+      - name: Attest evaluator, source, public inputs, and native execution
+        timeout-minutes: 15
+        run: python -m tools.redocking_p0_p1_runtime preflight --bundle-root "$RUNNER_TEMP/p0p1-bundle" --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence
+      - name: Execute eight cases with independent engine deadlines
+        timeout-minutes: 255
+        run: python -m tools.run_redocking_isolated_development run --manifest config/redocking_p0_p1_20261104.json --preflight evidence/preflight.json --stage development --start ${{ matrix.start }} --count 8 --profile development_observation_v1 --input-root "$RUNNER_TEMP/p0p1-inputs" --output-root evidence/development
+      - name: Compare environment after execution
+        if: always()
+        run: |
+          if test -f evidence/environment-start.json; then
+            python -m tools.redocking_p0_p1_runtime postflight --bundle-root "$RUNNER_TEMP/p0p1-bundle" --output-root evidence
+          fi
+      - name: Seal retained evidence including hidden inputs
+        if: always()
+        run: |
+          mkdir -p evidence
+          python -m tools.redocking_evidence_support seal --root evidence --output sealed-evidence.zip
+          python -m tools.redocking_evidence_support verify-artifact --archive sealed-evidence.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: p0p1-evidence-${{ github.job }}-${{ matrix.start || 'smoke' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: sealed-evidence.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  aggregate:
+    needs: [admission, development]
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 16
+          filter: blob:none
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            benchmarks
+            tools
+            config
+            tests
+            pyproject.toml
+            rust_engine_v2
+            rust/betelgeuze-docking-search
+            rust/Cargo.toml
+            LICENSE
+            .github/workflows
+          sparse-checkout-cone-mode: false
+          show-progress: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.10.22'
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: p0p1-evidence-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloaded-evidence
+      - name: Verify sealed members and aggregate full denominators
+        run: python -m tools.analyze_redocking_p0_p1 aggregate --artifact-root downloaded-evidence --output-root combined-evidence
+      - name: Seal combined report
+        if: always()
+        run: |
+          mkdir -p combined-evidence
+          python -m tools.redocking_evidence_support seal --root combined-evidence --output combined-evidence.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: p0p1-combined-${{ github.run_id }}-${{ github.run_attempt }}
+          path: combined-evidence.zip
+          if-no-files-found: error
+          retention-days: 30
