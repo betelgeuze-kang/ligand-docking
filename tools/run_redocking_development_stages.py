@@ -27,6 +27,10 @@ ENGINES = ("engine_v2", "vina", "gnina")
 ROLES = ("receptor", "reference", "native", "seed")
 
 
+class ProcessCleanupError(RuntimeError):
+    pass
+
+
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
@@ -176,6 +180,8 @@ def prepare(input_root, output_root):
         record["python"] = sys.version
         record["platform"] = platform.platform()
         record["host_cpu_count"] = os.cpu_count()
+        record["runner_image"] = {k: os.environ.get(k) for k in ("ImageOS", "ImageVersion", "RUNNER_OS", "RUNNER_ARCH")}
+        record["loader_library_path"] = os.environ.get("LD_LIBRARY_PATH")
         record["engine_source_sha256"] = runner._engine_source_sha256(ROOT)
         record["evaluation_pipeline_sha256"] = runner._evaluation_pipeline_sha256(ROOT)
         record["rmsd_semantics_test"] = rmsd_contract_test()
@@ -188,6 +194,16 @@ def prepare(input_root, output_root):
             require(lines == [expected], "pip check has an unexpected dependency failure")
         download_inputs(input_root, m)
         binary = input_root / m["inputs"]["gnina"]["filename"]
+        linkage = subprocess.run(["ldd", str(binary)], text=True, capture_output=True, timeout=30)
+        record["gnina_ldd"] = {"returncode": linkage.returncode, "stdout": linkage.stdout, "stderr": linkage.stderr}
+        linked = {}
+        for line in linkage.stdout.splitlines():
+            tokens = line.split()
+            if "=>" in tokens:
+                target = tokens[tokens.index("=>") + 1]
+                if target.startswith("/") and Path(target).is_file():
+                    linked[target] = digest_file(target)
+        record["gnina_linked_library_sha256s"] = linked
         probe = subprocess.run([str(binary), "--version"], text=True, capture_output=True, timeout=30)
         record["gnina_version_probe"] = {"returncode": probe.returncode,
                                         "stdout": probe.stdout, "stderr": probe.stderr}
@@ -229,7 +245,7 @@ def descendants(snapshot, root_pid, tracked):
     return {pid: snapshot[pid] for pid in ids if pid in snapshot}
 
 
-def stop_tree(process, tracked):
+def _stop_tree_impl(process, tracked):
     # External oracle processes create their own sessions; kill all observed descendant groups.
     for sig in (signal.SIGTERM, signal.SIGKILL):
         snapshot = proc_snapshot()
@@ -254,6 +270,13 @@ def stop_tree(process, tracked):
         if time.monotonic() >= deadline:
             raise RuntimeError("descendants survived cleanup: " + repr(live))
         time.sleep(.05)
+
+
+def stop_tree(process, tracked):
+    try:
+        _stop_tree_impl(process, tracked)
+    except Exception as exc:
+        raise ProcessCleanupError("process cleanup failed: " + str(exc)) from exc
 
 
 def invoke_case(command, log_path, m):
@@ -491,7 +514,7 @@ def run_stage(stage, start, count, input_root, output_root):
         except Exception as exc:
             record["verification_errors"].append(type(exc).__name__ + ": " + str(exc))
             record["execution"].setdefault("error", str(exc))
-            if "descendants survived cleanup" in str(exc):
+            if isinstance(exc, ProcessCleanupError):
                 record["execution"]["termination"] = "cleanup_failed"
         finally:
             record["finished_at"] = utc_now()
@@ -556,7 +579,8 @@ def self_test():
             child_marker = Path(directory) / ("child-%s.pid" % early_exit)
             child_code = ("import os, signal, time; from pathlib import Path; "
                           "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
-                          "Path(%r).write_text(str(os.getpid())); time.sleep(30)" % str(child_marker))
+                          "p=Path(%r); p.with_suffix('.tmp').write_text(str(os.getpid())); "
+                          "os.replace(p.with_suffix('.tmp'), p); time.sleep(30)" % str(child_marker))
             parent_code = ("import subprocess, sys, time; "
                            "subprocess.Popen([sys.executable, '-c', %r], start_new_session=True); "
                            "time.sleep(%s)" % (child_code, ".25" if early_exit else "30"))
@@ -572,7 +596,8 @@ def self_test():
         marker = Path(directory) / "previously-untracked.pid"
         child_code = ("import os, signal, time; from pathlib import Path; "
                       "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
-                      "Path(%r).write_text(str(os.getpid())); time.sleep(30)" % str(marker))
+                      "p=Path(%r); p.with_suffix('.tmp').write_text(str(os.getpid())); "
+                          "os.replace(p.with_suffix('.tmp'), p); time.sleep(30)" % str(marker))
         parent_code = ("import subprocess, sys, time; "
                        "subprocess.Popen([sys.executable, '-c', %r], start_new_session=True); "
                        "time.sleep(30)" % child_code)
@@ -618,7 +643,29 @@ def main():
             destination = args.output_root / stage
             destination.mkdir(exist_ok=True)
             selected = [x for x in attempts if x["stage"] == stage]
-            publish_summary(destination, selected, indices, m)
+            summary = publish_summary(destination, selected, indices, m)
+            for metric in summary["case_metrics"]:
+                print(json.dumps({"case_metric": metric}, sort_keys=True), flush=True)
+            for attempt in selected:
+                for engine, row in attempt["rows"].items():
+                    detail = {"stage": stage, "case_id": row["case_id"], "engine_id": engine,
+                              "status": row["status"], "failure_code": row["failure_code"],
+                              "runtime_seconds": row["runtime_seconds"], "rmsd_angstroms": row["rmsd_angstroms"],
+                              "geometric_valid": row["geometric_valid"], "chemical_valid": row["chemical_valid"],
+                              "execution": attempt["execution"]}
+                    diag = row.get("engine_v2_diagnostics")
+                    if diag:
+                        detail["preparation_failure_code"] = diag["preparation_failure_code"]
+                        candidates = [x for x in diag["candidates"] if x["status"] == "success"]
+                        if candidates:
+                            picks = {"score_top1": min(candidates, key=lambda x: (x["score"], x["proposal_index"])),
+                                     "rmsd_oracle": min(candidates, key=lambda x: (x["rmsd_angstrom"], x["proposal_index"]))}
+                            for label, candidate in picks.items():
+                                keys = ("proposal_index", "proposal_mode", "score", "rmsd_angstrom",
+                                        "geometric_valid", "chemical_valid", "posebusters_failed_check_ids",
+                                        "score_term_binary64_hex")
+                                detail[label] = {key: candidate.get(key) for key in keys}
+                    print(json.dumps({"case_detail": detail}, sort_keys=True), flush=True)
         collect_inventory(args.output_root)
     return 0
 

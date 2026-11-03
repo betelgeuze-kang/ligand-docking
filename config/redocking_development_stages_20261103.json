@@ -120,5 +120,10 @@
     "V7 penalties and ScorerV1 are not physical E/F measurements"
   ],
   "raw_results_policy": "Preserve receipts and legacy raw scope; sidecar is explicitly contaminated_development.",
-  "missing_results_policy": "No fabricated engine receipt or candidate slot. Missing observations retained separately in full case denominator."
+  "missing_results_policy": "No fabricated engine receipt or candidate slot. Missing observations retained separately in full case denominator.",
+  "gnina_native_runtime": {
+    "distribution": "nvidia-cudnn-cu12==9.1.0.70",
+    "wheel_sha256": "165764f44ef8c61fcdfdfdbe769d687e06374059fbb388b6c89ecb0e28793a6f",
+    "installation": "isolated target, native loader path only; no GPU Torch or GPU execution"
+  }
 }
