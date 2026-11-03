@@ -835,7 +835,7 @@ def test_ci_owns_the_contract_without_external_engine_execution() -> None:
         in dedicated
     )
     assert (
-        "uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+        "uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0"
         in dedicated
     )
     assert "persist-credentials: false" in dedicated
