@@ -230,6 +230,67 @@ def test_mmcif_does_not_mix_label_chain_and_author_residue_number():
         prep.parse_pdb_text(text)
 
 
+@pytest.mark.parametrize("label_seq", ["0", "-1", "invalid", "1.5", "1_0"])
+def test_mmcif_label_sequence_requires_positive_integer(label_seq):
+    with pytest.raises(ValueError, match="invalid_protein_residue_number"):
+        prep.parse_pdb_text(_cif([_row(label_seq_id=label_seq)]))
+
+
+@pytest.mark.parametrize("alias", ["01", "+01"])
+def test_mmcif_label_sequence_aliases_cannot_duplicate_ca(alias):
+    text = _cif([_row(), _row(id=2, label_seq_id=alias)])
+    with pytest.raises(ValueError, match="duplicate_protein_ca_residue"):
+        prep.parse_pdb_text(text)
+
+
+@pytest.mark.parametrize("first_atom", ["CA", "N"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_mmcif_mixed_residue_namespaces_require_preparation(first_atom, reverse):
+    # Both rows name author residue X/10, even when one lacks its label number.
+    rows = [
+        _row(label_atom_id=first_atom, type_symbol=first_atom[0],
+             auth_asym_id="X", auth_seq_id=10),
+        _row(id=2, label_seq_id=".", auth_asym_id="X", auth_seq_id=10),
+    ]
+    text = _cif(list(reversed(rows)) if reverse else rows)
+    with pytest.raises(ValueError, match="inconsistent_protein_residue_identity"):
+        prep.parse_pdb_text(text)
+
+
+def test_mmcif_label_sequence_aliases_share_atom_residue():
+    text = _cif([
+        _row(label_seq_id="+01", label_atom_id="N", type_symbol="N", label_comp_id="GLY"),
+        _row(id=2, label_comp_id="GLY", Cartn_x="5.000"),
+    ])
+    coords, sequence = prep.parse_pdb_text(text)
+    np.testing.assert_array_equal(coords, [[5.0, 2.0, 3.0]])
+    assert coords.dtype == np.float32
+    assert sequence == "G"
+
+
+def test_mmcif_invalid_label_sequence_on_non_ca_is_rejected():
+    text = _cif([
+        _row(label_seq_id=0, label_atom_id="N", type_symbol="N"),
+        _row(id=2),
+    ])
+    with pytest.raises(ValueError, match="invalid_protein_residue_number"):
+        prep.parse_pdb_text(text)
+
+
+def test_mmcif_invalid_label_sequence_cannot_hide_in_author_fallback():
+    text = _cif([_row(label_asym_id=".", label_seq_id=0, auth_asym_id="X", auth_seq_id=10)])
+    with pytest.raises(ValueError, match="invalid_protein_residue_number"):
+        prep.parse_pdb_text(text)
+
+
+@pytest.mark.parametrize("author_number", ["0", "-1", "A10"])
+def test_mmcif_author_residue_numbers_keep_existing_support(author_number):
+    text = _cif([_row(label_asym_id=".", label_seq_id=".", auth_seq_id=author_number)])
+    coords, sequence = prep.parse_pdb_text(text)
+    np.testing.assert_array_equal(coords, [[1.0, 2.0, 3.0]])
+    assert sequence == "A"
+
+
 @pytest.mark.parametrize("suffix", [" extra", "", " 'unclosed"])
 def test_mmcif_malformed_row_is_rejected(suffix):
     columns = list(_COLUMNS)
