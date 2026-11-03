@@ -170,7 +170,10 @@ def _write_detached_double_fork_runner(path: Path) -> None:
                 "    os.setsid()",
                 "    second = os.fork()",
                 "    if second == 0:",
-                "        Path(args.pid_file).write_text(json.dumps({'runner': runner_pid, 'detached': os.getpid()}), encoding='utf-8')",
+                "        pid_file = Path(args.pid_file)",
+                "        pending_pid_file = pid_file.with_name(pid_file.name + '.tmp')",
+                "        pending_pid_file.write_text(json.dumps({'runner': runner_pid, 'detached': os.getpid()}), encoding='utf-8')",
+                "        pending_pid_file.replace(pid_file)",
                 "        time.sleep(args.marker_delay)",
                 "        Path(args.late_marker).write_text('LATE', encoding='utf-8')",
                 "        os._exit(0)",
@@ -198,6 +201,76 @@ def _running_pids_with_command_token(token: str) -> list[int]:
         if token in command:
             matches.append(int(entry.name))
     return matches
+
+
+@pytest.mark.parametrize("partial_payload", ["", '{"runner":'])
+def test_detached_runner_publishes_complete_pid_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    partial_payload: str,
+) -> None:
+    runner = tmp_path / "detached_double_fork_runner.py"
+    _write_detached_double_fork_runner(runner)
+    runner_code = compile(runner.read_text(encoding="utf-8"), str(runner), "exec")
+    pid_file = tmp_path / "detached-pids.json"
+    late_marker = tmp_path / "detached-late-marker.txt"
+    writes: list[str] = []
+    forks: list[None] = []
+
+    def _observe_write(path: Path, data: str, *, encoding: str) -> int:
+        with path.open("w", encoding=encoding) as stream:
+            stream.write(partial_payload)
+            stream.flush()
+            # Match the native reader at the empty/partial-write boundary.
+            if pid_file.exists():
+                json.loads(pid_file.read_text(encoding="utf-8"))
+            assert not pid_file.exists()
+            writes.append(data)
+            stream.seek(0)
+            stream.truncate()
+            return stream.write(data)
+
+    class _ReachedMarkerDelay(Exception):
+        pass
+
+    def _stop_after_publication(seconds: float) -> None:
+        assert seconds == 1.0
+        raise _ReachedMarkerDelay
+
+    def _fork() -> int:
+        forks.append(None)
+        return 0
+
+    def _unexpected_process_call(*args: object) -> None:
+        pytest.fail("fixture probe must not exit or wait for a real process")
+
+    # Run the generated writer synchronously, without creating any process.
+    with monkeypatch.context() as probe:
+        probe.setattr(
+            sys,
+            "argv",
+            [
+                str(runner),
+                "--pid-file",
+                str(pid_file),
+                "--late-marker",
+                str(late_marker),
+            ],
+        )
+        probe.setattr(os, "fork", _fork, raising=False)
+        probe.setattr(os, "setsid", lambda: None, raising=False)
+        probe.setattr(os, "_exit", _unexpected_process_call)
+        probe.setattr(os, "waitpid", _unexpected_process_call, raising=False)
+        probe.setattr(time, "sleep", _stop_after_publication)
+        probe.setattr(Path, "write_text", _observe_write)
+        with pytest.raises(_ReachedMarkerDelay):
+            exec(runner_code, {"__name__": "__main__"})
+
+    expected = {"runner": os.getpid(), "detached": os.getpid()}
+    assert len(forks) == 2
+    assert writes == [json.dumps(expected)]
+    assert json.loads(pid_file.read_text(encoding="utf-8")) == expected
+    assert not late_marker.exists()
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")

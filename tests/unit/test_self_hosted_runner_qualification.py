@@ -28,8 +28,8 @@ TRUSTED_WORKFLOW = (
 )
 CHECKOUT_V4_SHA = "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
 CHECKOUT_V7_SHA = "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-UPLOAD_V7_SHA = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-SETUP_PYTHON_V6_SHA = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+UPLOAD_V7_SHA = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+SETUP_PYTHON_V7_SHA = "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0"
 
 
 def _workflow(path: Path) -> dict:
@@ -225,11 +225,11 @@ def test_trusted_qualification_workflow_uses_node20_checkout_before_node24_uploa
     assert "retention-days: 30" in source
 
 
-def test_hosted_contract_workflow_is_ephemeral_and_uses_setup_python_v6() -> None:
+def test_hosted_contract_workflow_is_ephemeral_and_uses_setup_python_v7() -> None:
     source = HOSTED_WORKFLOW.read_text(encoding="utf-8")
     workflow = _workflow(HOSTED_WORKFLOW)
     assert workflow["permissions"] == {"contents": "read"}
     job = workflow["jobs"]["qualification-contract"]
     assert job["runs-on"] == "ubuntu-latest"
-    assert SETUP_PYTHON_V6_SHA in source
+    assert SETUP_PYTHON_V7_SHA in source
     assert "self-hosted" not in str(job["runs-on"]).lower()
