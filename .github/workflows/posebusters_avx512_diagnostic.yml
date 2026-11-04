@@ -1,0 +1,202 @@
+name: Diagnose 6YSP on two AVX512 candidate hosts
+'on':
+  push:
+    branches:
+    - codex/pb-avx512-diagnostic-20261104
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: posebusters-avx512-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+env:
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONHASHSEED: '0'
+  PYTHONNOUSERSITE: '1'
+  PYTHONPATH: ${{ github.workspace }}/execution
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  BLIS_NUM_THREADS: '1'
+  CUDA_VISIBLE_DEVICES: ''
+  HIP_VISIBLE_DEVICES: ''
+  ROCR_VISIBLE_DEVICES: ''
+jobs:
+  diagnose:
+    name: 6YSP native AVX512 eligibility and diagnostic (host ${{ matrix.host_slot }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        host_slot: [1, 2]
+    env:
+      CASE_ID: 6YSP_PAL
+      HOST_SLOT: ${{ matrix.host_slot }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/execution
+    steps:
+    - name: Checkout diagnostic launcher
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        path: launcher
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - name: Checkout unchanged execution source
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        ref: 8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4
+        path: execution
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-avx512-diagnostic-logs/host-$HOST_SLOT/$CASE_ID"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-avx512-diagnostic-logs/host-$HOST_SLOT/$CASE_ID/runtime-install.log"
+    - name: Verify the existing 23 diagnostic guards
+      working-directory: ${{ github.workspace }}/launcher
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m unittest tests.unit.test_posebusters_cpu_diagnostic -v 2>&1 | tee "$RUNNER_TEMP/pb-avx512-diagnostic-logs/host-$HOST_SLOT/$CASE_ID/guard-tests.log"
+    - name: Check native AVX512 before downloading molecular inputs
+      id: host_eligibility
+      timeout-minutes: 2
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" - <<'PY' 2>&1 | tee "$RUNNER_TEMP/pb-avx512-diagnostic-logs/host-$HOST_SLOT/$CASE_ID/host-eligibility.log"
+        import hashlib
+        import json
+        import os
+        from pathlib import Path
+        import platform
+        import sys
+        from datetime import datetime, timezone
+
+        # A fresh eligibility process must observe native, not forced, dispatch.
+        removed_override = os.environ.pop("ATEN_CPU_CAPABILITY", None) is not None
+        workspace = Path(os.environ["GITHUB_WORKSPACE"])
+        launcher_root = workspace / "launcher"
+        execution_root = workspace / "execution"
+        sys.path.insert(0, str(launcher_root))
+        from tools import run_posebusters_cpu_diagnostic as launcher
+
+        launcher.require(Path(launcher.__file__).resolve() == launcher_root / "tools/run_posebusters_cpu_diagnostic.py",
+                         "wrong eligibility metadata helper imported")
+        slot = int(os.environ["HOST_SLOT"])
+        case_id = os.environ["CASE_ID"]
+        output = Path(os.environ["RUNNER_TEMP"]) / "pb-avx512-diagnostic-logs" / f"host-{slot}" / case_id
+        receipt = {
+            "schema_id": "betelgeuze.avx512_host_eligibility/1.0.0",
+            "stage": "native_host_eligibility",
+            "status": "error", "eligible": False,
+            "host_slot": slot, "case_id": case_id,
+            "checked_at_utc": datetime.now(timezone.utc).isoformat(),
+            "github_run_id": os.environ["GITHUB_RUN_ID"],
+            "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+            "launcher_workflow_sha": os.environ["GITHUB_SHA"],
+            "expected_execution_sha": launcher.EXECUTION_COMMIT,
+            "python_executable": sys.executable,
+            "python_version": platform.python_version(),
+            "inherited_aten_override_removed": removed_override,
+            "aten_cpu_capability_before_torch_import": os.environ.get("ATEN_CPU_CAPABILITY"),
+            "required_common_flags": sorted(launcher.AVX512_FLAGS),
+            "stage_performed_molecular_evaluation": False,
+            "historical_gate_status": "not_evaluated",
+            "claim_scope": "Host eligibility only; no historical equivalence or performance claim.",
+        }
+        exit_code = 0
+        try:
+            launcher.require(slot in (1, 2) and case_id == "6YSP_PAL", "host slot/case differs")
+            receipt["launcher_source"] = launcher.git_identity(launcher_root)
+            receipt["execution_source"] = launcher.git_identity(execution_root)
+            receipt["launcher_file"] = launcher.descriptor(Path(launcher.__file__).resolve())
+            launcher.require(receipt["launcher_source"]["commit"] == receipt["launcher_workflow_sha"],
+                             "launcher workflow SHA differs from actual Git HEAD")
+            launcher.require(receipt["execution_source"] == {
+                "commit": "8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4",
+                "tree": "1cdf7b179a046f25dc0d0690692efa54d0d632b9"}, "execution checkout differs")
+
+            import torch
+
+            launcher.require(platform.python_version() == "3.10.22" and str(torch.__version__) == "2.6.0+cpu",
+                             "eligibility runtime differs from frozen Python/Torch")
+            native = torch.backends.cpu.get_cpu_capability()
+            cpu = launcher.cpu_metadata()
+            missing = sorted(launcher.AVX512_FLAGS - set(cpu["common_flags"]))
+            reasons = []
+            if native != "AVX512":
+                reasons.append("native_torch_capability_is_not_AVX512")
+            if missing:
+                reasons.append("required_flags_are_not_common_to_all_affinity_cpus")
+            eligible = not reasons
+            receipt.update(status="eligible" if eligible else "not_eligible", eligible=eligible,
+                           native_torch_cpu_capability=native, torch_version=str(torch.__version__),
+                           cpu=cpu, missing_required_flags=missing, reasons=reasons,
+                           next_action="run_existing_bounded_diagnostic" if eligible else
+                                       "skip_molecular_input_download_and_docking")
+        except Exception as exc:
+            receipt.update(status="error", eligible=False, error_type=type(exc).__name__, error=str(exc))
+            exit_code = 1
+        finally:
+            receipt["receipt_sha256"] = hashlib.sha256(launcher.canonical(receipt)).hexdigest()
+            launcher.atomic_json(output / "host-eligibility.json", receipt)
+            with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+                stream.write("eligible=" + ("true" if receipt["eligible"] else "false") + "\n")
+            print(json.dumps({key: receipt[key] for key in
+                ("host_slot", "case_id", "status", "eligible", "receipt_sha256")}, sort_keys=True))
+        raise SystemExit(exit_code)
+        PY
+    - name: Download exact admitted inputs only for an eligible host
+      if: ${{ success() && steps.host_eligibility.outputs.eligible == 'true' }}
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: pb-integration-inputs-41798394302-1
+        run-id: '41798394302'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Run the unchanged bounded diagnostic on an eligible AVX512 host
+      if: ${{ success() && steps.host_eligibility.outputs.eligible == 'true' }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" "$GITHUB_WORKSPACE/launcher/tools/run_posebusters_cpu_diagnostic.py" run \
+          --launcher-root "$GITHUB_WORKSPACE/launcher" \
+          --execution-root "$GITHUB_WORKSPACE/execution" \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --case-id "$CASE_ID" \
+          --output-root "$RUNNER_TEMP/pb-avx512-diagnostic/host-$HOST_SLOT/$CASE_ID" \
+          --python "$RUNNER_TEMP/p0p1-python/bin/python" \
+          2>&1 | tee "$RUNNER_TEMP/pb-avx512-diagnostic-logs/host-$HOST_SLOT/$CASE_ID/diagnostic.log"
+    - name: Retain diagnostics and not-eligible host receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-avx512-diagnostic-6YSP_PAL-host-${{ matrix.host_slot }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ runner.temp }}/pb-avx512-diagnostic/host-${{ matrix.host_slot }}/6YSP_PAL
+          ${{ runner.temp }}/pb-avx512-diagnostic-logs/host-${{ matrix.host_slot }}/6YSP_PAL
+        if-no-files-found: error
+        retention-days: 30
