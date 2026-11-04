@@ -1,0 +1,112 @@
+name: Diagnose historical docking CPU reproducibility
+'on':
+  push:
+    branches:
+    - codex/pb-cpu-diagnostic-20261104
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: posebusters-cpu-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+env:
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONHASHSEED: '0'
+  PYTHONNOUSERSITE: '1'
+  PYTHONPATH: ${{ github.workspace }}/execution
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  BLIS_NUM_THREADS: '1'
+  CUDA_VISIBLE_DEVICES: ''
+  HIP_VISIBLE_DEVICES: ''
+  ROCR_VISIBLE_DEVICES: ''
+jobs:
+  diagnose:
+    name: Frozen CPU dispatch diagnostic (${{ matrix.case_id }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case_id: [6T88_MWQ, 6YSP_PAL]
+    env:
+      CASE_ID: ${{ matrix.case_id }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/execution
+    steps:
+    - name: Checkout diagnostic launcher
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        path: launcher
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - name: Checkout unchanged execution source
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        ref: 8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4
+        path: execution
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-cpu-diagnostic-logs/$CASE_ID"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-cpu-diagnostic-logs/$CASE_ID/runtime-install.log"
+    - name: Verify diagnostic guards
+      working-directory: ${{ github.workspace }}/launcher
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m unittest tests.unit.test_posebusters_cpu_diagnostic -v 2>&1 | tee "$RUNNER_TEMP/pb-cpu-diagnostic-logs/$CASE_ID/guard-tests.log"
+    - name: Download exact admitted original inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: pb-integration-inputs-41798394302-1
+        run-id: '41798394302'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Compare bounded CPU profiles without changing the execution source
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" "$GITHUB_WORKSPACE/launcher/tools/run_posebusters_cpu_diagnostic.py" run \
+          --launcher-root "$GITHUB_WORKSPACE/launcher" \
+          --execution-root "$GITHUB_WORKSPACE/execution" \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --case-id "$CASE_ID" \
+          --output-root "$RUNNER_TEMP/pb-cpu-diagnostic/$CASE_ID" \
+          --python "$RUNNER_TEMP/p0p1-python/bin/python" \
+          2>&1 | tee "$RUNNER_TEMP/pb-cpu-diagnostic-logs/$CASE_ID/diagnostic.log"
+    - name: Retain every condition including strict comparison failures
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-cpu-diagnostic-${{ matrix.case_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ${{ runner.temp }}/pb-cpu-diagnostic/${{ matrix.case_id }}
+          ${{ runner.temp }}/pb-cpu-diagnostic-logs/${{ matrix.case_id }}
+        if-no-files-found: error
+        retention-days: 30
