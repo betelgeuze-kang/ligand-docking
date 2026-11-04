@@ -65,6 +65,9 @@ def test_repository_satisfies_external_oracle_boundary() -> None:
 def test_scientific_qualification_tools_are_product_image_exclusions() -> None:
     assert {
         "tools/analyze_redocking_p0_p1.py",
+        "tools/posebusters_replay_inputs.py",
+        "tools/posebusters_replay_evaluator.py",
+        "tools/run_posebusters_replay.py",
         "tools/redocking_p0_p1_runtime.py",
         "tools/run_redocking_development_stages.py",
         "tools/run_redocking_isolated_development.py",
