@@ -1,0 +1,591 @@
+name: PoseBusters runner integration and stage diagnosis
+'on':
+  push:
+    branches:
+    - codex/pb-runner-integration-20261104
+  workflow_dispatch: null
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: posebusters-integration-${{ github.ref }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+env:
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONHASHSEED: '0'
+  PYTHONNOUSERSITE: '1'
+  PYTHONPATH: ${{ github.workspace }}
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  BLIS_NUM_THREADS: '1'
+  CUDA_VISIBLE_DEVICES: ''
+  HIP_VISIBLE_DEVICES: ''
+  ROCR_VISIBLE_DEVICES: ''
+jobs:
+  prepare:
+    name: Admit frozen runtime and original development inputs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      PB_REPLAY_REQUIRE_FROZEN_RUNTIME: '1'
+      PB_INTEGRATION_REQUIRE_FROZEN_RUNTIME: '1'
+      PB_STAGE_REQUIRE_FROZEN_RUNTIME: '1'
+    outputs:
+      bundle_sha256: ${{ steps.bind.outputs.bundle_sha256 }}
+      input_artifact_name: ${{ steps.bind.outputs.input_artifact_name }}
+      trace_bundle_sha256: ${{ steps.bind.outputs.trace_bundle_sha256 }}
+      trace_artifact_name: ${{ steps.bind.outputs.trace_artifact_name }}
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-integration-prepare-logs"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-prepare-logs/runtime-install.log"
+    - name: Require frozen molecular and regression tests
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m pytest -q \
+          tests/unit/test_posebusters_replay_inputs.py \
+          tests/unit/test_posebusters_replay_evaluator.py \
+          tests/unit/test_posebusters_evaluator_context.py \
+          tests/unit/test_posebusters_subset.py \
+          tests/unit/test_posebusters_integration_inputs.py \
+          tests/unit/test_posebusters_replay_runner.py \
+          tests/unit/test_posebusters_integration_runner.py \
+          tests/unit/test_redocking_failure_diagnosis.py \
+          tests/unit/test_redocking_stage_rmsd.py \
+          tests/unit/test_p1_redocking_observation.py \
+          tests/unit/test_p1_redocking_runner.py \
+          tests/unit/test_p1_redocking_lineage_validation.py \
+          tests/unit/test_external_oracle_architecture.py \
+          -o cache_dir="$RUNNER_TEMP/pb-integration-pytest-cache" --junitxml="$RUNNER_TEMP/pb-integration-prepare-logs/tests.xml" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-prepare-logs/tests.log"
+    - name: Download sealed development-2 evidence
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-evidence-development-2-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-source/development-2
+    - name: Download sealed development-10 evidence
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-evidence-development-10-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-source/development-10
+    - name: Download sealed development-18 evidence
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-evidence-development-18-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-source/development-18
+    - name: Download sealed development-26 evidence
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-evidence-development-26-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-source/development-26
+    - name: Reconstruct and admit all 1856 original candidates
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_integration prepare --artifact-root "$RUNNER_TEMP/pb-integration-source" --output-root "$RUNNER_TEMP/pb-integration-prepared" --runtime-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-prepare-logs/prepare.log"
+    - name: Admit retained intermediate coordinate stages
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.trace_redocking_stage_rmsd prepare --artifact-root "$RUNNER_TEMP/pb-integration-source" --output-root "$RUNNER_TEMP/pb-stage-prepared" 2>&1 | tee "$RUNNER_TEMP/pb-integration-prepare-logs/trace-prepare.log"
+    - name: Bind both immutable input artifacts
+      id: bind
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" - <<'PYBIND'
+        import hashlib
+        import os
+        from pathlib import Path
+        root = Path(os.environ["RUNNER_TEMP"])
+        items = (
+            ("bundle_sha256", "input_artifact_name", "pb-integration-prepared", "pb-integration-inputs"),
+            ("trace_bundle_sha256", "trace_artifact_name", "pb-stage-prepared", "pb-stage-inputs"),
+        )
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+            for hash_key, name_key, directory, prefix in items:
+                payload = (root / directory / "bundle.json").read_bytes()
+                artifact = f"{prefix}-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
+                output.write(f"{hash_key}={hashlib.sha256(payload).hexdigest()}\n")
+                output.write(f"{name_key}={artifact}\n")
+        PYBIND
+    - name: Upload pb-integration-prepared
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: ${{ steps.bind.outputs.input_artifact_name }}
+        path: ${{ runner.temp }}/pb-integration-prepared/
+        if-no-files-found: error
+    - name: Upload pb-stage-prepared
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: ${{ steps.bind.outputs.trace_artifact_name }}
+        path: ${{ runner.temp }}/pb-stage-prepared/
+        if-no-files-found: error
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-integration-prepare-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-integration-prepare-logs/
+        if-no-files-found: error
+  pilot:
+    name: Exact Top5 pilot (${{ matrix.case_id }})
+    needs:
+    - prepare
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case_id:
+        - 6T88_MWQ
+        - 6YSP_PAL
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-integration-bootstrap"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-bootstrap/runtime-install.log"
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.input_artifact_name }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Run three supervised evaluator strategies
+      env:
+        INTEGRATION_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        INTEGRATION_CASE_ID: ${{ matrix.case_id }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_integration run-case \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 "$INTEGRATION_BUNDLE_SHA256" \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --stage replay --case-id "$INTEGRATION_CASE_ID" \
+          --output-root "$RUNNER_TEMP/pb-integration-results/replay/$INTEGRATION_CASE_ID" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-bootstrap/controller.log"
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-integration-result-replay-${{ matrix.case_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |-
+          ${{ runner.temp }}/pb-integration-results/
+          ${{ runner.temp }}/pb-integration-bootstrap/
+        if-no-files-found: error
+  pipeline:
+    name: Complete docking execution (${{ matrix.case_id }})
+    needs:
+    - prepare
+    - pilot_gate
+    runs-on: ubuntu-22.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case_id:
+        - 6T88_MWQ
+        - 6YSP_PAL
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-integration-bootstrap"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-bootstrap/runtime-install.log"
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.input_artifact_name }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Run three supervised evaluator strategies
+      env:
+        INTEGRATION_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        INTEGRATION_CASE_ID: ${{ matrix.case_id }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_integration run-case \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 "$INTEGRATION_BUNDLE_SHA256" \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --stage pipeline --case-id "$INTEGRATION_CASE_ID" \
+          --output-root "$RUNNER_TEMP/pb-integration-results/pipeline/$INTEGRATION_CASE_ID" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-bootstrap/controller.log"
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-integration-result-pipeline-${{ matrix.case_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |-
+          ${{ runner.temp }}/pb-integration-results/
+          ${{ runner.temp }}/pb-integration-bootstrap/
+        if-no-files-found: error
+  pilot_gate:
+    name: Require both pilots before expanded execution
+    needs:
+    - prepare
+    - pilot
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-integration-gate"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-gate/runtime-install.log"
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.input_artifact_name }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Download both pilot artifacts
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        pattern: pb-integration-result-replay-*-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-integration-case-artifacts
+        merge-multiple: false
+    - name: Require both exact pilot comparisons
+      if: always()
+      env:
+        INTEGRATION_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_integration aggregate \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 "$INTEGRATION_BUNDLE_SHA256" \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --scope pilot --results-root "$RUNNER_TEMP/pb-integration-case-artifacts" \
+          --output "$RUNNER_TEMP/pb-integration-gate/report.json" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-gate/aggregate.log"
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-integration-pilot-gate-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-integration-gate/
+        if-no-files-found: error
+  regression:
+    name: Development replay shard ${{ matrix.shard_id }}
+    needs:
+    - prepare
+    - pilot_gate
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shard_id:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-integration-bootstrap"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-bootstrap/runtime-install.log"
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.input_artifact_name }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Run remaining development Top5 comparisons
+      env:
+        INTEGRATION_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        INTEGRATION_SHARD_ID: ${{ matrix.shard_id }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_integration run-shard \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 "$INTEGRATION_BUNDLE_SHA256" \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --shard-id "$INTEGRATION_SHARD_ID" \
+          --output-root "$RUNNER_TEMP/pb-integration-results/shards/$INTEGRATION_SHARD_ID" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-bootstrap/controller.log"
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-integration-result-shard-${{ matrix.shard_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |-
+          ${{ runner.temp }}/pb-integration-results/
+          ${{ runner.temp }}/pb-integration-bootstrap/
+        if-no-files-found: error
+  stage_trace:
+    name: Intermediate RMSD shard ${{ matrix.shard_id }}
+    needs:
+    - prepare
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shard_id:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-stage-bootstrap"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-stage-bootstrap/runtime-install.log"
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.trace_artifact_name }}
+        path: ${{ runner.temp }}/pb-stage-prepared
+    - name: Measure retained stage RMSDs in bounded workers
+      env:
+        TRACE_BUNDLE_SHA256: ${{ needs.prepare.outputs.trace_bundle_sha256 }}
+        TRACE_SHARD_ID: ${{ matrix.shard_id }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.trace_redocking_stage_rmsd run-shard \
+          --input-root "$RUNNER_TEMP/pb-stage-prepared" \
+          --bundle-sha256 "$TRACE_BUNDLE_SHA256" \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --shard-id "$TRACE_SHARD_ID" \
+          --output-root "$RUNNER_TEMP/pb-stage-results/shard-$TRACE_SHARD_ID" \
+          2>&1 | tee "$RUNNER_TEMP/pb-stage-bootstrap/controller.log"
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-stage-result-shard-${{ matrix.shard_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |-
+          ${{ runner.temp }}/pb-stage-results/
+          ${{ runner.temp }}/pb-stage-bootstrap/
+        if-no-files-found: error
+  final:
+    name: Verify complete performance and stage evidence
+    needs:
+    - prepare
+    - pilot
+    - pilot_gate
+    - regression
+    - pipeline
+    - stage_trace
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+      if: ${{ needs.prepare.result == 'success' }}
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-integration-final"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-integration-final/runtime-install.log"
+      if: ${{ needs.prepare.result == 'success' }}
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.input_artifact_name }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+      if: ${{ needs.prepare.result == 'success' }}
+    - name: Download exact admitted inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: ${{ needs.prepare.outputs.trace_artifact_name }}
+        path: ${{ runner.temp }}/pb-stage-prepared
+      if: ${{ needs.prepare.result == 'success' }}
+    - name: Download pb-integration-result-* artifacts
+      if: ${{ always() && needs.prepare.result == 'success' }}
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        pattern: pb-integration-result-*-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-integration-case-artifacts
+        merge-multiple: false
+    - name: Download pb-stage-result-* artifacts
+      if: ${{ always() && needs.prepare.result == 'success' }}
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        pattern: pb-stage-result-*-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-stage-artifacts
+        merge-multiple: false
+    - name: Require all 31 integration comparisons
+      if: ${{ always() && needs.prepare.result == 'success' }}
+      env:
+        INTEGRATION_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_integration aggregate \
+          --input-root "$RUNNER_TEMP/pb-integration-prepared" \
+          --bundle-sha256 "$INTEGRATION_BUNDLE_SHA256" \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --scope all --results-root "$RUNNER_TEMP/pb-integration-case-artifacts" \
+          --output "$RUNNER_TEMP/pb-integration-final/report.json" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-final/aggregate.log"
+    - name: Require selected-stage controls and aggregate intermediate RMSDs
+      if: ${{ always() && needs.prepare.result == 'success' }}
+      env:
+        TRACE_BUNDLE_SHA256: ${{ needs.prepare.outputs.trace_bundle_sha256 }}
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.trace_redocking_stage_rmsd aggregate \
+          --input-root "$RUNNER_TEMP/pb-stage-prepared" \
+          --bundle-sha256 "$TRACE_BUNDLE_SHA256" \
+          --results-root "$RUNNER_TEMP/pb-stage-artifacts" \
+          --output "$RUNNER_TEMP/pb-integration-final/stage-rmsd-report.json" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-final/stage-aggregate.log"
+    - name: Fail explicitly when preparation is not admitted
+      if: ${{ always() && needs.prepare.result != 'success' }}
+      env:
+        PREPARE_RESULT: ${{ needs.prepare.result }}
+      run: |
+        python - <<'PYFAIL'
+        import json
+        import os
+        from pathlib import Path
+        root = Path(os.environ["RUNNER_TEMP"]) / "pb-integration-final"
+        root.mkdir(parents=True, exist_ok=True)
+        report = {
+            "status": "failed",
+            "prepare_result": os.environ["PREPARE_RESULT"],
+            "error": "No admitted input bundles; molecular comparison and stage inference were not performed.",
+        }
+        (root / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        raise SystemExit(1)
+        PYFAIL
+    - name: Retain results, logs, environments and receipts
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-integration-final-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-integration-final/
+        if-no-files-found: error
