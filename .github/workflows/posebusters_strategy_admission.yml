@@ -1,0 +1,94 @@
+name: PoseBusters strategy molecular admission
+
+on:
+  push:
+    branches:
+      - codex/pb-runner-integration-20261104
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: posebusters-strategy-admission-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONHASHSEED: "0"
+  PYTHONNOUSERSITE: "1"
+  PYTHONPATH: ${{ github.workspace }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+  VECLIB_MAXIMUM_THREADS: "1"
+  BLIS_NUM_THREADS: "1"
+  CUDA_VISIBLE_DEVICES: ""
+  HIP_VISIBLE_DEVICES: ""
+  ROCR_VISIBLE_DEVICES: ""
+
+jobs:
+  prepare:
+    name: Verify inputs and frozen runtime
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      PB_REPLAY_REQUIRE_FROZEN_RUNTIME: "1"
+      PB_INTEGRATION_REQUIRE_FROZEN_RUNTIME: "1"
+    steps:
+      # Full checkout is required by test_external_oracle_architecture.py.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.10.22"
+          check-latest: false
+      - name: Download original frozen runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-runtime-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-runtime
+      - name: Install only the retained evaluator wheels
+        run: |
+          mkdir -p "$RUNNER_TEMP/pb-replay-prepare-logs"
+          python -m venv "$RUNNER_TEMP/p0p1-python"
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator \
+            --bundle-root "$RUNNER_TEMP/pb-replay-runtime" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-prepare-logs/runtime-install.log"
+      - name: Run mandatory frozen-runtime and regression tests
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m pytest -q \
+            tests/unit/test_posebusters_replay_inputs.py \
+            tests/unit/test_posebusters_replay_evaluator.py \
+            tests/unit/test_posebusters_evaluator_context.py \
+            tests/unit/test_posebusters_subset.py \
+            tests/unit/test_posebusters_integration_inputs.py \
+            tests/unit/test_posebusters_replay_runner.py \
+            tests/unit/test_p1_redocking_observation.py \
+            tests/unit/test_p1_redocking_runner.py \
+            tests/unit/test_p1_redocking_lineage_validation.py \
+            tests/unit/test_external_oracle_architecture.py \
+            -o cache_dir="$RUNNER_TEMP/pb-replay-pytest-cache" \
+            --junitxml="$RUNNER_TEMP/pb-replay-prepare-logs/tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-prepare-logs/tests.log"
+      - name: Retain admission logs and JUnit
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pb-strategy-admission-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pb-replay-prepare-logs/
+          if-no-files-found: error

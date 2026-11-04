@@ -127,6 +127,7 @@ from betelgeuze_engine_v2.docking.development_lineage import emit_coordinate_sna
 
 if TYPE_CHECKING:
     from tools.redocking_development_p1 import DevelopmentObservation
+    from tools.posebusters_evaluator_context import PoseBustersEvaluatorContext
 
 
 RUNNER_ID = PUBLIC_REDOCKING_RUNNER_ID
@@ -2107,6 +2108,27 @@ def _require_development_observation(observation, case_id: str) -> None:
         observation.assert_case(case_id)
 
 
+def _require_posebusters_evaluation_context(
+    evaluation_context,
+    *,
+    case_id: str | None = None,
+    development_observation=None,
+) -> None:
+    if evaluation_context is None:
+        return
+    from tools.posebusters_evaluator_context import PoseBustersEvaluatorContext
+
+    if type(evaluation_context) is not PoseBustersEvaluatorContext:
+        raise PublicRedockingRunnerError("invalid PoseBusters evaluation context")
+    if case_id is not None:
+        evaluation_context.assert_case(case_id)
+        if case_id in FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS:
+            raise PublicRedockingRunnerError(
+                "experimental evaluator contexts are not a Stage 0 holdout admission"
+            )
+    evaluation_context.assert_observation(development_observation)
+
+
 def _profile(
     case_id: str,
     paths: dict[str, Path],
@@ -2202,18 +2224,31 @@ def _posebusters_outcomes(
     receptor_payload: bytes,
     expected_pose_count: int = 5,
     development_observation: DevelopmentObservation | None = None,
+    evaluation_context: PoseBustersEvaluatorContext | None = None,
 ) -> tuple[
     tuple[float, ...],
     tuple[bool, ...],
     tuple[bool, ...],
     tuple[tuple[str, ...], ...],
 ]:
+    if evaluation_context is not None:
+        _require_posebusters_evaluation_context(
+            evaluation_context, development_observation=development_observation
+        )
+        evaluation_context.assert_inputs(
+            native_payload=native_payload, receptor_payload=receptor_payload
+        )
+    context_arguments = (
+        {"evaluation_context": evaluation_context}
+        if evaluation_context is not None else {}
+    )
     if development_observation is None:
         return _evaluate_posebusters_outcomes(
             output_payload,
             native_payload=native_payload,
             receptor_payload=receptor_payload,
             expected_pose_count=expected_pose_count,
+            **context_arguments,
         )
     records = _split_sdf_records(output_payload)
     if len(records) != expected_pose_count:
@@ -2228,6 +2263,7 @@ def _posebusters_outcomes(
             receptor_payload=receptor_payload,
             expected_pose_count=expected_pose_count,
             development_observation=development_observation,
+            **context_arguments,
         ),
     )
 
@@ -2239,12 +2275,24 @@ def _evaluate_posebusters_outcomes(
     receptor_payload: bytes,
     expected_pose_count: int = 5,
     development_observation: DevelopmentObservation | None = None,
+    evaluation_context: PoseBustersEvaluatorContext | None = None,
 ) -> tuple[
     tuple[float, ...],
     tuple[bool, ...],
     tuple[bool, ...],
     tuple[tuple[str, ...], ...],
 ]:
+    records = None
+    if evaluation_context is not None:
+        _require_posebusters_evaluation_context(
+            evaluation_context, development_observation=development_observation
+        )
+        evaluation_context.assert_inputs(
+            native_payload=native_payload, receptor_payload=receptor_payload
+        )
+        records = _split_sdf_records(output_payload)
+        if len(records) != expected_pose_count:
+            raise PublicRedockingRunnerError("evaluation input denominator mismatch")
     PoseBusters = _load_posebusters()
     molecule_arguments = dict(
         output_payload=output_payload,
@@ -2270,20 +2318,32 @@ def _evaluate_posebusters_outcomes(
         "evaluation_posebusters",
         record_count=expected_pose_count,
     ):
-        report = PoseBusters(config="redock", top_n=expected_pose_count).bust(
-            predicted,
-            native,
-            receptor,
-            full_report=True,
-        )
+        if evaluation_context is None:
+            report = PoseBusters(config="redock", top_n=expected_pose_count).bust(
+                predicted,
+                native,
+                receptor,
+                full_report=True,
+            )
+        else:
+            report = evaluation_context.bust(
+                predicted, native, receptor, records=records,
+                native_payload=native_payload, receptor_payload=receptor_payload,
+                expected_pose_count=expected_pose_count, PoseBusters=PoseBusters,
+            )
     with _development_stage(
         development_observation,
         "evaluation_report_validation",
         record_count=expected_pose_count,
     ):
-        return _posebusters_report_outcomes(
+        outcomes = _posebusters_report_outcomes(
             report, expected_pose_count=expected_pose_count
         )
+    if evaluation_context is not None:
+        evaluation_context.observe_report(
+            report, predicted=predicted, records=records, outcomes=outcomes
+        )
+    return outcomes
 
 
 def _posebusters_report_outcomes(report, *, expected_pose_count: int) -> tuple:
@@ -2445,12 +2505,24 @@ def _evaluation_pipeline_sha256(
     repo_root: Path,
     *,
     evaluator_versions: dict[str, str] | None = None,
+    evaluator_mode: str | None = None,
 ) -> str:
     paths = (
         repo_root / "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
         Path(__file__).resolve(),
         repo_root / "tools/redocking_development_p1.py",
     )
+    strategy = None
+    if evaluator_mode is not None:
+        from tools.posebusters_evaluator_context import (
+            SCHEMA_ID as CONTEXT_SCHEMA_ID,
+            strategy_source_paths,
+        )
+
+        paths += tuple(
+            repo_root / relative for relative in strategy_source_paths(evaluator_mode)
+        )
+        strategy = {"schema_id": CONTEXT_SCHEMA_ID, "mode": evaluator_mode}
     projection = {
         "runner_id": RUNNER_ID,
         "evaluator_distribution_versions": (
@@ -2468,6 +2540,8 @@ def _evaluation_pipeline_sha256(
             for path in paths
         ],
     }
+    if strategy is not None:
+        projection["explicit_evaluator_context"] = strategy
     return hashlib.sha256(_canonical_bytes(projection)).hexdigest()
 
 
@@ -2726,9 +2800,15 @@ def _engine_v2_pose_coordinates(
     development_true_conformer_profile: bool = False,
     development_source_paired_torsion_rescue: bool = False,
     development_observation: DevelopmentObservation | None = None,
+    evaluation_context: PoseBustersEvaluatorContext | None = None,
 ) -> EngineV2PoseSearchOutcome:
     _require_development_observation(development_observation, case_id)
-    if development_observation is not None and any(
+    if evaluation_context is not None:
+        _require_posebusters_evaluation_context(
+            evaluation_context, case_id=case_id,
+            development_observation=development_observation,
+        )
+    if (development_observation is not None or evaluation_context is not None) and any(
         (
             development_v8_clearance_variant,
             development_true_conformer_profile,
@@ -3257,6 +3337,11 @@ def _engine_v2_pose_coordinates(
                 if development_observation is not None
                 else {}
             ),
+            **(
+                {"evaluation_context": evaluation_context}
+                if evaluation_context is not None
+                else {}
+            ),
         )
         evaluated_by_index = {
             row.proposal_index: (
@@ -3476,8 +3561,18 @@ def _engine_v2_result(
         dict[str, DevelopmentTrueConformerProposalEvidence] | None
     ) = None,
     development_observation: DevelopmentObservation | None = None,
+    evaluation_context: PoseBustersEvaluatorContext | None = None,
 ) -> PublicRedockingCaseResult:
     _require_development_observation(development_observation, case_id)
+    if evaluation_context is not None:
+        _require_posebusters_evaluation_context(
+            evaluation_context, case_id=case_id,
+            development_observation=development_observation,
+        )
+    if evaluation_context is not None and execution_profile_sha256:
+        raise PublicRedockingRunnerError(
+            "experimental evaluator contexts cannot reuse a frozen execution profile"
+        )
     _development_variant_kind(
         development_v8_clearance_variant=development_v8_clearance_variant,
         development_true_conformer_profile=development_true_conformer_profile,
@@ -3567,6 +3662,8 @@ def _engine_v2_result(
             pose_arguments["development_source_paired_torsion_rescue"] = True
         if development_observation is not None:
             pose_arguments["development_observation"] = development_observation
+        if evaluation_context is not None:
+            pose_arguments["evaluation_context"] = evaluation_context
         outcome = _engine_v2_pose_coordinates(case_id, paths, **pose_arguments)
         if type(outcome) is not EngineV2PoseSearchOutcome:
             raise PublicRedockingRunnerError(
@@ -3591,6 +3688,8 @@ def _engine_v2_result(
                 "top5_artifacts", pose_artifact_sha256s=artifacts
             )
     except _ENGINE_V2_CASE_EXCEPTIONS as exc:
+        if evaluation_context is not None:
+            evaluation_context.assert_healthy()
         if isinstance(exc, EngineV2SearchCaseFailure):
             diagnostics = exc.diagnostics
             diagnostic_evaluation_seconds = exc.diagnostic_evaluation_seconds
@@ -3688,6 +3787,11 @@ def _engine_v2_result(
         **(
             {"development_observation": development_observation}
             if development_observation is not None
+            else {}
+        ),
+        **(
+            {"evaluation_context": evaluation_context}
+            if evaluation_context is not None
             else {}
         ),
     )
