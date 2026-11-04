@@ -1,0 +1,201 @@
+name: Qualify frozen Intel profile and validate all 6YSP evaluator strategies
+'on':
+  push:
+    branches:
+    - codex/pb-qualified-integration-20261104
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: posebusters-qualified-integration-${{ github.ref }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+env:
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONHASHSEED: '0'
+  PYTHONNOUSERSITE: '1'
+  PYTHONPATH: ${{ github.workspace }}/execution
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  BLIS_NUM_THREADS: '1'
+  CUDA_VISIBLE_DEVICES: ''
+  HIP_VISIBLE_DEVICES: ''
+  ROCR_VISIBLE_DEVICES: ''
+jobs:
+  qualified_case:
+    name: Frozen three-strategy integration (host ${{ matrix.host_slot }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        host_slot:
+        - 1
+        - 2
+        - 3
+        - 4
+    env:
+      HOST_SLOT: ${{ matrix.host_slot }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/execution
+    steps:
+    - name: Checkout diagnostic launcher
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        path: launcher
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+        clean: true
+    - name: Checkout unchanged execution source
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        ref: 8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4
+        path: execution
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+        clean: true
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/runtime-install.log"
+    - name: Verify qualified integration and workflow boundary regressions
+      working-directory: ${{ github.workspace }}/launcher
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m pytest -q -p no:cacheprovider --confcutdir=tests/unit   tests/unit/test_posebusters_qualified_integration.py   tests/unit/test_posebusters_cpu_diagnostic.py   tests/unit/test_github_workflow_trust_boundaries.py   --junitxml="$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/tests.xml"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/tests.log"
+      env:
+        PYTHONPATH: ${{ github.workspace }}/launcher
+    - name: Download exact admitted original inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: pb-integration-inputs-41798394302-1
+        run-id: '41798394302'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Run the original three-strategy case only on a qualified host
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" "$GITHUB_WORKSPACE/launcher/tools/run_posebusters_qualified_integration.py" run --launcher-root "$GITHUB_WORKSPACE/launcher" --profile "$GITHUB_WORKSPACE/launcher/config/posebusters_qualified_profile_20261104.json"   --profile-sha256 14dba14517929759804dc83f30f7ef0f5cb293d8c65cbb52f54c940ddfe0cfc5   --execution-root "$GITHUB_WORKSPACE/execution"   --python "$RUNNER_TEMP/p0p1-python/bin/python"   --input-root "$RUNNER_TEMP/pb-integration-prepared"   --bundle-sha256 35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e   --runtime-root "$RUNNER_TEMP/pb-replay-runtime"   --output-root "$RUNNER_TEMP/pb-qualified-integration/host-$HOST_SLOT"   --launcher-workflow-sha "$GITHUB_SHA"   --host-slot "$HOST_SLOT"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/integration.log"
+    - name: Preserve infrastructure failure when no decision was written
+      if: always()
+      working-directory: ${{ runner.temp }}
+      env:
+        QUALIFIED_JOB_STATUS: ${{ job.status }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT"
+        if [ ! -f "$RUNNER_TEMP/pb-qualified-integration/host-$HOST_SLOT/qualified-result.json" ]; then
+          printf '{"schema_id":"betelgeuze.posebusters_qualified_infrastructure_failure/1.0.0","status":"incomplete","error_type":"infrastructure_or_prerequisite_failure","host_slot":%s,"workflow_sha":"%s","run_id":"%s","run_attempt":"%s","job_status":"%s"}\n' "$HOST_SLOT" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$QUALIFIED_JOB_STATUS" > "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/infrastructure-failure.json"
+        fi
+    - name: Retain success, failure, incomplete and ineligible host evidence
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-qualified-integration-6YSP_PAL-host-${{ matrix.host_slot }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |-
+          ${{ runner.temp }}/pb-qualified-integration/host-${{ matrix.host_slot }}
+          ${{ runner.temp }}/pb-qualified-logs/host-${{ matrix.host_slot }}
+        if-no-files-found: error
+        retention-days: 30
+  aggregate:
+    name: Verify all host profiles and three-strategy comparisons
+    needs:
+    - qualified_case
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/execution
+    steps:
+    - name: Checkout diagnostic launcher
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        path: launcher
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+        clean: true
+    - name: Checkout unchanged execution source
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        ref: 8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4
+        path: execution
+        persist-credentials: false
+        fetch-depth: 1
+        filter: blob:none
+        clean: true
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: 3.10.22
+        check-latest: false
+    - name: Download original frozen runtime
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: p0p1-runtime-41697499611-1
+        run-id: '41697499611'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-replay-runtime
+    - name: Install the retained wheels into the original venv path
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-qualified-final"
+        python -m venv "$RUNNER_TEMP/p0p1-python"
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-qualified-final/runtime-install.log"
+    - name: Download exact admitted original inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: pb-integration-inputs-41798394302-1
+        run-id: '41798394302'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-integration-prepared
+    - name: Download all four host result artifacts
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        pattern: pb-qualified-integration-6YSP_PAL-host-*-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-qualified-results
+        merge-multiple: false
+    - name: Require every eligible host to pass the original raw comparison
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" "$GITHUB_WORKSPACE/launcher/tools/run_posebusters_qualified_integration.py" aggregate   --profile "$GITHUB_WORKSPACE/launcher/config/posebusters_qualified_profile_20261104.json"   --profile-sha256 14dba14517929759804dc83f30f7ef0f5cb293d8c65cbb52f54c940ddfe0cfc5   --execution-root "$GITHUB_WORKSPACE/execution"   --input-root "$RUNNER_TEMP/pb-integration-prepared"   --bundle-sha256 35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e   --results-root "$RUNNER_TEMP/pb-qualified-results"   --output "$RUNNER_TEMP/pb-qualified-final/aggregate.json"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-final/aggregate.log"
+    - name: Preserve infrastructure failure when no decision was written
+      if: always()
+      working-directory: ${{ runner.temp }}
+      env:
+        QUALIFIED_JOB_STATUS: ${{ job.status }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/pb-qualified-final"
+        if [ ! -f "$RUNNER_TEMP/pb-qualified-final/aggregate.json" ]; then
+          printf '{"schema_id":"betelgeuze.posebusters_qualified_infrastructure_failure/1.0.0","status":"incomplete","error_type":"aggregation_infrastructure_or_prerequisite_failure","workflow_sha":"%s","run_id":"%s","run_attempt":"%s","job_status":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$QUALIFIED_JOB_STATUS" > "$RUNNER_TEMP/pb-qualified-final/infrastructure-failure.json"
+        fi
+    - name: Retain the full admission decision
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: pb-qualified-integration-final-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/pb-qualified-final
+        if-no-files-found: error
+        retention-days: 30
