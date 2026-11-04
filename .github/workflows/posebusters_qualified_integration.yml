@@ -47,6 +47,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ github.workspace }}/execution
+        shell: bash
     steps:
     - name: Checkout diagnostic launcher
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -79,13 +80,15 @@ jobs:
         path: ${{ runner.temp }}/pb-replay-runtime
     - name: Install the retained wheels into the original venv path
       run: |
+        set -euo pipefail
         mkdir -p "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT"
         python -m venv "$RUNNER_TEMP/p0p1-python"
         "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/runtime-install.log"
     - name: Verify qualified integration and workflow boundary regressions
       working-directory: ${{ github.workspace }}/launcher
       run: |
-        "$RUNNER_TEMP/p0p1-python/bin/python" -m pytest -q -p no:cacheprovider --confcutdir=tests/unit   tests/unit/test_posebusters_qualified_integration.py   tests/unit/test_posebusters_cpu_diagnostic.py   tests/unit/test_github_workflow_trust_boundaries.py   --junitxml="$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/tests.xml"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/tests.log"
+        set -euo pipefail
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m pytest -q -p no:cacheprovider --confcutdir=tests/unit   tests/unit/test_posebusters_qualified_integration.py tests/unit/test_posebusters_qualified_workflow.py   tests/unit/test_posebusters_cpu_diagnostic.py   tests/unit/test_github_workflow_trust_boundaries.py   --junitxml="$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/tests.xml"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/tests.log"
       env:
         PYTHONPATH: ${{ github.workspace }}/launcher
     - name: Download exact admitted original inputs
@@ -98,6 +101,7 @@ jobs:
         path: ${{ runner.temp }}/pb-integration-prepared
     - name: Run the original three-strategy case only on a qualified host
       run: |
+        set -euo pipefail
         "$RUNNER_TEMP/p0p1-python/bin/python" "$GITHUB_WORKSPACE/launcher/tools/run_posebusters_qualified_integration.py" run --launcher-root "$GITHUB_WORKSPACE/launcher" --profile "$GITHUB_WORKSPACE/launcher/config/posebusters_qualified_profile_20261104.json"   --profile-sha256 14dba14517929759804dc83f30f7ef0f5cb293d8c65cbb52f54c940ddfe0cfc5   --execution-root "$GITHUB_WORKSPACE/execution"   --python "$RUNNER_TEMP/p0p1-python/bin/python"   --input-root "$RUNNER_TEMP/pb-integration-prepared"   --bundle-sha256 35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e   --runtime-root "$RUNNER_TEMP/pb-replay-runtime"   --output-root "$RUNNER_TEMP/pb-qualified-integration/host-$HOST_SLOT"   --launcher-workflow-sha "$GITHUB_SHA"   --host-slot "$HOST_SLOT"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/integration.log"
     - name: Preserve infrastructure failure when no decision was written
       if: always()
@@ -105,6 +109,7 @@ jobs:
       env:
         QUALIFIED_JOB_STATUS: ${{ job.status }}
       run: |
+        set -euo pipefail
         mkdir -p "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT"
         if [ ! -f "$RUNNER_TEMP/pb-qualified-integration/host-$HOST_SLOT/qualified-result.json" ]; then
           printf '{"schema_id":"betelgeuze.posebusters_qualified_infrastructure_failure/1.0.0","status":"incomplete","error_type":"infrastructure_or_prerequisite_failure","host_slot":%s,"workflow_sha":"%s","run_id":"%s","run_attempt":"%s","job_status":"%s"}\n' "$HOST_SLOT" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$QUALIFIED_JOB_STATUS" > "$RUNNER_TEMP/pb-qualified-logs/host-$HOST_SLOT/infrastructure-failure.json"
@@ -129,6 +134,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ github.workspace }}/execution
+        shell: bash
     steps:
     - name: Checkout diagnostic launcher
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -161,6 +167,7 @@ jobs:
         path: ${{ runner.temp }}/pb-replay-runtime
     - name: Install the retained wheels into the original venv path
       run: |
+        set -euo pipefail
         mkdir -p "$RUNNER_TEMP/pb-qualified-final"
         python -m venv "$RUNNER_TEMP/p0p1-python"
         "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator --bundle-root "$RUNNER_TEMP/pb-replay-runtime" 2>&1 | tee "$RUNNER_TEMP/pb-qualified-final/runtime-install.log"
@@ -180,6 +187,7 @@ jobs:
         merge-multiple: false
     - name: Require every eligible host to pass the original raw comparison
       run: |
+        set -euo pipefail
         "$RUNNER_TEMP/p0p1-python/bin/python" "$GITHUB_WORKSPACE/launcher/tools/run_posebusters_qualified_integration.py" aggregate   --profile "$GITHUB_WORKSPACE/launcher/config/posebusters_qualified_profile_20261104.json"   --profile-sha256 14dba14517929759804dc83f30f7ef0f5cb293d8c65cbb52f54c940ddfe0cfc5   --execution-root "$GITHUB_WORKSPACE/execution"   --input-root "$RUNNER_TEMP/pb-integration-prepared"   --bundle-sha256 35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e   --results-root "$RUNNER_TEMP/pb-qualified-results"   --output "$RUNNER_TEMP/pb-qualified-final/aggregate.json"   2>&1 | tee "$RUNNER_TEMP/pb-qualified-final/aggregate.log"
     - name: Preserve infrastructure failure when no decision was written
       if: always()
@@ -187,6 +195,7 @@ jobs:
       env:
         QUALIFIED_JOB_STATUS: ${{ job.status }}
       run: |
+        set -euo pipefail
         mkdir -p "$RUNNER_TEMP/pb-qualified-final"
         if [ ! -f "$RUNNER_TEMP/pb-qualified-final/aggregate.json" ]; then
           printf '{"schema_id":"betelgeuze.posebusters_qualified_infrastructure_failure/1.0.0","status":"incomplete","error_type":"aggregation_infrastructure_or_prerequisite_failure","workflow_sha":"%s","run_id":"%s","run_attempt":"%s","job_status":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$QUALIFIED_JOB_STATUS" > "$RUNNER_TEMP/pb-qualified-final/infrastructure-failure.json"
