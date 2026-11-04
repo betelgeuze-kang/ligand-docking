@@ -13,7 +13,7 @@ evidence from Actions run `41697499611` and its retained molecular runtime.
 | --- | --- | --- |
 | `reference` | Original PoseBusters implementation | Original helper |
 | `prepared_receptor` | Reused immutable category prototypes | Original helper |
-| `prepared_subset` | Reused immutable category prototypes | Exact bondless subset fast path, with explicit original-helper fallback |
+| `prepared_subset` | Reused immutable category prototypes | Exact retained-atom and retained-bond copying, with explicit original-helper fallback |
 
 The runner accepts an optional `evaluation_context`. Its default is `None`.
 Existing CLI commands do not select the experimental strategy automatically.
@@ -23,11 +23,26 @@ clear the molecular energy LRU, and preserves the candidate-to-Top5 cache.
 Volume callbacks belong to the evaluator instance; the global PoseBusters
 registry is not patched.
 
-The subset fast path applies only to admitted bondless molecular objects and
-boolean masks. It copies retained atoms and double-precision coordinates using
-RDKit operations. Unsupported bonds, properties, query/stereo features, or
-object types use the source-pinned original helper. Unexpected fast-path errors
-propagate. The experiment records both fast-path and fallback counts.
+The subset fast path applies only to admitted ordinary molecular objects and
+boolean masks. It copies retained atoms and bonds in their original order,
+preserving endpoint orientation, native typed properties, atom/PDB metadata,
+conformer identity, and double-precision coordinates using RDKit operations.
+It does not sanitize or update molecular property caches. Persistent molecule
+or conformer properties, queries, unsupported chirality, bond stereo references,
+and stereo/substance groups use the source-pinned original helper. Unexpected
+fast-path errors propagate. The experiment records bonded and bondless
+applications, fallback reasons, and source/retained/removed atom and bond counts.
+The two pilot cases must exercise the bonded fast path with retained bonds.
+
+Frozen molecular tests compare complete native binaries using
+`AllProps | CoordsAsDouble`, including chirality, ring cuts, cached hydrogen
+counts, typed properties, multiple conformers, and precise coordinates.
+`tools/check_posebusters_subset_inputs.py` additionally audits every actual
+distance mask for the two retained pilot Top5 sets against the original helper
+and compares their complete reports. This deliberately duplicated audit is an
+equivalence check; its execution times are not an independent speed benchmark.
+The input bundle's preparation source and the currently executing source are
+recorded separately when a later candidate checks an earlier immutable bundle.
 
 ## Fixed scientific scope
 
@@ -79,6 +94,11 @@ environment snapshots, installed active package payloads, and process
 receipts are retained and validated separately. The original runtime uses
 Python 3.10.22, RDKit 2022.09.5, and PoseBusters 0.3.1 from retained wheels.
 The original venv path is recreated to preserve the installed-payload check.
+
+Complete-docking workers materialize their own verified copies of the four
+input roles and honor the public runner's private, read-only directory/file
+contract. Downloaded input artifacts are not modified to satisfy that contract.
+Input hashes remain checked before, during, and after execution and cleanup.
 
 Workers have explicit limits: 900 seconds for Top5 replay, 1,800 seconds for
 new complete-docking measurements, and 600 seconds for stage RMSD measurement.

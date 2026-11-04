@@ -33,6 +33,7 @@ class _FakeAtom:
         self.index = index
         self.query = False
         self.chirality = 0
+        self.aromatic = False
         self.props = {"serial": index + 100, "_computed": index * 2}
         self.computed = {"_computed"}
         self.pdb = {"name": f"atom-{index}", "chain": "A"}
@@ -42,6 +43,34 @@ class _FakeAtom:
 
     def GetChiralTag(self):
         return self.chirality
+
+
+class _FakeBond:
+    def __init__(self, begin, end, bond_type=1):
+        self.begin, self.end = begin, end
+        self.index = 0
+        self.bond_type = bond_type
+        self.query = False
+        self.stereo = 0
+        self.stereo_atoms = []
+        self.direction = 0
+        self.props = {"typed_unsigned": 4294967295, "computed_bond": -0.0}
+        self.computed = {"computed_bond"}
+
+    def GetBeginAtomIdx(self):
+        return self.begin
+
+    def GetEndAtomIdx(self):
+        return self.end
+
+    def HasQuery(self):
+        return self.query
+
+    def GetStereo(self):
+        return self.stereo
+
+    def GetStereoAtoms(self):
+        return tuple(self.stereo_atoms)
 
 
 class _FakeConformer:
@@ -82,7 +111,7 @@ class _FakeMol:
             self.__dict__.update(deepcopy(source.__dict__))
             return
         self.atoms = [_FakeAtom(index) for index in range(source)]
-        self.bonds = 0
+        self.bonds = []
         self.stereo_groups = []
         self.substance_groups = []
         self.props = {}
@@ -97,7 +126,10 @@ class _FakeMol:
         return len(self.atoms)
 
     def GetNumBonds(self):
-        return self.bonds
+        return len(self.bonds)
+
+    def GetBonds(self):
+        return tuple(self.bonds)
 
     def GetStereoGroups(self):
         return self.stereo_groups
@@ -122,6 +154,19 @@ class _FakeRWMol(_FakeMol):
         self.atoms.append(copied)
         return copied.index
 
+    def AddBond(self, begin, end, bond_type):
+        assert bond_type == 0  # The exact path must use UNSPECIFIED placeholders.
+        self.bonds.append(_FakeBond(begin, end, bond_type))
+        return len(self.bonds)
+
+    def ReplaceBond(self, index, bond, *, preserveProps, keepSGroups):
+        assert preserveProps is False and keepSGroups is True
+        original = self.bonds[index]
+        replacement = deepcopy(bond)
+        replacement.begin, replacement.end = original.begin, original.end
+        replacement.index = index
+        self.bonds[index] = replacement
+
     def AddConformer(self, conformer, *, assignId):
         assert not assignId
         self.conformers.append(deepcopy(conformer))
@@ -131,17 +176,19 @@ class _FakeRWMol(_FakeMol):
         for key in self.computed:
             self.props.pop(key, None)
         self.computed.clear()
-        for atom in self.atoms:
-            for key in atom.computed:
-                atom.props.pop(key, None)
-            atom.computed.clear()
+        for item in [*self.atoms, *self.bonds]:
+            for key in item.computed:
+                item.props.pop(key, None)
+            item.computed.clear()
 
 
 def _fake_chem():
     return SimpleNamespace(
         rdBase=SimpleNamespace(rdkitVersion=subset.FROZEN_RDKIT_VERSION),
         Mol=_FakeMol, RWMol=_FakeRWMol, Conformer=_FakeConformer,
-        ChiralType=SimpleNamespace(CHI_UNSPECIFIED=0),
+        ChiralType=SimpleNamespace(CHI_UNSPECIFIED=0, CHI_TETRAHEDRAL_CW=1, CHI_TETRAHEDRAL_CCW=2),
+        BondType=SimpleNamespace(UNSPECIFIED=0),
+        BondStereo=SimpleNamespace(STEREONONE=0),
         GetMolSubstanceGroups=lambda mol: mol.substance_groups,
     )
 
@@ -165,7 +212,7 @@ class SubsetGuardTests(unittest.TestCase):
         self.reference.assert_not_called()
 
     def test_all_keep_preserves_identity_even_for_unsupported_features(self):
-        self.mol.bonds = 1
+        self.mol.bonds = [_FakeBond(0, 1)]
         self.mol.props["_Name"] = "named"
         self.assertIs(self.filtered(self.mol, np.ones(4, dtype=bool)), self.mol)
         empty = _FakeMol()
@@ -202,6 +249,67 @@ class SubsetGuardTests(unittest.TestCase):
         self.assertEqual(result.conformers[0].positions, [])
         self.assertEqual(self.mol.GetNumAtoms(), 4)
 
+    def test_bonded_subset_copies_order_direction_chirality_and_typed_properties(self):
+        self.mol.bonds = [_FakeBond(3, 1, 7), _FakeBond(0, 3, 2), _FakeBond(2, 0, 9)]
+        self.mol.bonds[0].direction = 4
+        self.mol.atoms[1].chirality = 2
+        before = deepcopy(self.mol.__dict__)
+        result = self.filtered(self.mol, self.mask)
+        self.reference.assert_not_called()
+        self.assertEqual([(b.begin, b.end, b.index, b.bond_type) for b in result.bonds], [(1, 0, 0, 7)])
+        self.assertEqual(result.bonds[0].direction, 4)
+        self.assertEqual(result.bonds[0].props, {"typed_unsigned": 4294967295})
+        self.assertEqual(result.atoms[0].chirality, 2)
+        result.bonds[0].props["typed_unsigned"] = 1
+        result.atoms[0].chirality = 0
+        self.assertEqual(self.mol.bonds[0].props, before["bonds"][0].props)
+        self.assertEqual(self.mol.atoms[1].chirality, 2)
+        stats = self.filtered.document()
+        self.assertEqual((stats["bonded_fast_path_calls"], stats["bondless_fast_path_calls"]), (1, 0))
+        self.assertEqual((stats["source_bonds_fast_path"], stats["retained_bonds_fast_path"],
+                          stats["removed_bonds_fast_path"]), (3, 1, 2))
+
+    def test_bonded_subset_retains_isolated_atoms_and_all_removed_conformer(self):
+        self.mol.bonds = [_FakeBond(0, 1), _FakeBond(2, 3)]
+        retained = self.filtered(self.mol, self.mask)
+        self.assertEqual(retained.GetNumAtoms(), 2)
+        self.assertEqual(retained.GetNumBonds(), 0)
+        empty = self.filtered(self.mol, np.zeros(4, dtype=bool))
+        self.assertEqual((empty.GetNumAtoms(), empty.GetNumBonds()), (0, 0))
+        self.assertEqual(empty.conformers[0].positions, [])
+        self.assertEqual(self.filtered.document()["bonded_fast_path_calls"], 2)
+        self.reference.assert_not_called()
+
+    def test_kept_bonds_follow_source_order_without_endpoint_sorting(self):
+        self.mol.bonds = [_FakeBond(3, 0, 1), _FakeBond(1, 3, 2), _FakeBond(0, 1, 3)]
+        result = self.filtered(self.mol, np.array([True, True, False, True], dtype=bool))
+        self.assertEqual([(b.begin, b.end, b.bond_type) for b in result.bonds],
+                         [(2, 0, 1), (1, 2, 2), (0, 1, 3)])
+
+    def test_bond_copy_failure_propagates_without_silent_fallback(self):
+        self.mol.bonds = [_FakeBond(3, 1)]
+        error = RuntimeError("bond copy sentinel")
+        with patch.object(_FakeRWMol, "ReplaceBond", side_effect=error):
+            with self.assertRaises(RuntimeError) as caught:
+                self.filtered(self.mol, self.mask)
+        self.assertIs(caught.exception, error)
+        self.reference.assert_not_called()
+        self.assertEqual(self.filtered.document()["fast_path_errors"], 1)
+
+    def test_mixed_routes_conserve_atom_bond_and_call_counts(self):
+        self.filtered(self.mol, self.mask)
+        self.mol.bonds = [_FakeBond(3, 1)]
+        self.filtered(self.mol, self.mask)
+        self.filtered(self.mol, np.ones(4, dtype=bool))
+        self.mol.bonds[0].stereo_atoms = [0, 2]
+        self.filtered(self.mol, self.mask)
+        stats = self.filtered.document()
+        self.assertEqual(stats["calls"], stats["identity_calls"] + stats["fast_path_calls"] + stats["fallback_calls"])
+        self.assertEqual(stats["fast_path_calls"], stats["bonded_fast_path_calls"] + stats["bondless_fast_path_calls"])
+        self.assertEqual(stats["source_atoms_fast_path"], stats["retained_atoms_fast_path"] + stats["removed_atoms_fast_path"])
+        self.assertEqual(stats["source_bonds_fast_path"], stats["retained_bonds_fast_path"] + stats["removed_bonds_fast_path"])
+        self.assertEqual(sum(stats["fallback_reasons"].values()), stats["fallback_calls"])
+
     def test_conformer_order_ids_and_flags_are_retained(self):
         other = deepcopy(self.mol.conformers[0])
         other.identifier = 79
@@ -215,18 +323,21 @@ class SubsetGuardTests(unittest.TestCase):
 
     def test_persistent_molecule_properties_and_every_unsupported_feature_fall_back(self):
         cases = (
-            ("has_bonds", lambda m: setattr(m, "bonds", 1)),
             ("stereo_groups", lambda m: m.stereo_groups.append("enhanced-stereo")),
             ("substance_groups", lambda m: m.substance_groups.append("sgroup")),
             ("molecule_properties", lambda m: m.props.update({"_Name": "kept by upstream"})),
             ("query_atom", lambda m: setattr(m.atoms[0], "query", True)),
-            ("atom_chirality", lambda m: setattr(m.atoms[0], "chirality", 1)),
+            ("atom_chirality", lambda m: setattr(m.atoms[0], "chirality", 3)),
+            ("query_bond", lambda m: setattr(m.bonds[0], "query", True)),
+            ("bond_stereo", lambda m: setattr(m.bonds[0], "stereo", 1)),
+            ("bond_stereo_atoms", lambda m: m.bonds[0].stereo_atoms.extend([2, 3])),
             ("conformer_size", lambda m: m.conformers[0].positions.pop()),
             ("conformer_properties", lambda m: m.conformers[0].props.update({"x": 9})),
         )
         for reason, mutate in cases:
             with self.subTest(reason=reason):
                 mol = _FakeMol(4)
+                mol.bonds = [_FakeBond(0, 1)]
                 mutate(mol)
                 self.assertIs(self.filtered(mol, self.mask), self.sentinel)
                 self.assertIs(self.reference.call_args.args[0], mol)
@@ -258,7 +369,7 @@ class SubsetGuardTests(unittest.TestCase):
                          {"molecule_type": 1, "unsupported_mask": len(masks)})
 
     def test_original_failure_is_not_changed(self):
-        self.mol.bonds = 1
+        self.mol.props["unsupported"] = "preserve upstream error"
         error = RuntimeError("upstream sentinel")
         self.reference.side_effect = error
         with self.assertRaises(RuntimeError) as caught:
@@ -268,7 +379,7 @@ class SubsetGuardTests(unittest.TestCase):
 
     def test_unexpected_fast_path_error_is_not_hidden_by_fallback(self):
         error = RuntimeError("construction sentinel")
-        with patch.object(self.filtered, "_build_bondless_subset", side_effect=error):
+        with patch.object(self.filtered, "_build_induced_subset", side_effect=error):
             with self.assertRaises(RuntimeError) as caught:
                 self.filtered(self.mol, self.mask)
         self.assertIs(caught.exception, error)
@@ -329,6 +440,20 @@ class FrozenSubsetTests(unittest.TestCase):
         self.Chem.AssignStereochemistryFrom3D(mol)
         return mol
 
+    @classmethod
+    def bonded_receptor_payload(cls):
+        # Keep two bonded protein heavy atoms near the two synthetic poses,
+        # plus one far protein atom that forces an actual distance subset.
+        text = cls.receptor_payload().decode("ascii").replace(
+            "      40.000   0.000   0.000", "       5.000   0.000   0.000")
+        return text.replace("END\n", (
+            "ATOM      7  O   GLY B  10      40.000   0.000   0.000  1.00 26.00           O  \n"
+            "CONECT    1    5    6\n"
+            "CONECT    5    1\n"
+            "CONECT    6    1\n"
+            "END\n"
+        )).encode("ascii")
+
     def binary(self, mol):
         return bytes(mol.ToBinary(self.flags))
 
@@ -372,17 +497,90 @@ class FrozenSubsetTests(unittest.TestCase):
         self.assertEqual(filtered.document()["fallback_calls"], 0)
         self.assertEqual(filtered.document()["identity_calls"], 1)
 
+    def _assert_all_masks_exact(self, mol):
+        filtered = subset.ExactSubsetFilter(Chem=self.Chem, reference_filter=self.runtime.volume._filter_by_mask)
+        source = self.binary(mol)
+        count = mol.GetNumAtoms()
+        for bits in itertools.product((False, True), repeat=count):
+            with self.subTest(mask=bits):
+                mask = np.array(bits, dtype=bool)
+                baseline = self.runtime.volume._filter_by_mask(mol, mask)
+                observed = filtered(mol, mask)
+                self.assertEqual(self.binary(observed), self.binary(baseline))
+                self.assertEqual(self.binary(mol), source)
+                if all(bits):
+                    self.assertIs(observed, mol)
+        stats = filtered.document()
+        self.assertEqual(stats["fast_path_calls"], 2 ** count - 1)
+        self.assertEqual(stats["fallback_calls"], 0)
+        self.assertEqual(stats["identity_calls"], 1)
+        self.assertEqual(stats["bonded_fast_path_calls"], 2 ** count - 1 if mol.GetNumBonds() else 0)
+        self.assertEqual(stats["source_bonds_fast_path"], stats["retained_bonds_fast_path"] + stats["removed_bonds_fast_path"])
+
+    def bonded_metadata_receptor(self):
+        Chem = self.Chem
+        editable = Chem.RWMol(self.bondless_receptor())
+        for begin, end, kind in ((3, 1, Chem.BondType.SINGLE), (0, 3, Chem.BondType.DOUBLE),
+                                 (4, 0, Chem.BondType.SINGLE), (2, 3, Chem.BondType.DATIVE),
+                                 (1, 0, Chem.BondType.AROMATIC), (5, 4, Chem.BondType.ZERO)):
+            editable.AddBond(begin, end, kind)
+        mol = Chem.Mol(editable)
+        directions = (Chem.BondDir.BEGINWEDGE, Chem.BondDir.BEGINDASH, Chem.BondDir.ENDDOWNRIGHT,
+                      Chem.BondDir.ENDUPRIGHT, Chem.BondDir.EITHERDOUBLE, Chem.BondDir.UNKNOWN)
+        for index, bond in enumerate(mol.GetBonds()):
+            bond.SetProp("_private_string", "001")
+            bond.SetIntProp("signed", -2147483647 + index)
+            bond.SetUnsignedProp("unsigned", 4294967295 - index)
+            bond.SetBoolProp("boolean", bool(index % 2))
+            bond.SetDoubleProp("negative_zero", -0.0)
+            bond.SetIsConjugated(bool(index % 2))
+            bond.SetBondDir(directions[index])
+        # Deletion does not normalize inconsistent aromatic flags or atom
+        # chirality. The reconstruction must preserve even this raw state.
+        mol.GetAtomWithIdx(0).SetIsAromatic(False)
+        mol.GetAtomWithIdx(0).SetChiralTag(Chem.ChiralType.CHI_TETRAHEDRAL_CW)
+        mol.GetAtomWithIdx(0).SetNumExplicitHs(1)
+        mol.GetAtomWithIdx(0).SetNoImplicit(True)
+        mol.GetAtomWithIdx(1).SetChiralTag(Chem.ChiralType.CHI_TETRAHEDRAL_CCW)
+        first = mol.GetConformer()
+        first.SetId(31)
+        first.SetAtomPosition(0, (-0.0, math.nextafter(1.0, 2.0), 1e-200))
+        second = Chem.Conformer(first)
+        second.SetId(7)
+        second.Set3D(False)
+        second.SetAtomPosition(1, (math.nextafter(-1.0, -2.0), 0.0, -1e-200))
+        mol.AddConformer(second, assignId=False)
+        return mol
+
+    def test_bonded_all_masks_preserve_pdb_bond_properties_and_endpoint_order(self):
+        self._assert_all_masks_exact(self.bonded_metadata_receptor())
+
+    def test_all_masks_preserve_chiral_cached_hydrogens_rings_and_disconnected_atoms(self):
+        for smiles in ("N[C@@H](C)C(=O)O", "c1ccccc1", "C1CC1", "C.CC", "N->[Cu]"):
+            with self.subTest(smiles=smiles):
+                mol = self.Chem.MolFromSmiles(smiles)
+                self.assertIsNotNone(mol)
+                self._assert_all_masks_exact(mol)
+
     def test_original_fallback_preserves_properties_queries_and_bond_stereo(self):
         named = self.bondless_receptor()
         named.SetUnsignedProp("typed_property", 4294967295)
         conformer_property = self.bondless_receptor()
         conformer_property.GetConformer().SetDoubleProp("typed_conformer_property", -0.0)
-        chiral = self.bondless_receptor()
-        chiral.GetAtomWithIdx(0).SetChiralTag(self.Chem.ChiralType.CHI_TETRAHEDRAL_CW)
-        cases = (named, conformer_property, chiral,
-                 self.Chem.MolFromSmarts("[#6].[#8]"),
-                 self.Chem.MolFromSmiles("F/C=C/F"),
-                 self.Chem.MolFromSmiles("N[C@@H](C)C(=O)O"))
+        query_bond = self.Chem.RWMol(self.Chem.MolFromSmiles("CCC"))
+        query_bond.ReplaceBond(0, self.Chem.MolFromSmarts("C~C").GetBondWithIdx(0))
+        stereo_atoms = self.Chem.MolFromSmiles("CC=CC")
+        stereo_atoms.GetBondWithIdx(1).SetStereoAtoms(0, 3)
+        self.assertEqual(stereo_atoms.GetBondWithIdx(1).GetStereo(), self.Chem.BondStereo.STEREONONE)
+        grouped = self.Chem.MolFromSmiles("F[C@H](Cl)Br |&1:1|")
+        self.assertGreater(len(grouped.GetStereoGroups()), 0)
+        substance = self.bondless_receptor()
+        self.Chem.CreateMolSubstanceGroup(substance, "SUP").AddAtomWithIdx(0)
+        non_tetrahedral = self.bondless_receptor()
+        non_tetrahedral.GetAtomWithIdx(0).SetChiralTag(self.Chem.ChiralType.CHI_OTHER)
+        cases = (named, conformer_property, self.Chem.Mol(query_bond), stereo_atoms,
+                 grouped, substance, non_tetrahedral, self.Chem.MolFromSmarts("[#6].[#8]"),
+                 self.Chem.MolFromSmiles("F/C=C/F"))
         filtered = subset.ExactSubsetFilter(Chem=self.Chem, reference_filter=self.runtime.volume._filter_by_mask)
         for mol in cases:
             with self.subTest(atoms=mol.GetNumAtoms(), bonds=mol.GetNumBonds()):
@@ -396,18 +594,50 @@ class FrozenSubsetTests(unittest.TestCase):
         self.assertEqual(filtered.document()["fast_path_calls"], 0)
         self.assertEqual(filtered.document()["fallback_calls"], len(cases))
 
+    def test_frozen_batch_commit_matches_original_on_representative_masks(self):
+        # This verifies the investigated alternative's semantics. Production
+        # does not select it: the pinned commit still loops over RemoveAtom.
+        decorated = self.bonded_metadata_receptor()
+        decorated.SetUnsignedProp("molecule_typed", 4294967295)
+        decorated.GetConformer(31).SetDoubleProp("conformer_typed", -0.0)
+        for mol in (decorated, self.Chem.MolFromSmiles("N[C@@H](C)C(=O)O"),
+                    self.Chem.MolFromSmiles("F/C=C/F")):
+            count = mol.GetNumAtoms()
+            source = self.binary(mol)
+            masks = (np.zeros(count, dtype=bool), np.ones(count, dtype=bool),
+                     np.arange(count) % 2 == 0, np.arange(count) == count - 1)
+            for mask in masks:
+                with self.subTest(atoms=count, mask=mask.tolist()):
+                    baseline = self.runtime.volume._filter_by_mask(mol, mask)
+                    edited = self.Chem.RWMol(mol)
+                    edited.BeginBatchEdit()
+                    for index in reversed(np.flatnonzero(~mask).tolist()):
+                        edited.RemoveAtom(index)
+                    edited.CommitBatchEdit()
+                    self.assertEqual(self.binary(self.Chem.Mol(edited)), self.binary(baseline))
+                    self.assertEqual(self.binary(mol), source)
+
     def test_constructed_molecule_and_pdb_metadata_do_not_alias_source(self):
-        mol = self.bondless_receptor()
+        mol = self.bonded_metadata_receptor()
         before = self.binary(mol)
         filtered = subset.ExactSubsetFilter(Chem=self.Chem, reference_filter=self.runtime.volume._filter_by_mask)
-        result = filtered(mol, np.array([True, False, True, False, False, True], dtype=bool))
+        result = filtered(mol, np.array([True, True, True, True, False, True], dtype=bool))
         self.assertEqual(filtered.document()["fast_path_calls"], 1)
+        self.assertEqual(filtered.document()["bonded_fast_path_calls"], 1)
         result.GetAtomWithIdx(0).GetPDBResidueInfo().SetChainId("Z")
         result.GetAtomWithIdx(0).SetProp("changed", "new")
+        result.GetBondWithIdx(0).SetUnsignedProp("unsigned", 17)
+        result.GetBondWithIdx(0).SetBondDir(self.Chem.BondDir.UNKNOWN)
         result.GetConformer().SetAtomPosition(0, (900.0, 900.0, 900.0))
         self.assertEqual(self.binary(mol), before)
 
     def test_full_report_and_legacy_outcomes_match_with_distance_filter_hook(self):
+        self._assert_full_report_exact(self.receptor_payload(), require_bonded=False)
+
+    def test_bonded_full_report_and_legacy_outcomes_match_with_real_fast_path(self):
+        self._assert_full_report_exact(self.bonded_receptor_payload(), require_bonded=True)
+
+    def _assert_full_report_exact(self, receptor_payload, *, require_bonded):
         from rdkit.Chem import AllChem
 
         Chem, replay, runtime = self.Chem, self.replay, self.runtime
@@ -432,7 +662,7 @@ class FrozenSubsetTests(unittest.TestCase):
             try:
                 predicted, reference, receptor = runtime.runner._posebusters_molecules(
                     output_payload=b"".join(records), native_payload=native_payload,
-                    receptor_payload=self.receptor_payload(), expected_pose_count=len(records))
+                    receptor_payload=receptor_payload, expected_pose_count=len(records))
                 before = replay._input_fingerprints(predicted, reference, receptor, Chem)
                 evaluator_class = runtime.PoseBusters
                 cache = None
@@ -464,7 +694,11 @@ class FrozenSubsetTests(unittest.TestCase):
         self.assertEqual(outcomes["baseline"], outcomes["prepared_subset"])
         self.assertEqual(len(reports["baseline"]["columns"]), 126)
         self.assertGreater(optimized_stats["fast_path_calls"], 0)
+        if require_bonded:
+            self.assertGreater(optimized_stats["bonded_fast_path_calls"], 0)
+            self.assertGreater(optimized_stats["retained_bonds_fast_path"], 0)
         self.assertEqual(optimized_stats["fast_path_errors"], 0)
+        self.assertEqual(optimized_stats["fallback_calls"], 0)
 
 
 if __name__ == "__main__":

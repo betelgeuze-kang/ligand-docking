@@ -106,6 +106,7 @@ LEGACY_BENCHMARK_DOCKER_EXCLUSIONS = frozenset(
         "tools/posebusters_replay_inputs.py",
         "tools/posebusters_evaluator_context.py",
         "tools/posebusters_subset.py",
+        "tools/check_posebusters_subset_inputs.py",
         "tools/posebusters_integration_inputs.py",
         "tools/run_posebusters_integration.py",
         "tools/analyze_redocking_failures.py",

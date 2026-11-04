@@ -73,6 +73,7 @@ jobs:
           tests/unit/test_posebusters_replay_evaluator.py \
           tests/unit/test_posebusters_evaluator_context.py \
           tests/unit/test_posebusters_subset.py \
+          tests/unit/test_posebusters_subset_inputs.py \
           tests/unit/test_posebusters_integration_inputs.py \
           tests/unit/test_posebusters_replay_runner.py \
           tests/unit/test_posebusters_integration_runner.py \
@@ -84,6 +85,22 @@ jobs:
           tests/unit/test_external_oracle_architecture.py \
           -o cache_dir="$RUNNER_TEMP/pb-integration-pytest-cache" --junitxml="$RUNNER_TEMP/pb-integration-prepare-logs/tests.xml" \
           2>&1 | tee "$RUNNER_TEMP/pb-integration-prepare-logs/tests.log"
+    - name: Download immutable subset admission inputs
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: pb-integration-inputs-41790605433-1
+        run-id: '41790605433'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        path: ${{ runner.temp }}/pb-subset-inputs
+    - name: Admit exact subset binaries on actual receptor masks
+      run: |
+        "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.check_posebusters_subset_inputs \
+          --input-root "$RUNNER_TEMP/pb-subset-inputs" \
+          --bundle-sha256 85458df79ce784c2c74f775dab2da5893bd42f147e27c16c47f2de6ccbfdf4c2 \
+          --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+          --output "$RUNNER_TEMP/pb-integration-prepare-logs/subset-admission.json" \
+          2>&1 | tee "$RUNNER_TEMP/pb-integration-prepare-logs/subset-admission.log"
     - name: Download sealed development-2 evidence
       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
       with:
