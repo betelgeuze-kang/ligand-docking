@@ -81,6 +81,11 @@ class DevelopmentObservation:
     def case_id(self) -> str:
         return self._case_id
 
+    @property
+    def evaluator_identity(self) -> str:
+        """Expose the immutable cache identity for explicit runner strategies."""
+        return self._evaluator_identity
+
     def assert_case(self, case_id: str) -> None:
         self.assert_healthy()
         if self.case_id != case_id:

@@ -66,6 +66,13 @@ def test_scientific_qualification_tools_are_product_image_exclusions() -> None:
     assert {
         "tools/analyze_redocking_p0_p1.py",
         "tools/posebusters_replay_inputs.py",
+        "tools/posebusters_evaluator_context.py",
+        "tools/posebusters_subset.py",
+        "tools/check_posebusters_subset_inputs.py",
+        "tools/posebusters_integration_inputs.py",
+        "tools/run_posebusters_integration.py",
+        "tools/analyze_redocking_failures.py",
+        "tools/trace_redocking_stage_rmsd.py",
         "tools/posebusters_replay_evaluator.py",
         "tools/run_posebusters_replay.py",
         "tools/redocking_p0_p1_runtime.py",

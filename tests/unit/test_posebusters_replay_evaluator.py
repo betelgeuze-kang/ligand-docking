@@ -245,6 +245,31 @@ class PreparationTests(unittest.TestCase):
         self.adapted(pred, ignore_types={"hydrogens", "waters"})
         self.assertEqual(self.calls["shape"][-1][0], 1)
 
+    def test_injected_filter_receives_each_pose_mask(self):
+        pred = _FakeMol(["ligand"], [[0, 0, 0]])
+        calls = []
+
+        def distance_filter(mol, mask):
+            calls.append(mask.copy())
+            return self.volume._filter_by_mask(mol, mask)
+
+        first = self.adapted(pred, distance_filter=distance_filter)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(first, self.adapted(pred))
+        pred.coords[:] = 100
+        self.adapted(pred, distance_filter=distance_filter)
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(np.array_equal(calls[0], calls[1]))
+
+    def test_injected_filter_failure_is_not_hidden(self):
+        pred = _FakeMol(["ligand"], [[0, 0, 0]])
+
+        def failing_filter(mol, mask):
+            raise RuntimeError("subset sentinel")
+
+        with self.assertRaisesRegex(RuntimeError, "subset sentinel"):
+            self.adapted(pred, distance_filter=failing_filter)
+
     def test_diagnostic_profiler_restored_on_exception(self):
         self.assertIsNone(sys.getprofile())
         with self.assertRaisesRegex(RuntimeError, "sentinel"):

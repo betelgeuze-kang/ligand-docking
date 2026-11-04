@@ -300,6 +300,7 @@ def _prepared_volume_overlap(
     context: tuple[str, ...], volume: Any, measurements: _Measurements,
     label: str, clash_cutoff: float = 0.05, vdw_scale: float = 0.8,
     ignore_types: Any = frozenset({"hydrogens"}), search_distance: float = 6.0,
+    distance_filter: Callable | None = None,
 ) -> dict:
     # Only the first category-selection block of pinned volume_overlap.py is
     # replaced. Keep the remaining operation order, helper implementations,
@@ -316,7 +317,10 @@ def _prepared_volume_overlap(
         )
     keep_mask = distances.min(axis=0) <= search_distance * vdw_scale
     with measurements.stage(label, "distance_filter"):
-        mol_cond = volume._filter_by_mask(mol_cond, keep_mask)
+        # Existing replay callers keep the pinned helper. The opt-in runner
+        # can supply the separately guarded exact subset constructor.
+        filter_by_mask = volume._filter_by_mask if distance_filter is None else distance_filter
+        mol_cond = filter_by_mask(mol_cond, keep_mask)
     if mol_cond.GetNumAtoms() == 0:
         return {"results": {"volume_overlap": volume.np.nan, "no_volume_clash": True}}
 
@@ -330,7 +334,8 @@ def _prepared_volume_overlap(
 
 def _instrumented_class(runtime: Any, *, mode: str, cache: Any,
                         context: tuple[str, ...], measurements: _Measurements,
-                        trace_coverage: dict[str, dict[str, int]], energy_events: list[dict]) -> type:
+                        trace_coverage: dict[str, dict[str, int]], energy_events: list[dict],
+                        distance_filter: Callable | None = None) -> type:
     class ObservedPoseBusters(runtime.PoseBusters):
         def _initialize_modules(self) -> None:
             super()._initialize_modules()
@@ -343,10 +348,11 @@ def _instrumented_class(runtime: Any, *, mode: str, cache: Any,
                         start = time.perf_counter_ns()
                         before_energy = runtime.energy.get_average_energy.cache_info() if function == "energy_ratio" else None
                         try:
-                            if function == "volume_overlap" and mode == "prepared_receptor":
+                            if function == "volume_overlap" and mode in ("prepared_receptor", "prepared_subset"):
                                 return _prepared_volume_overlap(
                                     **kwargs, **parameters, cache=cache, context=context,
                                     volume=runtime.volume, measurements=measurements, label=label,
+                                    distance_filter=distance_filter,
                                 )
                             if function == "volume_overlap" and mode == "profile":
                                 with _VolumeTrace(runtime.volume, measurements, label) as trace:
