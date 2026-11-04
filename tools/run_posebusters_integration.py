@@ -7,6 +7,7 @@ The experiment's resource limits do not change the original run's contract.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from copy import deepcopy
 import hashlib
 import json
@@ -18,6 +19,7 @@ import re
 import statistics
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any
 
@@ -420,11 +422,20 @@ def validate_context(before: dict, after: dict, *, selected: dict, bundle: dict,
             require(type(stats) is dict and stats["implementation_id"] == IMPLEMENTATION_ID and
                     stats["rdkit_version"] == FROZEN_RDKIT_VERSION, "subset implementation identity differs")
             for key in ("calls", "identity_calls", "fast_path_calls", "fallback_calls", "fast_path_errors", "fallback_errors",
-                        "source_atoms_fast_path", "retained_atoms_fast_path", "removed_atoms_fast_path"):
-                _integer(stats[key], "subset " + key)
+                        "source_atoms_fast_path", "retained_atoms_fast_path", "removed_atoms_fast_path",
+                        "bonded_fast_path_calls", "bondless_fast_path_calls", "source_bonds_fast_path",
+                        "retained_bonds_fast_path", "removed_bonds_fast_path"):
+                _integer(stats.get(key), "subset " + key)
             require(stats["calls"] == stats["identity_calls"] + stats["fast_path_calls"] + stats["fallback_calls"] and
                     stats["fast_path_errors"] == stats["fallback_errors"] == 0, "subset call/error accounting differs")
+            require(stats["bonded_fast_path_calls"] + stats["bondless_fast_path_calls"] == stats["fast_path_calls"],
+                    "subset bonded/bondless call accounting differs")
             require(stats["source_atoms_fast_path"] == stats["retained_atoms_fast_path"] + stats["removed_atoms_fast_path"], "subset atom accounting differs")
+            require(stats["source_bonds_fast_path"] == stats["retained_bonds_fast_path"] + stats["removed_bonds_fast_path"],
+                    "subset bond accounting differs")
+            if selected["case"]["case_id"] in PILOT_CASES:
+                require(stats["bonded_fast_path_calls"] > 0 and stats["retained_bonds_fast_path"] > 0,
+                        "pilot subset strategy did not apply the bonded fast path with retained bonds")
             require(type(stats["fallback_reasons"]) is dict, "subset fallback reasons missing")
             for value in stats["fallback_reasons"].values():
                 _integer(value, "subset fallback reason count", minimum=1)
@@ -501,12 +512,48 @@ def _node_identity() -> dict:
             "affinity": sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None}
 
 
+@contextmanager
+def _private_pipeline_inputs(selected: dict, *, runner: Any, output_root: Path):
+    """Materialize verified bytes under the runner's unchanged private-input contract."""
+    case = selected["case"]
+    require(case["case_id"] in inputs.CASE_IDS, "private input case is outside the fixed cohort")
+    roles = ("receptor", "reference", "native", "seed")
+    hashes = {role: case[role]["sha256"] for role in roles}
+    names = {role: Path(case[role]["relative_path"]).name for role in roles}
+    require(len(set(names.values())) == len(roles), "private input filenames collide")
+    parent = runner._owned_directory_descriptor(output_root, create=False)
+    os.close(parent)
+    # Downloaded artifacts do not retain the public runner's 0500/0400 modes.
+    # Each worker gets distinct inodes; the shared, hash-bound bundle is untouched.
+    with tempfile.TemporaryDirectory(prefix="pipeline-inputs-", dir=output_root) as temporary:
+        directory = Path(temporary) / case["case_id"]
+        descriptor_fd = runner._owned_directory_descriptor(directory, create=True, exact_mode=0o700)
+        paths = {"directory": directory}
+        try:
+            for role in roles:
+                target = directory / names[role]
+                runner._atomic_bytes(target, bound_file(selected["root"], case[role]))
+                target.chmod(0o400)
+                paths[role] = target
+            os.fchmod(descriptor_fd, 0o500)
+            runner._require_case_input_identity(paths, hashes)
+            yield paths
+        finally:
+            # Restore only the owned private directory, including on pin/profile
+            # failure, before TemporaryDirectory removes it and any private aliases.
+            try:
+                os.fchmod(descriptor_fd, 0o700)
+            finally:
+                os.close(descriptor_fd)
+
+
 def _pipeline(selected: dict, *, runner: Any, observer: Any, context: Any, journal: Any, output_root: Path) -> dict:
-    case, paths = selected["case"], selected["paths"]
+    case = selected["case"]
     hashes = {role: case[role]["sha256"] for role in ("receptor", "reference", "native", "seed")}
     profiles = {profile.case_id: profile for profile in runner.frozen_public_redocking_profiles()}
     output = output_root / "poses" / (case["case_id"] + ".sdf")
-    with runner.PinnedCaseInputs(paths, hashes) as pinned:
+    with _private_pipeline_inputs(selected, runner=runner, output_root=output_root) as paths, \
+            runner.PinnedCaseInputs(paths, hashes) as pinned:
         with journal.stage("profile_validation"), pinned.verified_window():
             profile = runner._profile(case["case_id"], pinned.execution_paths, profiles[case["case_id"]], development_observation=observer)
             write_document(output_root, "profile-observation.json", {"case_id": profile.case_id,

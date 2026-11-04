@@ -4,19 +4,25 @@ Synthetic evidence exercises the controller's trust boundaries. These tests
 make no claim about molecular equivalence; frozen runtime/cloud cases do that.
 """
 from argparse import Namespace
-from contextlib import redirect_stdout
+import ast
+from contextlib import contextmanager, redirect_stdout
 from copy import deepcopy
+import ctypes
 from functools import lru_cache
 import hashlib
 import io
+import os
 from pathlib import Path
 import shutil
+import stat
 import struct
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+import uuid
 
 from tools import run_posebusters_integration as p
 from tools.redocking_development_p1 import DevelopmentObservation
@@ -193,7 +199,10 @@ def contexts(selected, bundle, mode):
         after["subset_filter"] = {"implementation_id": IMPLEMENTATION_ID, "rdkit_version": FROZEN_RDKIT_VERSION,
             "calls": count, "identity_calls": 0, "fast_path_calls": count, "fallback_calls": 0,
             "fast_path_errors": 0, "fallback_errors": 0, "source_atoms_fast_path": count * 10,
-            "retained_atoms_fast_path": count * 4, "removed_atoms_fast_path": count * 6, "fallback_reasons": {}}
+            "retained_atoms_fast_path": count * 4, "removed_atoms_fast_path": count * 6,
+            "bonded_fast_path_calls": count, "bondless_fast_path_calls": 0,
+            "source_bonds_fast_path": count * 9, "retained_bonds_fast_path": count * 3,
+            "removed_bonds_fast_path": count * 6, "fallback_reasons": {}}
     return before, after, energy_before, energy_after
 
 
@@ -649,6 +658,228 @@ class FrozenEnergyCacheAdmission(unittest.TestCase):
                 before["maxsize"] = after["maxsize"] = capacity
                 with self.assertRaises(ValueError):
                     p.validate_energy_cache(before, after, context, 5)
+
+
+class SubsetApplicationAdmission(unittest.TestCase):
+    NEW_COUNTERS = ("bonded_fast_path_calls", "bondless_fast_path_calls", "source_bonds_fast_path",
+                    "retained_bonds_fast_path", "removed_bonds_fast_path")
+
+    def fixture(self, case_id=p.PILOT_CASES[0], count=5):
+        selected = {"case": {"case_id": case_id}, "expected": [{}] * count,
+                    "input_ids": {"native_sha256": "a" * 64, "receptor_sha256": "b" * 64}}
+        bundle = {"evaluator_identities": {mode: sha(mode.encode()) for mode in p.MODES}}
+        before, after, energy_before, energy_after = contexts(selected, bundle, "prepared_subset")
+        return before, after, {"selected": selected, "bundle": bundle, "mode": "prepared_subset",
+                               "energy_before": energy_before, "energy_after": energy_after}
+
+    @staticmethod
+    def all_fallback(stats):
+        count = stats["calls"]
+        for key in ("identity_calls", "fast_path_calls", "source_atoms_fast_path", "retained_atoms_fast_path",
+                    "removed_atoms_fast_path", *SubsetApplicationAdmission.NEW_COUNTERS):
+            stats[key] = 0
+        stats["fallback_calls"] = count
+        stats["fallback_reasons"] = {"unsupported_fixture_metadata": count}
+
+    def test_pilots_require_real_bonded_application_at_both_record_counts(self):
+        for case_id in p.PILOT_CASES:
+            for count in (5, 64):
+                with self.subTest(case_id=case_id, count=count):
+                    before, after, kwargs = self.fixture(case_id, count)
+                    p.validate_context(before, after, **kwargs)
+
+    def test_missing_v2_counter_is_rejected(self):
+        for key in self.NEW_COUNTERS:
+            with self.subTest(key=key):
+                before, after, kwargs = self.fixture()
+                del after["subset_filter"][key]
+                with self.assertRaises(ValueError):
+                    p.validate_context(before, after, **kwargs)
+
+    def test_counter_types_are_nonnegative_integers(self):
+        for key in self.NEW_COUNTERS:
+            for value in (-1, True, 1.0, "1", None):
+                with self.subTest(key=key, value=value):
+                    before, after, kwargs = self.fixture()
+                    after["subset_filter"][key] = value
+                    with self.assertRaises(ValueError):
+                        p.validate_context(before, after, **kwargs)
+
+    def test_contradictory_call_or_bond_accounting_is_rejected(self):
+        for key in ("bonded_fast_path_calls", "bondless_fast_path_calls", "source_bonds_fast_path",
+                    "retained_bonds_fast_path", "removed_bonds_fast_path"):
+            with self.subTest(key=key):
+                before, after, kwargs = self.fixture()
+                after["subset_filter"][key] += 1
+                with self.assertRaises(ValueError):
+                    p.validate_context(before, after, **kwargs)
+
+    def test_all_fallback_cannot_pass_either_pilot(self):
+        for case_id in p.PILOT_CASES:
+            with self.subTest(case_id=case_id):
+                before, after, kwargs = self.fixture(case_id)
+                self.all_fallback(after["subset_filter"])
+                with self.assertRaises(ValueError):
+                    p.validate_context(before, after, **kwargs)
+
+    def test_bondless_only_or_zero_retained_bonds_cannot_pass_pilot(self):
+        for variant in ("bondless_only", "zero_retained_bonds"):
+            with self.subTest(variant=variant):
+                before, after, kwargs = self.fixture()
+                stats = after["subset_filter"]
+                if variant == "bondless_only":
+                    stats.update(bonded_fast_path_calls=0, bondless_fast_path_calls=stats["fast_path_calls"],
+                                 source_bonds_fast_path=0, retained_bonds_fast_path=0, removed_bonds_fast_path=0)
+                else:
+                    stats.update(retained_bonds_fast_path=0, removed_bonds_fast_path=stats["source_bonds_fast_path"])
+                with self.assertRaises(ValueError):
+                    p.validate_context(before, after, **kwargs)
+
+    def test_nonpilot_supported_fallback_remains_visible_and_allowed(self):
+        before, after, kwargs = self.fixture(p.REMAINING_CASES[0])
+        self.all_fallback(after["subset_filter"])
+        original = deepcopy(after["subset_filter"])
+        p.validate_context(before, after, **kwargs)
+        self.assertEqual(after["subset_filter"], original)
+        self.assertEqual(original["fallback_calls"], 5)
+
+
+def actual_pinned_input_runner():
+    """Load the unchanged production filesystem contract without molecular imports."""
+    source = p.ROOT / "tools/run_engine_v2_public_redocking_300.py"
+    names = {"PublicRedockingRunnerError", "PinnedCaseInputs", "_require_case_input_identity",
+             "_input_sha256s", "_sha256_path", "_sha256_descriptor", "_open_directory_descriptor",
+             "_owned_directory_descriptor", "_atomic_bytes", "_EXTERNAL_INPUT_ALIAS_NAMES",
+             "_INOTIFY_DIRECTORY_MUTATION_MASK", "_INOTIFY_FILE_MUTATION_MASK"}
+    selected, found = [], set()
+    for node in ast.parse(source.read_text(), filename=str(source)).body:
+        node_names = ({node.name} if isinstance(node, (ast.FunctionDef, ast.ClassDef)) else
+                      {target.id for target in node.targets if isinstance(target, ast.Name)}
+                      if isinstance(node, ast.Assign) else set())
+        if node_names & names:
+            selected.append(node)
+            found.update(node_names & names)
+    if found != names:
+        raise AssertionError("actual runner contract definitions are missing: " + str(names - found))
+    namespace = {"__name__": "actual_pinned_input_contract", "Path": Path, "os": os,
+                 "stat": stat, "hashlib": hashlib, "uuid": uuid, "ctypes": ctypes,
+                 "contextmanager": contextmanager}
+    future = ast.parse("from __future__ import annotations").body[0]
+    module = ast.Module(body=[future, *selected], type_ignores=[])
+    exec(compile(ast.fix_missing_locations(module), str(source), "exec"), namespace)
+    return SimpleNamespace(**namespace)
+
+
+class PipelinePrivateInputAdmission(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        self.shared = self.root / "downloaded-bundle"
+        self.output = self.root / "worker"
+        self.shared.mkdir(mode=0o755)
+        self.output.mkdir(mode=0o700)
+        self.real = actual_pinned_input_runner()
+        self.case_id = p.PILOT_CASES[0]
+        case = {"case_id": self.case_id, "frozen_case_seed": 42}
+        paths = {"directory": self.shared}
+        for role in ("receptor", "reference", "native", "seed"):
+            case[role] = raw_file(self.shared, role + ".dat", (role + " original bytes\n").encode())
+            paths[role] = self.shared / (role + ".dat")
+            paths[role].chmod(0o644)
+        self.shared.chmod(0o755)
+        self.selected = {"case": case, "paths": paths, "root": self.shared}
+        self.hashes = {role: case[role]["sha256"] for role in ("receptor", "reference", "native", "seed")}
+        self.original = self.shared_state()
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def shared_state(self):
+        return {path.name: {"mode": stat.S_IMODE(path.lstat().st_mode),
+                            "inode": (path.lstat().st_dev, path.lstat().st_ino),
+                            "bytes": path.read_bytes() if path.is_file() else None}
+                for path in (self.shared, *sorted(self.shared.iterdir()))}
+
+    def test_actual_runner_keeps_rejecting_downloaded_artifact_permissions(self):
+        with self.assertRaisesRegex(self.real.PublicRedockingRunnerError, "private and read-only"):
+            self.real.PinnedCaseInputs(self.selected["paths"], self.hashes)
+        self.assertEqual(self.shared_state(), self.original)
+
+    def test_pipeline_reaches_profile_through_real_pin_and_cleans_up_on_exception(self):
+        class ProfileReached(RuntimeError):
+            pass
+
+        private_paths, pinned_instances = [], []
+        actual_pin = self.real.PinnedCaseInputs
+
+        def pin(paths, hashes):
+            instance = actual_pin(paths, hashes)
+            private_paths.append(dict(paths))
+            pinned_instances.append(instance)
+            return instance
+
+        def stop_after_pin(case_id, paths, profile, **kwargs):
+            self.assertEqual(case_id, self.case_id)
+            self.assertEqual(stat.S_IMODE(paths["directory"].stat().st_mode), 0o500)
+            for role in self.hashes:
+                self.assertEqual(sha(paths[role].read_bytes()), self.hashes[role])
+                self.assertNotEqual(paths[role].stat().st_ino, self.selected["paths"][role].stat().st_ino)
+            pinned_instances[-1].verify()
+            raise ProfileReached("profile reached after actual pin admission")
+
+        self.real.PinnedCaseInputs = pin
+        self.real.frozen_public_redocking_profiles = lambda: [SimpleNamespace(case_id=self.case_id)]
+        self.real._profile = stop_after_pin
+        for ordinal, mode in enumerate(p.MODES):
+            with self.subTest(mode=mode):
+                journal = p.isolation.AtomicJournal(self.output / ("journal-" + str(ordinal)), {"mode": mode})
+                with self.assertRaisesRegex(ProfileReached, "actual pin admission"):
+                    p._pipeline(self.selected, runner=self.real, observer=None, context=None,
+                                journal=journal, output_root=self.output)
+                self.assertEqual(self.shared_state(), self.original)
+                self.assertFalse(private_paths[-1]["directory"].exists())
+                self.assertEqual(list(self.output.glob("pipeline-inputs-*")), [])
+                with self.assertRaisesRegex(self.real.PublicRedockingRunnerError, "closed"):
+                    _ = pinned_instances[-1].descriptors
+        self.assertEqual(len(private_paths), 3)
+        self.assertEqual(len({paths["directory"] for paths in private_paths}), 3)
+
+    def test_private_copy_is_readonly_and_passes_actual_verified_window(self):
+        with p._private_pipeline_inputs(self.selected, runner=self.real, output_root=self.output) as paths:
+            directory = paths["directory"]
+            self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o500)
+            self.assertEqual(set(directory.iterdir()), {paths[role] for role in self.hashes})
+            with self.real.PinnedCaseInputs(paths, self.hashes) as pinned:
+                with pinned.verified_window():
+                    for role in self.hashes:
+                        self.assertEqual(stat.S_IMODE(paths[role].stat().st_mode), 0o400)
+                        self.assertEqual(sha(pinned.execution_paths[role].read_bytes()), self.hashes[role])
+                        self.assertNotEqual(paths[role].stat().st_ino, self.selected["paths"][role].stat().st_ino)
+        self.assertFalse(directory.exists())
+        self.assertEqual(list(self.output.iterdir()), [])
+        self.assertEqual(self.shared_state(), self.original)
+
+    def test_hash_failure_during_materialization_restores_cleanup(self):
+        selected = deepcopy(self.selected)
+        selected["case"]["reference"]["sha256"] = "0" * 64
+        with self.assertRaises(ValueError):
+            with p._private_pipeline_inputs(selected, runner=self.real, output_root=self.output):
+                self.fail("changed original input digest was accepted")
+        self.assertEqual(list(self.output.iterdir()), [])
+        self.assertEqual(self.shared_state(), self.original)
+
+    def test_mutation_gate_still_fails_and_private_aliases_are_cleaned(self):
+        with self.assertRaises(self.real.PublicRedockingRunnerError):
+            with p._private_pipeline_inputs(self.selected, runner=self.real, output_root=self.output) as paths:
+                directory = paths["directory"]
+                with self.real.PinnedCaseInputs(paths, self.hashes) as pinned:
+                    paths["seed"].chmod(0o600)
+                    paths["seed"].write_bytes(b"changed private input")
+                    paths["seed"].chmod(0o400)
+                    pinned.verify()
+        self.assertFalse(directory.exists())
+        self.assertEqual(list(self.output.iterdir()), [])
+        self.assertEqual(self.shared_state(), self.original)
 
 
 if __name__ == "__main__":

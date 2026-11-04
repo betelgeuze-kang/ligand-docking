@@ -67,6 +67,9 @@ jobs:
             tests/unit/test_posebusters_subset.py \
             tests/unit/test_posebusters_evaluator_context.py \
             tests/unit/test_posebusters_replay_evaluator.py \
+            tests/unit/test_posebusters_subset_inputs.py \
+            tests/unit/test_posebusters_integration_runner.py \
+            tests/unit/test_external_oracle_architecture.py \
             -o cache_dir="$RUNNER_TEMP/pb-subset-pytest-cache" \
             --junitxml="$RUNNER_TEMP/pb-subset-admission/tests.xml" \
             2>&1 | tee "$RUNNER_TEMP/pb-subset-admission/tests.log"
@@ -79,6 +82,22 @@ jobs:
           assert suites and sum(int(s.attrib['tests']) for s in suites) > 0
           assert all(int(s.attrib.get(k, '0')) == 0 for s in suites for k in ('skipped', 'failures', 'errors'))
           PYVERIFY
+      - name: Download previously admitted immutable pilot inputs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: pb-integration-inputs-41790605433-1
+          run-id: '41790605433'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-subset-inputs
+      - name: Require exact real receptor masks and reports
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.check_posebusters_subset_inputs \
+            --input-root "$RUNNER_TEMP/pb-subset-inputs" \
+            --bundle-sha256 85458df79ce784c2c74f775dab2da5893bd42f147e27c16c47f2de6ccbfdf4c2 \
+            --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+            --output "$RUNNER_TEMP/pb-subset-admission/admission.json" \
+            2>&1 | tee "$RUNNER_TEMP/pb-subset-admission/real-input-admission.log"
       - name: Retain all native admission evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
