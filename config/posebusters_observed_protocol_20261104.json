@@ -1,0 +1,118 @@
+{
+  "capability_request": null,
+  "case_id": "6YSP_PAL",
+  "claim_scope": {
+    "changes_to_frozen_scientific_gates": false,
+    "changes_to_old_qualified_profile": false,
+    "commercial_promotion": false,
+    "cpu_cause_proven": false,
+    "docking_accuracy_improved": false,
+    "full_31_case_stage_integration_rerun": false,
+    "performance_promotion": false,
+    "product_promotion": false,
+    "scientific_promotion": false,
+    "single_case_observed_host_diagnostic": true
+  },
+  "classification": {
+    "diagnostic_collection_complete": "Both sibling probes, original case controller and all three distinct worker receipts are complete, authentic and cleanup-confirmed; CPU and software are stable within host. Does not imply scientific acceptance.",
+    "incomplete": "Missing, unauthentic, timed out, unstable, failed prerequisites or cleanup-unconfirmed evidence. Return nonzero.",
+    "run_success": "All two predeclared hosts pass the original scientific gates and diagnostic provenance checks.",
+    "scientific_failure": "Original case or worker scientific gates fail. Retain every raw failure and return nonzero even if diagnostic collection is complete.",
+    "scientific_success": "Unchanged original 8f5fc53 run-case returns 0 and its original assess_case independently succeeds with identical assessment."
+  },
+  "declared_at_utc": "2026-11-04T12:27:24.820446+00:00",
+  "execution_source": {
+    "commit": "8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4",
+    "protocol_sha256": "bbb9fee321f435f2e2cdea14229b8e4f38265e754e42588bb33209c057b4e4d1",
+    "tree": "1cdf7b179a046f25dc0d0690692efa54d0d632b9"
+  },
+  "experiment_id": "6YSP-three-mode-native-observed-hosts-20261104",
+  "host_selection": {
+    "batches": 1,
+    "cpu_model_eligibility_filter": false,
+    "distinct_boot_ids_required_for_two_host_summary": true,
+    "outcome_dependent_selection": false,
+    "retry_on_scientific_failure": false,
+    "runs_on": "ubuntu-22.04",
+    "slots_per_batch": 2
+  },
+  "host_slots": [
+    1,
+    2
+  ],
+  "input_bundle_sha256": "35276e0afe5101ca165439af012c6eeaed70a605950446310426b000743d298e",
+  "interpretation": "This distinct prospective diagnostic records the assigned host without selecting a CPU model. It does not retroactively satisfy the prior Intel8573C profile. Frozen runtime and source/input identity requirements remain unchanged. A successful native sibling capability probe does not directly instrument internal worker ISA or all BLAS/libm dispatch. All hosts and failures remain in the denominator.",
+  "limits": {
+    "case_controller_wall_seconds": 2400,
+    "log_bytes": 8388608,
+    "probe_wall_seconds": 90,
+    "rss_bytes": 6442450944,
+    "rss_sampling_seconds": 0.25
+  },
+  "numerical_environment": {
+    "BLIS_NUM_THREADS": "1",
+    "CUDA_VISIBLE_DEVICES": "",
+    "HIP_VISIBLE_DEVICES": "",
+    "LANG": "C.UTF-8",
+    "LD_LIBRARY_PATH": "/opt/hostedtoolcache/Python/3.10.22/x64/lib",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONHASHSEED": "0",
+    "PYTHONNOUSERSITE": "1",
+    "ROCR_VISIBLE_DEVICES": "",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  },
+  "old_runs_preserved": [
+    {
+      "admitted_case_stages": 30,
+      "admitted_workers": 90,
+      "run_id": "41798394302",
+      "status": "failed",
+      "total_case_stages": 31,
+      "total_workers": 93
+    },
+    {
+      "github_conclusion": "success",
+      "known_false_green_shell_masking": true,
+      "new_molecular_workers": 0,
+      "run_id": "41816903029",
+      "status": "profile_unavailable"
+    },
+    {
+      "github_conclusion": "failure",
+      "new_molecular_workers": 0,
+      "run_id": "41818921965",
+      "status": "profile_unavailable"
+    }
+  ],
+  "pilot_evidence": {
+    "aggregate_sha256": "a275894e9e261b7157f3fb8d57b0111ee252ff0ca9c094309d2d4a7fec7e0737",
+    "artifact_name": "pb-integration-pilot-gate-41798394302-1",
+    "expected_case_stage_count": 2,
+    "expected_worker_count": 6,
+    "observed_case_stage_count": 2,
+    "relative_path": "report.json",
+    "run_id": "41798394302",
+    "scope": "pilot",
+    "sha256": "1996406dea8ae2db79cfadaa7e534626b5f3540a6a50d101c383e0f1ee92eced",
+    "size_bytes": 50370,
+    "source": {
+      "commit": "8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4",
+      "protocol_sha256": "bbb9fee321f435f2e2cdea14229b8e4f38265e754e42588bb33209c057b4e4d1",
+      "tree": "1cdf7b179a046f25dc0d0690692efa54d0d632b9"
+    },
+    "status": "success",
+    "url": "https://github.com/betelgeuze-kang/ligand-docking/actions/runs/41798394302"
+  },
+  "prior_qualified_profile_sha256": "14dba14517929759804dc83f30f7ef0f5cb293d8c65cbb52f54c940ddfe0cfc5",
+  "required_modes": [
+    "reference",
+    "prepared_receptor",
+    "prepared_subset"
+  ],
+  "schema_id": "betelgeuze.posebusters_observed_protocol/1.0.0",
+  "stage": "pipeline"
+}
