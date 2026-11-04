@@ -722,18 +722,42 @@ class SubsetApplicationAdmission(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     p.validate_context(before, after, **kwargs)
 
-    def test_bondless_only_or_zero_retained_bonds_cannot_pass_pilot(self):
-        for variant in ("bondless_only", "zero_retained_bonds"):
-            with self.subTest(variant=variant):
-                before, after, kwargs = self.fixture()
-                stats = after["subset_filter"]
-                if variant == "bondless_only":
-                    stats.update(bonded_fast_path_calls=0, bondless_fast_path_calls=stats["fast_path_calls"],
-                                 source_bonds_fast_path=0, retained_bonds_fast_path=0, removed_bonds_fast_path=0)
-                else:
-                    stats.update(retained_bonds_fast_path=0, removed_bonds_fast_path=stats["source_bonds_fast_path"])
-                with self.assertRaises(ValueError):
-                    p.validate_context(before, after, **kwargs)
+    def test_bondless_only_cannot_pass_pilot(self):
+        before, after, kwargs = self.fixture()
+        stats = after["subset_filter"]
+        stats.update(bonded_fast_path_calls=0, bondless_fast_path_calls=stats["fast_path_calls"],
+                     source_bonds_fast_path=0, retained_bonds_fast_path=0, removed_bonds_fast_path=0)
+        with self.assertRaises(ValueError):
+            p.validate_context(before, after, **kwargs)
+
+    def test_actual_6ysp_all_bonds_removed_is_admitted(self):
+        # Exact counters from run 41796707907 subset-admission.json; file SHA256
+        # da0498dcb2a895395153297d30e0e8a92c6fdb10e024b3b40bbe4a25d85aae84.
+        # All 20 masks matched the reference; zero retained bonds is legitimate.
+        before, after, kwargs = self.fixture("6YSP_PAL")
+        after["subset_filter"] = {
+            "bonded_fast_path_calls": 20, "bondless_fast_path_calls": 0, "calls": 20,
+            "fallback_calls": 0, "fallback_errors": 0, "fallback_reasons": {},
+            "fast_path_calls": 20, "fast_path_errors": 0, "identity_calls": 0,
+            "implementation_id": "betelgeuze.posebusters_induced_subset/2.0.0",
+            "rdkit_version": "2022.09.5", "removed_atoms_fast_path": 37018,
+            "removed_bonds_fast_path": 920, "retained_atoms_fast_path": 422,
+            "retained_bonds_fast_path": 0, "source_atoms_fast_path": 37440,
+            "source_bonds_fast_path": 920,
+        }
+        p.validate_context(before, after, **kwargs)
+
+    def test_pilot_source_bonds_must_cover_bonded_call_count(self):
+        for case_id in p.PILOT_CASES:
+            for source_bonds in (0, 4):
+                with self.subTest(case_id=case_id, source_bonds=source_bonds):
+                    before, after, kwargs = self.fixture(case_id)
+                    stats = after["subset_filter"]
+                    self.assertEqual(stats["bonded_fast_path_calls"], 5)
+                    stats.update(source_bonds_fast_path=source_bonds,
+                                 retained_bonds_fast_path=source_bonds, removed_bonds_fast_path=0)
+                    with self.assertRaises(ValueError):
+                        p.validate_context(before, after, **kwargs)
 
     def test_nonpilot_supported_fallback_remains_visible_and_allowed(self):
         before, after, kwargs = self.fixture(p.REMAINING_CASES[0])

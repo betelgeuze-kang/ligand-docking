@@ -120,8 +120,14 @@ def validate_audit(rows: list[dict], stats: dict, *, expected_calls: int = 20) -
     require(len(rows) == expected_calls and stats["calls"] == expected_calls, "distance subset denominator differs")
     require(all(row["status"] == "passed" and row["binary_equal"] is True and row["source_unchanged"] is True
                 and row["mask_unchanged"] is True for row in rows), "a native subset comparison did not pass")
-    for key in ("bonded_fast_path_calls", "retained_bonds_fast_path"):
-        require(type(stats[key]) is int and stats[key] > 0, "no actual bonded optimization: " + key)
+    bonded_calls = stats["bonded_fast_path_calls"]
+    require(type(bonded_calls) is int and bonded_calls > 0, "no actual bonded optimization: bonded_fast_path_calls")
+    for key in ("source_bonds_fast_path", "retained_bonds_fast_path", "removed_bonds_fast_path"):
+        require(type(stats[key]) is int and stats[key] >= 0, "invalid subset bond count: " + key)
+    require(stats["source_bonds_fast_path"] >= bonded_calls, "bonded fast paths lack source bonds")
+    # A legitimate distance mask can remove every source bond (the observed
+    # 6YSP pilot does). Case admission requires bonded input work; retained
+    # bond copying is required separately across the complete pilot cohort.
     require(stats["fast_path_errors"] == stats["fallback_errors"] == 0, "subset errors recorded")
     require(stats["calls"] == stats["identity_calls"] + stats["fast_path_calls"] + stats["fallback_calls"], "subset call accounting differs")
     require(stats["fast_path_calls"] == stats["bonded_fast_path_calls"] + stats["bondless_fast_path_calls"], "subset graph routing accounting differs")
@@ -129,6 +135,17 @@ def validate_audit(rows: list[dict], stats: dict, *, expected_calls: int = 20) -
         require(stats[f"source_{feature}_fast_path"] == stats[f"retained_{feature}_fast_path"] +
                 stats[f"removed_{feature}_fast_path"], "subset " + feature + " accounting differs")
     require(sum(stats["fallback_reasons"].values()) == stats["fallback_calls"], "fallback reason accounting differs")
+
+
+def validate_cohort_bond_coverage(case_stats: list[tuple[str, dict]]) -> dict:
+    equal([case_id for case_id, _ in case_stats], list(CASES), "bond-copy coverage cohort")
+    totals = {}
+    for key in ("bonded_fast_path_calls", "source_bonds_fast_path", "retained_bonds_fast_path"):
+        values = [stats[key] for _, stats in case_stats]
+        require(all(type(value) is int and value >= 0 for value in values), "invalid cohort bond count: " + key)
+        totals[key] = sum(values)
+    require(totals["retained_bonds_fast_path"] > 0, "cohort did not demonstrate retained bond copying")
+    return {"case_ids": list(CASES), **totals, "retained_bond_copy_covered": True}
 
 
 def validate_observation(document: dict, *, selected: dict, bundle: dict, mode: str,
@@ -219,6 +236,10 @@ def run_probe(*, input_root: Path, bundle_sha256: str, runtime_root: Path, repor
         require(reselected["records"] == selected["records"] and reselected["native"] == selected["native"]
                 and reselected["receptor"] == selected["receptor"], "pinned input bytes changed")
         case.update(status="passed", full_report_equal=True, legacy_equal=True, input_bytes_unchanged=True)
+    report["cohort_bond_coverage"] = validate_cohort_bond_coverage([
+        (case["case_id"], case["modes"]["prepared_subset"]["context"]["subset_filter"])
+        for case in report["cases"]
+    ])
     inspect_inputs(input_root, bundle_sha256)
     equal(integration.source_identity(), current_source, "executing source changed during admission")
     after = integration.capture_environment(runtime_root)

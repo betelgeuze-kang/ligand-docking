@@ -32,7 +32,10 @@ or conformer properties, queries, unsupported chirality, bond stereo references,
 and stereo/substance groups use the source-pinned original helper. Unexpected
 fast-path errors propagate. The experiment records bonded and bondless
 applications, fallback reasons, and source/retained/removed atom and bond counts.
-The two pilot cases must exercise the bonded fast path with retained bonds.
+Both pilot cases must exercise the fast path on bonded source molecules.
+Retained-bond copying must be observed across the pilot cohort. A particular
+distance-filtered molecule may legitimately retain zero bonds; its complete
+native binary still has to match the original helper exactly.
 
 Frozen molecular tests compare complete native binaries using
 `AllProps | CoordsAsDouble`, including chirality, ring cuts, cached hydrogen

@@ -434,8 +434,9 @@ def validate_context(before: dict, after: dict, *, selected: dict, bundle: dict,
             require(stats["source_bonds_fast_path"] == stats["retained_bonds_fast_path"] + stats["removed_bonds_fast_path"],
                     "subset bond accounting differs")
             if selected["case"]["case_id"] in PILOT_CASES:
-                require(stats["bonded_fast_path_calls"] > 0 and stats["retained_bonds_fast_path"] > 0,
-                        "pilot subset strategy did not apply the bonded fast path with retained bonds")
+                require(stats["bonded_fast_path_calls"] > 0 and
+                        stats["source_bonds_fast_path"] >= stats["bonded_fast_path_calls"],
+                        "pilot subset strategy did not apply the fast path to bonded source inputs")
             require(type(stats["fallback_reasons"]) is dict, "subset fallback reasons missing")
             for value in stats["fallback_reasons"].values():
                 _integer(value, "subset fallback reason count", minimum=1)

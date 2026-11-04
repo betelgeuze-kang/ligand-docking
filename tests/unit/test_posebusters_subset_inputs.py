@@ -162,6 +162,20 @@ class AuditorFailureTests(unittest.TestCase):
 
 
 class AdmissionGateTests(unittest.TestCase):
+    @staticmethod
+    def actual_6ysp_stats():
+        # Native run 41796707907, source a86; the 20 real distance masks
+        # legitimately remove all 920 source bonds. Raw admission file SHA256:
+        # da0498dcb2a895395153297d30e0e8a92c6fdb10e024b3b40bbe4a25d85aae84.
+        return {
+            "implementation_id": "betelgeuze.posebusters_induced_subset/2.0.0", "rdkit_version": "2022.09.5",
+            "calls": 20, "identity_calls": 0, "fast_path_calls": 20, "fallback_calls": 0,
+            "bonded_fast_path_calls": 20, "bondless_fast_path_calls": 0,
+            "fast_path_errors": 0, "fallback_errors": 0, "fallback_reasons": {},
+            "source_atoms_fast_path": 37440, "retained_atoms_fast_path": 422, "removed_atoms_fast_path": 37018,
+            "source_bonds_fast_path": 920, "retained_bonds_fast_path": 0, "removed_bonds_fast_path": 920,
+        }
+
     def setUp(self):
         self.rows = [{"status": "passed", "binary_equal": True, "source_unchanged": True,
                       "mask_unchanged": True} for _ in range(20)]
@@ -176,6 +190,9 @@ class AdmissionGateTests(unittest.TestCase):
 
     def test_valid_pure_accounting_fixture(self):
         probe.validate_audit(self.rows, self.stats)
+
+    def test_actual_6ysp_zero_retained_bonds_passes_case_admission(self):
+        probe.validate_audit(self.rows, self.actual_6ysp_stats())
 
     def test_missing_rows_failed_rows_and_non_boolean_equality_fail(self):
         mutations = (
@@ -192,8 +209,10 @@ class AdmissionGateTests(unittest.TestCase):
 
     def test_missing_actual_bonded_work_and_bad_accounting_fail(self):
         mutations = (
-            {"bonded_fast_path_calls": 0}, {"retained_bonds_fast_path": 0},
+            {"bonded_fast_path_calls": 0}, {"retained_bonds_fast_path": -1},
             {"bonded_fast_path_calls": True}, {"retained_bonds_fast_path": True},
+            {"source_bonds_fast_path": True}, {"source_bonds_fast_path": 0},
+            {"source_bonds_fast_path": 19, "retained_bonds_fast_path": 0, "removed_bonds_fast_path": 19},
             {"fast_path_errors": 1}, {"fallback_errors": 1}, {"calls": 19},
             {"bondless_fast_path_calls": 1}, {"removed_atoms_fast_path": 0},
             {"removed_bonds_fast_path": 0}, {"fallback_reasons": {"unsupported": 1}},
@@ -201,6 +220,31 @@ class AdmissionGateTests(unittest.TestCase):
         for changed in mutations:
             with self.subTest(changed=changed), self.assertRaises(Exception):
                 probe.validate_audit(self.rows, {**self.stats, **changed})
+
+    def test_cohort_accepts_actual_zero_retained_case_with_retained_bond_coverage(self):
+        coverage = probe.validate_cohort_bond_coverage([
+            (probe.CASES[0], self.stats), (probe.CASES[1], self.actual_6ysp_stats())])
+        self.assertEqual(coverage["retained_bonds_fast_path"], 20)
+        self.assertEqual(coverage["source_bonds_fast_path"], 960)
+        self.assertEqual(coverage["bonded_fast_path_calls"], 40)
+        self.assertIs(coverage["retained_bond_copy_covered"], True)
+
+    def test_cohort_with_no_retained_bonds_still_fails(self):
+        zero = self.actual_6ysp_stats()
+        for case_id in probe.CASES:
+            probe.validate_audit(self.rows, zero)
+        with self.assertRaisesRegex(Exception, "retained bond copying"):
+            probe.validate_cohort_bond_coverage([(case_id, zero) for case_id in probe.CASES])
+
+    def test_cohort_cannot_substitute_missing_duplicate_or_unexpected_cases(self):
+        invalid = (
+            [(probe.CASES[0], self.stats)],
+            [(probe.CASES[0], self.stats), (probe.CASES[0], self.stats)],
+            [(probe.CASES[0], self.stats), ("unexpected", self.stats)],
+        )
+        for rows in invalid:
+            with self.subTest(cases=[name for name, _ in rows]), self.assertRaisesRegex(Exception, "cohort"):
+                probe.validate_cohort_bond_coverage(rows)
 
 
 class AdmissionCliTests(unittest.TestCase):
