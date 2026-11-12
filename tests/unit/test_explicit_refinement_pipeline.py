@@ -21,7 +21,10 @@ from betelgeuze_product.docking_development_v1.observed_rigid_refinement import 
     ObservedRigidEnsembleV6,
     _ObservedRigidLeaf,
 )
-from betelgeuze_engine_v2.docking.proposals import bind_docking_proposal_state
+from betelgeuze_engine_v2.docking.proposals import (
+    bind_docking_proposal_state,
+    generate_bounded_docking_proposals,
+)
 from betelgeuze_product.docking_development_v1.refinement_work import (
     count_objective,
     refinement_work_records,
@@ -35,6 +38,7 @@ from betelgeuze_product.docking_development_v1.torsion_refinement_v9 import (
     TorsionRefinementBoundsV9,
 )
 from betelgeuze_product.docking_development_v1.guarded_search import (
+    IdentityGuardedScorerV1,
     run_authenticated_guarded_docking_search,
 )
 from betelgeuze_product.explicit_refinement_pipeline import (
@@ -611,6 +615,103 @@ def test_guarded_scalar_search_detects_mutation_of_an_earlier_row():
     assert tuple(row.proposal_index for row in result.rows) == (0, 1)
     assert result.rows[0].status == "failure"
     assert result.rows[1].status == "success"
+
+
+@pytest.mark.parametrize("batch", [False, True])
+@pytest.mark.parametrize("mutation", ["current", "earlier", "component"])
+def test_guarded_search_checks_deferred_scalar_conversion_mutations(batch, mutation):
+    authority = _authority()
+
+    class DeferredFloat(float):
+        def __new__(cls, scorer, proposal):
+            value = super().__new__(cls, 0.0)
+            value.scorer = scorer
+            value.proposal = proposal
+            return value
+
+        def __float__(self):
+            scorer, proposal = self.scorer, self.proposal
+            scorer.conversions.append(proposal.proposal_index)
+            if mutation == "current":
+                object.__setattr__(proposal, "candidate_id", "deferred-mutation")
+            elif mutation == "earlier" and proposal.proposal_index == 1:
+                object.__setattr__(
+                    scorer.proposals[0], "candidate_id", "later-conversion-mutation"
+                )
+            elif mutation == "component":
+                scorer.config_fingerprint_sha256 = "0" * 64
+            return 0.0
+
+    class DeferredScorer(_Scorer):
+        def __init__(self, problem):
+            super().__init__(problem)
+            self.proposals = []
+            self.conversions = []
+
+        def score(self, proposal):
+            self.proposals.append(proposal)
+            return DeferredFloat(self, proposal)
+
+    class BatchDeferredScorer(DeferredScorer):
+        def score_batch(self, proposals):
+            return tuple(
+                DockingBatchScoreOutcome(score=self.score(proposal))
+                for proposal in proposals
+            )
+
+    scorer_type = BatchDeferredScorer if batch else DeferredScorer
+    scorer = scorer_type(authority.problem.fingerprint_sha256)
+    result = run_authenticated_guarded_docking_search(
+        authority,
+        DockingBudget(candidate_count=2, top_k=2, max_torsions=1),
+        scorer,
+    ).search_result
+    assert scorer.conversions == [0, 1]
+    assert tuple(row.proposal_index for row in result.rows) == (0, 1)
+    expected = ("failure", "success") if mutation == "earlier" else ("failure",) * 2
+    assert tuple(row.status for row in result.rows) == expected
+    assert all(row.candidate_id.startswith("pose-") for row in result.rows)
+    assert all(row.proposal_index == 1 for row in result.top_rows)
+    if mutation != "earlier":
+        assert not result.top_rows
+
+
+@pytest.mark.parametrize("batch", [False, True])
+def test_guarded_scores_are_finite_native_floats_with_per_row_errors(batch):
+    authority = _authority()
+    evidence = object()
+
+    class MixedScorer(_Scorer):
+        def score(self, proposal):
+            value = math.nan if proposal.proposal_index == 0 else 2.5
+            return torch.tensor(value, dtype=torch.float64)
+
+    class BatchMixedScorer(MixedScorer):
+        def score_batch(self, proposals):
+            return tuple(
+                DockingBatchScoreOutcome(score=self.score(row), evidence=evidence)
+                for row in proposals
+            )
+
+    proposals = generate_bounded_docking_proposals(
+        authority.search_space,
+        DockingBudget(candidate_count=2, top_k=2, max_torsions=1),
+        problem=authority.problem,
+        placement_center=authority.pocket.center,
+    )
+    scorer_type = BatchMixedScorer if batch else MixedScorer
+    guard = IdentityGuardedScorerV1(
+        scorer_type(authority.problem.fingerprint_sha256),
+        authority.problem.fingerprint_sha256,
+    )
+    outcomes = guard.score_batch(proposals)
+    assert len(outcomes) == 2
+    assert outcomes[0].score is None
+    assert "non-finite" in str(outcomes[0].error)
+    assert outcomes[1].error is None
+    assert type(outcomes[1].score) is float
+    assert outcomes[1].score == 2.5
+    assert outcomes[1].evidence is (evidence if batch else None)
 
 
 def test_new_namespace_source_change_during_refinement_blocks_publication(monkeypatch):

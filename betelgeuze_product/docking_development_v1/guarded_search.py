@@ -26,6 +26,7 @@ from betelgeuze_engine_v2.docking.search import (
     DockingPoseBatchScorer,
     DockingPoseScorer,
     DockingSearchError,
+    _score_value,
 )
 
 MAX_GUARDED_CANDIDATES = 128
@@ -129,6 +130,24 @@ class IdentityGuardedScorerV1:
                             DockingBatchScoreOutcome(score=None, error=exc)
                         )
                 outcomes = tuple(generated)
+            # Float/Tensor conversion may execute scorer-owned code. Finish all
+            # conversions before checking any identity: a later conversion can
+            # mutate an earlier copy or the wrapped component contract.
+            materialized = []
+            for outcome in outcomes:
+                if outcome.error is not None:
+                    materialized.append(outcome)
+                    continue
+                try:
+                    materialized.append(
+                        DockingBatchScoreOutcome(
+                            score=_score_value(outcome.score),
+                            evidence=outcome.evidence,
+                        )
+                    )
+                except Exception as exc:
+                    materialized.append(DockingBatchScoreOutcome(score=None, error=exc))
+            outcomes = tuple(materialized)
             self._require_unchanged_contract()
         except Exception as exc:
             return tuple(DockingBatchScoreOutcome(score=None, error=exc) for _ in rows)
