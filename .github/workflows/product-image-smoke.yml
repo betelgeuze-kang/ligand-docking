@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - Dockerfile.product
+      - .dockerignore
       - pyproject.toml
       - requirements-package.txt
       - requirements-base.txt
@@ -15,6 +16,7 @@ on:
       - api/**
       - core/**
       - betelgeuze_engine/**
+      - betelgeuze_engine_v2/**
       - betelgeuze_product/**
       - rust_engine/**
       - tools/product/build_ai_md_*.py
@@ -27,6 +29,7 @@ on:
       - tools/build_product_image_smoke_preflight.py
       - api/validated_runner_runtime_qualification.py
       - tests/unit/test_build_product_image_smoke_preflight.py
+      - tests/unit/test_product_docker_cli_closure.py
       - tests/unit/test_validated_runner_runtime_qualification.py
       - .github/workflows/product-image-smoke.yml
       - .github/workflows/product-image-smoke-trusted.yml

@@ -21,6 +21,8 @@ runs/**
 !core/**
 !betelgeuze_engine
 !betelgeuze_engine/**
+!betelgeuze_engine_v2
+!betelgeuze_engine_v2/**
 !betelgeuze_ai_md
 !betelgeuze_ai_md/**
 !betelgeuze_product
