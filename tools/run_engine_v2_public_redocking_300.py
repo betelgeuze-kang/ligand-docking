@@ -2015,11 +2015,6 @@ def _with_benchmark_partial_charges(
 
 
 def _assign_receptor_proxy_charges(system: AllAtomSystem) -> AllAtomSystem:
-    """Historical diagnostic-only proxy; not explicit receptor preparation.
-
-    Keep this frozen lane reproducible. New prepared chemistry uses the named
-    peptide profile in run_engine_v2_prepared_receptor_development instead.
-    """
     charges = [float(atom.formal_charge) for atom in system.atoms]
     formal_charges = [int(atom.formal_charge) for atom in system.atoms]
     residue_rules = {
