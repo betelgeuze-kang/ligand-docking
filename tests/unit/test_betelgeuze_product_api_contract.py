@@ -74,3 +74,23 @@ def test_product_api_contract_blocks_missing_commercial_license_handoff_key(tmp_
     assert payload["summary"]["status"] == "blocked_product_api_contract"
     assert payload["summary"]["status_response_domain_missing_key_count"] >= 1
     assert any(blocker["check"] == "product_status_response_domain_keys" for blocker in payload["blockers"])
+
+
+def test_product_api_contract_follows_builder_and_detects_missing_returned_key(tmp_path: Path) -> None:
+    """Declared keys alone cannot make an incomplete response pass the source check."""
+    root = tmp_path / "repo"
+    (root / "api").mkdir(parents=True)
+    (root / "betelgeuze_product").mkdir()
+    for source in Path("api").glob("product*.py"):
+        (root / "api" / source.name).write_bytes(source.read_bytes())
+    builder = root / "betelgeuze_product" / "docking_response.py"
+    source = Path("betelgeuze_product/docking_response.py").read_text(encoding="utf-8")
+    builder.write_text(source, encoding="utf-8")
+    assert build_product_api_contract(root=root)["summary"]["docking_response_missing_key_count"] == 0
+
+    returned_field = '        "scientific_input": docking_scientific_input_summary(record),\n'
+    assert source.count(returned_field) == 1
+    builder.write_text(source.replace(returned_field, ""), encoding="utf-8")
+    payload = build_product_api_contract(root=root)
+    assert payload["summary"]["docking_response_missing_key_count"] == 1
+    assert any(row["check"] == "product_docking_response_contract" for row in payload["blockers"])

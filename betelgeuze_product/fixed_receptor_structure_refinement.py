@@ -421,6 +421,7 @@ class FixedReceptorStructureCoordinator:
         if type(provider) is not FixedReceptorEnergyForceProvider:
             raise StructureRefinementError("explicit fixed-receptor provider required")
         self._provider = provider
+        self._bound_provider = provider
         self._authority = authority
         self._atom_count = ligand.atom_count
         self._config = SearchConfig() if config is None else config
@@ -436,6 +437,51 @@ class FixedReceptorStructureCoordinator:
     def attempts(self):
         return self._refiner.attempts
 
+    def assert_ready(self):
+        if self._provider is not self._bound_provider:
+            raise StructureRefinementError("coordinator provider identity changed")
+        self._refiner.assert_ready()
+
+    def is_bound_to_provider(self, provider):
+        self.assert_ready()
+        return provider is self._bound_provider
+
+    def binding_identity(self, *, provider):
+        """Verify once and return one coherent adapter binding snapshot."""
+        self.assert_ready()
+        if provider is not self._bound_provider:
+            raise StructureRefinementError("coordinator physical model is cross-wired")
+        return {"problem": self._refiner.problem_fingerprint_sha256,
+                "authority": self._authority.input_receipt_sha256,
+                "config": self._refiner.config_fingerprint_sha256,
+                "source": self._refiner.implementation_source_sha256,
+                "model": self._provider.model_fingerprint_sha256}
+
+    @property
+    def problem_fingerprint_sha256(self):
+        self.assert_ready()
+        return self._refiner.problem_fingerprint_sha256
+
+    @property
+    def authority_input_receipt_sha256(self):
+        self.assert_ready()
+        return self._authority.input_receipt_sha256
+
+    @property
+    def config_fingerprint_sha256(self):
+        self.assert_ready()
+        return self._refiner.config_fingerprint_sha256
+
+    @property
+    def implementation_source_sha256(self):
+        self.assert_ready()
+        return self._refiner.implementation_source_sha256
+
+    @property
+    def model_fingerprint_sha256(self):
+        self.assert_ready()
+        return self._provider.model_fingerprint_sha256
+
     @property
     def outcomes(self):
         return MappingProxyType(dict(self._outcomes))
@@ -449,7 +495,7 @@ class FixedReceptorStructureCoordinator:
         return MappingProxyType(dict(self._initial_constraint_rejections))
 
     def run(self, proposal, *, max_steps):
-        self._refiner.assert_ready()
+        self.assert_ready()
         if not isinstance(proposal, DockingProposal):
             raise StructureRefinementError("DockingProposal required")
         if type(max_steps) is not int or not 1 <= max_steps <= self._config.max_steps:

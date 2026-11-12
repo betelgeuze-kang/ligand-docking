@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from api.product_docking import DockingJobRequest, _model_to_dict, _scientific_input_summary
+from api.product_docking import DockingJobRequest, _model_to_dict
+from betelgeuze_product.docking_response import docking_scientific_input_summary
 from betelgeuze_product.scientific_input_provenance import (
     build_scientific_input_provenance,
     verify_scientific_input_provenance,
@@ -205,7 +206,7 @@ def test_api_request_exposes_explicit_pocket_fields_and_summary_is_redacted(tmp_
         dispatch_manifest=_manifest(),
         root=tmp_path,
     )
-    summary = _scientific_input_summary(
+    summary = docking_scientific_input_summary(
         {
             "scientific_input_provenance": receipt,
             "private_payload_stored": True,

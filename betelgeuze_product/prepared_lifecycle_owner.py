@@ -9,8 +9,9 @@ import sys
 import threading
 import time
 
-from .prepared_lifecycle import (admission_document, digest, implementation_sources, json_bytes,
-    private_root, process_identity, regular_bytes, require, write_absent)
+from .prepared_lifecycle import (_ClaimRejected, PUBLIC_REPORT_ROLE, admission_document, digest,
+    implementation_sources, json_bytes, private_root, process_identity, public_report_document,
+    regular_bytes, require, write_absent)
 
 _OWNER_LOCK = threading.Lock()
 
@@ -65,7 +66,10 @@ def run_one(service, *, execution_id=None, process_runner=None):
 
 def _run_one(service, *, execution_id, process_runner):
     reconcile_lost_owners(service)
-    claim = service._claim(execution_id)
+    try:
+        claim = service._claim(execution_id)
+    except _ClaimRejected as exc:
+        return service.status(exc.execution_id)
     if claim is None:
         return None
     job = service.root / "jobs" / claim["execution_id"]
@@ -185,6 +189,9 @@ def _run_one(service, *, execution_id, process_runner):
             require(result is not None and result.get("report_sha256") == digest(report_document),
                     "ARTIFACT_PUBLICATION_UNKNOWN", "Retained report binding differs", 409)
             artifacts.append((report_path, "retained_refinement_report"))
+            public_report_path = attempt / "public-report.json"
+            write_absent(public_report_path, public_report_document(report_document, total_work_known=known))
+            artifacts.append((public_report_path, PUBLIC_REPORT_ROLE))
         else:
             require(not known, "ARTIFACT_PUBLICATION_UNKNOWN", "Retained report is missing", 409)
         force = result.get("known_force_calls") if result else None
@@ -207,6 +214,7 @@ def _run_one(service, *, execution_id, process_runner):
             "status": status, "numerical_state": numerical, "total_work_known": known,
             "known_force_calls": force, "process_terminal_confirmed": contained,
             "implementation_sources": binding["implementation_sources"],
+            "numerical_implementation_sources": admission["numerical_sources"],
             "runtime_identity": admission["runtime_identity"],
             "protocol_sha256": admission["manifest"]["protocol_sha256"],
             "artifact_content_sha256": {path.name: hashlib.sha256(regular_bytes(path, job)).hexdigest()
