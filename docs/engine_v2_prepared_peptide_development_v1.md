@@ -4,6 +4,9 @@
 opt-in route from receptor PDB and explicit ligand SDF to prepared chemical
 graphs, shared chemical features, guided proposals, V7 contact refinement, and
 scoring/selection. It does not replace the frozen public-redocking profile.
+The implementation is owned by `betelgeuze_product/docking_development_v1`.
+The sealed `betelgeuze_engine_v2` Python sources remain unchanged; their
+historical manifests and recorded scientific evidence are not rebound.
 
 ```bash
 python -m tools.run_engine_v2_prepared_receptor_development \
@@ -23,8 +26,9 @@ The JSON includes all candidate coordinates, statuses, scores, internal checks,
 and selected proposal indices. It never fills a short selected list with
 invalid candidates. Existing output files are not overwritten.
 
-The report hashes the observed Python-source inventory of `betelgeuze_engine_v2`
-and this entry point, and binds the canonical manifest digest to pocket, scorer
+The report hashes the observed Python-source inventories of `betelgeuze_engine_v2`
+and the product development namespace plus this entry point, and binds the
+canonical manifest digest to pocket, scorer
 and refiner identities. It rejects a changed inventory at completion. Python,
 Torch and RDKit versions are recorded separately. This is source-byte provenance
 for the development run, not a digest of dependency binaries, a signed release,
@@ -57,7 +61,8 @@ selection. This denominator differs from the V7 path and must not be treated as
 the same candidate budget in comparisons.
 
 The enclosing V9 report hashes the union of the product pipeline's complete
-source inventory, engine_v2 Python inventory, and CLI entry point. It binds that
+source inventory, engine_v2 and development-namespace Python inventories, and
+CLI entry point. It binds that
 digest to pocket authority and checks the source snapshot again at completion.
 The nested pipeline preserves its independently observed numerical source
 digest. These two identities have different declared scopes; neither replaces
@@ -110,7 +115,23 @@ general rotation with an explicit tolerance for PDB 0.001-A rounding.
 
 Both scorer and guidance consume
 `betelgeuze.full_topology_chemistry_features/1.0.0`, selected by the prepared
-system's metadata and bound through canonical system/context fingerprints.
+system's metadata in the product-owned adapters and bound through canonical
+system/context fingerprints. Python callers use
+`docking_development_v1.prepared_scoring.ChemistryPoseScorerV1` and
+`docking_development_v1.prepared_scoring.build_guided_placement_context`;
+the unchanged engine entry points retain their historical feature rules.
+The prepared contexts are typed subclasses accepted by the original bounded
+scoring/search contracts. Geometry and scoring arithmetic remain engine-owned.
+Prepared scoring supports only the Python reference backend; a native backend
+request fails explicitly. All context-dependent hydrophobic/acceptor/donor
+caches are rebuilt and checked against the new context before scoring.
+The product owns a bounded proposal-generation entry and guided-search adapter
+because the legacy generator rederives its own legacy feature context. The new
+entry rederives the prepared context independently and rejects a coherently
+rehashed but chemically altered feature context. It reuses engine geometry
+helpers and context-local proposal transport without changing engine globals.
+Only the ordinary `GuidedPlacementPolicy` is supported here; source-paired
+rescue and precomputed conformer protocols remain separate development lanes.
 The context receipts expose the policy. Mixed legacy/new policies are rejected.
 Shared perception uses the complete graph before spatial filtering. Amide,
 sulfonamide, pyrrolic, protonated amidinium/guanidinium N and acidic hydroxyl O
@@ -131,12 +152,16 @@ that contradict the declared microstate fail. No claim flags are promoted to
 `chemistry_validated`, `scientifically_validated`, or `product_qualified`.
 
 Systems without the new feature-policy marker retain the historical diagnostic
-feature rules. The old `run_engine_v2_public_redocking_300` proxy remains a
+feature rules through the adapters. The old `run_engine_v2_public_redocking_300` proxy remains a
 frozen, unvalidated diagnostic and is not the new preparation API. Existing
 benchmark accuracy numbers are not reinterpreted as results of this profile.
-The strict PDB reader's separate CONECT bug fix decodes five-column serial
-fields correctly and rejects unsupported/malformed fields rather than silently
-discarding bonds. Historical receipts remain tied to their source commits.
+The product `prepared_pdb.parse_pdb` wrapper decodes five-column CONECT serial
+fields and delegates coordinate parsing to the unchanged engine reader.
+It rejects unsupported/malformed fields rather than silently discarding bonds,
+preserves atom source-line numbers, and binds the original input bytes in
+provenance. This corrected parser is used by the preparation API; it is not a
+global replacement of the engine parser. Historical receipts remain tied to
+their source commits.
 
 ## Evidence and remaining work
 

@@ -15,7 +15,6 @@ import platform
 import torch
 
 from betelgeuze_engine_v2.docking import (
-    ChemistryPoseScorerV1,
     DockingAuthorityError,
     DockingBudget,
     DockingScope,
@@ -24,17 +23,20 @@ from betelgeuze_engine_v2.docking import (
     InteractionAwareTorsionContactEnsembleRefinerV7,
     PocketDefinition,
     build_element_aware_authenticated_known_pocket_docking_problem,
-    build_guided_placement_context,
-    run_authenticated_scorer_v1_guided_search,
     uniform_v3_ensemble_proposal_indices,
 )
-from betelgeuze_engine_v2.docking.chemistry_features import (
+from betelgeuze_product.docking_development_v1.chemistry_features import (
     FULL_TOPOLOGY_FEATURE_POLICY_ID,
 )
-from betelgeuze_engine_v2.docking.receptor_preparation import (
+from betelgeuze_product.docking_development_v1.receptor_preparation import (
     ChemistryPreparationError,
     prepare_ligand_v1,
     prepare_receptor_v1,
+)
+from betelgeuze_product.docking_development_v1.prepared_scoring import (
+    ChemistryPoseScorerV1,
+    build_guided_placement_context,
+    run_authenticated_scorer_v1_guided_search,
 )
 
 PROFILE_ID = "betelgeuze.prepared_peptide_guided_docking_development/1.0.0"
@@ -45,12 +47,23 @@ RETAINED_V9_PROFILE_ID = (
 
 def _implementation_sources() -> dict[str, str]:
     import betelgeuze_engine_v2
+    from betelgeuze_product.docking_development_v1 import receptor_preparation
 
     root = Path(betelgeuze_engine_v2.__file__).resolve().parent
     paths = {
         "betelgeuze_engine_v2/" + path.relative_to(root).as_posix(): path
         for path in sorted(root.rglob("*.py"))
     }
+    development_root = Path(receptor_preparation.__file__).resolve().parent
+    for path in sorted(development_root.rglob("*.py")):
+        name = (
+            "betelgeuze_product/docking_development_v1/"
+            + path.relative_to(development_root).as_posix()
+        )
+        paths[name] = path
+    product_init = development_root.parent / "__init__.py"
+    if product_init.is_file():
+        paths["betelgeuze_product/__init__.py"] = product_init
     runner = Path(__file__).resolve()
     paths["tools/" + runner.name] = runner
     tools_init = runner.parent / "__init__.py"
@@ -282,7 +295,7 @@ def run_prepared_receptor_development(
         "status": "completed",
         "implementation_sources": sources,
         "implementation_source_sha256": implementation,
-        "implementation_source_scope": "engine_v2_python_inventory_and_development_entrypoint",
+        "implementation_source_scope": "engine_v2_python_inventory_product_docking_development_and_entrypoint",
         "environment": {
             "python": platform.python_version(),
             "torch": str(torch.__version__),

@@ -16,7 +16,7 @@ from typing import Mapping
 
 import torch
 
-from betelgeuze_engine_v2.io import parse_pdb, parse_sdf_v2000
+from betelgeuze_engine_v2.io import parse_sdf_v2000
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem,
     Atom,
@@ -29,6 +29,7 @@ from .chemistry_features import (
     FULL_TOPOLOGY_FEATURE_POLICY_ID,
     perceive_full_topology_features,
 )
+from .prepared_pdb import parse_pdb
 
 RECEPTOR_PREPARATION_PROFILE_ID = "betelgeuze.named_peptide_receptor_preparation/1.0.0"
 LIGAND_PREPARATION_PROFILE_ID = "betelgeuze.explicit_ligand_gasteiger_preparation/1.0.0"

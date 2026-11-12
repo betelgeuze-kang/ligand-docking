@@ -38,12 +38,6 @@ from .conformers import (
     SourceBoundPreparedConformerEnsemble,
 )
 from .identity import coordinate_fingerprint
-from .chemistry_features import (
-    FULL_TOPOLOGY_FEATURE_POLICY_ID,
-    perceive_full_topology_features,
-    require_matching_feature_policies,
-    uses_full_topology_features,
-)
 from .placement import (
     _PROPOSAL_OVERRIDE,
     _ProposalOverride,
@@ -331,13 +325,6 @@ def _feature_indices(
     *,
     allowed_indices: set[int] | None = None,
 ) -> dict[str, tuple[int, ...]]:
-    if uses_full_topology_features(system):
-        features = perceive_full_topology_features(
-            system, allowed_indices=allowed_indices,
-        ).guidance_indices()
-        if any(len(indices) > MAX_GUIDED_FEATURE_ATOMS for indices in features.values()):
-            raise DockingAuthorityError("guided feature atom count exceeds its hard bound")
-        return features
     adjacency = _adjacency(system, allowed_indices=allowed_indices)
     bonds = _bond_by_pair(
         system,
@@ -539,7 +526,7 @@ class GuidedPlacementContext:
             "ligand_system_sha256",
         ):
             object.__setattr__(self, name, _digest(getattr(self, name), name=name))
-        if self.feature_policy_id not in {GUIDED_FEATURE_POLICY_ID, FULL_TOPOLOGY_FEATURE_POLICY_ID}:
+        if self.feature_policy_id != GUIDED_FEATURE_POLICY_ID:
             raise DockingAuthorityError("unsupported guided feature policy")
         ligand_features = {
             str(name): tuple(int(value) for value in values)
@@ -1153,7 +1140,6 @@ def build_guided_placement_context(
         if not isinstance(system, AllAtomSystem):
             raise TypeError(f"{name} must be AllAtomSystem")
         require_valid_all_atom_system(system)
-    require_matching_feature_policies(receptor_system, ligand_system)
     authenticated_problem.input_receipt_sha256
     receptor_sha256 = canonical_system_sha256(receptor_system)
     ligand_sha256 = canonical_system_sha256(ligand_system)
@@ -1215,8 +1201,6 @@ def build_guided_placement_context(
         allowed_indices=allowed_receptor,
     )
     return GuidedPlacementContext(
-        feature_policy_id=(FULL_TOPOLOGY_FEATURE_POLICY_ID
-                           if uses_full_topology_features(receptor_system) else GUIDED_FEATURE_POLICY_ID),
         authority_input_receipt_sha256=authenticated_problem.input_receipt_sha256,
         receptor_system_sha256=receptor_sha256,
         ligand_system_sha256=ligand_sha256,

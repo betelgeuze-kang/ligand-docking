@@ -30,12 +30,6 @@ from betelgeuze_engine_v2.molecular import (
 
 from .authority import AuthenticatedDockingProblem, DockingAuthorityError
 from .contact_validity import ElementAwarePoseValidityContext
-from .chemistry_features import (
-    FULL_TOPOLOGY_FEATURE_POLICY_ID,
-    perceive_full_topology_features,
-    require_matching_feature_policies,
-    uses_full_topology_features,
-)
 from .guided_placement import (
     FixedSourceBoundConformerProposalReceipt,
     GuidedPlacementContext,
@@ -251,9 +245,6 @@ def _features(
     system: AllAtomSystem,
     allowed: set[int],
 ) -> tuple[tuple[tuple[int, int], ...], tuple[int, ...], tuple[int, ...]]:
-    if uses_full_topology_features(system):
-        features = perceive_full_topology_features(system, allowed_indices=allowed)
-        return features.donor_pairs, features.acceptors, features.hydrophobic
     adjacency = _adjacency(system)
     bonds = {
         tuple(sorted((int(bond.atom_i), int(bond.atom_j)))): bond
@@ -672,12 +663,9 @@ class ScorerV1Context:
     ligand_acceptors: tuple[int, ...]
     receptor_hydrophobic: tuple[int, ...]
     ligand_hydrophobic: tuple[int, ...]
-    feature_policy_id: str = "legacy_scorer_features_v1"
     _fingerprint_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        if self.feature_policy_id not in {"legacy_scorer_features_v1", FULL_TOPOLOGY_FEATURE_POLICY_ID}:
-            raise ScorerV1Error("unsupported scorer feature policy")
         for name in (
             "authority_input_receipt_sha256",
             "receptor_system_sha256",
@@ -782,8 +770,6 @@ class ScorerV1Context:
     def _projection(self) -> dict[str, object]:
         return {
             "schema_id": SCORER_V1_CONTEXT_SCHEMA_ID,
-            **({"feature_policy_id": self.feature_policy_id}
-               if self.feature_policy_id != "legacy_scorer_features_v1" else {}),
             "authority_input_receipt_sha256": self.authority_input_receipt_sha256,
             "receptor_system_sha256": self.receptor_system_sha256,
             "ligand_system_sha256": self.ligand_system_sha256,
@@ -956,7 +942,6 @@ def derive_scorer_v1_context(
         if not isinstance(system, AllAtomSystem):
             raise TypeError(f"{name} must be AllAtomSystem")
         require_valid_all_atom_system(system)
-    require_matching_feature_policies(receptor_system, ligand_system)
     if len(receptor_system.bonds) > MAX_SCORER_V1_RECEPTOR_BONDS_SCANNED:
         raise ScorerV1Error("receptor bond count exceeds scorer v1 hard bound")
     if (
@@ -984,8 +969,6 @@ def derive_scorer_v1_context(
         if donor in receptor_position and hydrogen in receptor_position
     )
     return ScorerV1Context(
-        feature_policy_id=(FULL_TOPOLOGY_FEATURE_POLICY_ID
-                           if uses_full_topology_features(receptor_system) else "legacy_scorer_features_v1"),
         authority_input_receipt_sha256=authority.input_receipt_sha256,
         receptor_system_sha256=authority.receptor_system_sha256,
         ligand_system_sha256=authority.ligand_system_sha256,

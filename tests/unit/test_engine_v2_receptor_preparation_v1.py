@@ -10,27 +10,33 @@ import pytest
 import torch
 
 from betelgeuze_engine_v2.docking import (
-    ChemistryPoseScorerV1,
     DockingBudget,
     DockingScope,
     PocketDefinition,
     build_element_aware_authenticated_known_pocket_docking_problem,
-    build_guided_placement_context,
     generate_pocket_centered_docking_proposals,
 )
-from betelgeuze_engine_v2.docking.chemistry_features import (
+from betelgeuze_product.docking_development_v1.chemistry_features import (
     FEATURE_POLICY_METADATA_KEY,
     FULL_TOPOLOGY_FEATURE_POLICY_ID,
     perceive_full_topology_features,
 )
-from betelgeuze_engine_v2.docking.guided_placement import _feature_indices
-from betelgeuze_engine_v2.docking.receptor_preparation import (
+from betelgeuze_product.docking_development_v1.receptor_preparation import (
     ChemistryPreparationError,
     prepare_ligand_v1,
     prepare_receptor_v1,
 )
-from betelgeuze_engine_v2.docking.scorer_v1 import _features
-from betelgeuze_engine_v2.io import PDBParseError, parse_pdb, pdb_string
+from betelgeuze_product.docking_development_v1.prepared_scoring import (
+    ChemistryPoseScorerV1,
+    PreparedScorerContext,
+    PreparedGuidedPlacementContext,
+    build_guided_placement_context,
+    generate_guided_docking_proposals,
+    _features,
+    _feature_indices,
+)
+from betelgeuze_product.docking_development_v1.prepared_pdb import parse_pdb
+from betelgeuze_engine_v2.io import PDBParseError, pdb_string
 from tools.run_engine_v2_prepared_receptor_development import main
 import tools.run_engine_v2_prepared_receptor_development as development_runner
 
@@ -292,6 +298,28 @@ def test_conect_fixed_width_serial_boundaries_and_bidirectional_deduplication(se
     )
     system = parse_pdb(payload)
     assert [(b.atom_i, b.atom_j) for b in system.bonds] == [(0, 1)]
+    assert (
+        system.provenance.source_sha256 == hashlib.sha256(payload.encode()).hexdigest()
+    )
+
+
+def test_product_pdb_wrapper_preserves_atom_lines_and_binds_original_bytes():
+    payload = "\n".join(
+        [
+            _atom(10000, "C1", "C", 0),
+            "CONECT1000010001",
+            _atom(10001, "O1", "O", 1.3),
+            "END",
+        ]
+    )
+    system = parse_pdb(payload)
+    assert [a.metadata["source_line"] for a in system.atoms] == [1, 3]
+    assert len(system.bonds) == 1
+    assert system.provenance.parser_name == "betelgeuze_product_fixedwidth_pdb"
+    assert (
+        system.provenance.source_sha256 == hashlib.sha256(payload.encode()).hexdigest()
+    )
+    assert not system.provenance.chemistry_validated
 
 
 @pytest.mark.parametrize(
@@ -341,8 +369,10 @@ def test_new_cli_consumes_both_policies_in_real_bounded_search(tmp_path):
     assert not report["claim_safe"]
     sources = report["implementation_sources"]
     for name in (
-        "betelgeuze_engine_v2/docking/receptor_preparation.py",
-        "betelgeuze_engine_v2/docking/chemistry_features.py",
+        "betelgeuze_product/docking_development_v1/receptor_preparation.py",
+        "betelgeuze_product/docking_development_v1/chemistry_features.py",
+        "betelgeuze_product/docking_development_v1/prepared_scoring.py",
+        "betelgeuze_product/docking_development_v1/prepared_pdb.py",
         "betelgeuze_engine_v2/docking/scorer_v1.py",
         "betelgeuze_engine_v2/docking/guided_placement.py",
         "betelgeuze_engine_v2/docking/search.py",
@@ -364,7 +394,12 @@ def test_changed_implementation_cannot_produce_a_successful_report(monkeypatch):
     def changing_sources():
         nonlocal calls
         calls += 1
-        return {"betelgeuze_engine_v2/docking/chemistry_features.py": str(calls) * 64}
+        return {
+            "betelgeuze_product/docking_development_v1/chemistry_features.py": str(
+                calls
+            )
+            * 64
+        }
 
     monkeypatch.setattr(development_runner, "_implementation_sources", changing_sources)
     with pytest.raises(ChemistryPreparationError) as error:
@@ -410,6 +445,9 @@ def test_cli_unsupported_chemistry_retains_typed_failure(tmp_path):
 
 
 def test_legacy_unmarked_inputs_keep_the_original_feature_policy():
+    from betelgeuze_engine_v2.docking import scorer_v1 as legacy_scoring
+    from betelgeuze_engine_v2.docking import guided_placement as legacy_guidance
+
     system = prepare_receptor_v1((FIXTURES / "asg_heavy.pdb").read_bytes()).system
     ligand = prepare_ligand_v1((FIXTURES / "ethanol_explicit.sdf").read_bytes()).system
 
@@ -421,11 +459,100 @@ def test_legacy_unmarked_inputs_keep_the_original_feature_policy():
             },
         )
 
-    _, scorer, guidance = _context(legacy(system), legacy(ligand))
-    assert scorer.context.feature_policy_id == "legacy_scorer_features_v1"
+    receptor, ligand = legacy(system), legacy(ligand)
+    authority, scorer, guidance = _context(receptor, ligand)
+    assert not isinstance(scorer.context, PreparedScorerContext)
+    assert not isinstance(guidance, PreparedGuidedPlacementContext)
     assert guidance.feature_policy_id != FULL_TOPOLOGY_FEATURE_POLICY_ID
+    original_scorer = legacy_scoring.ChemistryPoseScorerV1(
+        authority, receptor, ligand, implementation_source_sha256="c" * 64
+    )
+    assert scorer.context.to_dict() == original_scorer.context.to_dict()
+    assert (
+        guidance.to_dict()
+        == legacy_guidance.build_guided_placement_context(
+            authority, receptor, ligand
+        ).to_dict()
+    )
     with pytest.raises(ValueError, match="policies differ"):
         _context(system, legacy(ligand))
+
+
+def test_prepared_adapters_bind_features_and_caches_without_mutating_engine():
+    from betelgeuze_engine_v2.docking import scorer_v1 as legacy_scoring
+    from betelgeuze_engine_v2.docking import guided_placement as legacy_guidance
+
+    old_features = legacy_scoring._features
+    old_builder = legacy_guidance.build_guided_placement_context
+    receptor = prepare_receptor_v1((FIXTURES / "asg_heavy.pdb").read_bytes()).system
+    ligand = prepare_ligand_v1((FIXTURES / "ethanol_explicit.sdf").read_bytes()).system
+    authority, scorer, guidance = _context(receptor, ligand)
+    assert isinstance(scorer.context, PreparedScorerContext)
+    assert isinstance(guidance, PreparedGuidedPlacementContext)
+    assert legacy_scoring._features is old_features
+    assert legacy_guidance.build_guided_placement_context is old_builder
+    positions = {i: offset for offset, i in enumerate(authority.receptor_atom_indices)}
+    guided_acceptors = {i for i, _, _ in guidance.receptor_feature_rows["acceptor"]}
+    for atom in receptor.atoms:
+        if atom.name == "N" and atom.index in positions:
+            assert positions[atom.index] not in scorer.context.receptor_acceptors
+            assert atom.index not in guided_acceptors
+    assert scorer._ligand_acceptors == frozenset(scorer.context.ligand_acceptors)
+    assert scorer._native_context is None
+    with pytest.raises(
+        legacy_scoring.ScorerV1Error, match="Python reference backend only"
+    ):
+        ChemistryPoseScorerV1(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="c" * 64,
+            backend=legacy_scoring.ScorerBackend.RUST_CPU_REQUIRED,
+        )
+    scorer._ligand_acceptors = frozenset()
+    with pytest.raises(legacy_scoring.ScorerV1Error, match="feature caches changed"):
+        scorer._assert_bound_state()
+
+
+def test_prepared_guidance_rederives_new_features_and_generates_actual_anchor_modes():
+    from betelgeuze_engine_v2.docking.guided_placement import GuidedPlacementPolicy
+    from betelgeuze_engine_v2.docking.authority import DockingAuthorityError
+
+    receptor = prepare_receptor_v1((FIXTURES / "asg_heavy.pdb").read_bytes()).system
+    ligand = prepare_ligand_v1((FIXTURES / "ethanol_explicit.sdf").read_bytes()).system
+    authority, _, context = _context(receptor, ligand)
+    budget = DockingBudget(
+        candidate_count=16,
+        top_k=3,
+        max_torsions=32,
+        translation_radius_angstrom=8.0,
+        seed=13,
+    )
+    policy = GuidedPlacementPolicy(centered_candidate_count=1)
+    proposals, receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        policy=policy,
+    )
+    assert len(proposals) == 16
+    assert receipt.guidance_context_sha256 == context.fingerprint_sha256
+    assert dict(receipt.feature_counts) == context.feature_counts()
+    assert "donor_acceptor_hotspot" in receipt.proposal_modes
+    forged = replace(
+        context, ligand_features={**dict(context.ligand_features), "acceptor": ()}
+    )
+    with pytest.raises(DockingAuthorityError, match="authenticated derivation"):
+        generate_guided_docking_proposals(
+            authority,
+            budget,
+            forged,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            policy=policy,
+        )
 
 
 def _retained_cli_arguments(output, *, policy="retained-v9", steps=1):
@@ -490,8 +617,10 @@ def test_retained_v9_cli_runs_actual_pipeline_and_preserves_its_evidence(tmp_pat
     for name in (
         "betelgeuze_product/explicit_refinement_pipeline.py",
         "betelgeuze_product/cpu_refinement_fourier_v1/evaluation.py",
-        "betelgeuze_engine_v2/docking/receptor_preparation.py",
-        "betelgeuze_engine_v2/docking/chemistry_features.py",
+        "betelgeuze_product/docking_development_v1/receptor_preparation.py",
+        "betelgeuze_product/docking_development_v1/chemistry_features.py",
+        "betelgeuze_product/docking_development_v1/prepared_scoring.py",
+        "betelgeuze_product/docking_development_v1/prepared_pdb.py",
         "tools/run_engine_v2_prepared_receptor_development.py",
     ):
         source = Path(development_runner.__file__).resolve().parents[1] / name

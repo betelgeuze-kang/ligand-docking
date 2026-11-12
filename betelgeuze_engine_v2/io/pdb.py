@@ -253,22 +253,14 @@ def parse_pdb(
             continue
 
         if record == "CONECT":
-            # PDB serial fields are five columns wide, not whitespace separated.
-            # In particular CONECT1000010001 must retain the 10000--10001 bond.
-            if raw_line[31:].strip():
-                raise PDBParseError("CONECT fields beyond column 31 are unsupported")
-            fields = [line[start : start + 5].strip() for start in range(6, 31, 5)]
-            if not fields[0]:
+            fields = raw_line[6:].split()
+            if not fields:
                 raise PDBParseError("empty CONECT record")
             try:
                 center = int(fields[0])
-                targets = [int(value) for value in fields[1:] if value]
+                targets = [int(value) for value in fields[1:]]
             except ValueError as exc:
                 raise PDBParseError("CONECT records must contain integer serials") from exc
-            if center < 1 or any(target < 1 for target in targets):
-                raise PDBParseError("CONECT serials must be positive")
-            if not targets:
-                raise PDBParseError("CONECT record must contain a bonded atom")
             for target in targets:
                 if center == target:
                     raise PDBParseError("self CONECT records are not supported")
