@@ -112,25 +112,6 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _scientific_input_summary(record: dict[str, Any]) -> dict[str, Any]:
-    receipt = record.get("scientific_input_provenance")
-    if not isinstance(receipt, dict):
-        receipt = {}
-    pocket = receipt.get("pocket") if isinstance(receipt.get("pocket"), dict) else {}
-    return {
-        "schema_version": str(receipt.get("schema_version") or ""),
-        "receipt_sha256": str(receipt.get("receipt_sha256") or ""),
-        "content_identity_ready": receipt.get("content_identity_ready") is True,
-        "execution_input_ready": receipt.get("execution_input_ready") is True,
-        "explicit_pocket": pocket.get("explicit") is True,
-        "pocket_definition_kind": str(pocket.get("definition_kind") or ""),
-        "ligand_count": int(receipt.get("ligand_count") or 0),
-        "private_payload_stored": record.get("private_payload_stored") is True,
-        "blockers": list(receipt.get("blockers") or []),
-        "claim_safe": False,
-    }
-
-
 @router.post("/docking/jobs")
 async def submit_docking_job(
     payload: DockingJobRequest,
@@ -175,13 +156,7 @@ async def submit_docking_job(
         persist_docking_job_record,
     )
     from betelgeuze_product.docking_response import (
-        docking_claim_summary,
-        docking_diagnostics_envelope,
-        docking_dispatch_summary,
-        docking_links,
-        docking_progress_summary,
-        docking_structure_summary,
-        docking_validation_summary,
+        build_docking_submission_response,
     )
     from betelgeuze_product.scientific_input_provenance import (
         build_scientific_input_provenance,
@@ -224,31 +199,9 @@ async def submit_docking_job(
         jobs_dir=_jobs_dir(),
         store=get_configured_job_store(),
     )
-    return {
-        "job_id": record["job_id"],
-        "status": record["status"],
-        "request_type": record["request_type"],
-        "family": record["family"],
-        "target_id": record["target_id"],
-        "customer_id": record["customer_id"],
-        "user_id": record["user_id"],
-        "validation_status": record["validation_status"],
-        "execution_enabled": record["execution_enabled"],
-        "docking_results_emitted": record["docking_results_emitted"],
-        "validation": docking_validation_summary(record),
-        "structure": docking_structure_summary(record),
-        "scientific_input": _scientific_input_summary(record),
-        "progress": docking_progress_summary(record),
-        "dispatch": docking_dispatch_summary(record, dispatch_outcome),
-        "claim": docking_claim_summary(record),
-        "links": docking_links(record),
-        "claim_boundary": record["claim_boundary"],
-        **(
-            docking_diagnostics_envelope(record)
-            if debug and identity.is_admin
-            else {}
-        ),
-    }
+    return build_docking_submission_response(
+        record, dispatch_outcome=dispatch_outcome, debug=debug and identity.is_admin,
+    )
 
 
 @router.post("/structure/analyze")
