@@ -124,5 +124,16 @@
     "namespace_containment_qualified": false,
     "native_cpu_qualification_established": false
   },
-  "remote_ci": "Tracked separately on the pull request; not implied by local results."
+  "remote_ci": "Tracked separately on the pull request; not implied by local results.",
+  "fixture_padding_followup": {
+    "scope": "Remove trailing blank charge columns from two PDB fixtures; parsed atoms, bonds, residues, chains and coordinates are identical.",
+    "passed": 28,
+    "skipped": 0,
+    "seconds": 3.5,
+    "counts_are_reverification_not_additional_unique_tests": true,
+    "fixture_sha256": {
+      "tests/fixtures/prepared_peptide_v1/asg_heavy.pdb": "ba2336d2ffec32426f2d7cf02d7ceafddb391d4316fdd8067149643497949cd2",
+      "tests/fixtures/prepared_peptide_v1/charged_heavy.pdb": "6b46e419d701c94720747472a62041d08f3f4be3c3662e7ad213ade58fb651f8"
+    }
+  }
 }

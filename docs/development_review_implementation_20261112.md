@@ -128,6 +128,11 @@ Skip은 native extension 미설치에 따른 기존 scorer 비교 3개이며, �
 실패를 skip으로 바꾼 것이 아니다. Starlette httpx deprecation과 `-c /dev/null`
 사용 시 mobile marker 미등록으로 경고 2개가 있었다.
 
+최종 diff 검사에서는 두 PDB fixture의 빈 마지막 열만 정리했다. 정리 전후의
+원자·결합·잔기·chain·좌표가 정확히 같음을 비교했고, 영향을 받는 준비·CLI
+회귀 28개를 다시 실행해 모두 통과했다. 이는 위 455개에 더해 세는 별도 성공
+건수가 아니라 동일 테스트 중 해당 범위의 재검증이다.
+
 검사 범위와 skip의 정확한 test ID는
 [기계 판독 검증 기록](evidence/development_review_20261112.json)에 포함했다.
 
