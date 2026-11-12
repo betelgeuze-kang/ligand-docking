@@ -6,10 +6,15 @@ pipeline and its frozen receipts keep their numerical behavior. No native
 qualification, force-field accuracy, binding-affinity calibration, or benchmark
 accuracy claim is created by this connection.
 
-Frozen numerical behavior and receipt schema do not mean that changed source
-files retain an old implementation identity. The new consumer observes the
-owning numerical source inventory, including the actual legacy/Fourier E/F
-evaluators and all engine physics/geometry modules, plus its new adapters.
+The historical Engine v2 Python source tree remains byte-for-byte unchanged.
+New preparation, scoring, guarded search and refinement extensions live in the
+product-owned `betelgeuze_product.docking_development_v1` namespace. No original
+engine class or module global is patched. New extension execution has its own
+source identity and does not inherit the old implementation identity.
+
+The consumer observes the owning numerical source inventory, including the
+actual legacy/Fourier E/F evaluators, all engine physics/geometry modules, its
+adapters, and every Python source in the new product namespace recursively.
 It binds that inventory and the execution environment at entry and rechecks
 them at exit. Old source-bound runs cannot be relabelled as this implementation.
 
@@ -83,7 +88,9 @@ result_sha256 = result.receipt_sha256
 The default proposal generator is the existing authenticated bounded uniform
 generator. Supply a bound `GuidedPlacementContext` and optional exact
 `GuidedPlacementPolicy` as `guided_context=` and `guided_policy=` to reuse the
-existing guided generator. The source-paired/frozen campaign profile is not
+existing guided generator. The exact new `PreparedGuidedPlacementContext` is
+also supported with the explicit prepared scorer; arbitrary context types are
+rejected. The source-paired/frozen campaign profile is not
 implicitly promoted or reused by this API.
 
 For a supplied physical model:
@@ -139,17 +146,33 @@ fresh dictionaries when reading it.
 
 ## Work accounting
 
-Existing V2/V3/V6/V7/V8 pose receipts still report their historical selected-path
-step fields. A new typed sidecar, `refinement_work_records(refiner)`, observes every
-nested arm without changing those receipts. It counts local and recursive total
-objective attempts, completed/failed objective calls, accepted steps, trial
-objective attempts, and direction-only geometry calls. Discarded comparison and
-clearance arms remain in the child records. A failed parent retains the work of
-already completed and partially executed children.
+Existing V2/V3/V6/V7/V8 classes and receipts remain untouched. Work observation
+belongs only to new product subclasses and the product-owned V9 bounded search.
+`refinement_work_records(refiner)` counts each actual objective/direction call
+through ordinary method dispatch. Completed rigid-arm receipts provide exact
+accepted-step and trial counts. Discarded comparison and clearance arms remain
+in the child records. A failed parent retains all observed objective calls and
+already completed child receipts.
+
+When an original rigid method raises before publishing its leaf receipt, its
+partial accepted-step/trial counts are unavailable. Those aggregate counters
+are explicitly `null`, named in `unknown_counters`, and `total_work_known` is
+false. `known_lower_bounds` preserves the observed completed work without
+inventing zero work for an interrupted arm. Objective attempts/completions/
+failures remain directly observed, including the failed call.
 
 These are actual Python objective invocation counts. They are not wall time or
 physical E/F counts. `max_refinement_steps` remains a per-arm/selected-path bound,
 not a global objective-call cap. The sidecar explicitly labels that meaning.
+
+For the generic authenticated search interface, the product API
+`docking_development_v1.guarded_search.run_authenticated_guarded_docking_search`
+adds bounded scorer isolation while keeping the engine implementation unchanged.
+It passes independent proposal copies to scalar or batch scorers and verifies
+the pre-call proposal identities and component contract afterwards. Coherent
+identity replacement and cross-row mutations are rejected without replacing the
+engine's original candidate objects. This wrapper has a separate observed source
+identity and is not an assertion that the historical search source was changed.
 
 Physical work reports separately count optimizer callbacks, admitted provider
 calls, physical evaluator attempts, graph builds, recoverable trial rejections,

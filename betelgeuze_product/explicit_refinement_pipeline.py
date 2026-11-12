@@ -21,17 +21,21 @@ from betelgeuze_engine_v2.docking.authority import AuthenticatedDockingProblem
 from betelgeuze_engine_v2.docking.guided_placement import (
     GuidedPlacementContext,
     GuidedPlacementPolicy,
-    generate_guided_docking_proposals,
 )
 from betelgeuze_engine_v2.docking.proposals import (
     DockingBudget,
     DockingProposal,
     generate_bounded_docking_proposals,
 )
-from betelgeuze_engine_v2.docking.refinement_work import refinement_work_records
-from betelgeuze_engine_v2.docking.scorer_v1 import ChemistryPoseScorerV1, ScorerV1Terms
+from betelgeuze_engine_v2.docking.scorer_v1 import ScorerV1Terms
 from betelgeuze_engine_v2.docking.scoring import score_sort_key
-from betelgeuze_engine_v2.docking.torsion_refinement_v9 import (
+from .docking_development_v1.prepared_scoring import (
+    ChemistryPoseScorerV1,
+    PreparedGuidedPlacementContext,
+    generate_guided_docking_proposals,
+)
+from .docking_development_v1.refinement_work import refinement_work_records
+from .docking_development_v1.torsion_refinement_v9 import (
     InteractionAwareTorsionContactEnsembleRefinerV9,
     TorsionRefinementBoundsV9,
 )
@@ -99,6 +103,11 @@ def implementation_sources():
     sources[__name__.replace(".", "/") + ".py"] = hashlib.sha256(
         Path(__file__).read_bytes()
     ).hexdigest()
+    product_root = Path(__file__).resolve().parent
+    for path in sorted((product_root / "docking_development_v1").rglob("*.py")):
+        sources["betelgeuze_product/" + path.relative_to(product_root).as_posix()] = (
+            hashlib.sha256(path.read_bytes()).hexdigest()
+        )
     return dict(sorted(sources.items()))
 
 
@@ -582,7 +591,10 @@ class ExplicitRefinementDockingPipelineV1:
             )
             generation = {"mode": "authenticated_uniform_bounded"}
         else:
-            if type(guided_context) is not GuidedPlacementContext or (
+            if type(guided_context) not in (
+                GuidedPlacementContext,
+                PreparedGuidedPlacementContext,
+            ) or (
                 guided_policy is not None
                 and type(guided_policy) is not GuidedPlacementPolicy
             ):

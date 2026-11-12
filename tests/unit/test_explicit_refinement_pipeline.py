@@ -17,12 +17,12 @@ from betelgeuze_engine_v2.docking import (
 from betelgeuze_engine_v2.docking.authority import (
     run_authenticated_bounded_docking_search,
 )
-from betelgeuze_engine_v2.docking.interaction_refinement import (
-    InteractionAwareRigidHybridClearanceEnsembleRefinerV6,
-    ReceptorClashReliefRefiner,
+from betelgeuze_product.docking_development_v1.observed_rigid_refinement import (
+    ObservedRigidEnsembleV6,
+    _ObservedRigidLeaf,
 )
 from betelgeuze_engine_v2.docking.proposals import bind_docking_proposal_state
-from betelgeuze_engine_v2.docking.refinement_work import (
+from betelgeuze_product.docking_development_v1.refinement_work import (
     count_objective,
     refinement_work_records,
 )
@@ -30,9 +30,12 @@ from betelgeuze_engine_v2.docking.search import DockingBatchScoreOutcome
 from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
     InteractionAwareTorsionContactEnsembleRefinerV7,
 )
-from betelgeuze_engine_v2.docking.torsion_refinement_v9 import (
+from betelgeuze_product.docking_development_v1.torsion_refinement_v9 import (
     InteractionAwareTorsionContactEnsembleRefinerV9,
     TorsionRefinementBoundsV9,
+)
+from betelgeuze_product.docking_development_v1.guarded_search import (
+    run_authenticated_guarded_docking_search,
 )
 from betelgeuze_product.explicit_refinement_pipeline import (
     ContactRefinementProviderV9,
@@ -80,6 +83,8 @@ def _folded_source(*, overlapping=False):
 
 def test_v9_really_searches_internal_overlap_below_receptor_window_and_retains_both():
     authority, ligand, receptor, source = _folded_source()
+    frozen_method = InteractionAwareTorsionContactEnsembleRefinerV7.refine
+    frozen_objective = InteractionAwareTorsionContactEnsembleRefinerV7._objective
     legacy = InteractionAwareTorsionContactEnsembleRefinerV7(
         authority,
         receptor,
@@ -101,6 +106,7 @@ def test_v9_really_searches_internal_overlap_below_receptor_window_and_retains_b
     assert float.fromhex(receipt["baseline_v6_receptor_penalty_binary64_hex"]) == 0.0
     assert float.fromhex(receipt["baseline_v6_internal_penalty_binary64_hex"]) > 0.0
     assert old_receipt["torsion_evaluated"] is False
+    assert refinement_work_records(legacy) == ()
     assert receipt["torsion_evaluated"] is True
     assert receipt["accepted_torsion_steps"] > 0
     assert float.fromhex(
@@ -120,20 +126,17 @@ def test_v9_really_searches_internal_overlap_below_receptor_window_and_retains_b
     )
     assert receipt["historical_receptor_penalty_window_enabled"] is False
     assert receipt["scientifically_validated"] is False
+    assert InteractionAwareTorsionContactEnsembleRefinerV7.refine is frozen_method
+    assert (
+        InteractionAwareTorsionContactEnsembleRefinerV7._objective is frozen_objective
+    )
 
 
 @pytest.mark.parametrize(
     "penalty", [0.0, math.nextafter(2.0, 0.0), 2.0, math.nextafter(4.0, 0.0), 4.0, 10.0]
 )
-def test_v9_has_no_discontinuous_selection_at_legacy_two_and_four(penalty):
-    authority, ligand, receptor, _ = _folded_source()
-    old = InteractionAwareTorsionContactEnsembleRefinerV7(
-        authority,
-        receptor,
-        ligand,
-        implementation_source_sha256="b" * 64,
-        v3_proposal_indices=(0,),
-    )
+def test_v9_has_no_discontinuous_selection_at_legacy_two_and_four(penalty, monkeypatch):
+    authority, ligand, receptor, source = _folded_source()
     new = InteractionAwareTorsionContactEnsembleRefinerV9(
         authority,
         receptor,
@@ -141,16 +144,28 @@ def test_v9_has_no_discontinuous_selection_at_legacy_two_and_four(penalty):
         implementation_source_sha256="b" * 64,
         v3_proposal_indices=(0,),
     )
-    assert old._select_torsion_variant(True, penalty) == (2.0 <= penalty < 4.0)
-    assert new._select_torsion_variant(True, penalty)
-    assert new._selection_window_reachable(penalty, 2)
-    assert not new._stop_torsion_search(penalty, 2)
-    assert not new._select_torsion_variant(False, penalty)
+    # A declared synthetic constant receptor component isolates the old window
+    # boundaries while the real internal-overlap objective and torsion moves run.
+    monkeypatch.setattr(
+        new,
+        "_receptor_penalty_by_atom",
+        lambda xyz: torch.full((len(xyz),), penalty / len(xyz), dtype=torch.float64),
+    )
+    new.refine(source, max_steps=2)
+    receipt = new.receipts[source.fingerprint_sha256]
+    assert receipt["torsion_evaluated"]
+    assert receipt["torsion_selected"]
+    assert receipt["accepted_torsion_steps"] > 0
+    assert receipt["torsion_trial_objective_evaluation_count"] > 0
+    assert float.fromhex(receipt["final_receptor_penalty_binary64_hex"]) == penalty
+    assert float.fromhex(
+        receipt["final_internal_penalty_binary64_hex"]
+    ) < float.fromhex(receipt["baseline_v6_internal_penalty_binary64_hex"])
 
 
 def test_all_rigid_arms_are_counted_even_when_their_endpoint_is_discarded(monkeypatch):
     authority, ligand, receptor, source = _folded_source(overlapping=True)
-    refiner = InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
+    refiner = ObservedRigidEnsembleV6(
         authority,
         receptor,
         ligand,
@@ -158,13 +173,13 @@ def test_all_rigid_arms_are_counted_even_when_their_endpoint_is_discarded(monkey
         v3_proposal_indices=(0,),
     )
     calls = []
-    original = ReceptorClashReliefRefiner._penalty_and_direction
+    original = _ObservedRigidLeaf._penalty_and_direction
 
     def observed(self, coordinates):
         calls.append(self)
         return original(self, coordinates)
 
-    monkeypatch.setattr(ReceptorClashReliefRefiner, "_penalty_and_direction", observed)
+    monkeypatch.setattr(_ObservedRigidLeaf, "_penalty_and_direction", observed)
     refiner.refine(source, max_steps=2)
     work = refinement_work_records(refiner)[-1]
     assert len(work.children) >= 2
@@ -172,6 +187,7 @@ def test_all_rigid_arms_are_counted_even_when_their_endpoint_is_discarded(monkey
     assert work.total("objective_completed") == len(calls)
     assert work.total("accepted_steps") > work.selected_path_steps
     assert work.to_dict()["discarded_path_steps"] > 0
+    assert work.to_dict()["total_work_known"] is True
     assert (
         work.selected_path_steps
         == refiner.receipts[source.fingerprint_sha256]["accepted_steps"]
@@ -180,7 +196,7 @@ def test_all_rigid_arms_are_counted_even_when_their_endpoint_is_discarded(monkey
 
 def test_failed_objective_and_previous_discarded_arm_work_are_retained(monkeypatch):
     authority, ligand, receptor, source = _folded_source(overlapping=True)
-    refiner = InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
+    refiner = ObservedRigidEnsembleV6(
         authority,
         receptor,
         ligand,
@@ -206,6 +222,12 @@ def test_failed_objective_and_previous_discarded_arm_work_are_retained(monkeypat
     assert work.total("objective_failed") == 1
     assert work.total("objective_attempts") == work.total("objective_completed") + 1
     assert work.total("accepted_steps") > 0
+    document = work.to_dict()
+    assert document["total_work_known"] is False
+    assert document["total"]["accepted_steps"] is None
+    assert document["total"]["trial_objective_attempts"] is None
+    assert document["total"]["objective_failed"] == 1
+    assert document["known_lower_bounds"]["accepted_steps"] > 0
 
 
 def _budget():
@@ -456,6 +478,12 @@ def test_v9_pipeline_retains_and_independently_validates_bounded_candidates():
         "betelgeuze_product/cpu_refinement_v1_2/evaluation.py",
         "betelgeuze_product/cpu_refinement_v1_2/fixed_receptor.py",
         "betelgeuze_engine_v2/physics/reference_forcefield.py",
+        "betelgeuze_product/docking_development_v1/prepared_scoring.py",
+        "betelgeuze_product/docking_development_v1/chemistry_features.py",
+        "betelgeuze_product/docking_development_v1/refinement_work.py",
+        "betelgeuze_product/docking_development_v1/observed_rigid_refinement.py",
+        "betelgeuze_product/docking_development_v1/torsion_refinement_v9.py",
+        "betelgeuze_product/docking_development_v1/guarded_search.py",
     ],
 )
 def test_actual_numerical_source_change_changes_pipeline_identity_without_execution(
@@ -466,6 +494,10 @@ def test_actual_numerical_source_change_changes_pipeline_identity_without_execut
     inventory = implementation_sources()
     assert relative in inventory
     assert any(name.startswith("betelgeuze_engine_v2/geometry/") for name in inventory)
+    namespace = root / "betelgeuze_product/docking_development_v1"
+    assert {str(path.relative_to(root)) for path in namespace.rglob("*.py")}.issubset(
+        inventory
+    )
     before = implementation_source_sha256()
     read = Path.read_bytes
 
@@ -514,10 +546,97 @@ def test_search_detects_coherently_rebound_scorer_mutation_before_scoring(batch)
         scorer = BatchMutator(authority.problem.fingerprint_sha256)
     else:
         scorer = Mutator(authority.problem.fingerprint_sha256)
-    result = run_authenticated_bounded_docking_search(
+    result = run_authenticated_guarded_docking_search(
         authority, DockingBudget(candidate_count=1, top_k=1, max_torsions=1), scorer
     ).search_result
     assert len(result.rows) == 1
     assert result.rows[0].status == "failure"
     assert not result.rows[0].selection_eligible
     assert not result.top_rows
+
+
+@pytest.mark.parametrize("field", ["proposal_index", "candidate_id"])
+def test_guarded_search_keeps_original_row_denominator_when_scorer_rebinds_identity(
+    field,
+):
+    authority = _authority()
+
+    class RebindingScorer(_Scorer):
+        def score(self, proposal):
+            if field == "candidate_id":
+                object.__setattr__(proposal, field, "changed-by-scorer")
+            else:
+                rebound = bind_docking_proposal_state(
+                    coordinates=proposal.coordinates,
+                    torsion_angles=proposal.torsion_angles,
+                    rotation=proposal.rotation,
+                    translation=proposal.translation,
+                    proposal_index=999,
+                    seed=proposal.seed,
+                    problem_fingerprint_sha256=proposal.problem_fingerprint_sha256,
+                    search_space_fingerprint_sha256=proposal.search_space_fingerprint_sha256,
+                )
+                for item in fields(proposal):
+                    object.__setattr__(proposal, item.name, getattr(rebound, item.name))
+            proposal.assert_integrity()
+            return 0.0
+
+    result = run_authenticated_guarded_docking_search(
+        authority,
+        DockingBudget(candidate_count=2, top_k=2, max_torsions=1),
+        RebindingScorer(authority.problem.fingerprint_sha256),
+    ).search_result
+    assert tuple(row.proposal_index for row in result.rows) == (0, 1)
+    assert all(row.status == "failure" for row in result.rows)
+    assert not result.top_rows
+
+
+def test_guarded_scalar_search_detects_mutation_of_an_earlier_row():
+    authority = _authority()
+
+    class EarlierRowMutator(_Scorer):
+        previous = None
+
+        def score(self, proposal):
+            if self.previous is not None:
+                object.__setattr__(self.previous, "candidate_id", "later-call-mutation")
+            self.previous = proposal
+            return 0.0
+
+    result = run_authenticated_guarded_docking_search(
+        authority,
+        DockingBudget(candidate_count=2, top_k=2, max_torsions=1),
+        EarlierRowMutator(authority.problem.fingerprint_sha256),
+    ).search_result
+    assert tuple(row.proposal_index for row in result.rows) == (0, 1)
+    assert result.rows[0].status == "failure"
+    assert result.rows[1].status == "success"
+
+
+def test_new_namespace_source_change_during_refinement_blocks_publication(monkeypatch):
+    authority, ligand, receptor, _ = _folded_source()
+    target = Path(__file__).resolve().parents[2] / (
+        "betelgeuze_product/docking_development_v1/prepared_scoring.py"
+    )
+    original_read = Path.read_bytes
+    original_refine = InteractionAwareTorsionContactEnsembleRefinerV9.refine
+    changed = False
+
+    def read_bytes(path):
+        raw = original_read(path)
+        return raw + b"\n# live source drift\n" if changed and path == target else raw
+
+    def refine_then_change(self, proposal, *, max_steps):
+        nonlocal changed
+        result = original_refine(self, proposal, max_steps=max_steps)
+        changed = True
+        return result
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+    monkeypatch.setattr(
+        InteractionAwareTorsionContactEnsembleRefinerV9, "refine", refine_then_change
+    )
+    with pytest.raises(StructureRefinementError, match="implementation changed"):
+        ExplicitRefinementDockingPipelineV1(ContactRefinementProviderV9()).run(
+            authority, ligand, receptor, _budget()
+        )

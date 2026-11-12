@@ -17,10 +17,6 @@ from .authority import AuthenticatedDockingProblem, DockingAuthorityError
 from .contact_validity import VdwContactPolicy
 from .identity import coordinate_fingerprint
 from .proposals import DockingProposal
-from .refinement_work import (
-    accepted_refinement_step, count_direction, count_objective,
-    track_refinement, trial_objective_attempt,
-)
 
 
 CLASH_RELIEF_REFINER_ID = "betelgeuze.engine_v2_receptor_clash_relief_refiner"
@@ -474,7 +470,6 @@ class ReceptorClashReliefRefiner:
     def receipts(self) -> Mapping[str, Mapping[str, object]]:
         return MappingProxyType(dict(self._receipts))
 
-    @count_objective
     def _penalty_and_direction(
         self, coordinates: torch.Tensor
     ) -> tuple[float, torch.Tensor]:
@@ -499,7 +494,6 @@ class ReceptorClashReliefRefiner:
             )
         return penalty, direction
 
-    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.problem_fingerprint_sha256 != self.problem_fingerprint_sha256:
@@ -525,14 +519,12 @@ class ReceptorClashReliefRefiner:
                 break
             step = direction / norm * min(self._config.maximum_step_angstrom, remaining)
             trial = coordinates + step
-            trial_objective_attempt()
             trial_penalty, _ = self._penalty_and_direction(trial)
             if trial_penalty >= penalty:
                 break
             coordinates = trial
             total_shift += step
             accepted_steps += 1
-            accepted_refinement_step()
         final_penalty, _ = self._penalty_and_direction(coordinates)
         receipt: dict[str, object] = {
             "schema_id": "betelgeuze.engine_v2_receptor_clash_relief_receipt/1.0.0",
@@ -587,7 +579,6 @@ class InteractionAwareRigidRefinerV2(ReceptorClashReliefRefiner):
             radii_policy=radii_policy,
         )
 
-    @count_direction
     def _maximum_penetration_direction(
         self,
         coordinates: torch.Tensor,
@@ -642,7 +633,6 @@ class InteractionAwareRigidRefinerV2(ReceptorClashReliefRefiner):
         direction[signed_axis // 2] = -1.0 if signed_axis % 2 else 1.0
         return direction
 
-    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.problem_fingerprint_sha256 != self.problem_fingerprint_sha256:
@@ -713,7 +703,6 @@ class InteractionAwareRigidRefinerV2(ReceptorClashReliefRefiner):
                         step_size *= 0.5
                         continue
                     trial = coordinates + step
-                    trial_objective_attempt()
                     trial_penalty, _ = self._penalty_and_direction(trial)
                     line_search_evaluation_count += 1
                     row = (
@@ -736,7 +725,6 @@ class InteractionAwareRigidRefinerV2(ReceptorClashReliefRefiner):
             coordinates = best[3]
             total_shift = best[4]
             accepted_steps += 1
-            accepted_refinement_step()
             fallback_direction_step_count += int(best[1] > 0)
 
         final_penalty, _ = self._penalty_and_direction(coordinates)
@@ -806,7 +794,6 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
             float(authority.pocket.radius_angstrom),
         )
 
-    @count_direction
     def _maximum_penetration_direction(
         self,
         coordinates: torch.Tensor,
@@ -861,7 +848,6 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
         direction[signed_axis // 2] = -1.0 if signed_axis % 2 else 1.0
         return direction
 
-    @count_direction
     def _rotation_torque(self, coordinates: torch.Tensor) -> torch.Tensor:
         centroid = coordinates.mean(dim=0)
         lever = coordinates - centroid
@@ -906,7 +892,6 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
         )
         return rotated + coordinates.mean(dim=0)
 
-    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.problem_fingerprint_sha256 != self.problem_fingerprint_sha256:
@@ -1012,7 +997,6 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
                         ):
                             step_size *= 0.5
                             continue
-                        trial_objective_attempt()
                         trial_penalty, _ = self._penalty_and_direction(trial)
                         line_search_evaluation_count += 1
                         row = (
@@ -1064,7 +1048,6 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
                         coordinates,
                         rotation_step,
                     )
-                    trial_objective_attempt()
                     trial_penalty, _ = self._penalty_and_direction(trial)
                     line_search_evaluation_count += 1
                     row = (
@@ -1091,7 +1074,6 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
             total_rotation_vector = best[5]
             total_rotation_path_radians = best[6]
             accepted_steps += 1
-            accepted_refinement_step()
             accepted_rotation_steps += int(best[1] == 2)
             fallback_direction_step_count += int(best[1] == 1)
 
@@ -1249,7 +1231,6 @@ class InteractionAwareRigidEnsembleRefinerV4:
     def receipts(self) -> Mapping[str, Mapping[str, object]]:
         return MappingProxyType(dict(self._receipts))
 
-    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.fingerprint_sha256 in self._receipts:
@@ -1426,7 +1407,6 @@ class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
             }
         )
 
-    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.proposal_index not in self._v3_proposal_index_set:

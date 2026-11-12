@@ -541,13 +541,6 @@ def run_bounded_docking_search(
                 error=exc,
             )
 
-    # Snapshot before invoking user-supplied scoring code. Integrity checks
-    # alone cannot detect a scorer that coherently replaces coordinates and
-    # recomputes their identity on the same proposal object.
-    pre_score_identities = tuple(
-        (proposal.fingerprint_sha256, current.fingerprint_sha256)
-        for proposal, current, _ in prepared
-    )
     if isinstance(scorer, DockingPoseBatchScorer):
         try:
             outcomes = tuple(scorer.score_batch(tuple(row[1] for row in prepared)))
@@ -568,20 +561,20 @@ def run_bounded_docking_search(
                 generated.append(DockingBatchScoreOutcome(score=None, error=exc))
         outcomes = tuple(generated)
 
-    for (proposal, current, refined), outcome, identities in zip(
+    for (proposal, current, refined), outcome in zip(
         prepared,
         outcomes,
-        pre_score_identities,
         strict=True,
     ):
         try:
             if outcome.error is not None:
                 raise outcome.error
+            before_score_fingerprint = current.fingerprint_sha256
             score = _score_value(outcome.score)
             current.assert_integrity()
             proposal.assert_integrity()
             search_space.assert_integrity()
-            if (proposal.fingerprint_sha256, current.fingerprint_sha256) != identities:
+            if current.fingerprint_sha256 != before_score_fingerprint:
                 raise DockingSearchError("scorer mutated the proposal identity")
             validity = None if context is None else context.evaluate(current)
             selection_eligible = (
