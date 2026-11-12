@@ -2,8 +2,11 @@
 
 `betelgeuze-dock prepared-jobs` and `/product/prepared/jobs` use one local,
 tenant-scoped authority for the bounded prepared Fourier development protocol.
-Submitting work queues a job. A trusted local owner explicitly runs at most one
-queued job with `betelgeuze-dock prepared-jobs owner-once`.
+Submitting work queues a job. A trusted local owner explicitly handles at most
+one queued job with `betelgeuze-dock prepared-jobs owner-once`. A definitive
+per-job admission/plan/budget failure becomes `rejected_before_dispatch`, with
+its typed cause retained and no new invocation reserved. The next owner call can
+reach healthy queued work; it does not repeatedly select the rejected head.
 
 This is a research vertical slice. It does not unify every existing docking
 backend or establish molecular accuracy, deployment readiness, or external-user
@@ -68,8 +71,8 @@ betelgeuze-dock prepared-jobs owner-once
 | `GET /product/prepared/jobs/{id}/verify` | Check retained generations, artifacts and the owning numerical journal without evaluating forces. |
 | `GET /product/prepared/jobs/{id}/report` | Read a verified baseline/last-observed report, preserving unknown work and nonconvergence. |
 | `POST /product/prepared/jobs/compare` | Compare retained results for every requested `execution_ids` entry; no automatic winner or ranking. |
-| `GET /product/prepared/jobs/{id}/artifacts` | List immutable artifact descriptors. |
-| `GET /product/prepared/jobs/{id}/artifacts/{artifact_id}` | Download hash-checked JSON with its digest as ETag. |
+| `GET /product/prepared/jobs/{id}/artifacts` | List immutable public artifact descriptors. |
+| `GET /product/prepared/jobs/{id}/artifacts/{artifact_id}` | Download hash-checked public JSON with its digest as ETag; private source receipts are not downloadable. |
 
 HTTP requires the authenticated principal supplied by ProductSecurityMiddleware.
 A raw tenant header is insufficient. Other tenants receive the same not-found
@@ -78,7 +81,13 @@ operation and has no public HTTP equivalent.
 
 Plans freeze the registered input bytes, implementation and runtime identities,
 solver bounds, model, force semantics, units and cumulative budget. Planning
-checks registered byte identities and the bounded solver admission; the fixed
+hashes the owning Fourier numerical source inventory without importing Torch.
+The initial worker freeze must match that planned inventory before force work;
+same-version numerical-only source changes do not silently establish a new
+first-run identity. The numerical journal's existing freeze checks still apply
+to verification and resume. Plans/admissions from implementations without this
+numerical identity are stale and are not silently migrated to new calculations.
+Planning checks registered byte identities and the bounded solver admission; the fixed
 worker performs full molecular validation before its first evaluation. Planning
 does not create an execution, reserve force work or import Torch. A changed
 input, runtime, implementation or policy prevents stale-plan execution. CPU
@@ -125,6 +134,14 @@ pause can explicitly resume if its cumulative budget remains. Completed resume
 is a no-op. Owner loss, incomplete publication, unverified containment, or an
 unknown force census prevents automatic recovery and numerical reissue.
 
+A cancellation received after a child has already returned but before owner
+publication is reconciled against the final transaction and process-terminal
+receipt. A known pause or failure keeps its numerical outcome and matching
+manifest/invocation status, while `cancel_state` becomes
+`confirmed_process_terminal`; it does not remain pending without an owner.
+Completion retains `completion_won_race`. A rejected queued resume retains all
+previously known work and cumulative charges and cannot automatically reissue it.
+
 The fixed installed worker runs with isolated Python imports and checks its
 owner token, generation, admission, implementation closure, installed origins,
 runtime identity, affinity, and applied resource limits. Known numerical failure
@@ -154,3 +171,13 @@ capture are not public artifacts. All outcomes remain `research_only: true`
 and `qualified: false`. Installation, native containment, synthetic lifecycle,
 real prepared evaluation, scientific comparison, and external-user acceptance
 must be reported as distinct evidence.
+
+The original `retained_refinement_report` remains an immutable private receipt
+used for lineage and owning verification, including original candidate labels.
+Its artifact ID is not listed publicly and public download returns not-found.
+A separate `public_refinement_report` (`public-report.json`) removes the raw
+candidate label, records its digest and the canonical original-report digest,
+and has its own file checksum/ETag. Public projection verification binds it back
+to the private receipt. Unknown owner work remains provisional with null totals
+and convergence in this downloadable projection as in the structured report;
+an earlier complete-looking numerical receipt does not override owner uncertainty.

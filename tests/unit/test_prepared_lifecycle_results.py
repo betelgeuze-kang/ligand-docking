@@ -14,7 +14,7 @@ import pytest
 import betelgeuze_product
 from betelgeuze_product import prepared_lifecycle_results as results
 from betelgeuze_product.prepared_lifecycle import (
-    LifecycleError, PreparedLifecycle, digest, write_absent,
+    LifecycleError, PreparedLifecycle, digest, write_absent, public_report_document,
 )
 from tests.unit.test_prepared_lifecycle_store import make_service
 
@@ -68,6 +68,7 @@ def retained(service, key="one", *, known=True, energy=8., candidate="candidate"
               "report_sha256": digest(report)}
     write_absent(attempt / "result.json", result)
     write_absent(attempt / "report.json", report)
+    write_absent(attempt / "public-report.json", public_report_document(report, total_work_known=known))
     manifest = {"schema_version": "prepared_lifecycle_artifact_manifest/1.0.0",
                 "execution_id": execution, "generation": generation,
                 "status": status if known else "interrupted_unknown",
@@ -75,17 +76,18 @@ def retained(service, key="one", *, known=True, energy=8., candidate="candidate"
                 "total_work_known": known, "known_force_calls": force,
                 "process_terminal_confirmed": True,
                 "implementation_sources": admission["lifecycle_sources"],
+                "numerical_implementation_sources": admission["numerical_sources"],
                 "runtime_identity": admission["runtime_identity"],
                 "protocol_sha256": admission["manifest"]["protocol_sha256"],
                 "artifact_content_sha256": {name: hashlib.sha256((attempt/name).read_bytes()).hexdigest()
-                                            for name in ("result.json", "report.json")}}
+                                            for name in ("result.json", "report.json", "public-report.json")}}
     write_absent(attempt / "manifest.json", manifest)
     process = {"returncode": 0 if known else 125, "containment_error": "",
                "containment_evidence": {"namespace_exit_verified": True}}
     service._finish(claim, status=manifest["status"], numerical_state=manifest["numerical_state"],
                     receipt={"process_terminal_confirmed": True, "process": process},
                     known_force=force, force_known=known, spawned=True,
-                    artifacts=[(attempt/name, role) for role, name in results.ROLES.items()])
+                    artifacts=[(attempt/name, role) for role, name in results.ARTIFACT_NAMES.items()])
     owning = {"binding": "b"*64, "status": status, "known_force_calls": force,
               "total_work_known": True, "report": report,
               "evaluator": {"evaluator_id": "test-fourier-fixed", "parameter_fingerprint_sha256": "c"*64,
@@ -165,6 +167,7 @@ def test_cancelled_before_numerical_files_keeps_unknown_none_manifest_prefix(ser
                 "numerical_state": "interrupted_unknown", "total_work_known": False,
                 "known_force_calls": None, "process_terminal_confirmed": True,
                 "implementation_sources": admission["lifecycle_sources"],
+                "numerical_implementation_sources": admission["numerical_sources"],
                 "runtime_identity": admission["runtime_identity"],
                 "protocol_sha256": admission["manifest"]["protocol_sha256"],
                 "artifact_content_sha256": {}}
@@ -201,9 +204,10 @@ def test_prior_generation_report_census_checked_even_if_current_generation_is_va
     result = json.loads((first / "result.json").read_bytes())
     result["report_sha256"] = digest(report)
     reseal_registered(service, identity, first / "result.json", result, "numerical_invocation_result")
+    reseal_registered(service, identity, first / "public-report.json", public_report_document(report, total_work_known=True), results.PUBLIC_REPORT_ROLE)
     manifest = json.loads((first / "manifest.json").read_bytes())
     manifest["artifact_content_sha256"] = {name: hashlib.sha256((first/name).read_bytes()).hexdigest()
-                                           for name in ("report.json", "result.json")}
+                                           for name in ("report.json", "result.json", "public-report.json")}
     reseal_registered(service, identity, first / "manifest.json", manifest, "execution_artifact_manifest")
     with pytest.raises(LifecycleError, match="Result and report binding"):
         results.verify_execution(service, identity)
