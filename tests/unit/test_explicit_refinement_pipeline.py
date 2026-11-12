@@ -614,17 +614,24 @@ def test_guarded_scalar_search_detects_mutation_of_an_earlier_row():
 
 
 def test_new_namespace_source_change_during_refinement_blocks_publication(monkeypatch):
-    authority, ligand, receptor, _ = _folded_source()
+    authority, ligand, receptor, _, _, _ = fixture()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor, ligand, authority.pocket
+    )
     target = Path(__file__).resolve().parents[2] / (
         "betelgeuze_product/docking_development_v1/prepared_scoring.py"
     )
     original_read = Path.read_bytes
     original_refine = InteractionAwareTorsionContactEnsembleRefinerV9.refine
     changed = False
+    drift_reads = []
 
     def read_bytes(path):
         raw = original_read(path)
-        return raw + b"\n# live source drift\n" if changed and path == target else raw
+        if changed and path == target:
+            drift_reads.append(path)
+            return raw + b"\n# live source drift\n"
+        return raw
 
     def refine_then_change(self, proposal, *, max_steps):
         nonlocal changed
@@ -640,3 +647,5 @@ def test_new_namespace_source_change_during_refinement_blocks_publication(monkey
         ExplicitRefinementDockingPipelineV1(ContactRefinementProviderV9()).run(
             authority, ligand, receptor, _budget()
         )
+    assert changed, "the valid scored input must reach actual refinement"
+    assert drift_reads, "the exit check must observe the changed product source bytes"
