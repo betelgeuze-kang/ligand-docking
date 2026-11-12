@@ -168,8 +168,10 @@ not a global objective-call cap. The sidecar explicitly labels that meaning.
 For the generic authenticated search interface, the product API
 `docking_development_v1.guarded_search.run_authenticated_guarded_docking_search`
 adds bounded scorer isolation while keeping the engine implementation unchanged.
-It passes independent proposal copies to scalar or batch scorers and verifies
-the pre-call proposal identities and component contract afterwards. Coherent
+It passes independent proposal copies to scalar or batch scorers, normalizes
+all successful scores to finite native floats inside the guard, then verifies
+the pre-call proposal identities and component contract. Deferred scalar
+conversion is therefore inside the checked boundary. Coherent
 identity replacement and cross-row mutations are rejected without replacing the
 engine's original candidate objects. This wrapper has a separate observed source
 identity and is not an assertion that the historical search source was changed.
