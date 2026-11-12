@@ -101,6 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           python tools/check_engine_v2_architecture.py
+          python tools/verify_engine_v2_global_orientation_contaminated_development.py
           python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q --junitxml=development-contracts.xml \
             tests/unit/test_engine_v2_receptor_preparation_v1.py \
             tests/unit/test_explicit_refinement_pipeline.py \
@@ -116,5 +117,5 @@ jobs:
           suites = ET.parse('development-contracts.xml').getroot().iter('testsuite')
           assert all(int(s.attrib.get('skipped', '0')) == 0 for s in suites), 'CPU development contracts must not skip'
           PY
-          python -m ruff check --isolated --no-cache betelgeuze_engine_v2/docking/chemistry_features.py betelgeuze_engine_v2/docking/receptor_preparation.py betelgeuze_engine_v2/docking/refinement_work.py betelgeuze_engine_v2/docking/torsion_refinement_v9.py betelgeuze_product/explicit_refinement_pipeline.py tools/run_engine_v2_prepared_receptor_development.py tests/unit/test_engine_v2_receptor_preparation_v1.py tests/unit/test_explicit_refinement_pipeline.py
+          python -m ruff check --isolated --no-cache betelgeuze_product/docking_development_v1/*.py betelgeuze_product/explicit_refinement_pipeline.py tools/run_engine_v2_prepared_receptor_development.py tests/unit/test_engine_v2_receptor_preparation_v1.py tests/unit/test_explicit_refinement_pipeline.py
           git diff --check
