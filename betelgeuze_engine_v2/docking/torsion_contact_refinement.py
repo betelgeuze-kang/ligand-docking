@@ -38,6 +38,10 @@ from .interaction_refinement import (
     InteractionAwareRigidHybridClearanceEnsembleRefinerV6,
 )
 from .proposals import DockingProposal
+from .refinement_work import (
+    accepted_refinement_step, count_objective,
+    track_refinement, trial_objective_attempt,
+)
 from .validity import POSE_VALIDITY_RECEPTOR_COORDINATES_SCHEMA_ID
 
 
@@ -1454,6 +1458,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         overlap = (cutoff - distance).clamp_min(0.0)
         return overlap * overlap * overlap * overlap
 
+    @count_objective
     def _objective(
         self,
         coordinates: torch.Tensor,
@@ -1517,6 +1522,19 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
     def _normalized_angle(value: float) -> float:
         return math.atan2(math.sin(value), math.cos(value))
 
+    def _selection_window_reachable(self, receptor: float, remaining: int) -> bool:
+        return bool(receptor + remaining * self._config.penalty_tolerance
+                    >= self._config.minimum_selected_final_receptor_penalty)
+
+    def _select_torsion_variant(self, available: bool, receptor: float) -> bool:
+        return bool(available and self._config.minimum_selected_final_receptor_penalty
+                    <= receptor < self._config.maximum_selected_final_receptor_penalty)
+
+    def _stop_torsion_search(self, receptor: float, remaining: int) -> bool:
+        return bool(receptor + remaining * self._config.penalty_tolerance
+                    < self._config.minimum_selected_final_receptor_penalty)
+
+    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.fingerprint_sha256 in self._receipts:
@@ -1582,9 +1600,8 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             self._config.maximum_torsion_steps,
             remaining_steps,
         )
-        selection_window_reachable = bool(
-            baseline_receptor + torsion_step_budget * self._config.penalty_tolerance
-            >= self._config.minimum_selected_final_receptor_penalty
+        selection_window_reachable = self._selection_window_reachable(
+            baseline_receptor, torsion_step_budget
         )
         proposal_is_torsion_rescue = (
             proposal.proposal_index in self._source_paired_torsion_rescue_index_set
@@ -1680,6 +1697,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                             + self._config.penalty_tolerance
                         ):
                             continue
+                        trial_objective_attempt()
                         (
                             receptor,
                             internal,
@@ -1737,6 +1755,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 internal_by_pair,
             ) = best
             total_torsion_path += abs(delta)
+            accepted_refinement_step()
             accepted_moves.append(
                 {
                     "rotatable_child_atom_index": rotor,
@@ -1747,11 +1766,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 }
             )
             remaining_torsion_steps = torsion_step_budget - len(accepted_moves)
-            if (
-                current_receptor
-                + remaining_torsion_steps * self._config.penalty_tolerance
-                < self._config.minimum_selected_final_receptor_penalty
-            ):
+            if self._stop_torsion_search(current_receptor, remaining_torsion_steps):
                 evaluation_stopped_after_selection_window_became_unreachable = True
                 break
 
@@ -1773,11 +1788,8 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             coordinates=optimized_state_coordinates.clone(),
             torsion_angles=optimized_state_torsion_angles.clone(),
         )
-        torsion_selected = bool(
-            torsion_variant_available
-            and self._config.minimum_selected_final_receptor_penalty
-            <= optimized_receptor
-            < self._config.maximum_selected_final_receptor_penalty
+        torsion_selected = self._select_torsion_variant(
+            torsion_variant_available, optimized_receptor
         )
         if torsion_selected:
             final_coordinates = optimized_state_coordinates
@@ -2181,6 +2193,7 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
             receptor_atom_indices=self._receptor_atom_indices,
         )
 
+    @track_refinement
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         proposal.assert_integrity()
         if proposal.fingerprint_sha256 in self._receipts:
