@@ -426,3 +426,124 @@ def test_legacy_unmarked_inputs_keep_the_original_feature_policy():
     assert guidance.feature_policy_id != FULL_TOPOLOGY_FEATURE_POLICY_ID
     with pytest.raises(ValueError, match="policies differ"):
         _context(system, legacy(ligand))
+
+
+def _retained_cli_arguments(output, *, policy="retained-v9", steps=1):
+    return [
+        "--receptor",
+        str(FIXTURES / "asg_heavy.pdb"),
+        "--ligand",
+        str(FIXTURES / "ethanol_explicit.sdf"),
+        "--center",
+        "0",
+        "0",
+        "0",
+        "--radius",
+        "8",
+        "--candidates",
+        "2",
+        "--refinement-policy",
+        policy,
+        "--refinement-steps",
+        str(steps),
+        "--output",
+        str(output),
+    ]
+
+
+def test_retained_v9_cli_runs_actual_pipeline_and_preserves_its_evidence(tmp_path):
+    output = tmp_path / "retained-v9.json"
+    assert main(_retained_cli_arguments(output)) == 0
+    report = json.loads(output.read_text())
+    assert report["profile_id"] == development_runner.RETAINED_V9_PROFILE_ID
+    assert report["profile_id"] != development_runner.PROFILE_ID
+    assert report["refinement_policy"] == "retained-v9"
+    assert "search" not in report and "selected_proposal_indices" not in report
+    assert (
+        report["scorer_feature_policy_id"]
+        == report["guidance_feature_policy_id"]
+        == FULL_TOPOLOGY_FEATURE_POLICY_ID
+    )
+    result = report["retained_refinement"]
+    assert result["provider_type"] == "ContactRefinementProviderV9"
+    assert result["proposal_generation"]["mode"] == "authenticated_guided_bounded"
+    assert result["source_candidate_count"] == 2
+    assert len(result["source_outcomes"]) == len(result["work"]) == 2
+    assert all(row["status"] == "success" for row in result["source_outcomes"])
+    assert 2 <= len(result["candidates"]) <= 4
+    for index in range(2):
+        rows = [
+            row for row in result["candidates"] if row["source_proposal_index"] == index
+        ]
+        assert rows[0]["role"] == "baseline" and rows[0]["ordinal"] == 0
+    for row in result["candidates"]:
+        assert row["coordinates_binary64_hex"] and row["proposal_identity"]
+        if row["selected"]:
+            assert row["selection_eligible"] and row["pose_validity"]["valid"]
+    assert result["refinement_receipts"] and result["claim_blockers"]
+    assert not result["accuracy_claim"] and not report["claim_safe"]
+    sources = report["implementation_sources"]
+    assert all(
+        sources[name] == digest
+        for name, digest in result["implementation_sources"].items()
+    )
+    for name in (
+        "betelgeuze_product/explicit_refinement_pipeline.py",
+        "betelgeuze_product/cpu_refinement_fourier_v1/evaluation.py",
+        "betelgeuze_engine_v2/docking/receptor_preparation.py",
+        "betelgeuze_engine_v2/docking/chemistry_features.py",
+        "tools/run_engine_v2_prepared_receptor_development.py",
+    ):
+        source = Path(development_runner.__file__).resolve().parents[1] / name
+        assert sources[name] == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert (
+        report["implementation_source_sha256"]
+        == hashlib.sha256(
+            json.dumps(sources, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    )
+
+
+@pytest.mark.parametrize("policy,exit_code", [("v7", 0), ("retained-v9", 2)])
+def test_cli_zero_step_policy_difference_is_explicit(tmp_path, policy, exit_code):
+    output = tmp_path / "zero-steps.json"
+    assert main(_retained_cli_arguments(output, policy=policy, steps=0)) == exit_code
+    report = json.loads(output.read_text())
+    if policy == "retained-v9":
+        assert report["profile_id"] == development_runner.RETAINED_V9_PROFILE_ID
+        assert report["status"] == "failed"
+        assert report["failure_code"] == "retained_v9_requires_positive_steps"
+    else:
+        assert report["profile_id"] == development_runner.PROFILE_ID
+        assert report["status"] == "completed" and "search" in report
+        assert "retained_refinement" not in report
+
+
+def test_retained_cli_source_drift_cannot_hide_behind_stable_product_manifest(
+    monkeypatch,
+):
+    original = development_runner._retained_implementation_sources
+    calls = 0
+
+    def changed_sources():
+        nonlocal calls
+        sources = original()
+        calls += 1
+        if calls > 1:
+            sources["tools/run_engine_v2_prepared_receptor_development.py"] = "0" * 64
+        return sources
+
+    monkeypatch.setattr(
+        development_runner, "_retained_implementation_sources", changed_sources
+    )
+    with pytest.raises(ChemistryPreparationError) as error:
+        development_runner.run_prepared_receptor_development(
+            (FIXTURES / "asg_heavy.pdb").read_bytes(),
+            (FIXTURES / "ethanol_explicit.sdf").read_bytes(),
+            center=(0.0, 0.0, 0.0),
+            radius=8.0,
+            candidate_count=1,
+            refinement_steps=1,
+            refinement_policy="retained-v9",
+        )
+    assert error.value.code == "implementation_source_changed"

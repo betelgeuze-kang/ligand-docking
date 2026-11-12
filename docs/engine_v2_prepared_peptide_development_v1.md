@@ -30,6 +30,48 @@ Torch and RDKit versions are recorded separately. This is source-byte provenance
 for the development run, not a digest of dependency binaries, a signed release,
 or scientific validation.
 
+## Explicit retained V9 option
+
+The default remains `--refinement-policy v7` and retains the existing V7 JSON
+schema. To use prepared chemistry with the retained-candidate V9 pipeline:
+
+```bash
+python -m tools.run_engine_v2_prepared_receptor_development \
+  --receptor tests/fixtures/prepared_peptide_v1/asg_heavy.pdb \
+  --ligand tests/fixtures/prepared_peptide_v1/ethanol_explicit.sdf \
+  --center 0 0 0 --radius 8 --candidates 2 --refinement-steps 1 \
+  --refinement-policy retained-v9 \
+  --output prepared-retained-v9-report.json
+```
+
+This option calls `ExplicitRefinementDockingPipelineV1` with
+`ContactRefinementProviderV9`, using the same prepared systems and authenticated
+guided context. Its separate profile is
+`betelgeuze.prepared_peptide_retained_v9_docking_development/1.0.0`. The report
+stores the unmodified product result under `retained_refinement`: source
+outcomes, retained candidates, exact coordinates, selection pairs
+`[source_proposal_index, ordinal]`, refinement receipts, work counters, and the
+product implementation manifest. A source retains its baseline and at most one
+refined endpoint; each is scored and checked for internal validity before
+selection. This denominator differs from the V7 path and must not be treated as
+the same candidate budget in comparisons.
+
+The enclosing V9 report hashes the union of the product pipeline's complete
+source inventory, engine_v2 Python inventory, and CLI entry point. It binds that
+digest to pocket authority and checks the source snapshot again at completion.
+The nested pipeline preserves its independently observed numerical source
+digest. These two identities have different declared scopes; neither replaces
+the other. The CLI verifies the returned scorer contract against that actual
+pipeline source identity and exposes its prepared feature-policy ID.
+
+V7 permits a zero-step request. Retained V9 requires **1–24 requested steps** in
+this CLI; zero fails with `retained_v9_requires_positive_steps` and exit code 2
+before preparation or search. Provider-specific bounds still limit actual work,
+which is recorded in the nested result. V9 contract errors remain typed CLI
+failures. Candidate-level failures remain visible in the pipeline result.
+Completion is still not native-pose recovery, PoseBusters validity, or accuracy
+qualification. No new accuracy claim is enabled by selecting V9.
+
 ## Input support and declared microstate
 
 The peptide preparer uses RDKit's named amino-acid templates, with the actual
