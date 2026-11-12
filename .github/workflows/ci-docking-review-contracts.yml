@@ -13,6 +13,10 @@ on:
       - 'tests/unit/test_product_docking*.py'
       - 'tests/unit/test_product_docker_cli_closure.py'
       - 'tests/unit/test_betelgeuze_product_api_contract.py'
+      - 'tests/unit/test_engine_v2_receptor_preparation_v1.py'
+      - 'tests/unit/test_explicit_refinement_pipeline.py'
+      - 'tests/fixtures/prepared_peptide_v1/**'
+      - 'tools/run_engine_v2_prepared_receptor_development.py'
       - '.github/workflows/ci-docking-review-contracts.yml'
   workflow_dispatch:
 
@@ -63,4 +67,54 @@ jobs:
             tests/unit/test_product_docker_cli_closure.py \
             tests/unit/test_verify_product_docker_context.py
           python -m ruff check --isolated --no-cache api/product_docking.py betelgeuze_product/docking_response.py betelgeuze_product/api_contract.py tests/unit/test_product_docking_http_contract.py tests/unit/test_product_docker_cli_closure.py
+          git diff --check
+
+  scientific-development-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          clean: true
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install fixed CPU development dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install pytest==8.3.5 ruff==0.11.13 numpy==1.26.4 cryptography==46.0.5 rdkit==2026.3.6
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Check source ownership and development contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/check_engine_v2_architecture.py
+          python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q --junitxml=development-contracts.xml \
+            tests/unit/test_engine_v2_receptor_preparation_v1.py \
+            tests/unit/test_explicit_refinement_pipeline.py \
+            tests/unit/test_engine_v2_standalone_pipeline_core.py \
+            tests/unit/test_fixed_receptor_structure_refinement.py \
+            tests/unit/test_prepared_fourier_structure_refinement.py \
+            tests/unit/test_engine_v2_element_contact_round8.py \
+            tests/unit/test_engine_v2_bounded_scaffolds.py \
+            tests/unit/test_engine_v2_input_identity.py \
+            tests/unit/test_engine_v2_guided_proposal_stage4.py
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          suites = ET.parse('development-contracts.xml').getroot().iter('testsuite')
+          assert all(int(s.attrib.get('skipped', '0')) == 0 for s in suites), 'CPU development contracts must not skip'
+          PY
+          python -m ruff check --isolated --no-cache betelgeuze_engine_v2/docking/chemistry_features.py betelgeuze_engine_v2/docking/receptor_preparation.py betelgeuze_engine_v2/docking/refinement_work.py betelgeuze_engine_v2/docking/torsion_refinement_v9.py betelgeuze_product/explicit_refinement_pipeline.py tools/run_engine_v2_prepared_receptor_development.py tests/unit/test_engine_v2_receptor_preparation_v1.py tests/unit/test_explicit_refinement_pipeline.py
           git diff --check
