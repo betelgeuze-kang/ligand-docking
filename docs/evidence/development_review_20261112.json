@@ -1,0 +1,128 @@
+{
+  "schema_id": "betelgeuze.development_review_verification/1.0.0",
+  "date_utc": "2026-11-12",
+  "base_commit": "4c6e4b9fba670e325be37b538e054af88f65dc01",
+  "tested_code_commit": "10825763da159ff920a2172f4f66345ec32ec08c",
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.6.0+cpu",
+    "numpy": "1.26.4",
+    "rdkit": "2026.03.6"
+  },
+  "integrated_tests": {
+    "collected": 458,
+    "passed": 455,
+    "failures": 0,
+    "errors": 0,
+    "skipped": [
+      {
+        "module": "tests.unit.test_engine_v2_scorer_v1_stage5",
+        "test": "test_rust_cpu_batch_matches_python_reference_when_installed",
+        "reason": "could not import 'betelgeuze_engine_v2_native': No module named 'betelgeuze_engine_v2_native'"
+      },
+      {
+        "module": "tests.unit.test_engine_v2_scorer_v1_stage5",
+        "test": "test_rust_cpu_preserves_candidate_local_typed_failure",
+        "reason": "could not import 'betelgeuze_engine_v2_native': No module named 'betelgeuze_engine_v2_native'"
+      },
+      {
+        "module": "tests.unit.test_engine_v2_scorer_v1_stage5",
+        "test": "test_rust_cpu_64_candidate_rank_and_top5_match_reference",
+        "reason": "could not import 'betelgeuze_engine_v2_native': No module named 'betelgeuze_engine_v2_native'"
+      }
+    ],
+    "warnings": 2,
+    "seconds": 96.65,
+    "junit_sha256": "2cbb2cfa27aa3a27ca2305c0403da78b53f309782429cff523538370feeea739",
+    "modules": [
+      "tests.mobile.test_product_docking_tenant_isolation",
+      "tests.unit.test_api_product_prepared",
+      "tests.unit.test_betelgeuze_product_api_contract",
+      "tests.unit.test_build_product_image_smoke_preflight",
+      "tests.unit.test_engine_v2_bounded_scaffolds",
+      "tests.unit.test_engine_v2_element_contact_round8",
+      "tests.unit.test_engine_v2_guided_proposal_stage4",
+      "tests.unit.test_engine_v2_input_identity",
+      "tests.unit.test_engine_v2_receptor_preparation_v1",
+      "tests.unit.test_engine_v2_scorer_v1_stage5",
+      "tests.unit.test_engine_v2_standalone_pipeline_core",
+      "tests.unit.test_explicit_refinement_pipeline",
+      "tests.unit.test_fixed_receptor_structure_refinement",
+      "tests.unit.test_github_workflow_trust_boundaries",
+      "tests.unit.test_prepared_fourier_structure_refinement",
+      "tests.unit.test_prepared_lifecycle_cli",
+      "tests.unit.test_prepared_lifecycle_named_surfaces",
+      "tests.unit.test_prepared_lifecycle_owner",
+      "tests.unit.test_prepared_lifecycle_plans",
+      "tests.unit.test_prepared_lifecycle_readonly_worker",
+      "tests.unit.test_prepared_lifecycle_regressions",
+      "tests.unit.test_prepared_lifecycle_results",
+      "tests.unit.test_prepared_lifecycle_store",
+      "tests.unit.test_product_docker_cli_closure",
+      "tests.unit.test_product_docking_http_contract",
+      "tests.unit.test_product_docking_response_contract",
+      "tests.unit.test_product_docking_response_snapshot",
+      "tests.unit.test_verify_product_docker_context"
+    ]
+  },
+  "source_guards": {
+    "engine_v2_architecture": "passed",
+    "external_oracle_architecture": "passed",
+    "ruff_changed_python": "passed",
+    "git_diff_check": "passed"
+  },
+  "installed_wheel": {
+    "distribution": "betelgeuze-md-product",
+    "version": "0.1.0",
+    "source_commit": "c5189d55a62cc74080133aa23777501b8ca9b002",
+    "wheel_sha256": "ce36e1ea1a1fa61f412504af5a31adca3865b7b658f370661ef9185a0f644a50",
+    "bytes": 2572443,
+    "packaged_source_files_compared": 557,
+    "all_packaged_sources_equal_to_tested_code_commit": true,
+    "source_equal_wheel_members": 556,
+    "pip_check_passed": true,
+    "help_commands_passed": 3,
+    "loaded_project_modules_under_installed_prefix": 186,
+    "checkout_on_sys_path": false,
+    "tools_tests_pytest_importable": false,
+    "dependency_versions": {
+      "betelgeuze-md-product": "0.1.0",
+      "cryptography": "46.0.5",
+      "numpy": "1.26.4",
+      "rdkit": "2026.3.6",
+      "torch": "2.6.0+cpu"
+    }
+  },
+  "synthetic_installed_readonly": {
+    "producer_runs": 1,
+    "producer_force_evaluation_calls": 6,
+    "producer_failed_force_evaluation_calls": 0,
+    "reader_adapter_calls": 2,
+    "reader_additional_force_evaluation_calls": 0,
+    "journal_files_preserved": 7,
+    "journal_bytes_and_hashes_preserved": true,
+    "parent_torch_context_preserved": true,
+    "refinement_status": "max_iterations_reached",
+    "numerical_convergence": false,
+    "chemical_validity": null,
+    "pose_accuracy": null
+  },
+  "scientific_scope": {
+    "new_real_docking_benchmark_run": false,
+    "posebusters_measured": false,
+    "native_recovery_measured": false,
+    "commercial_equivalence_established": false,
+    "peptide_template_smoke_cases": 22,
+    "observed_6T88_preparation_failure": "histidine_microstate_required"
+  },
+  "runtime_scope": {
+    "actual_docker_image_built": false,
+    "full_test_suite_run_in_installed_environment": false,
+    "gpu_or_rocm_qualification_established": false,
+    "lifecycle_product_acceptance_established_by_this_smoke": false,
+    "molecular_accuracy_or_commercial_quality_established": false,
+    "namespace_containment_qualified": false,
+    "native_cpu_qualification_established": false
+  },
+  "remote_ci": "Tracked separately on the pull request; not implied by local results."
+}
