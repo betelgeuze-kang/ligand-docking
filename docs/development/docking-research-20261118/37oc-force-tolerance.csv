@@ -1,0 +1,5 @@
+endpoint,arm,diagnostic_force_tolerance,objective_attempts,accepted,rejected,E_kcal_mol,force,RMSD_A,internal_increase_kcal_mol,maximum_all_atom_displacement_A,H_contact,PB,D3_variant,D3_reason
+0,baseline,0.001,1,0,0,-72.9383320677066,0.00085756087158746,2.091314568753231,16.48463756398658,0.0,PASS_WITHIN_CONTACT_SCOPE,,none,ligand_internal_strain_limit_exceeded
+0,tight,1e-05,173,164,8,-72.93833245647704,8.88064740076228e-06,2.091340416235611,16.48457564427418,0.00014457047726896998,PASS_WITHIN_CONTACT_SCOPE,True,none,ligand_internal_strain_limit_exceeded
+1,baseline,0.001,1,0,0,-48.240358662678894,0.0007833083553995245,9.35050920666824,17.877686361501638,0.0,PASS_WITHIN_CONTACT_SCOPE,,none,ligand_internal_strain_limit_exceeded
+1,tight,1e-05,187,178,8,-48.240358966911245,8.349437034261032e-06,9.350514099628471,17.878514134472475,0.00016077543610573994,PASS_WITHIN_CONTACT_SCOPE,True,none,ligand_internal_strain_limit_exceeded
