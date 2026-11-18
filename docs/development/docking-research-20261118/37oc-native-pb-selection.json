@@ -1,0 +1,54 @@
+{
+  "status": "SAVED_COHORT_NATIVE_PB_AND_PRE_ACCURACY_SELECTION_COMPLETED",
+  "submission_denominator": 8,
+  "selected_D3": 4,
+  "statistics": {
+    "D3_NOT_SELECTED": 4,
+    "ELIGIBLE": 2,
+    "EXCLUDED": 2
+  },
+  "new_PB": 3,
+  "reused_PB": 1,
+  "expected_boolean_matches": 88,
+  "top1_composite": true,
+  "top5_composite": true,
+  "recommendation_sha256": "8066f22c618d555462b66aeabfc70c04eb16a1beb695641a0f077145e59cc737",
+  "open_reference_after_freeze": true,
+  "native_worker_reference_access": false,
+  "new_EF": 0,
+  "new_QM": 0,
+  "PB_UFF": {
+    "misses": 1,
+    "hits": 2,
+    "conformers_cap": 50,
+    "distinct_keys": 1
+  },
+  "supervised_wall_seconds": 11.907336078999833,
+  "sampled_peak_RSS": 694177792,
+  "same_fixed_saved_starts": true,
+  "new_starts_and_independent_validation": "NOT_RUN",
+  "production_admission": "HOLD",
+  "THRB": "HOLD",
+  "existing_UNKNOWN": 17,
+  "actual32": "NOT_RUN",
+  "actual100": "NOT_RUN",
+  "retained": [
+    {
+      "rank": 1,
+      "original_rank": 3,
+      "variant": "refined",
+      "RMSD_A": 1.8341056073542998,
+      "maximum_force": 0.0008842486460697023,
+      "stored_composite": true
+    },
+    {
+      "rank": 2,
+      "original_rank": 4,
+      "variant": "refined",
+      "RMSD_A": 1.83415794720597,
+      "maximum_force": 0.0009122022893947528,
+      "stored_composite": true
+    }
+  ],
+  "original_result_sha256": "efcd3c38759a8a883e14621e423616470a6c175fc1d3257eb28639eb00fdbf01"
+}
