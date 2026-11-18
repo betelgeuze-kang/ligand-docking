@@ -38,6 +38,7 @@ from .conformers import (
     SourceBoundPreparedConformerEnsemble,
 )
 from .identity import coordinate_fingerprint
+from .development_lineage import DevelopmentObserver, emit_coordinate_snapshot
 from .placement import (
     _PROPOSAL_OVERRIDE,
     _ProposalOverride,
@@ -4154,7 +4155,10 @@ def run_authenticated_guided_placement_search(
         | SourcePairedTorsionRescueProposalReceipt
         | None
     ) = None,
+    development_observer: DevelopmentObserver | None = None,
 ) -> GuidedPlacementSearchResult:
+    if development_observer is not None:
+        development_observer("proposal_generation", "start", {})
     supplied_precomputed_values = (
         precomputed_proposals is not None,
         precomputed_guided_receipt is not None,
@@ -4305,6 +4309,24 @@ def run_authenticated_guided_placement_search(
             raise DockingAuthorityError(
                 "precomputed guided proposal provenance is cross-wired"
             )
+    if development_observer is not None:
+        for proposal in proposals:
+            emit_coordinate_snapshot(
+                development_observer,
+                "proposal_generated",
+                proposal,
+                proposal_mode=receipt.proposal_modes[proposal.proposal_index],
+                ensemble_source_proposal_index=(
+                    receipt.ensemble_source_proposal_indices[proposal.proposal_index]
+                ),
+                torsion_rescue_parent_proposal_index=(
+                    receipt.torsion_rescue_parent_proposal_indices[proposal.proposal_index]
+                ),
+                guided_receipt_sha256=receipt.receipt_sha256,
+            )
+        development_observer(
+            "proposal_generation", "complete", {"candidate_count": len(proposals)}
+        )
     override = _ProposalOverride(
         search_space_fingerprint_sha256=authenticated_problem.search_space.fingerprint_sha256,
         budget_sha256=_budget_sha256(budget),

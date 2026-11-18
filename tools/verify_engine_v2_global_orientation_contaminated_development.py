@@ -5,12 +5,23 @@ from __future__ import annotations
 
 import argparse
 import ast
+from contextvars import ContextVar
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from types import MappingProxyType
 from typing import Any, Mapping
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+_HISTORICAL_SNAPSHOT_ROOT = (
+    _REPO_ROOT / "benchmarks/oracles/historical_sources/global_orientation_v1"
+)
+HISTORICAL_SNAPSHOT_MANIFEST_SHA256 = (
+    "33e29111f24f6b9f888b3941818aeddd9bf18ad8370f61b022edeb7ea69db9c2"
+)
+_BOUND_SOURCE_BYTES: ContextVar[Mapping[str, bytes] | None] = ContextVar(
+    "global_orientation_static_source_bytes", default=None
+)
 
 SCHEMA_ID = (
     "betelgeuze.engine_v2_global_orientation_contaminated_development_protocol/1.10.0"
@@ -149,14 +160,25 @@ def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
-def _file_sha256(relative_path: str) -> str:
-    path = _REPO_ROOT / relative_path
+def _source_bytes(relative_path: str) -> bytes:
+    snapshot = _BOUND_SOURCE_BYTES.get()
+    if snapshot is not None:
+        try:
+            return snapshot[relative_path]
+        except KeyError as exc:
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"source is absent from historical snapshot: {relative_path}"
+            ) from exc
     try:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
+        return (_REPO_ROOT / relative_path).read_bytes()
     except OSError as exc:
         raise GlobalOrientationDevelopmentProtocolError(
             f"bound authority source is not readable: {relative_path}: {exc}"
         ) from exc
+
+
+def _file_sha256(relative_path: str) -> str:
+    return hashlib.sha256(_source_bytes(relative_path)).hexdigest()
 
 
 def _source_manifest(
@@ -165,7 +187,21 @@ def _source_manifest(
     files: tuple[str, ...] = (),
 ) -> list[dict[str, str]]:
     paths = set(files)
+    snapshot = _BOUND_SOURCE_BYTES.get()
     for relative_root in roots:
+        if snapshot is not None:
+            matches = {
+                path
+                for path in snapshot
+                if path.startswith(relative_root.rstrip("/") + "/")
+                and path.endswith(".py")
+            }
+            if not matches:
+                raise GlobalOrientationDevelopmentProtocolError(
+                    f"source root is absent from historical snapshot: {relative_root}"
+                )
+            paths.update(matches)
+            continue
         root = _REPO_ROOT / relative_root
         if not root.is_dir():
             raise GlobalOrientationDevelopmentProtocolError(
@@ -180,6 +216,102 @@ def _source_manifest(
         {"path": relative_path, "sha256": _file_sha256(relative_path)}
         for relative_path in sorted(paths)
     ]
+
+
+def _read_regular_snapshot_file(root: Path, relative_path: str) -> bytes:
+    pure = PurePosixPath(relative_path)
+    if (
+        not relative_path
+        or pure.is_absolute()
+        or pure.as_posix() != relative_path
+        or any(part in {".", ".."} for part in pure.parts)
+        or "\\" in relative_path
+    ):
+        raise GlobalOrientationDevelopmentProtocolError("invalid historical source path")
+    candidate = root
+    for component in pure.parts:
+        candidate = candidate / component
+        if candidate.is_symlink():
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"historical source symlink is forbidden: {relative_path}"
+            )
+    try:
+        if not candidate.is_file():
+            raise OSError("not a regular file")
+        return candidate.read_bytes()
+    except OSError as exc:
+        raise GlobalOrientationDevelopmentProtocolError(
+            f"historical source is not readable: {relative_path}: {exc}"
+        ) from exc
+
+
+def _load_historical_source_snapshot() -> tuple[Mapping[str, bytes], dict[str, Any]]:
+    """Load bytes for static verification; no archived Python is imported."""
+
+    raw = _read_regular_snapshot_file(_HISTORICAL_SNAPSHOT_ROOT, "manifest.json")
+    if hashlib.sha256(raw).hexdigest() != HISTORICAL_SNAPSHOT_MANIFEST_SHA256:
+        raise GlobalOrientationDevelopmentProtocolError(
+            "historical source snapshot manifest drifted"
+        )
+    try:
+        manifest = json.loads(raw, object_pairs_hook=_reject_duplicate_object_pairs)
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise GlobalOrientationDevelopmentProtocolError(
+            "historical source snapshot manifest is invalid"
+        ) from exc
+    sources: dict[str, bytes] = {}
+    for row in manifest["files"]:
+        path = row["path"]
+        if path in sources:
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"historical source snapshot repeats a path: {path}"
+            )
+        if row["storage"] == "archived_text":
+            data = _read_regular_snapshot_file(
+                _HISTORICAL_SNAPSHOT_ROOT, row["archive_name"]
+            )
+        elif row["storage"] == "unchanged_checkout_bytes":
+            data = _read_regular_snapshot_file(_REPO_ROOT, path)
+        else:
+            raise GlobalOrientationDevelopmentProtocolError(
+                "historical source snapshot storage is invalid"
+            )
+        if (
+            len(data) != row["size_bytes"]
+            or hashlib.sha256(data).hexdigest() != row["sha256"]
+        ):
+            raise GlobalOrientationDevelopmentProtocolError(
+                f"historical source snapshot bytes drifted: {path}"
+            )
+        sources[path] = data
+    return MappingProxyType(sources), manifest
+
+
+def _current_source_comparison(snapshot: Mapping[str, bytes]) -> dict[str, Any]:
+    """Describe live source differences without granting execution authority."""
+
+    changed: list[str] = []
+    missing: list[str] = []
+    for path, archived_bytes in snapshot.items():
+        try:
+            current = _read_regular_snapshot_file(_REPO_ROOT, path)
+        except GlobalOrientationDevelopmentProtocolError:
+            missing.append(path)
+        else:
+            if current != archived_bytes:
+                changed.append(path)
+    current_python_paths = {
+        path.relative_to(_REPO_ROOT).as_posix()
+        for path in (_REPO_ROOT / "betelgeuze_engine_v2").rglob("*.py")
+        if path.is_file()
+    }
+    added = sorted(current_python_paths - set(snapshot))
+    return {
+        "current_source_matches": not (changed or missing or added),
+        "changed_paths": sorted(changed),
+        "missing_paths": sorted(missing),
+        "added_python_paths": added,
+    }
 
 
 def _mapping(value: object, *, name: str) -> Mapping[str, Any]:
@@ -218,6 +350,23 @@ def _load_json_object(path: Path, *, name: str) -> dict[str, Any]:
     return payload
 
 
+def _load_bound_json_object(relative_path: str, *, name: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(
+            _source_bytes(relative_path),
+            object_pairs_hook=_reject_duplicate_object_pairs,
+        )
+    except GlobalOrientationDevelopmentProtocolError:
+        raise
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise GlobalOrientationDevelopmentProtocolError(
+            f"{name} is not readable JSON: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise GlobalOrientationDevelopmentProtocolError(f"{name} must be a JSON object")
+    return payload
+
+
 def _typed_equal(value: object, expected: object) -> bool:
     if type(value) is not type(expected):
         return False
@@ -243,9 +392,11 @@ def load_protocol(path: Path) -> dict[str, Any]:
 
 
 def _generator_parameters() -> tuple[str, ...]:
-    path = _REPO_ROOT / "betelgeuze_engine_v2/docking/global_orientation.py"
+    relative_path = "betelgeuze_engine_v2/docking/global_orientation.py"
     try:
-        module = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        module = ast.parse(
+            _source_bytes(relative_path).decode("utf-8"), filename=relative_path
+        )
     except (OSError, UnicodeError, SyntaxError) as exc:
         raise GlobalOrientationDevelopmentProtocolError(
             f"generator source is not parseable: {exc}"
@@ -305,11 +456,10 @@ def _verify_generator_boundary() -> None:
 def _verify_synthetic_contract_binding(
     source_bindings: Mapping[str, Any],
 ) -> None:
-    contract_path = (
-        Path(__file__).resolve().parents[1]
-        / "config/engine_v2_global_orientation_synthetic_contract.json"
+    contract = _load_bound_json_object(
+        "config/engine_v2_global_orientation_synthetic_contract.json",
+        name="synthetic contract",
     )
-    contract = _load_json_object(contract_path, name="synthetic contract")
     projection = dict(contract)
     observed_hash = projection.pop("contract_sha256", None)
     _exact(
@@ -338,11 +488,9 @@ def _verify_synthetic_contract_binding(
 def _verify_phase25_policy_binding(
     source_bindings: Mapping[str, Any],
 ) -> None:
-    policy_path = (
-        Path(__file__).resolve().parents[1]
-        / "config/engine_v2_phase25_cohort_admission.json"
+    policy = _load_bound_json_object(
+        "config/engine_v2_phase25_cohort_admission.json", name="phase 2.5 policy"
     )
-    policy = _load_json_object(policy_path, name="phase 2.5 policy")
     projection = dict(policy)
     observed_hash = projection.pop("policy_sha256", None)
     _exact(
@@ -773,7 +921,7 @@ def _verify_authority_bindings(
         )
 
 
-def verify_protocol(protocol: Mapping[str, Any]) -> str:
+def _verify_protocol_bound_sources(protocol: Mapping[str, Any]) -> str:
     expected_top_keys = {
         "arm_contract",
         "authority",
@@ -1308,6 +1456,58 @@ def verify_protocol(protocol: Mapping[str, Any]) -> str:
     return expected_hash
 
 
+def verify_protocol(protocol: Mapping[str, Any]) -> str:
+    """Verify against the live checkout only, even inside a static snapshot call.
+
+    The historical protocol is deliberately rejected after its bound execution
+    sources change. Archival validation never changes this default contract.
+    """
+
+    token = _BOUND_SOURCE_BYTES.set(None)
+    try:
+        return _verify_protocol_bound_sources(protocol)
+    finally:
+        _BOUND_SOURCE_BYTES.reset(token)
+
+
+def verify_historical_protocol(protocol: Mapping[str, Any]) -> dict[str, Any]:
+    """Statically verify the old contract and its exact source snapshot.
+
+    This distinct receipt cannot stand in for live-checkout verification. No
+    archived Python is imported or executed, and execution remains forbidden.
+    """
+
+    snapshot, manifest = _load_historical_source_snapshot()
+    token = _BOUND_SOURCE_BYTES.set(snapshot)
+    try:
+        protocol_sha256 = _verify_protocol_bound_sources(protocol)
+        scorer_manifest_sha256 = _sha256(
+            _source_manifest(
+                roots=tuple(SCORER_PYTHON_SOURCE_SCOPE["roots"]),
+                files=tuple(SCORER_PYTHON_SOURCE_SCOPE["files"]),
+            )
+        )
+        evaluation_manifest_sha256 = _sha256(
+            _source_manifest(files=tuple(POSEBUSTERS_EVALUATION_SOURCE_SCOPE["files"]))
+        )
+    finally:
+        _BOUND_SOURCE_BYTES.reset(token)
+    return {
+        "schema_id": "betelgeuze.global_orientation_historical_verification/1.0.0",
+        "status": "historical_snapshot_verified",
+        "verification_mode": "historical_static_source_only",
+        "protocol_sha256": protocol_sha256,
+        "source_snapshot_manifest_sha256": HISTORICAL_SNAPSHOT_MANIFEST_SHA256,
+        "source_snapshot_commit_sha": manifest["source_commit_sha"],
+        "source_snapshot_tree_sha": manifest["source_tree_sha"],
+        "scorer_python_source_manifest_sha256": scorer_manifest_sha256,
+        "posebusters_evaluation_source_manifest_sha256": evaluation_manifest_sha256,
+        "live_checkout_verified": False,
+        "execution_authorized": False,
+        **_current_source_comparison(snapshot),
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1318,12 +1518,24 @@ def _parser() -> argparse.ArgumentParser:
             / "config/engine_v2_global_orientation_contaminated_development.json"
         ),
     )
+    parser.add_argument(
+        "--historical-snapshot",
+        action="store_true",
+        help=(
+            "statically verify the archived source snapshot and emit a distinct "
+            "receipt; does not verify or authorize the current executable sources"
+        ),
+    )
     return parser
 
 
 def main() -> int:
     arguments = _parser().parse_args()
-    print(verify_protocol(load_protocol(arguments.protocol)))
+    protocol = load_protocol(arguments.protocol)
+    if arguments.historical_snapshot:
+        print(json.dumps(verify_historical_protocol(protocol), sort_keys=True))
+    else:
+        print(verify_protocol(protocol))
     return 0
 
 
