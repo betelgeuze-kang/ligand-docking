@@ -177,7 +177,9 @@ class ProductSecurityMiddleware:
                     message = buffered_request[replay_index]
                     replay_index += 1
                     return message
-                return {"type": "http.request", "body": b"", "more_body": False}
+                # Return to the real channel after replay so disconnect waits
+                # yield and request-body accounting still covers later messages.
+                return await limited_receive()
 
             await self.app(scope, replay_receive, security_send)
         except _PayloadTooLarge:
