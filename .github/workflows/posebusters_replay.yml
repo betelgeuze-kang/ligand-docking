@@ -1,0 +1,400 @@
+name: PoseBusters same-pose replay
+
+on:
+  push:
+    branches:
+      - codex/posebusters-replay-20261104
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: posebusters-replay-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  BETELGEUZE_PRODUCT_TEST_ARTIFACT_BOOTSTRAP: disabled
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONHASHSEED: "0"
+  PYTHONNOUSERSITE: "1"
+  PYTHONPATH: ${{ github.workspace }}
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+  VECLIB_MAXIMUM_THREADS: "1"
+  BLIS_NUM_THREADS: "1"
+  CUDA_VISIBLE_DEVICES: ""
+  HIP_VISIBLE_DEVICES: ""
+  ROCR_VISIBLE_DEVICES: ""
+
+jobs:
+  prepare:
+    name: Verify inputs and frozen runtime
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      PB_REPLAY_REQUIRE_FROZEN_RUNTIME: "1"
+    outputs:
+      bundle_sha256: ${{ steps.bind.outputs.bundle_sha256 }}
+      input_artifact_name: ${{ steps.bind.outputs.input_artifact_name }}
+    steps:
+      # Full checkout is required by test_external_oracle_architecture.py.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.10.22"
+          check-latest: false
+      - name: Download original frozen runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-runtime-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-runtime
+      - name: Install only the retained evaluator wheels
+        run: |
+          mkdir -p "$RUNNER_TEMP/pb-replay-prepare-logs"
+          python -m venv "$RUNNER_TEMP/p0p1-python"
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator \
+            --bundle-root "$RUNNER_TEMP/pb-replay-runtime" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-prepare-logs/runtime-install.log"
+      - name: Run mandatory frozen-runtime and regression tests
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m pytest -q \
+            tests/unit/test_posebusters_replay_inputs.py \
+            tests/unit/test_posebusters_replay_evaluator.py \
+            tests/unit/test_posebusters_replay_runner.py \
+            tests/unit/test_p1_redocking_observation.py \
+            tests/unit/test_p1_redocking_runner.py \
+            tests/unit/test_p1_redocking_lineage_validation.py \
+            tests/unit/test_external_oracle_architecture.py \
+            -o cache_dir="$RUNNER_TEMP/pb-replay-pytest-cache" \
+            --junitxml="$RUNNER_TEMP/pb-replay-prepare-logs/tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-prepare-logs/tests.log"
+      - name: Download sealed admission evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-evidence-admission-smoke-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-source/admission
+      - name: Download sealed development-2 evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-evidence-development-2-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-source/development-2
+      - name: Download sealed development-10 evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-evidence-development-10-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-source/development-10
+      - name: Download sealed development-18 evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-evidence-development-18-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-source/development-18
+      - name: Reconstruct and verify all 384 original candidate records
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_replay prepare \
+            --artifact-root "$RUNNER_TEMP/pb-replay-source" \
+            --output-root "$RUNNER_TEMP/pb-replay-prepared" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-prepare-logs/prepare.log"
+      - name: Bind the immutable prepared-input artifact
+        id: bind
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          payload = (Path(os.environ["RUNNER_TEMP"]) / "pb-replay-prepared/bundle.json").read_bytes()
+          bundle = json.loads(payload)
+          assert len(bundle["reconstructions"]) == 6
+          assert sum(row["record_count"] for row in bundle["reconstructions"]) == 384
+          assert all(row["all_original_record_sha256s_match"] is True for row in bundle["reconstructions"])
+          artifact_name = f"pb-replay-inputs-{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"bundle_sha256={hashlib.sha256(payload).hexdigest()}\n")
+              output.write(f"input_artifact_name={artifact_name}\n")
+          PY
+      - name: Upload admitted prepared inputs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ${{ steps.bind.outputs.input_artifact_name }}
+          path: ${{ runner.temp }}/pb-replay-prepared/
+          if-no-files-found: error
+      - name: Retain preparation and test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pb-replay-prepare-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pb-replay-prepare-logs/
+          if-no-files-found: warn
+
+  pilot:
+    name: Top5 pilot (${{ matrix.case_id }})
+    needs: prepare
+    runs-on: ubuntu-22.04
+    # Five separately supervised workers, each capped at 900 seconds.
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        case_id: [5SAK_ZRY, 5SB2_1K2, 6TW5_9M2, 6XHT_V2V, 6YSP_PAL, 6T88_MWQ]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.10.22"
+          check-latest: false
+      - name: Download original frozen runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-runtime-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-runtime
+      - name: Download exact admitted inputs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: ${{ needs.prepare.outputs.input_artifact_name }}
+          path: ${{ runner.temp }}/pb-replay-prepared
+      - name: Recreate the original venv path and install frozen wheels
+        run: |
+          mkdir -p "$RUNNER_TEMP/pb-replay-bootstrap"
+          python -m venv "$RUNNER_TEMP/p0p1-python"
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator \
+            --bundle-root "$RUNNER_TEMP/pb-replay-runtime" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-bootstrap/runtime-install.log"
+      - name: Run paired cold Top5 replays and diagnostic profile
+        env:
+          REPLAY_CASE_ID: ${{ matrix.case_id }}
+          REPLAY_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_replay run-case \
+            --input-root "$RUNNER_TEMP/pb-replay-prepared" \
+            --bundle-sha256 "$REPLAY_BUNDLE_SHA256" \
+            --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+            --case-id "$REPLAY_CASE_ID" --stage pilot \
+            --output-root "$RUNNER_TEMP/pb-replay-results/pilot/$REPLAY_CASE_ID" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-bootstrap/controller.log"
+      - name: Retain every case result, environment, log, and receipt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pb-replay-result-pilot-${{ matrix.case_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pb-replay-results/
+            ${{ runner.temp }}/pb-replay-bootstrap/
+          if-no-files-found: error
+
+  pilot_gate:
+    name: Require all six exact pilot comparisons
+    needs: [prepare, pilot]
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.10.22"
+          check-latest: false
+      - name: Download exact admitted inputs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: ${{ needs.prepare.outputs.input_artifact_name }}
+          path: ${{ runner.temp }}/pb-replay-prepared
+      - name: Download original pilot case artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: pb-replay-result-pilot-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pb-replay-case-artifacts
+          merge-multiple: false
+      # Aggregate uses only the standard library and retained JSON/byte evidence.
+      - name: Reject missing cases or any exact-equivalence failure
+        if: always()
+        env:
+          REPLAY_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/pb-replay-pilot-gate"
+          python -m tools.run_posebusters_replay aggregate \
+            --input-root "$RUNNER_TEMP/pb-replay-prepared" \
+            --bundle-sha256 "$REPLAY_BUNDLE_SHA256" \
+            --stage pilot --results-root "$RUNNER_TEMP/pb-replay-case-artifacts" \
+            --output "$RUNNER_TEMP/pb-replay-pilot-gate/report.json" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-pilot-gate/aggregate.log"
+      - name: Retain the pilot gate report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pb-replay-pilot-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pb-replay-pilot-gate/
+          if-no-files-found: error
+
+  expanded:
+    name: Candidate64 replay (${{ matrix.case_id }})
+    needs: [prepare, pilot_gate]
+    if: ${{ needs.pilot_gate.result == 'success' }}
+    runs-on: ubuntu-22.04
+    # Two fresh workers, each capped at 1200 seconds, plus install/upload time.
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case_id: [6YSP_PAL, 6T88_MWQ]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.10.22"
+          check-latest: false
+      - name: Download original frozen runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: p0p1-runtime-41697499611-1
+          run-id: "41697499611"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          path: ${{ runner.temp }}/pb-replay-runtime
+      - name: Download exact admitted inputs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: ${{ needs.prepare.outputs.input_artifact_name }}
+          path: ${{ runner.temp }}/pb-replay-prepared
+      - name: Recreate the original venv path and install frozen wheels
+        run: |
+          mkdir -p "$RUNNER_TEMP/pb-replay-bootstrap"
+          python -m venv "$RUNNER_TEMP/p0p1-python"
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.redocking_p0_p1_runtime install-evaluator \
+            --bundle-root "$RUNNER_TEMP/pb-replay-runtime" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-bootstrap/runtime-install.log"
+      - name: Run all 64 admitted candidate records in fresh workers
+        env:
+          REPLAY_CASE_ID: ${{ matrix.case_id }}
+          REPLAY_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        run: |
+          "$RUNNER_TEMP/p0p1-python/bin/python" -m tools.run_posebusters_replay run-case \
+            --input-root "$RUNNER_TEMP/pb-replay-prepared" \
+            --bundle-sha256 "$REPLAY_BUNDLE_SHA256" \
+            --runtime-root "$RUNNER_TEMP/pb-replay-runtime" \
+            --case-id "$REPLAY_CASE_ID" --stage expanded \
+            --output-root "$RUNNER_TEMP/pb-replay-results/expanded/$REPLAY_CASE_ID" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-bootstrap/controller.log"
+      - name: Retain every expanded result, environment, log, and receipt
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pb-replay-result-expanded-${{ matrix.case_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pb-replay-results/
+            ${{ runner.temp }}/pb-replay-bootstrap/
+          if-no-files-found: error
+
+  final:
+    name: Aggregate all original replay evidence
+    needs: [prepare, pilot, pilot_gate, expanded]
+    if: always()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.10.22"
+          check-latest: false
+      - name: Download exact admitted inputs
+        if: ${{ needs.prepare.result == 'success' }}
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: ${{ needs.prepare.outputs.input_artifact_name }}
+          path: ${{ runner.temp }}/pb-replay-prepared
+      - name: Download original pilot and expanded case artifacts
+        if: ${{ always() && needs.prepare.result == 'success' }}
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          # This prefix excludes gate reports and preparation artifacts.
+          pattern: pb-replay-result-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pb-replay-case-artifacts
+          merge-multiple: false
+      - name: Aggregate all eight case-stage results, including missing failures
+        if: ${{ always() && needs.prepare.result == 'success' }}
+        env:
+          REPLAY_BUNDLE_SHA256: ${{ needs.prepare.outputs.bundle_sha256 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/pb-replay-final"
+          python -m tools.run_posebusters_replay aggregate \
+            --input-root "$RUNNER_TEMP/pb-replay-prepared" \
+            --bundle-sha256 "$REPLAY_BUNDLE_SHA256" \
+            --stage all --results-root "$RUNNER_TEMP/pb-replay-case-artifacts" \
+            --output "$RUNNER_TEMP/pb-replay-final/report.json" \
+            2>&1 | tee "$RUNNER_TEMP/pb-replay-final/aggregate.log"
+      - name: Record failed preparation without inventing replay results
+        if: ${{ always() && needs.prepare.result != 'success' }}
+        env:
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          directory = Path(os.environ["RUNNER_TEMP"]) / "pb-replay-final"
+          directory.mkdir(parents=True, exist_ok=True)
+          report = {
+              "status": "failed",
+              "stage": "all",
+              "prepare_result": os.environ["PREPARE_RESULT"],
+              "error": "No admitted input bundle: replay and scientific aggregation were not run.",
+          }
+          (directory / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+          raise SystemExit(1)
+          PY
+      - name: Always retain the final report and aggregation log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pb-replay-final-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pb-replay-final/
+          if-no-files-found: error
