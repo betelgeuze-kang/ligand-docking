@@ -840,19 +840,29 @@ def write_markdown(report: dict) -> str:
               "| penalty 변화 | 후보 | 최종 joint-invalid | 최종 valid near-native |", "|---|---:|---:|---:|"]
     for direction, counts in s["recorded_refinement_penalty_cross_tab"].items():
         lines.append(f"| {direction} | {counts['candidates']} | {counts['joint_invalid']} | {counts['valid_near_native']} |")
-    lines += ["", "## 6T88 / 6YSP 전체 평가표 진단", "",
-              "두 사례의 64개 record를 과거 receipt와 새 replay fullReport에 SDF SHA로 연결했다. 새 baseline과 prepared 결과도 정확히 일치한다.", "",
-              "| 사례 | 고정 좌표 RMSD 최솟값 | Kabsch RMSD 범위 | 단백질 거리 실패 | 단백질 부피 실패 |", "|---|---:|---:|---:|---:|"]
-    for cid, focus in report.get("focus_replays", {}).items():
-        d = focus["numeric_distributions"]
-        lines.append(f"| {cid} | {d['rmsd']['minimum']:.4f} Å | {d['kabsch_rmsd']['minimum']:.4f}–{d['kabsch_rmsd']['maximum']:.4f} Å | {focus['protein_distance_failures']}/64 | {focus['protein_volume_failures']}/64 |")
-    lines += ["", "| 사례 | 단백질 최소 상대거리 범위 | 단백질 부피 중첩 범위 | protein pair clash 범위 | energy ratio 범위 |", "|---|---:|---:|---:|---:|"]
-    for cid, focus in report.get("focus_replays", {}).items():
-        d = focus["numeric_distributions"]
-        cols = ("most_extreme_relative_distance_protein", "volume_overlap_protein", "num_pairwise_clashes_protein", "energy_ratio")
-        lines.append("| " + cid + " | " + " | ".join(f"{d[key]['minimum']:.6g}–{d[key]['maximum']:.6g}" for key in cols) + " |")
-    lines += ["", "Kabsch 정렬로 얻은 작은 RMSD는 내부 형태를 살펴보기 위한 진단이다. 수용체에 대한 위치·방향을 맞춰버리는 정렬 결과를 도킹 성공으로 바꾸지 않았다.", "",
-              "6YSP는 64개 모두 Kabsch RMSD ≤ 2 Å이나 고정 좌표 RMSD > 2 Å이며, 단백질 최소 상대거리 < 0.75 및 부피 중첩 > 0.075다. 이는 위치·방향과 수용체 충돌을 우선 조사할 근거다. 내부 에너지 문제도 일부 함께 있으므로 형태가 모두 물리적으로 유효하다는 뜻은 아니다. 6T88에서는 정렬만으로 임계값을 통과하는 경우가 60/64다.", "",
+    focus_replays = report.get("focus_replays", {})
+    lines += ["", "## 집중 재생 전체 평가표 진단", ""]
+    if not focus_replays:
+        lines.append("재생 관측 미제공. 이 실행에서 fullReport 재생 검증은 수행되지 않았다.")
+    else:
+        require(all(focus["exact_cross_mode_report"] is True for focus in focus_replays.values()),
+                "Markdown replay evidence has no verified cross-mode report")
+        lines += ["공급된 재생 관측을 과거 후보의 SDF SHA256에 결속했다. 저장된 baseline과 prepared 결과가 정확히 일치했다.", "",
+                  "| 사례 | 고정 좌표 RMSD 최솟값 | Kabsch RMSD 범위 | 정렬로만 2 Å 이내 | 단백질 거리 실패 | 단백질 부피 실패 |",
+                  "|---|---:|---:|---:|---:|---:|"]
+        for cid, focus in focus_replays.items():
+            d = focus["numeric_distributions"]
+            n = focus["record_count"]
+            lines.append(f"| {cid} | {d['rmsd']['minimum']:.4f} Å | {d['kabsch_rmsd']['minimum']:.4f}–{d['kabsch_rmsd']['maximum']:.4f} Å | "
+                         f"{focus['alignment_only_near_count']}/{n} | {focus['protein_distance_failures']}/{n} | {focus['protein_volume_failures']}/{n} |")
+        lines += ["", "| 사례 | 단백질 최소 상대거리 범위 | 단백질 부피 중첩 범위 | protein pair clash 범위 | energy ratio 범위 |",
+                  "|---|---:|---:|---:|---:|"]
+        for cid, focus in focus_replays.items():
+            d = focus["numeric_distributions"]
+            cols = ("most_extreme_relative_distance_protein", "volume_overlap_protein", "num_pairwise_clashes_protein", "energy_ratio")
+            lines.append("| " + cid + " | " + " | ".join(f"{d[key]['minimum']:.6g}–{d[key]['maximum']:.6g}" for key in cols) + " |")
+        lines += ["", "Kabsch RMSD는 리간드 형태 진단에 사용한다. 도킹 회복률에는 고정 수용체 좌표계의 RMSD를 사용한다."]
+    lines += ["",
               "## 다음 수식·함수 실험의 우선순위", "",
               "1. 준비 실패 3개 사례의 large-ring 지원을 별도 회귀 시험으로 다룬다. 기존 실패를 성공으로 다시 표기하지 않는다.",
               "2. 최종 후보에 정답 근처가 없는 23개 사례에서는 생성·배치·방향 탐색 및 refinement 시점별 포즈를 평가해 근접 후보가 처음부터 없었는지 중간에 소실됐는지 구분한다. 동일 seed·후보 수·계산 예산에서 후보 oracle과 valid oracle을 함께 측정한다.",
@@ -933,14 +943,16 @@ def main(argv: list[str] | None = None) -> int:
                   "focused_full_report_records": sum(f["record_count"] for f in focus.values()),
                   "missing_fields": ["PB checks and fixed-frame RMSD for preselected coordinate stages",
                                      "typed VDW attractive/repulsive subcomponents beyond the retained weighted aggregate",
-                                     "fullReport numerical diagnostics outside the two retained candidate64 replay cases"],
+                                     ("fullReport numerical diagnostics outside the supplied focused replay cases"
+                                      if focus else "fullReport numerical diagnostics for all cases; replay evidence not supplied")],
               },
               "limitations": [
                   "One fixed seed on previously observed development cases; no holdout or population generalization claim.",
                   "Initial/post-V6/post-V7 coordinates are retained, but PB/RMSD was evaluated only on the selected final poses in this source run.",
                   "Recorded quartic-overlap penalty is a geometric proxy in angstrom^4, not physical/free energy.",
                   "Stage timings can nest; they are not summed as disjoint work.",
-                  "Raw fullReport numerical diagnostics cover only the two retained candidate64 replay cases.",
+                  ("Raw fullReport numerical diagnostics cover only the supplied focused replay cases."
+                   if focus else "Raw fullReport numerical diagnostics were unavailable; no focused replay evidence was supplied."),
                   "Oracle ranking headroom is a bound for the unchanged recorded pool, not performance of a new deployable ranking function.",
               ]}
     require(sha256(args.delivery.read_bytes()) == DELIVERY_SHA256, "source delivery changed during analysis")

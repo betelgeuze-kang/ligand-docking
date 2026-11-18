@@ -327,5 +327,46 @@ class TestEvidenceIntegrity(unittest.TestCase):
             self.assertEqual(artifact.read_bytes(), b"retained input")
 
 
+class TestMarkdownReplayEvidence(unittest.TestCase):
+    def render(self, **fields):
+        report = {
+            "summary": {
+                "exclusive_case_categories": {f"top{k}": {category: {"count": 0} for category in diagnosis.CATEGORIES}
+                                              for k in diagnosis.TOP_K},
+                "candidate_quadrants": {name: 0 for name in ("near_valid", "near_invalid", "far_valid", "far_invalid")},
+                "candidate_evaluations": 0, "candidate_failure_checks": {},
+                "torsion_observations": dict.fromkeys(("observed_candidates", "evaluated_candidates",
+                                                       "trial_evaluations", "selected_candidates"), 0),
+                "refinement_coordinate_changes": dict.fromkeys(("post_v6_to_optimized", "post_v6_to_selected"), 0),
+                "recorded_refinement_penalty_cross_tab": {},
+            },
+            "source": {"delivery_sha256": "fixture"}, "analysis_script_sha256": "fixture", "cases": [],
+            **fields,
+        }
+        return diagnosis.write_markdown(report)
+
+    def test_missing_optional_replay_does_not_claim_verification(self):
+        for fields in ({}, {"focus_replays": {}}):
+            with self.subTest(fields=fields):
+                markdown = self.render(**fields)
+                self.assertIn("재생 관측 미제공", markdown)
+                self.assertNotIn("정확히 일치", markdown)
+                self.assertNotIn("60/64", markdown)
+                self.assertNotIn("protein pair clash", markdown)
+
+    def test_supplied_replay_uses_its_record_counts_and_measurements(self):
+        numeric = {key: {"minimum": 0.25, "maximum": 0.75} for key in diagnosis.NUMERIC_FOCUS_COLUMNS}
+        markdown = self.render(focus_replays={"6YSP_PAL": {
+            "numeric_distributions": numeric, "record_count": 5, "exact_cross_mode_report": True,
+            "alignment_only_near_count": 2, "protein_distance_failures": 3, "protein_volume_failures": 4,
+        }})
+        self.assertIn("6YSP_PAL", markdown)
+        self.assertIn("3/5 | 4/5", markdown)
+        self.assertIn("2/5", markdown)
+        self.assertIn("정확히 일치", markdown)
+        self.assertNotIn("60/64", markdown)
+        self.assertNotIn("6T88", markdown)
+
+
 if __name__ == "__main__":
     unittest.main()
