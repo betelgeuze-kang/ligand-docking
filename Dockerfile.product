@@ -40,6 +40,7 @@ COPY requirements-package.txt requirements-api.txt requirements-deploy.txt requi
 COPY api ./api
 COPY core ./core
 COPY betelgeuze_engine ./betelgeuze_engine
+COPY betelgeuze_engine_v2 ./betelgeuze_engine_v2
 COPY betelgeuze_ai_md ./betelgeuze_ai_md
 COPY betelgeuze_product ./betelgeuze_product
 COPY betelgeuze_cameo ./betelgeuze_cameo
@@ -53,6 +54,9 @@ RUN test ! -e /app/benchmarks \
     && python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir . \
     && python -m pip install --no-cache-dir -r requirements-api.txt -r requirements-deploy.txt -r requirements-product-rocm.txt \
+    && betelgeuze-dock --help > /dev/null \
+    && betelgeuze-dock prepared-refine --help > /dev/null \
+    && betelgeuze-dock prepared-jobs --help > /dev/null \
     && python tools/build_rust_hip_engine.py --output /app \
     && mkdir -p runs \
     && python -c "import json; from pathlib import Path; Path('runs/independent_engine_roadmap_status_current.json').write_text(json.dumps({'summary': {'status': 'independent_engine_roadmap_closed', 'engine_dispatch_ready': True, 'scoring_ranking_contract_ready': True, 'source': 'product_image_build_time_fixture'}}, indent=2, sort_keys=True) + '\n', encoding='utf-8')" \

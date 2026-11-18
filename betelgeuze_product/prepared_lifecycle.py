@@ -35,6 +35,13 @@ _TENANT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}\Z")
 _KEY = re.compile(r"[A-Za-z0-9_.:-]{1,128}\Z")
 _HEX32 = re.compile(r"[0-9a-f]{32}\Z")
 _SHA = re.compile(r"[0-9a-f]{64}\Z")
+PRIVATE_ARTIFACT_ROLES = frozenset({"retained_refinement_report"})
+PUBLIC_REPORT_ROLE = "public_refinement_report"
+PUBLIC_REPORT_SCHEMA = "prepared_lifecycle_public_report_artifact/1.0.0"
+_CLAIM_REJECTION_CODES = frozenset({
+    "INVALID_ADMISSION", "SOURCE_OR_MODEL_MISMATCH", "NOT_FOUND_OR_FORBIDDEN",
+    "PLAN_INTEGRITY_FAILED", "STALE_PLAN", "BUDGET_EXHAUSTED",
+})
 
 
 class LifecycleError(ValueError):
@@ -48,6 +55,14 @@ class LifecycleError(ValueError):
                 "error": {"code": self.code, "message": self.message,
                           "retry_allowed": self.retry_allowed},
                 "research_only": True, "qualified": False}
+
+
+class _ClaimRejected(LifecycleError):
+    """A selected queue entry was durably rejected without a new reservation."""
+
+    def __init__(self, execution_id, error):
+        super().__init__(error.code, error.message, error.http_status)
+        self.execution_id = execution_id
 
 
 def require(value, code, message, status=400):
@@ -175,6 +190,65 @@ def implementation_sources():
     return {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names}
 
 
+def numerical_implementation_sources():
+    """Hash the owning Fourier source closure without importing its Torch code.
+
+    The worker checks this inventory against the actual owning freeze before
+    evaluation, so a future change to that inventory fails closed as well.
+    """
+    root = Path(__file__).resolve().parent.parent
+    recursive = ("betelgeuze_engine_v2", "betelgeuze_product/cpu_refinement",
+                 "betelgeuze_product/cpu_refinement_v1_2")
+    paths = {}
+    for prefix in recursive:
+        directory = root / prefix
+        require(directory.is_dir(), "INVALID_CONFIGURATION", "Installed numerical sources are unavailable", 503)
+        paths.update({f"{prefix}/{path.relative_to(directory).as_posix()}": path
+                      for path in sorted(directory.rglob("*.py"))})
+    for name in ("__init__.py", "local_research_workflow.py", "reference_minimization_workflow.py",
+                 "refinement_comparison_workflow.py", "comparison_receipts.py", "installed_synthetic_comparison.py"):
+        paths[f"betelgeuze_product/{name}"] = root / "betelgeuze_product" / name
+    directory = root / "betelgeuze_product/cpu_refinement_fourier_v1"
+    require(directory.is_dir(), "INVALID_CONFIGURATION", "Installed Fourier sources are unavailable", 503)
+    paths.update({f"betelgeuze_product/cpu_refinement_fourier_v1/{path.name}": path
+                  for path in sorted(directory.glob("*.py"))})
+    return {name: hashlib.sha256(regular_bytes(path, root)).hexdigest()
+            for name, path in sorted(paths.items())}
+
+
+def public_report_document(report, *, total_work_known):
+    """Separate public projection; never rewrite the owning immutable receipt."""
+    require(type(total_work_known) is bool, "ARTIFACT_PUBLICATION_UNKNOWN", "Explicit owner work authority required", 409)
+    public_fields = ("binding", "evidence_kind", "requested_candidates", "execution_status",
+                     "refinement_status", "numerical_convergence", "structural_consistency_valid",
+                     "verification_scope", "chemical_validity", "pose_accuracy", "pose_selection_admitted",
+                     "boundary", "unknown_stage", "force_semantics", "units", "states", "comparison",
+                     "work", "limits", "report_sources", "report_source_sha256")
+    document = {"schema_version": PUBLIC_REPORT_SCHEMA, "source_report_sha256": digest(report),
+                "candidate_id": None, "backend_candidate_sha256": digest(report.get("candidate_id")),
+                **{key: report[key] for key in public_fields if key in report}}
+    document.update(total_work_known=total_work_known, state_metrics_provisional=not total_work_known,
+                    last_observed_numerical_convergence=report.get("numerical_convergence"),
+                    numerical_convergence=report.get("numerical_convergence") if total_work_known else None)
+    if "work" in report:
+        document["work"] = {**report["work"], "total_work_known": total_work_known,
+                            "total_force_evaluation_calls": report["work"].get("known_force_evaluation_calls") if total_work_known else None}
+
+    def check(value):
+        if isinstance(value, dict):
+            for item in value.values():
+                check(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                check(item)
+        elif isinstance(value, str):
+            require(not value.startswith(("/", "file://")), "ARTIFACT_PUBLICATION_UNKNOWN",
+                    "Public report contains a private filesystem reference", 409)
+
+    check(document)
+    return document
+
+
 def runtime_identity():
     distributions = {}
     for name in ("betelgeuze-md-product", "torch", "numpy"):
@@ -244,7 +318,9 @@ def _admission_document(input_root, admission_id, *, tenant_id="local"):
     sources[str(bundle / "admission.json")] = hashlib.sha256(regular_bytes(bundle / "admission.json", input_root)).hexdigest()
     return {"admission_id": admission_id, "manifest": manifest, "protocol": protocol,
             "protocol_path": str(bundle / "protocol.json"), "sources": sources,
-            "model_id": "prepared_fourier_development/1.0.0", "lifecycle_sources": implementation_sources(), "runtime_identity": runtime_identity(), "iterations": iterations,
+            "model_id": "prepared_fourier_development/1.0.0", "lifecycle_sources": implementation_sources(),
+            "numerical_sources": numerical_implementation_sources(),
+            "runtime_identity": runtime_identity(), "iterations": iterations,
             "backtracks": backtracks, "initial_pause": pause,
             "force_call_ceiling": 1 + (1 + iterations * (backtracks + 1)) + (1 if pause is not None else 0)}
 
@@ -379,6 +455,7 @@ class PreparedLifecycle:
                 "last_verified_numerical_state": row["numerical_state"], "cancel_state": row["cancel_state"],
                 "research_only": True, "qualified": False, "model_id": "prepared_fourier_development/1.0.0",
                 "implementation_sources": json.loads(row["admission_json"])["lifecycle_sources"],
+                "numerical_implementation_sources": json.loads(row["admission_json"]).get("numerical_sources"),
                 "runtime_identity": json.loads(row["admission_json"])["runtime_identity"],
                 "units": {"coordinates": "angstrom", "energy": "kcal/mol", "raw_force": "kcal/mol/angstrom"},
                 "budget": {"limits": policy, "wall_seconds_spent": row["wall_spent"],
@@ -419,6 +496,7 @@ class PreparedLifecycle:
                 "protocol_sha256": admission["manifest"]["protocol_sha256"],
                 "input_sha256": {name: protocol[name]["sha256"] for name in REFS},
                 "implementation_sources": admission["lifecycle_sources"],
+                "numerical_implementation_sources": admission.get("numerical_sources"),
                 "runtime_identity": admission["runtime_identity"],
                 "solver": {"configuration_sha256": digest(protocol["solver"]),
                            "max_iterations": admission["iterations"], "max_backtracks": admission["backtracks"]},
@@ -549,7 +627,8 @@ class PreparedLifecycle:
         with self._connect() as connection:
             self._row(connection, execution_id)
             rows = connection.execute("SELECT * FROM prepared_artifacts WHERE execution_id=? ORDER BY artifact_id", (execution_id,)).fetchall()
-        return {"execution_id": execution_id, "artifacts": [self._artifact_metadata(dict(row)) for row in rows],
+        return {"execution_id": execution_id, "artifacts": [self._artifact_metadata(dict(row)) for row in rows
+                if row["role"] not in PRIVATE_ARTIFACT_ROLES],
                 "research_only": True, "qualified": False}
 
     @staticmethod
@@ -562,7 +641,8 @@ class PreparedLifecycle:
         with self._connect() as connection:
             self._row(connection, execution_id)
             row = connection.execute("SELECT * FROM prepared_artifacts WHERE execution_id=? AND artifact_id=?", (execution_id, artifact_id)).fetchone()
-        require(row is not None, "NOT_FOUND_OR_FORBIDDEN", "Artifact was not found", 404)
+        require(row is not None and row["role"] not in PRIVATE_ARTIFACT_ROLES,
+                "NOT_FOUND_OR_FORBIDDEN", "Artifact was not found", 404)
         row = dict(row)
         path = self.root / "jobs" / execution_id / row["relative_path"]
         data = regular_bytes(path, self.root / "jobs" / execution_id, maximum=POLICY["output_bytes"])
@@ -571,6 +651,7 @@ class PreparedLifecycle:
         return path, self._artifact_metadata(row)
 
     def _claim(self, execution_id=None):
+        rejected = None
         with self._transaction() as connection:
             if execution_id is None:
                 found = connection.execute("SELECT execution_id FROM prepared_jobs WHERE tenant=? AND status IN ('queued','resume_queued') ORDER BY created,execution_id LIMIT 1", (self.tenant_id,)).fetchone()
@@ -580,24 +661,37 @@ class PreparedLifecycle:
             row = self._row(connection, execution_id)
             require(row["status"] in ("queued", "resume_queued"), "BUSY", "Execution is not queued for a new owner", 409)
             admission, policy = json.loads(row["admission_json"]), json.loads(row["policy_json"])
-            self._bound_plan(connection, row, admission, policy)
-            require(admission_document(self.input_root, admission["admission_id"], tenant_id=self.tenant_id) == admission,
-                    "SOURCE_OR_MODEL_MISMATCH", "Registered input bytes changed", 409)
-            resume = row["status"] == "resume_queued"
-            reserve_force = policy["force_call_ceiling"] - row["known_force"]
-            require(reserve_force > 0 and row["wall_spent"] < policy["wall_seconds"]
-                    and row["cpu_spent"] < policy["cpu_seconds"]
-                    and row["invocation_count"] < policy["max_numerical_invocations"],
-                    "BUDGET_EXHAUSTED", "Cumulative execution budget is exhausted", 409)
-            generation, token = row["generation"] + 1, secrets.token_hex(32)
-            wall, cpu = policy["wall_seconds"] - row["wall_spent"], policy["cpu_seconds"] - row["cpu_spent"]
-            connection.execute("UPDATE prepared_jobs SET status='running',generation=?,owner_token=?,owner_pid=?,owner_start=?,force_reserved=?,updated=? WHERE execution_id=?", (generation, token, os.getpid(), process_identity(os.getpid()), reserve_force, time.time(), execution_id))
-            connection.execute("INSERT INTO prepared_invocations VALUES(?,?,?,?,?,?,?,?,NULL)",
-                (execution_id, generation, token, int(resume), "reserved", reserve_force, wall, cpu))
-            self._event(connection, execution_id, "invocation_reserved", {"generation": generation, "force_calls_upper_bound": reserve_force})
-            row.update(generation=generation, owner_token=token, resume=resume, reserved_wall=wall,
-                       reserved_cpu=cpu, force_reserved=reserve_force)
-            return row
+            try:
+                self._bound_plan(connection, row, admission, policy)
+                require(admission_document(self.input_root, admission["admission_id"], tenant_id=self.tenant_id) == admission,
+                        "SOURCE_OR_MODEL_MISMATCH", "Registered input bytes changed", 409)
+                reserve_force = policy["force_call_ceiling"] - row["known_force"]
+                require(reserve_force > 0 and row["wall_spent"] < policy["wall_seconds"]
+                        and row["cpu_spent"] < policy["cpu_seconds"]
+                        and row["invocation_count"] < policy["max_numerical_invocations"],
+                        "BUDGET_EXHAUSTED", "Cumulative execution budget is exhausted", 409)
+            except LifecycleError as exc:
+                if exc.code not in _CLAIM_REJECTION_CODES:
+                    raise
+                error = {"code": exc.code, "stage": "claim_admission", "retry_allowed": False,
+                         "numerical_dispatches": 0}
+                connection.execute("UPDATE prepared_jobs SET status='rejected_before_dispatch',error_json=?,updated=? WHERE execution_id=?",
+                                   (canonical(error), time.time(), execution_id))
+                self._event(connection, execution_id, "claim_rejected", error)
+                rejected = _ClaimRejected(execution_id, exc)
+            else:
+                resume = row["status"] == "resume_queued"
+                generation, token = row["generation"] + 1, secrets.token_hex(32)
+                wall, cpu = policy["wall_seconds"] - row["wall_spent"], policy["cpu_seconds"] - row["cpu_spent"]
+                connection.execute("UPDATE prepared_jobs SET status='running',generation=?,owner_token=?,owner_pid=?,owner_start=?,force_reserved=?,updated=? WHERE execution_id=?", (generation, token, os.getpid(), process_identity(os.getpid()), reserve_force, time.time(), execution_id))
+                connection.execute("INSERT INTO prepared_invocations VALUES(?,?,?,?,?,?,?,?,NULL)",
+                    (execution_id, generation, token, int(resume), "reserved", reserve_force, wall, cpu))
+                self._event(connection, execution_id, "invocation_reserved", {"generation": generation, "force_calls_upper_bound": reserve_force})
+                row.update(generation=generation, owner_token=token, resume=resume, reserved_wall=wall,
+                           reserved_cpu=cpu, force_reserved=reserve_force)
+        if rejected is not None:
+            raise rejected  # The zero-dispatch rejection has committed, not rolled back.
+        return row
 
     def _bound_plan(self, connection, row, admission, policy):
         """Check immutable plan custody again before the sole owner reserves work."""
@@ -638,7 +732,9 @@ class PreparedLifecycle:
             require(type(known_force) is int and known_force >= row["known_force"]
                     and known_force <= policy["force_call_ceiling"], "INVALID_OWNER_RECEIPT", "Force census violates the frozen budget", 500)
             cancel_state = ("confirmed_process_terminal" if status == "cancelled" else
-                            "completion_won_race" if row["cancel_requested"] and status == "complete" else row["cancel_state"])
+                            "completion_won_race" if row["cancel_requested"] and status == "complete" else
+                            "confirmed_process_terminal" if row["cancel_requested"]
+                            and (receipt or {}).get("process_terminal_confirmed") is True else row["cancel_state"])
             connection.execute("""UPDATE prepared_jobs SET status=?,numerical_state=?,cancel_state=?,owner_token='',owner_pid=NULL,owner_start=NULL,
                 invocation_count=invocation_count+?,wall_spent=wall_spent+?,cpu_spent=cpu_spent+?,known_force=?,force_known=?,force_reserved=?,error_json=?,updated=?
                 WHERE execution_id=?""", (status, numerical_state, cancel_state, int(spawned), wall, cpu, known_force, int(force_known),

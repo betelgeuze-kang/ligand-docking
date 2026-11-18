@@ -23,6 +23,16 @@ def tree_bytes(root):
     return total
 
 
+def _bound_freeze(freeze, expected_sources):
+    """Admission guard around the owning freeze, before its first evaluation."""
+    def checked(protocol):
+        frozen, loaded = freeze(protocol)
+        require(frozen["payload"]["implementation_sources"] == expected_sources,
+                "SOURCE_OR_MODEL_MISMATCH", "Planned numerical implementation changed", 409)
+        return frozen, loaded
+    return checked
+
+
 def execute_binding(binding_path, owner_token):
     require(sys.flags.isolated == 1 and sys.dont_write_bytecode,
             "RUNTIME_UNQUALIFIED", "Isolated installed execution is required", 503)
@@ -63,7 +73,7 @@ def execute_binding(binding_path, owner_token):
     job, attempt = Path(binding["job_root"]), Path(binding["attempt_root"])
     require(job == service.root / "jobs" / binding["execution_id"] and attempt.parent == job / "attempts",
             "OWNER_FENCE_LOST", "Owned output binding differs", 409)
-    original_publish = workflow._publish
+    original_publish, original_freeze = workflow._publish, workflow.freeze
 
     def guarded_publish(destination, document):
         # This guard changes publication admission only, never force arithmetic.
@@ -73,12 +83,14 @@ def execute_binding(binding_path, owner_token):
         return original_publish(destination, document)
 
     workflow._publish = guarded_publish
+    workflow.freeze = _bound_freeze(original_freeze, admission["numerical_sources"])
     try:
         result = workflow.run(admission["protocol"], job / "numerical", resume=binding["resume"],
             pause_after_accepted_iterations=None if binding["resume"] else admission["initial_pause"])
         document = report(admission["protocol"], job / "numerical")
     finally:
         workflow._publish = original_publish
+        workflow.freeze = original_freeze
     require(document["work"]["total_force_evaluation_calls"] is None or
             document["work"]["total_force_evaluation_calls"] <= binding["policy"]["force_call_ceiling"],
             "BUDGET_EXHAUSTED", "Force census exceeds reserved total", 409)

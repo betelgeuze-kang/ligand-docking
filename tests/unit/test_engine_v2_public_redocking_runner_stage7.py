@@ -4,7 +4,9 @@ from dataclasses import replace
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import stat
+import subprocess
 from types import SimpleNamespace
 import zipfile
 
@@ -98,6 +100,49 @@ def _external_binary(tmp_path: Path) -> tuple[Path, str]:
     binary.write_bytes(b"fixture-gnina-binary\n")
     binary.chmod(0o500)
     return binary, runner._sha256_path(binary)
+
+
+def _version_probe_binary(tmp_path: Path) -> Path:
+    """Build a fixed ELF that accepts only the descriptor-based version call."""
+    compiler = shutil.which("cc")
+    assert compiler is not None, "pinned version probe fixture requires a C compiler"
+    source = tmp_path / "version-fixture.c"
+    binary = tmp_path / "version-fixture"
+    source.write_text(
+        r"""#include <stdio.h>
+#include <string.h>
+int main(int argc, char **argv) {
+    const char prefix[] = "/proc/self/fd/";
+    if (argc != 2 || strcmp(argv[1], "--version") != 0) return 64;
+    if (strncmp(argv[0], prefix, sizeof(prefix) - 1) != 0) return 65;
+    puts("pinned-descriptor-fixture 1.0");
+    return 0;
+}
+""",
+        encoding="ascii",
+    )
+    compiled = subprocess.run(
+        (
+            compiler,
+            "-std=c99",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-O0",
+            "-o",
+            str(binary),
+            str(source),
+        ),
+        check=False,
+        capture_output=True,
+        timeout=30,
+    )
+    assert compiled.returncode == 0, (
+        "pinned version probe fixture compilation failed: "
+        + compiled.stderr[:2048].decode("utf-8", errors="backslashreplace")
+    )
+    assert binary.read_bytes()[:4] == b"\x7fELF"
+    return binary
 
 
 def _evaluator_input_payloads(paths: dict[str, Path]) -> None:
@@ -713,16 +758,32 @@ def test_external_binary_stage_rejects_preexisting_sha_path_symlink(
         runner._stage_external_binary(source, output_root=tmp_path / "run")
 
 
-def test_binary_version_probe_executes_the_pinned_descriptor(tmp_path: Path) -> None:
+def test_binary_version_probe_executes_the_pinned_descriptor(
+    tmp_path: Path,
+) -> None:
+    # Host echo may be a multicall executable selected by its original name.
+    # This fixture instead verifies the descriptor execution contract itself.
+    source = _version_probe_binary(tmp_path)
+    direct = subprocess.run(
+        (str(source), "--version"),
+        check=False,
+        capture_output=True,
+        timeout=5,
+    )
+    assert direct.returncode == 65
+    assert direct.stdout == direct.stderr == b""
     pinned = runner._stage_external_binary(
-        Path("/bin/echo"),
+        source,
         output_root=tmp_path / "run",
     )
-
     with pinned:
+        replacement = tmp_path / "replacement"
+        replacement.write_bytes(b"replaced operator executable\n")
+        replacement.chmod(0o500)
+        replacement.replace(source)
         version = runner._binary_version(pinned)
 
-    assert "echo" in version.lower()
+    assert version == "pinned-descriptor-fixture 1.0"
 
 
 def test_posebusters_outcomes_reject_unevaluated_boolean_check(

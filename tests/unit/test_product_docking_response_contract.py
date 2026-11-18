@@ -133,3 +133,37 @@ def test_top_level_keys_match_contract_source_of_truth() -> None:
     # The contract analyzer's required keys are derived from this same constant.
     resp = build_docking_submission_response(_record())
     assert set(resp.keys()) == set(DOCKING_SUBMISSION_TOP_LEVEL_KEYS)
+
+
+def test_scientific_input_is_unready_for_legacy_record() -> None:
+    summary = build_docking_submission_response(_record())["scientific_input"]
+    assert summary["receipt_sha256"] == ""
+    assert summary["content_identity_ready"] is False
+    assert summary["execution_input_ready"] is False
+    assert summary["explicit_pocket"] is False
+    assert summary["claim_safe"] is False
+
+
+def test_scientific_input_publishes_summary_without_private_source_details() -> None:
+    record = _record()
+    record["private_payload_stored"] = True
+    record["scientific_input_provenance"] = {
+        "schema_version": "test-receipt/1",
+        "receipt_sha256": "a" * 64,
+        "content_identity_ready": True,
+        "execution_input_ready": False,
+        "pocket": {"explicit": True, "definition_kind": "sphere"},
+        "ligand_count": 2,
+        "blockers": ["fixture_not_prepared"],
+        "source_path": "/private/research/protein.pdb",
+        "source_content": "PRIVATE_MOLECULAR_CONTENT",
+    }
+    summary = build_docking_submission_response(record)["scientific_input"]
+    assert summary["receipt_sha256"] == "a" * 64
+    assert summary["explicit_pocket"] is True and summary["ligand_count"] == 2
+    assert summary["content_identity_ready"] is True
+    assert summary["execution_input_ready"] is False
+    assert summary["private_payload_stored"] is True
+    assert summary["blockers"] == ["fixture_not_prepared"]
+    assert "/private/" not in json.dumps(summary)
+    assert "PRIVATE_MOLECULAR_CONTENT" not in json.dumps(summary)

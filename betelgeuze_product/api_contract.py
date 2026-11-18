@@ -3532,11 +3532,31 @@ def _literal_return_keys(
         return set()
     functions = functions or {}
     _seen = _seen or set()
+    bindings: dict[str, ast.expr] = {}
+    for statement in node.body:
+        if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
+            if statement.value is not None:
+                bindings[statement.target.id] = statement.value
+        elif isinstance(statement, ast.Assign):
+            for target in statement.targets:
+                if isinstance(target, ast.Name):
+                    bindings[target.id] = statement.value
     keys: set[str] = set()
     for child in ast.walk(node):
         if not isinstance(child, ast.Return):
             continue
         value = child.value
+        if isinstance(value, ast.Name):
+            value = bindings.get(value.id)
+        if (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and value.func.id in functions
+            and value.func.id not in _seen
+        ):
+            keys.update(_literal_return_keys(
+                functions[value.func.id], functions, _seen | {value.func.id},
+            ))
         if isinstance(value, ast.Dict):
             for key, item_value in zip(value.keys, value.values):
                 if isinstance(key, ast.Constant) and isinstance(key.value, str):
@@ -3579,7 +3599,9 @@ def build_product_api_contract(*, root: str | Path = ".") -> dict[str, Any]:
         for field in expected - model_fields.get(model, set())
     )
 
-    docking_keys = _literal_return_keys(functions.get("submit_docking_job"), functions)
+    docking_helpers = dict(functions)
+    docking_helpers.update(_function_nodes(_parse_module(root_path / "betelgeuze_product" / "docking_response.py")))
+    docking_keys = _literal_return_keys(functions.get("submit_docking_job"), docking_helpers)
     docking_missing = sorted(REQUIRED_DOCKING_RESPONSE_KEYS - docking_keys)
     status_function_names = [
         name

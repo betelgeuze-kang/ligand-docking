@@ -69,6 +69,7 @@ def test_submission_response_top_level_keys_are_stable_snapshot() -> None:
         "docking_results_emitted",
         "validation",
         "structure",
+        "scientific_input",
         "progress",
         "dispatch",
         "claim",

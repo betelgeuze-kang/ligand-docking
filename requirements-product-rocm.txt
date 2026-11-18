@@ -2,4 +2,5 @@
 # Keep the ROCm PyTorch build from Dockerfile.product's rocm/pytorch base image.
 # Installing requirements-rocm.txt here would override that validated image build.
 -r requirements-base.txt
+cryptography==46.0.5
 rdkit-pypi==2022.9.5

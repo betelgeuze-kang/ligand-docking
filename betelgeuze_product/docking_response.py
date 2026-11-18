@@ -10,7 +10,7 @@ This module defines a small, stable, grouped response shape that the customer
 API and the GUI can depend on:
 
 - A short set of top-level identity/status fields.
-- Grouped summaries: ``validation``, ``structure``, ``progress``, ``dispatch``,
+- Grouped summaries: ``validation``, ``structure``, ``scientific_input``, ``progress``, ``dispatch``,
   ``claim``, and ``links``.
 - Internal diagnostics are exposed **only** when ``debug=True`` under a single
   ``diagnostics`` key, and the internal ``ledger_path`` is never exposed.
@@ -40,6 +40,7 @@ DOCKING_SUBMISSION_TOP_LEVEL_KEYS = frozenset(
         "docking_results_emitted",
         "validation",
         "structure",
+        "scientific_input",
         "progress",
         "dispatch",
         "claim",
@@ -149,6 +150,30 @@ def docking_structure_summary(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def docking_scientific_input_summary(record: dict[str, Any]) -> dict[str, Any]:
+    """Publish the same bounded provenance summary on submission and polling.
+
+    Legacy records without a receipt remain explicitly unready. Source paths,
+    molecular contents and private payload references are never copied here.
+    """
+    receipt = record.get("scientific_input_provenance")
+    if not isinstance(receipt, dict):
+        receipt = {}
+    pocket = receipt.get("pocket") if isinstance(receipt.get("pocket"), dict) else {}
+    return {
+        "schema_version": str(receipt.get("schema_version") or ""),
+        "receipt_sha256": str(receipt.get("receipt_sha256") or ""),
+        "content_identity_ready": receipt.get("content_identity_ready") is True,
+        "execution_input_ready": receipt.get("execution_input_ready") is True,
+        "explicit_pocket": pocket.get("explicit") is True,
+        "pocket_definition_kind": str(pocket.get("definition_kind") or ""),
+        "ligand_count": int(receipt.get("ligand_count") or 0),
+        "private_payload_stored": record.get("private_payload_stored") is True,
+        "blockers": list(receipt.get("blockers") or []),
+        "claim_safe": False,
+    }
+
+
 def docking_progress_summary(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "percent": record.get("progress_percent", 0.0),
@@ -248,6 +273,7 @@ def build_docking_submission_response(
         "docking_results_emitted": bool(record.get("docking_results_emitted", False)),
         "validation": docking_validation_summary(record),
         "structure": docking_structure_summary(record),
+        "scientific_input": docking_scientific_input_summary(record),
         "progress": docking_progress_summary(record),
         "dispatch": docking_dispatch_summary(record, dispatch_outcome),
         "claim": docking_claim_summary(record),
@@ -264,6 +290,7 @@ __all__ = [
     "DOCKING_DIAGNOSTIC_KEYS",
     "docking_validation_summary",
     "docking_structure_summary",
+    "docking_scientific_input_summary",
     "docking_progress_summary",
     "docking_dispatch_summary",
     "docking_claim_summary",

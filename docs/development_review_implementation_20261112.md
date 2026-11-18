@@ -1,0 +1,242 @@
+# 2026-11-12 코드 검토 후 개발 보고
+
+## 판단과 검토 기준
+
+기준 main은 `4c6e4b9fba670e325be37b538e054af88f65dc01`이며, 변경은
+`codex/docking-review-integration-20261112`에서 통합한다.
+이번 개발은 코드 검토에서 확인한 입력 화학, 작업 관리, 응답 계약, 배포 누락과
+정제 정책의 연결을 다룬다. 실제 분자군에 대한 정확도 개선이나 상용 제품과의
+동등성을 측정한 개발은 아니다.
+
+현재 판정은 **실행 가능한 연구 개발 경로와 제품 계약의 보강**이다. 새로운
+준비·정제 경로의 과학적 성능은 아직 검증되지 않았다. 기존 벤치마크를 새로운
+구현의 결과로 다시 표시하지 않고, 기존 V7 정책과 수치 receipt를 보존한다.
+새 기능은 `betelgeuze_product/docking_development_v1/`에 소유권을 두며,
+기존 Engine v2 Python 파일 187개와 역사적 public runner는 main과 byte가 같다.
+새 제품 경로는 자기 소스와 재사용하는 수치 구현을 포함하는 별도 source manifest를 갖는다.
+
+초기 PR CI는 엔진 전체를 고정하는 기존 source seal과 변경의 충돌을 발견했다.
+이에 기존 엔진의 bytes를 복원하고 새 특징·parser·guidance·정제·guard를 제품
+어댑터로 분리했다. 기존 seal/hash와 과거 evidence는 변경하지 않았다.
+이 보고서의 parser·특징·scorer guard 보강은 **새 opt-in 제품 경로에 적용**되며,
+legacy engine을 직접 호출하는 모든 경로의 동작이 바뀌었다는 뜻은 아니다.
+
+## 수정한 10개 검토 영역
+
+| 영역 | 변경과 현재 동작 | 범위 또는 이행 조건 |
+|---|---|---|
+| 수용체 결합·수소 준비 | Named peptide template으로 표준 잔기의 전체 결합·결합 차수·수소를 준비하는 명시적 개발 프로파일 추가 | 완전한 heavy inventory, 연속 chain, OXT, 선언된 HID/HIE/HIP 필요. 실제 단백질 전반의 준비 성공률은 미측정 |
+| PDB CONECT | 새 제품 준비 parser에서 5열 고정폭 serial을 해석해 붙어 있는 5자리 원자 번호의 결합을 보존 | 원본 입력 hash와 좌표 parser에 전달한 payload hash를 분리 기록. 기존 engine parser는 그대로 보존 |
+| 원자 순서에 의존하는 formal charge | 새 경로는 named residue/microstate의 formal charge와 explicit graph의 Gasteiger partial charge를 사용 | 기존 proxy는 frozen diagnostic에 남음. 새 전하는 검증된 단백질 힘장 매개변수가 아님 |
+| Scorer와 guidance의 화학 특징 차이 | 완전한 결합 그래프에서 공통 versioned 특징을 판정한 뒤 공간 부분집합을 적용 | 새 schema/policy fingerprint 및 cache 정합 검사. Python reference scorer와 일반 guided policy만 지원; legacy/new 혼합 거부 |
+| Queue 선두의 admission 실패 | 알려진 admission/plan/budget 오류를 durable `rejected_before_dispatch`로 확정 | 수치 dispatch와 budget 소모 0. 다음 owner-once가 다음 작업을 처리 |
+| 늦게 도착한 취소 | Process 종료 확인 후 `cancel_state`를 terminal 상태와 일치하게 정리 | numerical 결과 상태와 lineage를 임의로 바꾸지 않음 |
+| 계획과 실제 numerical source의 불일치 | Metadata 단계에서 owning numerical source inventory를 관측하고 worker의 첫 freeze와 비교 | 소스가 바뀐 계획은 stale. 과거 계획을 자동 재봉인하지 않음 |
+| 원본 report의 비공개 값 노출 | 원본 numerical report는 private receipt로 유지하고 별도 public projection을 생성 | public artifact 역할과 digest가 별도이며, 기존 private role의 목록·다운로드는 차단 |
+| 제출과 polling 응답의 `scientific_input` 불일치 | POST/GET이 같은 응답 builder를 사용 | 실제 authenticated HTTP 왕복 및 반환 keyset 회귀 포함 |
+| Product Docker의 Engine V2 누락 | `.dockerignore`, 실제 `COPY`, build 중 CLI help 검사 보강 | 실제 COPY 파일 구성 검사와 설치 wheel 검증을 구분. ROCm image 실행은 별도 검증 필요 |
+
+## 정제 설계의 세 가지 보강
+
+### V9의 후보 보존과 선택
+
+`InteractionAwareTorsionContactEnsembleRefinerV9`는 V7의 receptor penalty
+`[2,4)` 선택 구간을 새 정책에서 제거한다. Receptor penalty가 2 미만이어도
+내부 overlap을 개선할 torsion을 평가한다. Combined objective의 엄격한 감소,
+receptor component의 비증가, authority·이동량·torsion·step의 기존 한계는 유지한다.
+
+Source마다 V6 기준 후보와 개선 끝점을 최대 두 개 보존하고 각 후보에 scorer와
+독립 내부 유효성 검사를 적용한다. 유효한 후보가 부족하면 Top-K를 채우지 않는다.
+64개 source에서 최대 128개 후보를 scoring할 수 있으므로 과거 fixed-64 V7과
+동일 계산량 비교라고 해석할 수 없다. V9 contact objective 자체는 overlap이다.
+
+### 실제 물리·구조보존 정제의 연결
+
+Product 계층의 `ExplicitRefinementDockingPipelineV1`에 두 provider를 연결한다.
+`ContactRefinementProviderV9`는 위 후보 보존 정책을 실행한다.
+`FixedReceptorStructureProviderV1`는 명시적인 legacy 또는 Fourier parameter와
+matching cross parameter를 받아 실제 energy/force coordinator를 실행한다.
+모델이 없거나 frame/topology/provider authority가 맞지 않으면 실패한다.
+
+물리 경로의 입력 기준 후보와 최종 후보는 따로 보존한다. 최종 admission에
+실패한 후보는 사유와 좌표를 남기되 선택에서 제외한다. Projected stationarity,
+optimizer 종료 상태, Cartesian convergence는 서로 다른 항목이다.
+자동 힘장 추정이나 과학적 유효성 승격은 추가하지 않았다.
+
+### 전체 계산량과 선택 경로의 분리
+
+`RefinementWorkV1`는 새 제품 경로가 실행하는 중첩 정제 arm의 objective
+시도·완료·실패와 방향 계산을 관측한다. 버려진 arm과 실패 전 관측한 계산도
+합산한다. 완료한 frozen leaf의 trial/accepted step은 기존 receipt에서 얻고,
+중단되어 정확한 횟수를 얻을 수 없는 항목은 `null`과 관측한 하한으로 표시한다.
+알 수 없는 계산량을 0으로 표시하지 않는다. 기존 numerical receipt와 별도인
+sidecar이며, 선택된 경로의 step과 전체 계산량을 동일시하지 않는다. 물리 경로의
+callback, 실제 evaluator 시도, graph build, recoverable rejection도 구분한다.
+
+## 통합 검토에서 추가로 보강한 부분
+
+- 새 제품 search adapter는 scorer 호출 **이전**에 후보 identity를 보존하고
+  독립 tensor copy를 전달한다. 좌표와 hash를 함께 바꾸는 coherent rebinding도
+  단일·batch scorer 양쪽에서 거부한다. 모든 점수를 유한 native float로 변환한 뒤
+  전체 identity와 component contract를 검사하므로 지연 변환 중 변조도 잡는다.
+  기존 frozen search 파일은 변경하지 않는다.
+- 실제 legacy/Fourier E/F evaluator와 engine physics/geometry까지 numerical
+  source inventory에 포함했다. 어댑터 파일만 hash하는 것으로 계산 구현의
+  동일성을 주장하지 않는다.
+- 새 수용체 H는 이름으로 결정되는 heavy-atom local frame에서 생성한다.
+  강체 회전·이동에 따른 일관성을 검사하고, 공선·퇴화 frame은 실패시킨다.
+- 산화·고원자가 S의 acceptor 오분류를 수정하고 sulfoxide/sulfone/thioether를
+  scorer와 guidance 양쪽에서 검사한다.
+- Mobile 회귀가 삭제한 private 응답 helper 대신 canonical helper를 호출하도록
+  정리했다. 기존 응답 내용 검증은 그대로 유지했다.
+- Pinned binary version-probe 회귀는 host의 `/bin/echo` 대신 테스트가 만든 ELF를
+  사용한다. 실제 `/proc/self/fd/` 실행과 staging 이후 원본 경로 교체를 함께 검증한다.
+  Production probe, 출력 제한 및 실행 경계는 변경하지 않았다.
+
+## 검증 증거의 범위
+
+검증 환경은 별도 cloud checkout의 Python 3.12.14, Torch 2.6.0+cpu,
+NumPy 1.26.4, RDKit 2026.03.6이다. 테스트·설치 범위와 결과는 아래
+최종 검증 기록에 명시한다. 합성 fixture의 통과는 실제 docking 정확도 증거가 아니다.
+
+### 확인한 실제 입력의 한계
+
+22개 표준 residue/microstate 각각을 가운데 둔 소규모 A–X–G 준비 검사는
+통과했다. 이는 template 지원 점검이다. 보관된 6T88 원본 PDB에 대해서는
+준비 경계만 확인했으며 가장 먼저 발생한 오류는
+`histidine_microstate_required`였다. HIS를 임의로 HIE로 바꾸거나 FAD/GOL을
+삭제해 통과시키지 않았다. 이 입력의 cofactor와 기타 nonpolymer도 v1 범위 밖이다.
+
+새 프로파일로 PoseBusters, native recovery, affinity 또는 fresh holdout
+정확도를 측정하지 않았다. `chemistry_validated`, `scientifically_validated`,
+`product_qualified`, `claim_safe`는 승격하지 않는다.
+
+## 다음 개발 우선순위와 완료 조건
+
+| 우선순위 | 남은 개발 | 완료 조건 |
+|---|---|---|
+| P0 | 실제 표적의 준비 지원 확대 | Histidine/terminus 선택 근거, partial H·chain gap·missing heavy·water·ion·cofactor·crosslink 지원 정책과 실제 입력별 성공/typed failure 목록. Unsupported 원자의 묵시적 삭제 금지 |
+| P0 | 준비→제안→정제→선택의 단계별 실분자 평가 | 고정 입력·seed·분모에서 V7/V9와 물리 경로의 후보 보존, invalid 생성, Top-1/Top-5를 새로 측정. 개발 집합과 fresh holdout 분리, 동일 계산량 비교 별도 |
+| P0 | 물리 모델 및 특징의 검증 | 명시적 parameter authority와 atom typing, protonation/tautomer 및 cofactor 상태의 검증. Gasteiger와 contact overlap을 calibrated binding affinity로 표시하지 않음 |
+| P1 | Reader의 전체 요청·동시성 예산 | 전역·tenant active 슬롯, 부모의 해시/JSON 처리와 stream까지 포함하는 deadline, 최대 32개 compare의 누적 비용 예약, aggregate memory 제한 검증 |
+| P1 | 배포 패키지 소유권 정리 | Engine module과 `betelgeuze-dock`의 단일 소유자/고유 이름, release dependency와 migration, 두 wheel RECORD·entry point 중복 및 upgrade/uninstall 검사 |
+| P1 | 실제 배포 runtime 검증 | ROCm image build/run, native scorer 비교와 운영 process containment의 지원 host 검증. CPU source/wheel smoke와 구분 |
+| P2 | 후보 다양성·성능·사용성 | 검증된 RMSD 기반 diversity 정책, 전체 work/시간/메모리 수치, 연구자용 준비 오류 설명과 결과 비교 흐름 |
+
+Reader의 기존 제한을 없다고 해석하면 안 된다. Owning child에는 wall 120초,
+CPU 90초, address space 4 GiB, 1 CPU/thread 및 입출력 byte 제한이 있고,
+HTTP 공통 rate/quota도 있다. 남은 경계는 이 child 밖의 부모 처리와 여러 요청의
+합계이다. 주소 공간 제한과 실제 aggregate RSS 보장도 구분해야 한다.
+
+현재 product와 independent engine distribution은 같은 Engine V2 module과
+`betelgeuze-dock` 이름을 소유한다. 이 release 계약을 정리하기 전에는 각각
+별도의 깨끗한 virtual environment에서 운용해야 한다.
+
+## 실행·구현 문서
+
+- [새 준비·특징 프로파일](engine_v2_prepared_peptide_development_v1.md)
+- [후보 보존·물리 정제 API](explicit_refinement_pipeline_v1.md)
+- [Prepared lifecycle와 공개 결과 계약](prepared_job_lifecycle.md)
+
+## 최종 검증 기록
+
+코드 commit `2be03a408c99a9c1f2db4f263c47aa36eca37d41`에서 **32개 모듈의
+540개 test case를 수집해 537개 통과, 실패 0개, skip 3개**를 확인했다.
+실행 시간은 98.51초이다. 이 소스와 byte가 같은 GitHub commit은
+`c407c23f0dd64551d367c80ab461abfe148dd1e0`이며 Git tree는
+`2434f023ca03dd5e6b9caa72c796c6cb07f32b07`이다. 이후 보고서 변경은 문서에 한정한다.
+
+Skip은 native extension 미설치에 따른 기존 scorer 비교 3개이다. 새 준비·정련
+회귀는 skip하지 않았다. Starlette httpx deprecation과 `-c /dev/null` 사용 시
+mobile marker 미등록으로 경고 2개가 있었다. 이 결과는 저장소의 모든 테스트를
+실행했다는 의미가 아니라 아래 명시한 통합 범위의 결과다.
+
+| 검증 | 결과와 해석 |
+|---|---|
+| 통합 회귀 | Lifecycle/API/tenant/Docker context/준비/특징/정련/기존 V7/물리 adapter를 포함해 537개 통과 |
+| 새 준비·CLI 및 retained pipeline | 위 통합 결과에 포함된 73개, skip 없음 |
+| Frozen source 및 과거 protocol | 기존 테스트를 수정하지 않고 46개 통과. Engine Python 187개 및 역사 runner가 main 원문과 동일 |
+| 지연 scorer 변환 | 새 8개 회귀 통과. 변조 재현 6개는 수정 전 실패를 확인한 후 수정 |
+| Pinned binary probe | 변경과 관련된 6개 test function, parameterization 포함 9개 통과. 실제 FD 실행·원본 경로 교체 검증 |
+| Engine V2 architecture guard | 통과. Product 역의존 및 금지된 dense operation 추가 없음 |
+| External oracle architecture guard | 통과. 외부 도킹·시뮬레이션 엔진을 제품 의존성으로 연결하지 않음 |
+| Ruff와 whitespace | 변경 Python 검사 및 base 대비 전체 diff 검사 통과 |
+| Product wheel | 외부 context 빌드, 비편집 설치, `pip check`, CLI help 3개 통과 |
+| Wheel 출처 | 전체 payload 563개(Python 561 + JSON + py.typed)가 source·wheel·설치 위치에서 동일. 로드한 프로젝트 모듈 192개가 설치 환경 출처이며 퇴역 engine 모듈 4개 없음 |
+| Installed read-only journal | 합성 producer 1회, E/F 6회, 실패 0회. Reader 2회, 추가 E/F 0회. Journal 7개 파일과 부모 Torch 설정 보존 |
+| 실제 ROCm image/native host | 이번 local 검증에서 실행하지 않음. Native scorer 비교 3개도 별도 지원 환경에서 필요 |
+| 실분자 정확도 | 새 PoseBusters/native recovery/holdout 실험 없음 |
+
+기존 engine manifest는
+`7db2a8ba4bdf4c70c941b106892e36aaccd253c6a88d31ac4ef78e73fd416aa7`로
+보존됐다. 기존 contaminated-development verifier도 변경하지 않고 통과했다.
+과거 benchmark와 protocol을 새 소스에 맞추어 재봉인하지 않았다.
+
+확장 진단에서는 legacy stage7 전체를 새 개발 환경에서 실행해 610개 중
+600개 통과, 7개 실패, 3개 skip이 나왔다. 실패 하나는 새 source-drift 회귀의
+charge 없는 입력 fixture였고 수정 후 실제 source 변경 지점까지 도달함을
+검사했다. 나머지는 frozen RDKit 2022.09.5 요구 4개와 이 Python build의
+`fcntl` sealing constant 부재 2개이다. 해당 요구를 완화하지 않았다.
+최종 local 범위는 실제 변경한 descriptor 회귀를 포함하며, legacy stage7 전체는
+기존 Python 3.10/RDKit 2022.09.5/Linux 원격 CI lane으로 분리한다. 그 CI 결과는
+아래 local 성공 수치로 대신하지 않는다.
+
+제품 wheel은 위 최종 코드 commit에서 정확한 `git archive`를 만들어 빌드했다.
+Wheel SHA-256은
+`f58b8e509a8848103086ec3ee6955737dcae37c8094012fabc122e6bf7c395c6`이다.
+이전 설치를 교체한 뒤 각 설치 payload의 byte와 퇴역 모듈 부재까지 검사했다.
+저장소나 build context가 import 경로에 들어가지 않았고, tools/tests/pytest도
+설치 환경에서 import되지 않았다. 설치 환경에서 전체 pytest suite를 실행한 것은 아니다.
+
+설치 smoke의 수치 실행은 `max_iterations_reached`로 끝났다.
+`numerical_convergence=false`, `chemical_validity=null`, `pose_accuracy=null`을
+유지했다. 결과 조회는 추가 E/F 계산 없이 원래 journal bytes와 부모 프로세스의
+Torch thread/determinism 설정을 보존했다. 이 합성 실행은 분자 정확도나 native
+운영 host qualification 증거가 아니다.
+
+검사 범위, skip의 정확한 test ID, 설치 smoke 및 진단 기록은
+[기계 판독 검증 기록](evidence/development_review_20261112.json)에 포함한다.
+통합 회귀는 준비된 CPU dependency 환경에서 다음 명령으로 재현한다.
+기존 artifact bootstrap을 실행하지 않는 명시적 unit 범위다.
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 \
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q -rs \
+  tests/unit/test_prepared_lifecycle*.py \
+  tests/unit/test_api_product_prepared.py \
+  tests/unit/test_product_docking_http_contract.py \
+  tests/unit/test_product_docking_response_contract.py \
+  tests/unit/test_product_docking_response_snapshot.py \
+  tests/unit/test_betelgeuze_product_api_contract.py \
+  tests/mobile/test_product_docking_tenant_isolation.py \
+  tests/mobile/test_scientific_input_provenance.py \
+  tests/unit/test_product_docker_cli_closure.py \
+  tests/unit/test_verify_product_docker_context.py \
+  tests/unit/test_build_product_image_smoke_preflight.py \
+  tests/unit/test_github_workflow_trust_boundaries.py \
+  tests/unit/test_engine_v2_receptor_preparation_v1.py \
+  tests/unit/test_engine_v2_bounded_scaffolds.py \
+  tests/unit/test_engine_v2_input_identity.py \
+  tests/unit/test_engine_v2_scorer_v1_stage5.py \
+  tests/unit/test_engine_v2_guided_proposal_stage4.py \
+  tests/unit/test_explicit_refinement_pipeline.py \
+  tests/unit/test_engine_v2_standalone_pipeline_core.py \
+  tests/unit/test_fixed_receptor_structure_refinement.py \
+  tests/unit/test_prepared_fourier_structure_refinement.py \
+  tests/unit/test_engine_v2_element_contact_round8.py \
+  tests/unit/test_cpu_refinement_source_boundaries.py \
+  tests/unit/test_engine_v2_global_orientation_development_protocol.py \
+  tests/unit/test_engine_v2_public_redocking_runner_stage7.py::test_pinned_case_inputs_keep_original_bytes_during_path_swap_restore \
+  tests/unit/test_engine_v2_public_redocking_runner_stage7.py::test_pinned_case_inputs_reject_boundary_visible_mutation \
+  tests/unit/test_engine_v2_public_redocking_runner_stage7.py::test_pinned_external_alias_rejects_swap_and_restore \
+  tests/unit/test_engine_v2_public_redocking_runner_stage7.py::test_external_binary_is_copied_to_private_sha256_stage_and_reverified \
+  tests/unit/test_engine_v2_public_redocking_runner_stage7.py::test_external_binary_stage_rejects_preexisting_sha_path_symlink \
+  tests/unit/test_engine_v2_public_redocking_runner_stage7.py::test_binary_version_probe_executes_the_pinned_descriptor
+```
+
+새 `ci-docking-review-contracts.yml`은 Python 3.10/3.12에서 API·Docker COPY
+계약과 CPU 준비·정련 계약을 실행한다. 지정 CPU 계약은 skip을 허용하지 않으며
+기존 frozen-source verifier도 실행한다. 기존 native·lifecycle·product image
+CI를 대체하거나 완화하지 않았다. 원격 CI의 실제 완료 상태는 PR의 정확한
+head commit에서 별도로 확인해야 하며, 위 통합 숫자는 local 결과다.

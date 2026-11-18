@@ -25,6 +25,7 @@ import time
 from .prepared_lifecycle import (
     LifecycleError, _HEX32, _identifier, admission_document, digest, json_bytes,
     regular_bytes, require, implementation_sources, runtime_identity,
+    PRIVATE_ARTIFACT_ROLES, PUBLIC_REPORT_ROLE, public_report_document,
 )
 from . import prepared_lifecycle_readonly_worker as read_worker
 
@@ -41,6 +42,7 @@ ROLES = {
     "retained_refinement_report": "report.json",
     "execution_artifact_manifest": "manifest.json",
 }
+ARTIFACT_NAMES = {**ROLES, PUBLIC_REPORT_ROLE: "public-report.json"}
 REPORT_SOURCES = ("betelgeuze_product/prepared_refinement_cli.py",
                   "betelgeuze_product/docking_cli.py", "betelgeuze_engine_v2/standalone_cli.py")
 
@@ -82,11 +84,12 @@ def _artifacts(service, snapshot):
         total_bytes += len(data)
         require(len(data) == item["bytes"] and hashlib.sha256(data).hexdigest() == item["checksum"],
                 "ARTIFACT_PUBLICATION_UNKNOWN", "Retained artifact differs from its registered bytes", 409)
-        descriptors.append(service._artifact_metadata(item))
-        if item["role"] in ROLES:
+        if item["role"] not in PRIVATE_ARTIFACT_ROLES:
+            descriptors.append(service._artifact_metadata(item))
+        if item["role"] in ARTIFACT_NAMES:
             parts = Path(item["relative_path"]).parts
             require(len(parts) == 3 and parts[0] == "attempts" and parts[1].isdigit()
-                    and len(parts[1]) == 6 and parts[2] == ROLES[item["role"]],
+                    and len(parts[1]) == 6 and parts[2] == ARTIFACT_NAMES[item["role"]],
                     "ARTIFACT_PUBLICATION_UNKNOWN", "Artifact generation binding is invalid", 409)
             key = (int(parts[1]), item["role"])
             require(key not in documents, "ARTIFACT_PUBLICATION_UNKNOWN", "Duplicate generation artifact", 409)
@@ -117,18 +120,24 @@ def _artifacts(service, snapshot):
         admission = json.loads(row["admission_json"])
         require(manifest.get("protocol_sha256") == admission["manifest"]["protocol_sha256"]
                 and manifest.get("runtime_identity") == admission["runtime_identity"]
-                and manifest.get("implementation_sources") == admission["lifecycle_sources"],
+                and manifest.get("implementation_sources") == admission["lifecycle_sources"]
+                and manifest.get("numerical_implementation_sources") == admission["numerical_sources"],
                 "ARTIFACT_PUBLICATION_UNKNOWN", "Generation source identity differs", 409)
         contents = manifest.get("artifact_content_sha256")
-        expected_contents = {ROLES[r]: value[1] for (g, r), value in documents.items()
+        expected_contents = {ARTIFACT_NAMES[r]: value[1] for (g, r), value in documents.items()
                              if g == generation and r != "execution_artifact_manifest"}
         require(contents == expected_contents, "ARTIFACT_PUBLICATION_UNKNOWN", "Manifest artifact census differs", 409)
         for basename, checksum in contents.items():
             matching = [value[1] for (g, r), value in documents.items()
-                        if g == generation and ROLES[r] == basename]
+                        if g == generation and ARTIFACT_NAMES[r] == basename]
             require(matching == [checksum], "ARTIFACT_PUBLICATION_UNKNOWN", "Manifest artifact census differs", 409)
         result = documents.get((generation, "numerical_invocation_result"))
         report = documents.get((generation, "retained_refinement_report"))
+        public_report = documents.get((generation, PUBLIC_REPORT_ROLE))
+        if public_report:
+            require(report is not None and public_report[0] == public_report_document(
+                        report[0], total_work_known=manifest["total_work_known"]),
+                    "ARTIFACT_PUBLICATION_UNKNOWN", "Public report differs from its private source receipt", 409)
         if result and report:
             work = report[0].get("work", {})
             force = _count(work.get("known_force_evaluation_calls"))
@@ -373,6 +382,7 @@ def _model(admission, evaluator):
                                        for name in ("ligand", "receptor", "parameters", "cross")},
              "source_evidence_sha256": admission["protocol"]["source_evidence"]["sha256"],
              "implementation_sha256": digest(admission["lifecycle_sources"]),
+             "numerical_implementation_sha256": digest(admission["numerical_sources"]),
              "evidence_kind": admission["protocol"]["evidence_kind"],
              "force_semantics": FORCE_SEMANTICS, "units": dict(PUBLIC_UNITS)}
     return {**value, "comparability_sha256": digest(value),
@@ -412,7 +422,8 @@ def _terminal(snapshot, documents, owning):
     admission = json.loads(row["admission_json"])
     require(manifest.get("protocol_sha256") == admission["manifest"]["protocol_sha256"]
             and manifest.get("runtime_identity") == admission["runtime_identity"]
-            and manifest.get("implementation_sources") == admission["lifecycle_sources"],
+            and manifest.get("implementation_sources") == admission["lifecycle_sources"]
+            and manifest.get("numerical_implementation_sources") == admission["numerical_sources"],
             "ARTIFACT_PUBLICATION_UNKNOWN", "Terminal source identity differs", 409)
     require(report.get("binding") == owning["binding"], "ARTIFACT_PUBLICATION_UNKNOWN", "Retained report backend differs", 409)
     return True
@@ -425,7 +436,8 @@ def _base(snapshot, checksum):
     require(prefix <= policy["force_call_ceiling"], "READ_VERIFICATION_FAILED", "Registry force budget is inconsistent", 409)
     return {"schema_version": VERIFY_SCHEMA, "execution_id": row["execution_id"],
             "generation": row["generation"], "execution_status": row["status"],
-            "numerical_state": row["numerical_state"], "registry_snapshot_sha256": checksum,
+            "numerical_state": row["numerical_state"], "cancel_state": row["cancel_state"],
+            "registry_snapshot_sha256": checksum,
             "plan": snapshot["plan"],
             "fully_verified": False, "total_work_known": False, "known_force_calls": prefix,
             "total_force_calls": None, "report": None, "model": None,
