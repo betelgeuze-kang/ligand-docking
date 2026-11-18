@@ -101,7 +101,9 @@ jobs:
         run: |
           set -euo pipefail
           python tools/check_engine_v2_architecture.py
-          python tools/verify_engine_v2_global_orientation_contaminated_development.py
+          # Verify archived evidence against its exact source. The tests below
+          # still exercise the current development checkout.
+          python tools/verify_engine_v2_global_orientation_contaminated_development.py --historical-snapshot
           python -B -m pytest --rootdir=. -c /dev/null --noconftest -p no:cacheprovider -q --junitxml=development-contracts.xml \
             tests/unit/test_product_receptor_preparation_v1.py \
             tests/unit/test_explicit_refinement_pipeline.py \

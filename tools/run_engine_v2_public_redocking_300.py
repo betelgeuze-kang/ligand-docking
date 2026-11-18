@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager, ExitStack
+from contextlib import contextmanager, ExitStack, nullcontext
 import ctypes
 from dataclasses import replace
 import fcntl
@@ -22,7 +22,7 @@ import stat
 import subprocess
 import sys
 import time
-from typing import Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Iterator, Mapping, Sequence
 import uuid
 
 import torch
@@ -123,6 +123,10 @@ from betelgeuze_engine_v2.io import (
     parse_sdf_v2000,
 )
 from betelgeuze_engine_v2.molecular import AllAtomSystem
+from betelgeuze_engine_v2.docking.development_lineage import emit_coordinate_snapshot
+
+if TYPE_CHECKING:
+    from tools.redocking_development_p1 import DevelopmentObservation
 
 
 RUNNER_ID = PUBLIC_REDOCKING_RUNNER_ID
@@ -2090,24 +2094,43 @@ def _assign_ligand_gasteiger_charges(
     )
 
 
+def _development_stage(observation, stage: str, **details):
+    return nullcontext() if observation is None else observation.stage(stage, **details)
+
+
+def _require_development_observation(observation, case_id: str) -> None:
+    if observation is not None:
+        from tools.redocking_development_p1 import DevelopmentObservation
+
+        if type(observation) is not DevelopmentObservation:
+            raise PublicRedockingRunnerError("invalid development observation object")
+        observation.assert_case(case_id)
+
+
 def _profile(
     case_id: str,
     paths: dict[str, Path],
     expected: PublicRedockingCaseProfile,
+    *,
+    development_observation: DevelopmentObservation | None = None,
 ) -> PublicRedockingCaseProfile:
-    _, Lipinski, rdMolDescriptors = _load_rdkit_modules()
-    molecule = _first_molecule(paths["native"])
-    observed = PublicRedockingCaseProfile(
-        case_id=case_id,
-        heavy_atom_count=sum(atom.GetAtomicNum() > 1 for atom in molecule.GetAtoms()),
-        rotor_count=int(Lipinski.NumRotatableBonds(molecule)),
-        ring_count=int(rdMolDescriptors.CalcNumRings(molecule)),
-        ligand_artifact_sha256=_sha256_path(paths["native"]),
-    )
-    if observed != expected:
-        raise PublicRedockingRunnerError(
-            f"frozen ligand profile does not match source bytes: {case_id}"
+    _require_development_observation(development_observation, case_id)
+    with _development_stage(development_observation, "profile"):
+        _, Lipinski, rdMolDescriptors = _load_rdkit_modules()
+        molecule = _first_molecule(paths["native"])
+        observed = PublicRedockingCaseProfile(
+            case_id=case_id,
+            heavy_atom_count=sum(
+                atom.GetAtomicNum() > 1 for atom in molecule.GetAtoms()
+            ),
+            rotor_count=int(Lipinski.NumRotatableBonds(molecule)),
+            ring_count=int(rdMolDescriptors.CalcNumRings(molecule)),
+            ligand_artifact_sha256=_sha256_path(paths["native"]),
         )
+        if observed != expected:
+            raise PublicRedockingRunnerError(
+                f"frozen ligand profile does not match source bytes: {case_id}"
+            )
     return expected
 
 
@@ -2117,6 +2140,7 @@ def _posebusters_molecules(
     native_payload: bytes,
     receptor_payload: bytes,
     expected_pose_count: int = 5,
+    prepared_references: tuple[object, object] | None = None,
 ) -> tuple[tuple[object, ...], object, object]:
     """Decode pinned bytes with the exact PoseBusters 0.3.1 redock policy."""
     Chem, _, _ = _load_rdkit_modules()
@@ -2129,28 +2153,31 @@ def _posebusters_molecules(
                 strictParsing=True,
             )
         )
-        native_supplier = Chem.ForwardSDMolSupplier(
-            BytesIO(native_payload),
-            sanitize=False,
-            removeHs=False,
-            strictParsing=False,
-        )
-        native = None
-        for candidate in native_supplier:
-            if candidate is None:
-                continue
-            if native is None:
-                native = candidate
-            else:
-                native.AddConformer(candidate.GetConformer(), assignId=True)
-        receptor = Chem.MolFromPDBBlock(
-            receptor_payload.decode("ascii"),
-            sanitize=False,
-            removeHs=False,
-            proximityBonding=False,
-        )
-        if receptor is not None:
-            Chem.AssignStereochemistryFrom3D(receptor)
+        if prepared_references is None:
+            native_supplier = Chem.ForwardSDMolSupplier(
+                BytesIO(native_payload),
+                sanitize=False,
+                removeHs=False,
+                strictParsing=False,
+            )
+            native = None
+            for candidate in native_supplier:
+                if candidate is None:
+                    continue
+                if native is None:
+                    native = candidate
+                else:
+                    native.AddConformer(candidate.GetConformer(), assignId=True)
+            receptor = Chem.MolFromPDBBlock(
+                receptor_payload.decode("ascii"),
+                sanitize=False,
+                removeHs=False,
+                proximityBonding=False,
+            )
+            if receptor is not None:
+                Chem.AssignStereochemistryFrom3D(receptor)
+        else:
+            native, receptor = prepared_references
     except (OSError, RuntimeError, UnicodeError, ValueError) as exc:
         raise PublicRedockingRunnerError(
             "PoseBusters inputs could not be decoded from pinned bytes"
@@ -2174,6 +2201,44 @@ def _posebusters_outcomes(
     native_payload: bytes,
     receptor_payload: bytes,
     expected_pose_count: int = 5,
+    development_observation: DevelopmentObservation | None = None,
+) -> tuple[
+    tuple[float, ...],
+    tuple[bool, ...],
+    tuple[bool, ...],
+    tuple[tuple[str, ...], ...],
+]:
+    if development_observation is None:
+        return _evaluate_posebusters_outcomes(
+            output_payload,
+            native_payload=native_payload,
+            receptor_payload=receptor_payload,
+            expected_pose_count=expected_pose_count,
+        )
+    records = _split_sdf_records(output_payload)
+    if len(records) != expected_pose_count:
+        raise PublicRedockingRunnerError("evaluation input denominator mismatch")
+    return development_observation.evaluate(
+        records,
+        native_payload=native_payload,
+        receptor_payload=receptor_payload,
+        evaluate=lambda: _evaluate_posebusters_outcomes(
+            output_payload,
+            native_payload=native_payload,
+            receptor_payload=receptor_payload,
+            expected_pose_count=expected_pose_count,
+            development_observation=development_observation,
+        ),
+    )
+
+
+def _evaluate_posebusters_outcomes(
+    output_payload: bytes,
+    *,
+    native_payload: bytes,
+    receptor_payload: bytes,
+    expected_pose_count: int = 5,
+    development_observation: DevelopmentObservation | None = None,
 ) -> tuple[
     tuple[float, ...],
     tuple[bool, ...],
@@ -2181,18 +2246,47 @@ def _posebusters_outcomes(
     tuple[tuple[str, ...], ...],
 ]:
     PoseBusters = _load_posebusters()
-    predicted, native, receptor = _posebusters_molecules(
+    molecule_arguments = dict(
         output_payload=output_payload,
         native_payload=native_payload,
         receptor_payload=receptor_payload,
         expected_pose_count=expected_pose_count,
     )
-    report = PoseBusters(config="redock", top_n=expected_pose_count).bust(
-        predicted,
-        native,
-        receptor,
-        full_report=True,
-    )
+    if development_observation is None:
+        predicted, native, receptor = _posebusters_molecules(**molecule_arguments)
+    else:
+        Chem, _, _ = _load_rdkit_modules()
+        predicted, native, receptor = development_observation.decode_inputs(
+            native_payload=native_payload,
+            receptor_payload=receptor_payload,
+            decode=lambda prepared: _posebusters_molecules(
+                **molecule_arguments,
+                prepared_references=prepared,
+            ),
+            clone=Chem.Mol,
+        )
+    with _development_stage(
+        development_observation,
+        "evaluation_posebusters",
+        record_count=expected_pose_count,
+    ):
+        report = PoseBusters(config="redock", top_n=expected_pose_count).bust(
+            predicted,
+            native,
+            receptor,
+            full_report=True,
+        )
+    with _development_stage(
+        development_observation,
+        "evaluation_report_validation",
+        record_count=expected_pose_count,
+    ):
+        return _posebusters_report_outcomes(
+            report, expected_pose_count=expected_pose_count
+        )
+
+
+def _posebusters_report_outcomes(report, *, expected_pose_count: int) -> tuple:
     if len(report) != expected_pose_count:
         raise PublicRedockingRunnerError(
             "PoseBusters did not retain the expected pose count"
@@ -2355,6 +2449,7 @@ def _evaluation_pipeline_sha256(
     paths = (
         repo_root / "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
         Path(__file__).resolve(),
+        repo_root / "tools/redocking_development_p1.py",
     )
     projection = {
         "runner_id": RUNNER_ID,
@@ -2630,7 +2725,19 @@ def _engine_v2_pose_coordinates(
     development_v8_clearance_variant: bool = False,
     development_true_conformer_profile: bool = False,
     development_source_paired_torsion_rescue: bool = False,
+    development_observation: DevelopmentObservation | None = None,
 ) -> EngineV2PoseSearchOutcome:
+    _require_development_observation(development_observation, case_id)
+    if development_observation is not None and any(
+        (
+            development_v8_clearance_variant,
+            development_true_conformer_profile,
+            development_source_paired_torsion_rescue,
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "observation v1 is bound to the unchanged V7 numerical lane"
+        )
     _development_variant_kind(
         development_v8_clearance_variant=development_v8_clearance_variant,
         development_true_conformer_profile=development_true_conformer_profile,
@@ -2638,6 +2745,8 @@ def _engine_v2_pose_coordinates(
             development_source_paired_torsion_rescue
         ),
     )
+    if development_observation is not None:
+        development_observation.core_event("input_parse", "start", {})
     try:
         receptor_bytes = paths["receptor"].read_bytes()
         seed_bytes = paths["seed"].read_bytes()
@@ -2663,6 +2772,10 @@ def _engine_v2_pose_coordinates(
             device="cpu",
         )
     except (PDBParseError, SDFParseError, UnicodeDecodeError) as exc:
+        if development_observation is not None:
+            development_observation.core_event(
+                "input_parse", "error", {"error_type": type(exc).__name__}
+            )
         raise EngineV2PreparationFailure(
             "input_parse_unsupported",
             "Engine V2 input parsing is unsupported",
@@ -2671,10 +2784,17 @@ def _engine_v2_pose_coordinates(
                 "input_parse" if development_true_conformer_profile else ""
             ),
         ) from exc
+    if development_observation is not None:
+        development_observation.core_event("input_parse", "complete", {})
+        development_observation.core_event("charge_assignment", "start", {})
     try:
         receptor = _assign_receptor_proxy_charges(receptor)
         ligand = _assign_ligand_gasteiger_charges(ligand, paths["seed"])
     except EngineV2CaseFailure as exc:
+        if development_observation is not None:
+            development_observation.core_event(
+                "charge_assignment", "error", {"error_type": type(exc).__name__}
+            )
         raise EngineV2PreparationFailure(
             "partial_charge_assignment_failed",
             "Engine V2 partial-charge preparation failed",
@@ -2684,6 +2804,9 @@ def _engine_v2_pose_coordinates(
                 else ""
             ),
         ) from exc
+    if development_observation is not None:
+        development_observation.core_event("charge_assignment", "complete", {})
+        development_observation.core_event("context_preparation", "start", {})
     source_conformer_ensemble = None
     if development_true_conformer_profile:
         try:
@@ -2852,8 +2975,17 @@ def _engine_v2_pose_coordinates(
                     development_source_paired_torsion_rescue
                 ),
                 source_paired_torsion_rescue_allocation=(rescue_allocation),
+                **(
+                    {"development_observer": development_observation.core_event}
+                    if development_observation is not None
+                    else {}
+                ),
             )
     except UnsupportedVdwElementError as exc:
+        if development_observation is not None:
+            development_observation.core_event(
+                "context_preparation", "error", {"error_type": type(exc).__name__}
+            )
         raise EngineV2PreparationFailure(
             "unsupported_vdw_element",
             "Engine V2 validity/scoring tables do not cover an observed element",
@@ -2871,6 +3003,10 @@ def _engine_v2_pose_coordinates(
             ),
         ) from exc
     except UnsupportedLargeRingSystemError as exc:
+        if development_observation is not None:
+            development_observation.core_event(
+                "context_preparation", "error", {"error_type": type(exc).__name__}
+            )
         raise EngineV2PreparationFailure(
             "unsupported_large_ring_system",
             "Engine V2 rigid-ring lane does not support this ring system",
@@ -2892,6 +3028,10 @@ def _engine_v2_pose_coordinates(
         ElementAwareValidityError,
         ScorerV1Error,
     ) as exc:
+        if development_observation is not None:
+            development_observation.core_event(
+                "context_preparation", "error", {"error_type": type(exc).__name__}
+            )
         raise EngineV2PreparationFailure(
             "docking_context_preparation_failed",
             "Engine V2 docking-context preparation failed",
@@ -2908,6 +3048,8 @@ def _engine_v2_pose_coordinates(
                 else None
             ),
         ) from exc
+    if development_observation is not None:
+        development_observation.core_event("context_preparation", "complete", {})
     preparation_counts = {
         "receptor_atom_count": receptor.atom_count,
         "ligand_atom_count": ligand.atom_count,
@@ -2991,6 +3133,8 @@ def _engine_v2_pose_coordinates(
             ),
         )
 
+    if development_observation is not None:
+        development_observation.core_event("search_and_refinement", "start", {})
     try:
         result = run_authenticated_scorer_v1_guided_search(
             authority,
@@ -3005,6 +3149,11 @@ def _engine_v2_pose_coordinates(
             precomputed_proposals=precomputed_proposals,
             precomputed_guided_receipt=precomputed_guided_receipt,
             precomputed_provenance_receipt=(development_proposal_receipt),
+            **(
+                {"development_observer": development_observation.core_event}
+                if development_observation is not None
+                else {}
+            ),
         )
     except (
         DockingAuthorityError,
@@ -3012,12 +3161,22 @@ def _engine_v2_pose_coordinates(
         ElementAwareValidityError,
         ScorerV1Error,
     ) as exc:
+        if development_observation is not None:
+            development_observation.assert_healthy()
+            development_observation.core_event(
+                "search_and_refinement", "error", {"error_type": type(exc).__name__}
+            )
         raise EngineV2SearchCaseFailure(
             "Engine V2 candidate search failed",
             diagnostics=search_failure_diagnostics("search_execution_failed"),
             development_proposal_receipt=development_proposal_receipt,
         ) from exc
     search = result.guided_search_result.authenticated_search_result.search_result
+    if development_observation is not None:
+        development_observation.assert_healthy()
+        development_observation.core_event(
+            "search_and_refinement", "complete", {"row_count": len(search.rows)}
+        )
     if (
         len(search.rows) != ENGINE_V2_CANDIDATE_COUNT
         or len(result.rows) != ENGINE_V2_CANDIDATE_COUNT
@@ -3043,19 +3202,61 @@ def _engine_v2_pose_coordinates(
             key=lambda row: (float(row.score), row.proposal_index),
         )
     )
+    if development_observation is not None:
+        development_observation.snapshot(
+            "scored_candidates",
+            candidate_count=len(search.rows),
+            rank_score_id=scorer.score_descriptor.score_id,
+            rank_score_unit=scorer.score_descriptor.unit,
+            rank_score_semantics=scorer.score_descriptor.semantics,
+            benchmark_rank_rule="finite_success_score_then_proposal_index",
+            candidates=[
+                {
+                    "proposal_index": row.proposal_index,
+                    "status": row.status,
+                    "error_code": row.error_code,
+                    "coordinate_fingerprint_sha256": (
+                        None
+                        if row.proposal is None
+                        else row.proposal.coordinate_fingerprint_sha256
+                    ),
+                    "score_binary64_hex": None
+                    if row.score is None
+                    else float(row.score).hex(),
+                    "score_terms": (
+                        None
+                        if term_rows[row.proposal_index].terms is None
+                        else term_rows[row.proposal_index].terms.to_dict()
+                    ),
+                    "selection_eligible": row.selection_eligible,
+                }
+                for row in search.rows
+            ],
+        )
+        development_observation.core_event("candidate_diagnostics", "start", {})
     diagnostic_evaluation_started = time.perf_counter()
     evaluated_by_index: dict[int, tuple[float, bool, bool, tuple[str, ...], str]] = {}
     if successful_rows:
-        records = _serialize_pose_records(
-            paths["seed"],
-            tuple(row.proposal.coordinates for row in successful_rows),
-            case_id=case_id,
-        )
+        with _development_stage(
+            development_observation,
+            "candidate_serialization",
+            record_count=len(successful_rows),
+        ):
+            records = _serialize_pose_records(
+                paths["seed"],
+                tuple(row.proposal.coordinates for row in successful_rows),
+                case_id=case_id,
+            )
         rmsds, geometric, chemical, failed_checks = _posebusters_outcomes(
             b"".join(records),
             native_payload=native_bytes,
             receptor_payload=receptor_bytes,
             expected_pose_count=len(successful_rows),
+            **(
+                {"development_observation": development_observation}
+                if development_observation is not None
+                else {}
+            ),
         )
         evaluated_by_index = {
             row.proposal_index: (
@@ -3207,7 +3408,24 @@ def _engine_v2_pose_coordinates(
         proposals = _benchmark_ranked_proposals(search)
     except IncompleteRankedPoseSet as exc:
         ranking_failure = exc
+    if development_observation is not None:
+        for rank, proposal in enumerate(proposals, start=1):
+            emit_coordinate_snapshot(
+                development_observation.core_event,
+                "final_ranked",
+                proposal,
+                rank_1based=rank,
+                evaluated_pose_record_sha256=evaluated_by_index[
+                    proposal.proposal_index
+                ][4],
+            )
     diagnostic_evaluation_seconds = time.perf_counter() - diagnostic_evaluation_started
+    if development_observation is not None:
+        development_observation.core_event(
+            "candidate_diagnostics",
+            "complete",
+            {"candidate_count": len(candidate_rows)},
+        )
     diagnostics = PublicRedockingEngineV2Diagnostics(
         schema_id=diagnostic_schema_id,
         preparation_status="success",
@@ -3257,7 +3475,9 @@ def _engine_v2_result(
     development_proposal_evidence_sink: (
         dict[str, DevelopmentTrueConformerProposalEvidence] | None
     ) = None,
+    development_observation: DevelopmentObservation | None = None,
 ) -> PublicRedockingCaseResult:
+    _require_development_observation(development_observation, case_id)
     _development_variant_kind(
         development_v8_clearance_variant=development_v8_clearance_variant,
         development_true_conformer_profile=development_true_conformer_profile,
@@ -3345,6 +3565,8 @@ def _engine_v2_result(
             pose_arguments["development_true_conformer_profile"] = True
         if development_source_paired_torsion_rescue:
             pose_arguments["development_source_paired_torsion_rescue"] = True
+        if development_observation is not None:
+            pose_arguments["development_observation"] = development_observation
         outcome = _engine_v2_pose_coordinates(case_id, paths, **pose_arguments)
         if type(outcome) is not EngineV2PoseSearchOutcome:
             raise PublicRedockingRunnerError(
@@ -3357,12 +3579,17 @@ def _engine_v2_result(
             raise PublicRedockingRunnerError(
                 "successful true-conformer proposal search lacks its receipt"
             )
-        pose_payload, artifacts = _write_engine_v2_poses(
-            output,
-            paths["seed"],
-            outcome.ranked_coordinates,
-            case_id=case_id,
-        )
+        with _development_stage(development_observation, "top5_serialization"):
+            pose_payload, artifacts = _write_engine_v2_poses(
+                output,
+                paths["seed"],
+                outcome.ranked_coordinates,
+                case_id=case_id,
+            )
+        if development_observation is not None:
+            development_observation.snapshot(
+                "top5_artifacts", pose_artifact_sha256s=artifacts
+            )
     except _ENGINE_V2_CASE_EXCEPTIONS as exc:
         if isinstance(exc, EngineV2SearchCaseFailure):
             diagnostics = exc.diagnostics
@@ -3442,6 +3669,13 @@ def _engine_v2_result(
             engine_v2_diagnostics=diagnostics,
         )
         retain_development_proposal_evidence()
+        if development_observation is not None:
+            development_observation.assert_healthy()
+            development_observation.snapshot(
+                "engine_result",
+                status="failure",
+                failure_code=failure_result.failure_code,
+            )
         return failure_result
     runtime = max(
         0.0,
@@ -3451,6 +3685,11 @@ def _engine_v2_result(
         pose_payload,
         native_payload=paths["native"].read_bytes(),
         receptor_payload=paths["receptor"].read_bytes(),
+        **(
+            {"development_observation": development_observation}
+            if development_observation is not None
+            else {}
+        ),
     )
     success_result = PublicRedockingCaseResult(
         case_id=case_id,
@@ -3467,6 +3706,13 @@ def _engine_v2_result(
         engine_v2_diagnostics=diagnostics,
     )
     retain_development_proposal_evidence()
+    if development_observation is not None:
+        development_observation.assert_healthy()
+        development_observation.snapshot(
+            "engine_result",
+            status="success",
+            observation_summary=development_observation.summary(),
+        )
     return success_result
 
 
@@ -3871,7 +4117,19 @@ def _external_result(
     seed: int,
     timeout_seconds: int,
     execution_profile_sha256: str = "",
+    development_stdio: tuple[int, int] | None = None,
 ) -> tuple[PublicRedockingCaseResult, tuple[str, ...]]:
+    if development_stdio is not None and (
+        type(development_stdio) is not tuple
+        or len(development_stdio) != 2
+        or any(
+            type(descriptor) is not int or descriptor < 0
+            for descriptor in development_stdio
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "development stdio must be two non-negative file descriptors"
+        )
     _verify_external_binary(binary)
     active_external_paths = paths if external_paths is None else external_paths
     command = _external_command(
@@ -3932,8 +4190,12 @@ def _external_result(
                 tuple(executed_command),
                 runner=subprocess.run,
                 check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL
+                if development_stdio is None
+                else development_stdio[0],
+                stderr=subprocess.DEVNULL
+                if development_stdio is None
+                else development_stdio[1],
                 pass_fds=tuple(
                     dict.fromkeys(
                         (

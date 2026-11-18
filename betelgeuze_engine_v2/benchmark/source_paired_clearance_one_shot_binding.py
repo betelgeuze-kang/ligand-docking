@@ -41,6 +41,7 @@ EXPECTED_NO_GO_CRITERIA = (
     "selected_state_remains_penetrating_without_posebusters_validity_change",
 )
 MAX_DURABLE_RECEIPT_BYTES = 4 * 1024 * 1024
+_GIT_TIMEOUT_SECONDS = 15
 _DURABLE_ROOT_COMPONENTS = (
     ".betelgeuze",
     "engine_v2_source_paired_clearance_one_shot_ab",
@@ -70,24 +71,31 @@ def _git_executable() -> Path:
 
 def _run_git(repository_root: Path, *arguments: str) -> str:
     root = repository_root.resolve(strict=True)
-    completed = subprocess.run(
-        [str(_git_executable()), "-C", str(root), *arguments],
-        check=False,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        timeout=15,
-        env={
-            "GIT_CONFIG_GLOBAL": "/dev/null",
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_OPTIONAL_LOCKS": "0",
-            "HOME": "/nonexistent",
-            "LANG": "C",
-            "LC_ALL": "C",
-            "PATH": "/usr/bin:/bin",
-        },
-    )
+    try:
+        completed = subprocess.run(
+            [str(_git_executable()), "-C", str(root), *arguments],
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=_GIT_TIMEOUT_SECONDS,
+            env={
+                "GIT_CONFIG_GLOBAL": "/dev/null",
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_OPTIONAL_LOCKS": "0",
+                "HOME": "/nonexistent",
+                "LANG": "C",
+                "LC_ALL": "C",
+                "PATH": "/usr/bin:/bin",
+            },
+        )
+    except subprocess.TimeoutExpired as exc:
+        operation = arguments[0] if arguments else "unknown"
+        raise RuntimeError(
+            f"git_source_verification_timeout: command={operation}; "
+            f"timeout_seconds={_GIT_TIMEOUT_SECONDS}; checkout_state=unverified"
+        ) from exc
     if completed.returncode != 0:
         detail = completed.stderr.strip().replace("\n", " ")[:240]
         raise RuntimeError(f"Git source verification failed: {detail}")
