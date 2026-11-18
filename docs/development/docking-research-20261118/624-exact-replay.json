@@ -1,0 +1,78 @@
+{
+  "date_kst": "2026-11-18",
+  "status": "EXACT_REPLAY_BLOCKED",
+  "pr": 624,
+  "audited_head": "8f5fc53ab68b7e6d9801c6a5830e94dbdd914bb4",
+  "case": "6YSP_PAL",
+  "frozen_source_artifact_id": 13307325590,
+  "result_artifact_ids": [
+    13308515506,
+    13324798352,
+    13324178218
+  ],
+  "artifacts": [
+    {
+      "role": "13308515506.zip",
+      "size_bytes": 9297243,
+      "sha256": "d2debe7a4fe2ca4bee2be280a3935eddcca973397ac7cb043accbdb5178c53d9",
+      "artifact_id": 13308515506
+    },
+    {
+      "role": "13324178218.zip",
+      "size_bytes": 12310292,
+      "sha256": "c7e342bd3f4bb25f9a48ed4035afa2476bab65e6987f962402176519e219abf0",
+      "artifact_id": 13324178218
+    },
+    {
+      "role": "13324798352.zip",
+      "size_bytes": 12310368,
+      "sha256": "1504b0632f84a202bcbf9272286ade0693705273f595163b92c0602eb6388dec",
+      "artifact_id": 13324798352
+    },
+    {
+      "role": "expected.zip",
+      "size_bytes": 9418713,
+      "sha256": "bde3134fb1ab35ece75fe6d6e03c07118afd3965c0fa52902e97b1759033f4cc",
+      "artifact_id": 13307325590
+    }
+  ],
+  "worker_observations": 9,
+  "independent_cases": 1,
+  "candidate_denominator": 64,
+  "top5_bytes_equal": 9,
+  "all_worker_differences_identical": true,
+  "exact_mismatched_leaves_per_worker": 1738,
+  "changed_candidate_coordinate_fingerprints": 61,
+  "changed_candidate_scores": 51,
+  "max_candidate_score_abs_delta": 1.1523297871463e-09,
+  "max_score_component_abs_delta": 1.1677911970764399e-09,
+  "differences_root": "engine_v2_diagnostics",
+  "historical_environment_content_identity_matches": false,
+  "exact_gate_changed": false,
+  "numerical_root_cause": "UNKNOWN",
+  "new_molecular_evaluations": 0,
+  "existing_local_boundary_audit": "2026-11-04/pb-boundary-localization/historical-comparison-final/RESULT.json",
+  "independent_validation": "NOT_RUN",
+  "production_admission": "HOLD",
+  "THRB": "HOLD",
+  "existing_UNKNOWN": 17,
+  "historical_evidence_artifact": {
+    "id": 13263599742,
+    "sha256": "b227b82996e422f4f3a8354ededd8b6ea7650e4efab2ae5bcda8c0f43c1d7419"
+  },
+  "compared_installed_runtime_evidence": {
+    "matching": [
+      "interpreter runtime record",
+      "distribution inventory",
+      "reported versions",
+      "wheel set",
+      "wheel manifest",
+      "evaluator payload"
+    ],
+    "differing": [
+      "source-file inventory",
+      "environment content digest"
+    ],
+    "hardware_causation_established": false
+  }
+}
