@@ -29,6 +29,7 @@ from betelgeuze_engine_v2.molecular import (
 )
 
 from .authority import AuthenticatedDockingProblem, DockingAuthorityError
+from .development_lineage import DevelopmentObserver
 from .contact_validity import ElementAwarePoseValidityContext
 from .guided_placement import (
     FixedSourceBoundConformerProposalReceipt,
@@ -2031,6 +2032,7 @@ def run_authenticated_scorer_v1_guided_search(
         | SourcePairedTorsionRescueProposalReceipt
         | None
     ) = None,
+    development_observer: DevelopmentObserver | None = None,
 ) -> ScorerV1GuidedSearchResult:
     if not isinstance(scorer, ChemistryPoseScorerV1):
         raise TypeError("scorer must be ChemistryPoseScorerV1")
@@ -2053,6 +2055,11 @@ def run_authenticated_scorer_v1_guided_search(
         precomputed_proposals=precomputed_proposals,
         precomputed_guided_receipt=precomputed_guided_receipt,
         precomputed_provenance_receipt=precomputed_provenance_receipt,
+        **(
+            {"development_observer": development_observer}
+            if development_observer is not None
+            else {}
+        ),
     )
     retained: list[ScorerV1SearchTermRow] = []
     for row in guided.authenticated_search_result.search_result.rows:
