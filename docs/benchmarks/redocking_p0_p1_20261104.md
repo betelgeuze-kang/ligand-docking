@@ -1,5 +1,7 @@
 # Redocking P0/P1: isolated execution and observable evaluation
 
+For the latest 9T15 results and next experiment, see the [research handoff](9t15-research-handoff/README.ko.md).
+
 This implementation follows the fixed smoke2/development32 baseline in run
 [41651548827](https://github.com/betelgeuze-kang/ligand-docking/actions/runs/41651548827).
 It is development evidence. It does not authorize execution of the fresh holdout

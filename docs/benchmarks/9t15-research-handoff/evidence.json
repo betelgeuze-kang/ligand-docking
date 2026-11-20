@@ -1,0 +1,620 @@
+{
+  "as_of": "2026-11-20",
+  "scope": "9T15 A1JSY fixed-receptor development case",
+  "submission_denominator_per_arm": 12,
+  "handoff_slot": {
+    "slot": 3,
+    "raw_index": 1404,
+    "conformer": 22,
+    "starting_RMSD_A": 1.944384762347427,
+    "candidate_id": "fa693bb1abe0a5ce9704297aece62e7668e3f3c23db3f29b1e208cee6b4b8024",
+    "same_conformer_D3_reference_id": "6b7e30b1febcd380976ae3cd02537ca15424eddeac8ed20509da0f11aac3cfdb",
+    "original_seed": 2026110818,
+    "reference_used_for_generation_or_selection": false,
+    "cap_before_optimizer": 641,
+    "screen_EF_charged": 57,
+    "D3_reference_EF": 1,
+    "optimizer_cap": 583
+  },
+  "source": {
+    "research_source_head": "7d840881b034b10fe8f7cb6fb9de601c62cfd536",
+    "research_worktree_had_uncommitted_changes": true,
+    "published_main_base": "6d7e3b700e1eb3a2af8519746a5a9e855786b4e1",
+    "pocket_region_sha256": "6e5daec95efc2626ca91cdd928c936a6c407e813452ac024b550562f74b3c27d",
+    "Fourier_runtime_sha256": "90fa0ee343d65a8a226a8cc4dcbed9b202929a3814d08f8ed9a7e561457d639e",
+    "native_UF_sha256": "f95aecc8428048a0af809868f7007a2922865797916ef070b6b88b5ddb86df29",
+    "hardware": "AMD Radeon RX 6900 XT gfx1030 FP64 full U/F, CPU fallback disabled"
+  },
+  "geometry": {
+    "total": {
+      "eligible": 37,
+      "eligible_near": 0,
+      "eligible_best_A": 2.720121741792484,
+      "pb_rescued": 13
+    },
+    "extra": {
+      "eligible": 46,
+      "eligible_near": 1,
+      "eligible_best_A": 1.944384762347427,
+      "pb_rescued": 22
+    }
+  },
+  "measured_arms": {
+    "cpu-control": {
+      "rows": [
+        {
+          "slot": 0,
+          "candidate_id": "31e2da2d9e24b76b88ca1c820e6d07e36f1eee9b1895953e45754db7b54c1854",
+          "status": "force_converged",
+          "optimizer_EF": 549,
+          "force_converged": true,
+          "start_RMSD_A": 6.770180448915314,
+          "final_RMSD_A": 7.375417671696981,
+          "final_maximum_force": 0.0008617951758407977,
+          "PB_pass": true,
+          "pocket_pass": false,
+          "hydrogen_contact_pass": true,
+          "structural_pass": false,
+          "D3": "baseline",
+          "d3_reason": "refined_pose_invalid_or_incomplete"
+        },
+        {
+          "slot": 1,
+          "candidate_id": "3a193aa6a752e48c79da3b47aefb9e32e2fedd3cd29ce1f0c8a31ec63c49f8dd",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 588,
+          "force_converged": false,
+          "start_RMSD_A": 5.760476528026302,
+          "final_RMSD_A": 3.6516869387672943,
+          "final_maximum_force": 0.018942817508118017,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 2,
+          "candidate_id": "1179261211219eb8d69dc4899c7d03ce93b2c96204a081c25c83e1077692df52",
+          "status": "force_converged",
+          "optimizer_EF": 584,
+          "force_converged": true,
+          "start_RMSD_A": 5.744544598004684,
+          "final_RMSD_A": 6.219433750394466,
+          "final_maximum_force": 0.0008372513524860222,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "refined",
+          "d3_reason": "valid_refinement_selected"
+        },
+        {
+          "slot": 3,
+          "candidate_id": "19d6e9ba436d737b5616f310ab8ee92e725f716f021bcf55570d24769d545d26",
+          "status": "force_converged",
+          "optimizer_EF": 392,
+          "force_converged": true,
+          "start_RMSD_A": 1.9657927038835346,
+          "final_RMSD_A": 1.7788945770310918,
+          "final_maximum_force": 0.0008860899367973788,
+          "PB_pass": true,
+          "pocket_pass": false,
+          "hydrogen_contact_pass": true,
+          "structural_pass": false,
+          "D3": "baseline",
+          "d3_reason": "refined_pose_invalid_or_incomplete"
+        }
+      ],
+      "new_EF": 2117,
+      "top1_endpoint_pass": false,
+      "top5_endpoint_pass_count": 0,
+      "recommend_count": 4,
+      "top1_RMSD_A": 4.0396574482553556,
+      "slot3_trace": {
+        "pocket_tolerance_A": 0.5,
+        "observations": 392,
+        "accepted_inside": 13,
+        "accepted_first_outside": {
+          "attempt": 14,
+          "decision": "accepted",
+          "RMSD_A": 1.88904966239131,
+          "maximum_force": 16.897114938980696,
+          "max_distance_A": 0.5071715436681747,
+          "outside": [
+            "H18"
+          ],
+          "pocket_pass": false
+        },
+        "accepted_last_inside": {
+          "attempt": 13,
+          "decision": "accepted",
+          "RMSD_A": 1.895955589222779,
+          "maximum_force": 23.814622556723656,
+          "max_distance_A": 0.4944917923936688,
+          "outside": [],
+          "pocket_pass": true
+        },
+        "lowest_force_inside": {
+          "attempt": 12,
+          "decision": "accepted",
+          "RMSD_A": 1.903185941181492,
+          "maximum_force": 16.60815568577576,
+          "max_distance_A": 0.48233911172173244,
+          "outside": [],
+          "pocket_pass": true
+        },
+        "final": {
+          "attempt": 392,
+          "decision": "accepted",
+          "RMSD_A": 1.7788945770310918,
+          "maximum_force": 0.0008860899367973788,
+          "max_distance_A": 0.9145242897781278,
+          "outside": [
+            "H18",
+            "H1"
+          ],
+          "pocket_pass": false
+        },
+        "inside_converged": 0
+      }
+    },
+    "cpu-relaxed": {
+      "rows": [
+        {
+          "slot": 0,
+          "candidate_id": "18519a62bc5553bb406880dbb7caf91b9d0cc44d84e24f7cb06cc52df3ecd0ad",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 584,
+          "force_converged": false,
+          "start_RMSD_A": 6.790893217383354,
+          "final_RMSD_A": 7.375375894255737,
+          "final_maximum_force": 0.002436971516710755,
+          "PB_pass": true,
+          "pocket_pass": false,
+          "hydrogen_contact_pass": true,
+          "structural_pass": false,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 1,
+          "candidate_id": "c63587f1f62d5fa6bc49e0dc2819d880648ac650a50b952163cb4d4391b2d89c",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 588,
+          "force_converged": false,
+          "start_RMSD_A": 5.753315224712287,
+          "final_RMSD_A": 3.0333729615564233,
+          "final_maximum_force": 0.1545301812555315,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 2,
+          "candidate_id": "db6b8e4052983c56686cf3fec31b7f9b90a00cde7e2710edd879e47dfb2805c0",
+          "status": "force_converged",
+          "optimizer_EF": 560,
+          "force_converged": true,
+          "start_RMSD_A": 5.778885583276497,
+          "final_RMSD_A": 6.219463166251106,
+          "final_maximum_force": 0.0009385101466652205,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "refined",
+          "d3_reason": "valid_refinement_selected"
+        },
+        {
+          "slot": 3,
+          "candidate_id": "fa693bb1abe0a5ce9704297aece62e7668e3f3c23db3f29b1e208cee6b4b8024",
+          "status": "force_converged",
+          "optimizer_EF": 396,
+          "force_converged": true,
+          "start_RMSD_A": 1.944384762347427,
+          "final_RMSD_A": 1.7788960098450526,
+          "final_maximum_force": 0.0009470953710459355,
+          "PB_pass": true,
+          "pocket_pass": false,
+          "hydrogen_contact_pass": true,
+          "structural_pass": false,
+          "D3": "baseline",
+          "d3_reason": "refined_pose_invalid_or_incomplete"
+        }
+      ],
+      "new_EF": 2132,
+      "top1_endpoint_pass": false,
+      "top5_endpoint_pass_count": 0,
+      "recommend_count": 4,
+      "top1_RMSD_A": 4.0396574482553556,
+      "slot3_trace": {
+        "pocket_tolerance_A": 0.5,
+        "observations": 396,
+        "accepted_inside": 12,
+        "accepted_first_outside": {
+          "attempt": 13,
+          "decision": "accepted",
+          "RMSD_A": 1.8783750735406062,
+          "maximum_force": 35.03635894188599,
+          "max_distance_A": 0.5030426966385949,
+          "outside": [
+            "H18"
+          ],
+          "pocket_pass": false
+        },
+        "accepted_last_inside": {
+          "attempt": 12,
+          "decision": "accepted",
+          "RMSD_A": 1.8874365787469132,
+          "maximum_force": 30.56652311772167,
+          "max_distance_A": 0.4828137024118802,
+          "outside": [],
+          "pocket_pass": true
+        },
+        "lowest_force_inside": {
+          "attempt": 11,
+          "decision": "accepted",
+          "RMSD_A": 1.8954217893724186,
+          "maximum_force": 20.67235525885615,
+          "max_distance_A": 0.46587152312827684,
+          "outside": [],
+          "pocket_pass": true
+        },
+        "final": {
+          "attempt": 396,
+          "decision": "accepted",
+          "RMSD_A": 1.7788960098450526,
+          "maximum_force": 0.0009470953710459355,
+          "max_distance_A": 0.9145340683644576,
+          "outside": [
+            "H18",
+            "H1"
+          ],
+          "pocket_pass": false
+        },
+        "inside_converged": 0
+      }
+    },
+    "hip-relaxed": {
+      "rows": [
+        {
+          "slot": 0,
+          "candidate_id": "18519a62bc5553bb406880dbb7caf91b9d0cc44d84e24f7cb06cc52df3ecd0ad",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 584,
+          "force_converged": false,
+          "start_RMSD_A": 6.790893217383354,
+          "final_RMSD_A": 7.375356132718633,
+          "final_maximum_force": 0.004503537544788999,
+          "PB_pass": true,
+          "pocket_pass": false,
+          "hydrogen_contact_pass": true,
+          "structural_pass": false,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 1,
+          "candidate_id": "c63587f1f62d5fa6bc49e0dc2819d880648ac650a50b952163cb4d4391b2d89c",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 588,
+          "force_converged": false,
+          "start_RMSD_A": 5.753315224712287,
+          "final_RMSD_A": 3.0318185221280154,
+          "final_maximum_force": 0.1368059842170598,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 2,
+          "candidate_id": "db6b8e4052983c56686cf3fec31b7f9b90a00cde7e2710edd879e47dfb2805c0",
+          "status": "force_converged",
+          "optimizer_EF": 543,
+          "force_converged": true,
+          "start_RMSD_A": 5.778885583276497,
+          "final_RMSD_A": 6.219448118463078,
+          "final_maximum_force": 0.0008082834130108786,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "refined",
+          "d3_reason": "valid_refinement_selected"
+        },
+        {
+          "slot": 3,
+          "candidate_id": "fa693bb1abe0a5ce9704297aece62e7668e3f3c23db3f29b1e208cee6b4b8024",
+          "status": "force_converged",
+          "optimizer_EF": 388,
+          "force_converged": true,
+          "start_RMSD_A": 1.944384762347427,
+          "final_RMSD_A": 1.7788936332334881,
+          "final_maximum_force": 0.0006027878497945283,
+          "PB_pass": true,
+          "pocket_pass": false,
+          "hydrogen_contact_pass": true,
+          "structural_pass": false,
+          "D3": "baseline",
+          "d3_reason": "refined_pose_invalid_or_incomplete"
+        }
+      ],
+      "new_EF": 2107,
+      "top1_endpoint_pass": false,
+      "top5_endpoint_pass_count": 0,
+      "recommend_count": 4,
+      "top1_RMSD_A": 4.0396574482553556,
+      "slot3_trace": {
+        "pocket_tolerance_A": 0.5,
+        "observations": 388,
+        "accepted_inside": 12,
+        "accepted_first_outside": {
+          "attempt": 13,
+          "decision": "accepted",
+          "RMSD_A": 1.8783750735406022,
+          "maximum_force": 35.03635894188453,
+          "max_distance_A": 0.50304269663859,
+          "outside": [
+            "H18"
+          ],
+          "pocket_pass": false
+        },
+        "accepted_last_inside": {
+          "attempt": 12,
+          "decision": "accepted",
+          "RMSD_A": 1.887436578746914,
+          "maximum_force": 30.566523117727606,
+          "max_distance_A": 0.4828137024118864,
+          "outside": [],
+          "pocket_pass": true
+        },
+        "lowest_force_inside": {
+          "attempt": 11,
+          "decision": "accepted",
+          "RMSD_A": 1.89542178937242,
+          "maximum_force": 20.672355258853926,
+          "max_distance_A": 0.4658715231282787,
+          "outside": [],
+          "pocket_pass": true
+        },
+        "final": {
+          "attempt": 388,
+          "decision": "accepted",
+          "RMSD_A": 1.7788936332334881,
+          "maximum_force": 0.0006027878497945283,
+          "max_distance_A": 0.9145370165690049,
+          "outside": [
+            "H18",
+            "H1"
+          ],
+          "pocket_pass": false
+        },
+        "inside_converged": 0
+      }
+    },
+    "cpu-guard": {
+      "rows": [
+        {
+          "slot": 0,
+          "candidate_id": "18519a62bc5553bb406880dbb7caf91b9d0cc44d84e24f7cb06cc52df3ecd0ad",
+          "status": "line_search_failed",
+          "optimizer_EF": 23,
+          "force_converged": false,
+          "start_RMSD_A": 6.790893217383354,
+          "final_RMSD_A": 6.871145541898677,
+          "final_maximum_force": 16.474218109561228,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 1,
+          "candidate_id": "c63587f1f62d5fa6bc49e0dc2819d880648ac650a50b952163cb4d4391b2d89c",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 588,
+          "force_converged": false,
+          "start_RMSD_A": 5.753315224712287,
+          "final_RMSD_A": 3.0333729615564233,
+          "final_maximum_force": 0.1545301812555315,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 2,
+          "candidate_id": "db6b8e4052983c56686cf3fec31b7f9b90a00cde7e2710edd879e47dfb2805c0",
+          "status": "line_search_failed",
+          "optimizer_EF": 155,
+          "force_converged": false,
+          "start_RMSD_A": 5.778885583276497,
+          "final_RMSD_A": 6.1573938336340825,
+          "final_maximum_force": 13.126455171584523,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 3,
+          "candidate_id": "fa693bb1abe0a5ce9704297aece62e7668e3f3c23db3f29b1e208cee6b4b8024",
+          "status": "line_search_failed",
+          "optimizer_EF": 15,
+          "force_converged": false,
+          "start_RMSD_A": 1.944384762347427,
+          "final_RMSD_A": 1.8796654721813404,
+          "final_maximum_force": 33.8858351759763,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        }
+      ],
+      "new_EF": 785,
+      "logical_attempts": 805,
+      "pocket_rejections": 24,
+      "top1_endpoint_pass": false,
+      "top5_endpoint_pass_count": 0,
+      "slot3_logical_attempts": 25,
+      "slot3_pocket_rejections": 10
+    },
+    "hip-guard": {
+      "rows": [
+        {
+          "slot": 0,
+          "candidate_id": "18519a62bc5553bb406880dbb7caf91b9d0cc44d84e24f7cb06cc52df3ecd0ad",
+          "status": "line_search_failed",
+          "optimizer_EF": 23,
+          "force_converged": false,
+          "start_RMSD_A": 6.790893217383354,
+          "final_RMSD_A": 6.871145541898681,
+          "final_maximum_force": 16.474218109536423,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 1,
+          "candidate_id": "c63587f1f62d5fa6bc49e0dc2819d880648ac650a50b952163cb4d4391b2d89c",
+          "status": "objective_budget_exhausted",
+          "optimizer_EF": 588,
+          "force_converged": false,
+          "start_RMSD_A": 5.753315224712287,
+          "final_RMSD_A": 3.0318185221280154,
+          "final_maximum_force": 0.1368059842170598,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 2,
+          "candidate_id": "db6b8e4052983c56686cf3fec31b7f9b90a00cde7e2710edd879e47dfb2805c0",
+          "status": "line_search_failed",
+          "optimizer_EF": 155,
+          "force_converged": false,
+          "start_RMSD_A": 5.778885583276497,
+          "final_RMSD_A": 6.157426576172151,
+          "final_maximum_force": 13.03642418237447,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        },
+        {
+          "slot": 3,
+          "candidate_id": "fa693bb1abe0a5ce9704297aece62e7668e3f3c23db3f29b1e208cee6b4b8024",
+          "status": "line_search_failed",
+          "optimizer_EF": 15,
+          "force_converged": false,
+          "start_RMSD_A": 1.944384762347427,
+          "final_RMSD_A": 1.879665472181339,
+          "final_maximum_force": 33.88583517597969,
+          "PB_pass": true,
+          "pocket_pass": true,
+          "hydrogen_contact_pass": true,
+          "structural_pass": true,
+          "D3": "baseline",
+          "d3_reason": "refinement_or_rescoring_failed"
+        }
+      ],
+      "new_EF": 785,
+      "logical_attempts": 805,
+      "pocket_rejections": 24,
+      "top1_endpoint_pass": false,
+      "top5_endpoint_pass_count": 0,
+      "slot3_logical_attempts": 25,
+      "slot3_pocket_rejections": 10
+    }
+  },
+  "actual_new_EF": 7926,
+  "reused_screen_EF": 221,
+  "PB_errors": 0,
+  "configured_PB_calls": 168,
+  "local_evidence": [
+    {
+      "campaign": "9t15-pb-distance-relax.CsBD45KV",
+      "files": {
+        "REPORT.ko.md": "7219ba16ddd05d3ec78cfcd1149821bc313f6fdc280fb6f2829625493b43e4be",
+        "RESULT.json": "9a0691d4acd456072464cb2b8e9b055ba1bcf1bdcfce7104146cb781edadbd16",
+        "GUARD.json": "6af6e7585238eb83d063dbf9089d56372b24336c5fe03e5ab61dffc028c183aa",
+        "GEOMETRY-ACCURACY.json": "73cd157f700015d246494de460d98a6517322b7df1a22696d62f5eff98c11116",
+        "REPAIRED.json": "e366d01cf121971f17b045e110c4d06781033312e8c592dba958f27c99744139",
+        "cpu-relaxed/POCKET-TRACE.json": "64cb8e253bf7afb6a298261afe6dfbe4275ba18331950890682755edcb096501",
+        "hip-relaxed/POCKET-TRACE.json": "c6196b28df1c6473d6116cfd3f5800be0561a3c380a02c5845f8337ee795a3f1",
+        "SHA256SUMS": "57d0a2b5ccf6d8f070a1eb74c434c28dda15b5227ecd678ab6899fc285dfb209"
+      }
+    },
+    {
+      "campaign": "9t15-diverse-short-relax.pO5K6AiY",
+      "files": {
+        "REPORT.ko.md": "022d760e0a412f28dbdbedf703ee338215023cff44a0efe18bc85aa2c850fdac",
+        "RESULT.json": "02cddf88c736380997d93dca86ba7daa9bfa86aef518ec034b0d7c01924ec280",
+        "REPRESENTATIVE-PB.json": "2531d853a210a69000c08aad8bc1f381d8904552027fd09da16c14755aa46ca0",
+        "SHA256SUMS": "304cfffe1aa9636f365d9e2823e7bced7db7ad39dfafbfe65eb281c2738f515a"
+      }
+    },
+    {
+      "campaign": "9t15-translation-field.b9C8KS7A",
+      "files": {
+        "REPORT.ko.md": "65357e6c4abe37b6e41e7a29e23570fe76b13abcc5a35d0881f5e0d483f9a88c",
+        "FINAL.json": "dcbbf6e35e6427533da6d511c257396370633070e0ac4d03ba6b3e1d59583f81",
+        "SHA256SUMS": "05dc366272734ab219537e6076caebeabb944ae2d8f4d5ddc234e463324eeb21"
+      }
+    },
+    {
+      "campaign": "9t15-shortlist-original-pocket.G8L9Hz",
+      "files": {
+        "CORRECTION.ko.md": "938b1ceb9b063c41cdc5239afa8b0169782f30b663e0a1aed17317f5a732e7a7",
+        "SHA256SUMS": "52efc8be84e78ec7da44b9a90aa9fbc24b55ef10ac65c95f8aea4718d47c2c02"
+      }
+    },
+    {
+      "campaign": "9t15-pocket-guard641.zfal7T",
+      "files": {
+        "pocket_profile.py": "8e24d9e6a136846250b41ac47c98d799b99576e1f21311c8d44bfa957d5ec1b1",
+        "long_adapter.py": "7c2e7e1890b137fdac3ba2d428f4b5c4a090ff7839a2e9eb7809bdfd298bc821"
+      }
+    },
+    {
+      "campaign": "9t15-pocket-projected.D6qwkk",
+      "files": {
+        "projected.py": "89e180fbf22d76d1cfe86879f52fc6b0f4939286843cd3237649f5a67d56b5c9",
+        "ACCURACY.json": "da99f919b164f04dec61f6e798204a315f862f5912d740c185a4903ae8d8634c"
+      }
+    }
+  ],
+  "statuses": {
+    "production_admission": "HOLD",
+    "THRB": "HOLD",
+    "existing_UNKNOWN": 17,
+    "actual32": "NOT_RUN",
+    "official_verify": "NOT_RUN",
+    "actual100": "NOT_RUN"
+  },
+  "independent_molecule_validation": "NOT_RUN"
+}
