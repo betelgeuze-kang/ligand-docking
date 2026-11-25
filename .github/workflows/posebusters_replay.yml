@@ -57,7 +57,7 @@ jobs:
           python-version: "3.10.22"
           check-latest: false
       - name: Download original frozen runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-runtime-41697499611-1
           run-id: "41697499611"
@@ -85,7 +85,7 @@ jobs:
             --junitxml="$RUNNER_TEMP/pb-replay-prepare-logs/tests.xml" \
             2>&1 | tee "$RUNNER_TEMP/pb-replay-prepare-logs/tests.log"
       - name: Download sealed admission evidence
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-evidence-admission-smoke-41697499611-1
           run-id: "41697499611"
@@ -93,7 +93,7 @@ jobs:
           repository: ${{ github.repository }}
           path: ${{ runner.temp }}/pb-replay-source/admission
       - name: Download sealed development-2 evidence
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-evidence-development-2-41697499611-1
           run-id: "41697499611"
@@ -101,7 +101,7 @@ jobs:
           repository: ${{ github.repository }}
           path: ${{ runner.temp }}/pb-replay-source/development-2
       - name: Download sealed development-10 evidence
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-evidence-development-10-41697499611-1
           run-id: "41697499611"
@@ -109,7 +109,7 @@ jobs:
           repository: ${{ github.repository }}
           path: ${{ runner.temp }}/pb-replay-source/development-10
       - name: Download sealed development-18 evidence
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-evidence-development-18-41697499611-1
           run-id: "41697499611"
@@ -176,7 +176,7 @@ jobs:
           python-version: "3.10.22"
           check-latest: false
       - name: Download original frozen runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-runtime-41697499611-1
           run-id: "41697499611"
@@ -184,7 +184,7 @@ jobs:
           repository: ${{ github.repository }}
           path: ${{ runner.temp }}/pb-replay-runtime
       - name: Download exact admitted inputs
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: ${{ needs.prepare.outputs.input_artifact_name }}
           path: ${{ runner.temp }}/pb-replay-prepared
@@ -234,12 +234,12 @@ jobs:
           python-version: "3.10.22"
           check-latest: false
       - name: Download exact admitted inputs
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: ${{ needs.prepare.outputs.input_artifact_name }}
           path: ${{ runner.temp }}/pb-replay-prepared
       - name: Download original pilot case artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: pb-replay-result-pilot-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/pb-replay-case-artifacts
@@ -288,7 +288,7 @@ jobs:
           python-version: "3.10.22"
           check-latest: false
       - name: Download original frozen runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-runtime-41697499611-1
           run-id: "41697499611"
@@ -296,7 +296,7 @@ jobs:
           repository: ${{ github.repository }}
           path: ${{ runner.temp }}/pb-replay-runtime
       - name: Download exact admitted inputs
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: ${{ needs.prepare.outputs.input_artifact_name }}
           path: ${{ runner.temp }}/pb-replay-prepared
@@ -347,13 +347,13 @@ jobs:
           check-latest: false
       - name: Download exact admitted inputs
         if: ${{ needs.prepare.result == 'success' }}
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: ${{ needs.prepare.outputs.input_artifact_name }}
           path: ${{ runner.temp }}/pb-replay-prepared
       - name: Download original pilot and expanded case artifacts
         if: ${{ always() && needs.prepare.result == 'success' }}
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           # This prefix excludes gate reports and preparation artifacts.
           pattern: pb-replay-result-*-${{ github.run_id }}-${{ github.run_attempt }}

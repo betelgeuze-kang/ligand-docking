@@ -173,7 +173,7 @@ jobs:
           fields = ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA', 'GITHUB_JOB', 'RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion')
           Path('evidence/job-context.json').write_text(json.dumps({'request': {k: os.environ.get(k) for k in fields}, 'bootstrap_python': platform.python_version(), 'analysis_scope': 'contaminated_development', 'claim_safe': False}, indent=2) + '\n')
           PYTHON
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: p0p1-runtime-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/p0p1-bundle
@@ -242,7 +242,7 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
           python-version: '3.10.22'
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: p0p1-evidence-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: downloaded-evidence
